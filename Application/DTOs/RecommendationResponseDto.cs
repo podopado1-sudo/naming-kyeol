@@ -1,0 +1,42 @@
+namespace NameForm.Application.DTOs;
+
+public class RecommendationResponseDto
+{
+    public string Id { get; set; } = string.Empty;
+    public List<CandidateDto> TopCandidates { get; set; } = new();
+    public List<string> BonusNicknames { get; set; } = new();
+}
+
+public class CandidateDto
+{
+    public string Name { get; set; } = string.Empty;
+    public int AestheticScore { get; set; }
+    public int HarmonyScore { get; set; }
+    public int FinalScore { get; set; }
+    public List<string> Reasons { get; set; } = new();
+    
+    /// <summary>
+    /// 작명 모델 태그 (예: "윤고은모델", "문소리모델", "신해솜모델", "이수지-박지수모델")
+    /// </summary>
+    public string? NamingModel { get; set; }
+    
+    /// <summary>
+    /// 이름 분류 태그 ("의미중심" 또는 "음운중심")
+    /// </summary>
+    public string? NameType { get; set; }
+    
+    /// <summary>
+    /// 유니크 지수 (0-100, 높을수록 희귀함)
+    /// </summary>
+    public int RarityScore { get; set; }
+
+    /// <summary>
+    /// 영어 대응 이름 (이중 이름인 경우, 예: "Philip")
+    /// </summary>
+    public string? EnglishEquivalent { get; set; }
+
+    /// <summary>
+    /// 한자 의미 조합 (이중 이름인 경우, 예: "붓 필 + 설 립")
+    /// </summary>
+    public string? HanjaMeaning { get; set; }
+}

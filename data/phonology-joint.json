@@ -1,0 +1,48 @@
+{
+  "version": "v3",
+  "lastUpdated": "2026-04-21",
+  "description": "한국어 음절 경계(받침+초성) 음운 조합표. 점수 감점 없음.\n\n[설계 철학 v3 — 하이브리드]\n(1) 하드 필터: 현대 한국 이름에 존재하지 않는 조합은 생성 단계에서 배제.\n(2) 특성 설명: 드물거나 눈에 띄는 조합은 사용자에게 정보로만 노출 (점수 영향 0).\n(3) 점수 감점은 사용하지 않음 — 음운 위반으로 이름을 낮추면 '특이한 좋은 이름'도 배제하게 됨.\n\n평가 범위: 성씨 포함 전체. 엔진 목적이 '성씨와 어울리는 이름 추천'이므로 성씨-이름 경계 포함.\n\n사용 순서:\n1. 입력 받침을 sevenJongseongMapping으로 7종성 중 하나로 정규화.\n2. hardFilters 조회 → 해당되면 후보 배제.\n3. characteristics 조회 → 해당되면 explanationHint를 결과에 첨부.",
+  "sevenJongseongMapping": {
+    "ㄲ": "ㄱ",
+    "ㅋ": "ㄱ",
+    "ㅅ": "ㄷ",
+    "ㅆ": "ㄷ",
+    "ㅈ": "ㄷ",
+    "ㅊ": "ㄷ",
+    "ㅌ": "ㄷ",
+    "ㅎ": "ㄷ",
+    "ㅍ": "ㅂ"
+  },
+  "hardFilters": [
+    {
+      "id": "consonant_duplicate_tensified",
+      "name": "동일자음중복(경음화류)",
+      "description": "받침 ㄱ/ㄷ/ㅂ + 같은 평음 초성. 현대 한국 이름에 존재하지 않는 조합이므로 생성 단계에서 배제한다.",
+      "combinations": [
+        { "final": "ㄱ", "initial": "ㄱ", "example": "박가→[박까]" },
+        { "final": "ㄷ", "initial": "ㄷ", "example": "맛다→[맏따]" },
+        { "final": "ㅂ", "initial": "ㅂ", "example": "밥보→[밥뽀]" }
+      ]
+    }
+  ],
+  "characteristics": [
+    {
+      "id": "r_initial_after_final",
+      "name": "ㄹ초성과 받침 음절의 만남",
+      "description": "한국 고유어 음운 규범상 드문 형태. 서구적·현대적 감각으로 여겨지며, 라온/라희/리아 같은 현대 트렌드 이름이 여기 속함.",
+      "explanationHint": "받침 뒤에 'ㄹ' 초성이 이어져 세련되고 이국적인 느낌이 있어요",
+      "combinations": [
+        { "final": "ㄱ", "initial": "ㄹ", "example": "박라/억림" },
+        { "final": "ㄷ", "initial": "ㄹ", "example": "맛라" },
+        { "final": "ㅂ", "initial": "ㄹ", "example": "밥라" },
+        { "final": "ㅇ", "initial": "ㄹ", "example": "정라/영림" }
+      ]
+    }
+  ],
+  "notes": [
+    "v1(34조합/8규칙) → v2(7조합/2규칙 감점) → v3(3개 하드필터 + 4개 특성 노출, 감점 제거).",
+    "감점을 제거한 이유: '박지훈(경음화)' 같은 흔한 이름과 '박라온(ㄹ초성)' 같은 트렌드 이름을 살리기 위함. 엔진이 '정상 범위' 판단을 독단적으로 하지 않는다.",
+    "하드 필터는 '존재하지 않는 이름' 생성 방지용. 동일자음 중복(박박, 밥보, 맛다)은 실제 이름이 아니므로 후보에서 제외.",
+    "characteristics의 explanationHint는 API 응답에 'phonologyNotes: [...]' 같은 형태로 포함될 예정 (Phase 2)."
+  ]
+}

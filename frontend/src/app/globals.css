@@ -1,0 +1,463 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* 폰트는 모두 layout.tsx의 next/font로 처리 (Pretendard / Noto Serif KR / Inter / Nanum Myeongjo) */
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * 이름의 결 (Naming.kyeol) — Design Tokens
+ * Source: NameForm_design/colors_and_type.css (Claude Design 산출물)
+ *
+ * Brand tone: 전문성 70% + 친절함 20% + 감성 10%
+ * Color: warm ivory (#FAF7F2) + charcoal text (#2B2B2B) + navy/teal/gold accents
+ * Typography: Pretendard (한글) / Noto Serif KR (한자) / Inter (점수)
+ * Spacing: 8px grid
+ */
+
+@theme inline {
+  /* === Typography === */
+  --font-sans: var(--font-pretendard);
+  --font-serif: var(--font-noto-serif-kr);
+  --font-mono: var(--font-inter);
+
+  /* === Surface / Text === */
+  --color-paper: var(--color-background-token);
+  --color-surface: var(--color-surface-token);
+  --color-surface-2: var(--color-surface-2-token);
+  --color-text: var(--color-text-token);
+  --color-text-2: var(--color-text-2-token);
+  --color-text-3: var(--color-text-3-token);
+
+  /* === Accents — Navy === */
+  --color-navy: var(--color-navy-token);
+  --color-navy-600: var(--color-navy-600-token);
+  --color-navy-500: var(--color-navy-500-token);
+  --color-navy-100: var(--color-navy-100-token);
+  --color-navy-50: var(--color-navy-50-token);
+
+  /* === Accents — Teal === */
+  --color-teal: var(--color-teal-token);
+  --color-teal-600: var(--color-teal-600-token);
+  --color-teal-500: var(--color-teal-500-token);
+  --color-teal-100: var(--color-teal-100-token);
+  --color-teal-50: var(--color-teal-50-token);
+
+  /* === Accents — Gold === */
+  --color-gold: var(--color-gold-token);
+  --color-gold-600: var(--color-gold-600-token);
+  --color-gold-100: var(--color-gold-100-token);
+  --color-gold-50: var(--color-gold-50-token);
+
+  /* === Score 분기 === */
+  --color-score-high: var(--color-score-high-token);
+  --color-score-mid: var(--color-score-mid-token);
+  --color-score-low: var(--color-score-low-token);
+
+  /* === Spacing (8px grid) === */
+  --spacing-sp-1: 4px;
+  --spacing-sp-2: 8px;
+  --spacing-sp-3: 12px;
+  --spacing-sp-4: 16px;
+  --spacing-sp-6: 24px;
+  --spacing-sp-8: 32px;
+  --spacing-sp-12: 48px;
+  --spacing-sp-16: 64px;
+
+  /* === Radii === */
+  --radius-sm-token: 6px;
+  --radius-md-token: 12px;
+  --radius-lg-token: 20px;
+  --radius-xl-token: 32px;
+
+  /* === shadcn 매핑 === */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* === 이름의 결 — 핵심 컬러 (Claude Design 정의) === */
+  --color-background-token: #faf7f2; /* warm ivory */
+  --color-surface-token: #ffffff;
+  --color-surface-2-token: #f3eee6; /* ivory tinted deeper */
+  --color-text-token: #2b2b2b; /* charcoal body */
+  --color-text-2-token: #6b6b6b; /* secondary */
+  --color-text-3-token: #9a948b; /* muted */
+  --color-border-token: rgba(43, 43, 43, 0.12);
+  --color-divider-token: rgba(43, 43, 43, 0.08);
+
+  /* === Primary accent: 차콜 모노톤 (네이비 제거, 옵션 A) ===
+     토큰명은 호환성 위해 navy 그대로 유지하지만 값은 차콜 계열.
+     Primary CTA, h1 강조 등에 사용 → 베이지+그린+검정 3색 미니멀 팔레트로 통일. */
+  --color-navy-token: #2b2b2b; /* primary accent — charcoal */
+  --color-navy-600-token: #111111; /* hover — near black */
+  --color-navy-500-token: #4a4a4a; /* mid */
+  --color-navy-100-token: #e5e3df; /* light tint (paper-tinted gray) */
+  --color-navy-50-token: #f0ede7; /* lightest tint */
+
+  --color-teal-token: #2e7d7a; /* secondary accent */
+  --color-teal-600-token: #3b9390;
+  --color-teal-500-token: #4fa9a6;
+  --color-teal-100-token: #c8e0df;
+  --color-teal-50-token: #e3f0ef;
+
+  --color-gold-token: #c9a96e;
+  --color-gold-600-token: #b49258;
+  --color-gold-100-token: #efe3cb;
+  --color-gold-50-token: #f7efdd;
+
+  --color-score-high-token: #4a7c59; /* 90+ calm green */
+  --color-score-mid-token: #5b7faa;  /* 80+ soft blue */
+  --color-score-low-token: #b5874c;  /* 70+ mustard */
+
+  /* === Inline style용 alias (디자인 컴포넌트가 var(--color-X) 직접 참조) === */
+  --color-background: var(--color-background-token);
+  --color-surface: var(--color-surface-token);
+  --color-surface-2: var(--color-surface-2-token);
+  --color-text: var(--color-text-token);
+  --color-text-2: var(--color-text-2-token);
+  --color-text-3: var(--color-text-3-token);
+  --color-border: var(--color-border-token);
+  --color-divider: var(--color-divider-token);
+
+  --color-navy: var(--color-navy-token);
+  --color-navy-600: var(--color-navy-600-token);
+  --color-navy-500: var(--color-navy-500-token);
+  --color-navy-100: var(--color-navy-100-token);
+  --color-navy-50: var(--color-navy-50-token);
+
+  --color-teal: var(--color-teal-token);
+  --color-teal-600: var(--color-teal-600-token);
+  --color-teal-500: var(--color-teal-500-token);
+  --color-teal-100: var(--color-teal-100-token);
+  --color-teal-50: var(--color-teal-50-token);
+
+  --color-gold: var(--color-gold-token);
+  --color-gold-600: var(--color-gold-600-token);
+  --color-gold-100: var(--color-gold-100-token);
+  --color-gold-50: var(--color-gold-50-token);
+
+  --color-score-high: var(--color-score-high-token);
+  --color-score-mid: var(--color-score-mid-token);
+  --color-score-low: var(--color-score-low-token);
+
+  /* === Typography Scale (Claude Design) === */
+  --fs-h1: 40px;
+  --fs-h2: 28px;
+  --fs-h3: 20px;
+  --fs-body: 16px;
+  --fs-caption: 13px;
+
+  --lh-h1: 1.2;
+  --lh-h2: 1.3;
+  --lh-h3: 1.4;
+  --lh-body: 1.6;
+  --lh-caption: 1.5;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-heavy: 800;
+
+  /* === Spacing (8px grid) === */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* === Radii === */
+  --radius-sm-direct: 6px;
+  --radius-md-direct: 12px;
+  --radius-lg-direct: 20px;
+  --radius-xl-direct: 32px;
+
+  /* Inline style alias */
+  --radius-sm: var(--radius-sm-direct);
+  --radius-md: var(--radius-md-direct);
+  --radius-lg: var(--radius-lg-direct);
+  --radius-xl: var(--radius-xl-direct);
+
+  /* === Shadows === */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* === Motion === */
+  --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --dur-fast: 180ms;
+  --dur-base: 280ms;
+  --dur-slow: 420ms;
+
+  /* === Layout === */
+  --container-max: 1120px;
+  --card-max: 720px;
+
+  /* === shadcn 변수 (이름의 결 톤으로 재정의) === */
+  --background: var(--color-background-token);
+  --foreground: var(--color-text-token);
+
+  --card: var(--color-surface-token);
+  --card-foreground: var(--color-text-token);
+  --popover: var(--color-surface-token);
+  --popover-foreground: var(--color-text-token);
+
+  --primary: var(--color-navy-token);
+  --primary-foreground: var(--color-background-token);
+  --secondary: var(--color-surface-2-token);
+  --secondary-foreground: var(--color-text-token);
+  --muted: var(--color-surface-2-token);
+  --muted-foreground: var(--color-text-2-token);
+  --accent: var(--color-teal-token);
+  --accent-foreground: #ffffff;
+  --destructive: #b5874c; /* amber-warm — red 회피 */
+
+  --border: var(--color-border-token);
+  --input: var(--color-border-token);
+  --ring: var(--color-teal-token);
+
+  --chart-1: var(--color-teal-token);
+  --chart-2: var(--color-navy-token);
+  --chart-3: var(--color-gold-token);
+  --chart-4: var(--color-score-low-token);
+  --chart-5: var(--color-score-mid-token);
+
+  --radius: 0.625rem;
+
+  --sidebar: var(--color-surface-token);
+  --sidebar-foreground: var(--color-text-token);
+  --sidebar-primary: var(--color-navy-token);
+  --sidebar-primary-foreground: var(--color-background-token);
+  --sidebar-accent: var(--color-surface-2-token);
+  --sidebar-accent-foreground: var(--color-text-token);
+  --sidebar-border: var(--color-border-token);
+  --sidebar-ring: var(--color-teal-token);
+}
+
+.dark {
+  /* dark 모드 — 이름의 결은 light 우선이지만 shadcn 호환 유지 */
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html, body {
+    background: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01", "ss02", "case", "tnum";
+    word-break: keep-all;
+  }
+
+  body {
+    @apply min-h-full;
+  }
+
+  h1, .h1 {
+    font-size: var(--fs-h1);
+    line-height: var(--lh-h1);
+    font-weight: var(--fw-bold);
+    letter-spacing: -0.015em;
+    color: var(--color-text);
+  }
+  h2, .h2 {
+    font-size: var(--fs-h2);
+    line-height: var(--lh-h2);
+    font-weight: var(--fw-bold);
+    letter-spacing: -0.01em;
+    color: var(--color-text);
+  }
+  h3, .h3 {
+    font-size: var(--fs-h3);
+    line-height: var(--lh-h3);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+  }
+  p, .body-text {
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+  }
+  .caption {
+    font-size: var(--fs-caption);
+    line-height: var(--lh-caption);
+    color: var(--color-text-2);
+  }
+
+  /* === 한자 표기 === */
+  .hanja {
+    font-family: var(--font-serif);
+    font-weight: var(--fw-regular);
+  }
+  .font-hanja {
+    font-family: var(--font-serif);
+    font-feature-settings: "palt";
+  }
+
+  /* === Tabular figures (Inter) — 점수 표시 === */
+  .font-tabular {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* === Eyebrow 라벨 === */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-teal);
+  }
+}
+
+/* =========================================================
+   Utility — paper grain texture (Claude Design 정의)
+   ========================================================= */
+.paper-grain {
+  position: relative;
+}
+.paper-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image:
+    repeating-linear-gradient(
+      98deg,
+      rgba(43, 43, 43, 0.4) 0 0.5px,
+      transparent 0.5px 3px
+    ),
+    repeating-linear-gradient(
+      14deg,
+      rgba(43, 43, 43, 0.25) 0 0.5px,
+      transparent 0.5px 5px
+    );
+  mix-blend-mode: multiply;
+}
+
+/* ─── Print: 이름 리포트 PDF 저장 ────────────────────────────────── */
+@media print {
+  /* 배경/그림자 제거 → 잉크 절약 + 깔끔 */
+  * {
+    box-shadow: none !important;
+  }
+  /* 페이지 여백 */
+  @page {
+    margin: 16mm;
+    size: A4;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  /* 헤더/푸터/버튼 등 인쇄 시 제외 */
+  header,
+  footer,
+  .hide-on-print,
+  [data-hide-print] {
+    display: none !important;
+  }
+  /* 카드 배경을 흰색으로 단순화 */
+  [class*="surface"],
+  main > * {
+    background: transparent !important;
+    border-color: #ddd !important;
+  }
+  /* 링크 색은 검정으로 (잉크 절약) */
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+  /* 페이지 강제 분할 방지 */
+  section,
+  .breakdown-panel {
+    break-inside: avoid;
+  }
+}

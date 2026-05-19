@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120" role="img" aria-label="Paper grain — wave pattern">
+  <defs>
+    <pattern id="grain" x="0" y="0" width="400" height="24" patternUnits="userSpaceOnUse">
+      <path d="M0 12 Q 25 4 50 12 T 100 12 T 150 12 T 200 12 T 250 12 T 300 12 T 350 12 T 400 12" fill="none" stroke="#2B2B2B" stroke-width="0.6" opacity="0.12"></path>
+    </pattern>
+  </defs>
+  <rect width="400" height="120" fill="#FAF7F2"></rect>
+  <rect width="400" height="120" fill="url(#grain)"></rect>
+  <rect width="400" height="120" fill="url(#grain)" transform="translate(0 12)"></rect>
+</svg>

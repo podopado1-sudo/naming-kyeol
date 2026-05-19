@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="56" height="56" role="img" aria-label="Naming.kyeol mark">
+  <defs>
+    <linearGradient id="gr2" x1="0" x2="1">
+      <stop offset="0" stop-color="#1E3A5F"></stop>
+      <stop offset="1" stop-color="#2E7D7A"></stop>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="56" height="56" rx="14" fill="#FAF7F2" stroke="#1E3A5F" stroke-width="1.5"></rect>
+  <path d="M8 20 Q18 12 28 20 T48 20" fill="none" stroke="url(#gr2)" stroke-width="2" stroke-linecap="round"></path>
+  <path d="M8 30 Q18 22 28 30 T48 30" fill="none" stroke="#1E3A5F" stroke-width="2" stroke-linecap="round" opacity=".85"></path>
+  <path d="M8 40 Q18 32 28 40 T48 40" fill="none" stroke="#C9A96E" stroke-width="2" stroke-linecap="round"></path>
+</svg>

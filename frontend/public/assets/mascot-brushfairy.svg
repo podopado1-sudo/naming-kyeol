@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 180" width="120" height="180" role="img" aria-label="Brush mascot — hybrid">
+  <g fill="none" stroke="#2E7D7A" stroke-linecap="round" stroke-linejoin="round">
+    
+    <path d="M50 28 Q50 22 60 22 Q70 22 70 28 L70 96 Q70 100 60 100 Q50 100 50 96 Z" stroke-width="2"></path>
+    
+    <path d="M54 34 L54 90" stroke-width="0.7" opacity=".35"></path>
+    <path d="M60 32 L60 92" stroke-width="0.7" opacity=".25"></path>
+    <path d="M66 34 L66 90" stroke-width="0.7" opacity=".35"></path>
+    
+    <path d="M50 92 Q60 96 70 92" stroke-width="1.2"></path>
+    <path d="M50 96 Q60 100 70 96" stroke-width="1.2"></path>
+    
+    <path d="M48 102 L72 102 L69 110 L51 110 Z" stroke-width="1.8"></path>
+    
+    <path d="M51 110 Q50 126 54 140 Q57 150 60 160" stroke-width="2.6"></path>
+    <path d="M57 110 Q57 132 60 160" stroke-width="2.6" opacity=".7"></path>
+    <path d="M63 110 Q64 130 62 144 Q61 152 60 160" stroke-width="2.6" opacity=".75"></path>
+    <path d="M69 110 Q70 124 66 140 Q63 152 60 160" stroke-width="2.6" opacity=".6"></path>
+    
+    <path d="M52 156 Q56 160 60 156 T68 156" stroke-width="1.2" opacity=".55"></path>
+    <path d="M54 162 Q57 165 60 162 T66 162" stroke-width="1" opacity=".4"></path>
+    
+    <circle cx="55" cy="48" r="1.9" fill="#2E7D7A" stroke="none"></circle>
+    <circle cx="65" cy="48" r="1.9" fill="#2E7D7A" stroke="none"></circle>
+  </g>
+</svg>

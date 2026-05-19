@@ -1,0 +1,275 @@
+{
+  "_meta": {
+    "description": "한국어 이름 작명에서 회피해야 할 발음/형태소 패턴",
+    "version": "2.0",
+    "note": "한자의 고유 의미와 별개로 한국어 발음/연상에서 부정적인 패턴"
+  },
+  "negative_syllables": {
+    "description": "한자의 고유 의미와 관계없이 부정적 뉘앙스를 유발하는 음절 목록",
+    "high_penalty": [
+      "추", "허", "헐", "썩", "썰", "쓰", "쓸",
+      "흉", "망", "죽", "도",
+      "살", "곤", "악", "약",
+      "병", "탈", "꾀", "썩",
+      "째", "찌", "찐", "쪼",
+      "꺽", "꺼", "꺽", "걍",
+      "탐", "텅", "팅"
+    ],
+    "medium_penalty": [
+      "궂", "궤", "궐",
+      "굶", "굵", "굳",
+      "끔", "끅", "끄",
+      "꿈", "꿉", "꾸",
+      "퍽", "픽", "팍",
+      "툭", "특", "텁"
+    ],
+    "negative_combinations": [
+      {
+        "pattern": "추*",
+        "description": "추로 시작하는 음절은 '추하다'와 연상되어 부정적",
+        "penalty": 15
+      },
+      {
+        "pattern": "허*",
+        "description": "허로 시작하는 음절은 '허하다', '허탈하다'와 연상",
+        "penalty": 15
+      },
+      {
+        "pattern": "*추",
+        "description": "추로 끝나는 음절은 '추하다'와 연상",
+        "penalty": 10
+      },
+      {
+        "pattern": "*허",
+        "description": "허로 끝나는 음절은 '허하다'와 연상",
+        "penalty": 10
+      },
+      {
+        "pattern": "흉*",
+        "description": "흉으로 시작하는 음절은 '흉하다', '흉측'과 연상",
+        "penalty": 20
+      },
+      {
+        "pattern": "*흉",
+        "description": "흉으로 끝나는 음절은 '흉'과 연상",
+        "penalty": 15
+      },
+      {
+        "pattern": "망*",
+        "description": "망으로 시작하는 음절은 '망하다', '망신'과 연상",
+        "penalty": 15
+      },
+      {
+        "pattern": "*망",
+        "description": "망으로 끝나는 음절은 '망' 의미와 연상",
+        "penalty": 10
+      },
+      {
+        "pattern": "죽*",
+        "description": "죽으로 시작/포함 음절은 '죽음'과 직결",
+        "penalty": 25
+      },
+      {
+        "pattern": "*죽",
+        "description": "죽으로 끝나는 음절도 동일",
+        "penalty": 25
+      },
+      {
+        "pattern": "악*",
+        "description": "악으로 시작하면 '악하다', '악마'와 연상",
+        "penalty": 15
+      },
+      {
+        "pattern": "병*",
+        "description": "병으로 시작/포함 음절은 '병약', '질병' 연상",
+        "penalty": 12
+      }
+    ]
+  },
+  "negative_word_patterns": {
+    "description": "전체 이름(성+이름)에서 부정적 의미를 만드는 패턴",
+    "verbs_and_adjectives": [
+      "추하다", "허하다", "허탈하다", "추잡하다",
+      "허약하다", "추악하다", "허술하다", "추상하다",
+      "허무하다", "추진하다", "허위하다", "허해지다",
+      "허해진", "허전하다", "허전해지다",
+      "추워지다", "추워진", "추워하다",
+      "망하다", "망치다", "망설이다", "망그라지다",
+      "죽이다", "죽다", "죽어가다",
+      "흉하다", "흉측하다", "흉내내다",
+      "약하다", "약해지다", "약해진",
+      "병들다", "병약하다", "병나다",
+      "악하다", "악독하다", "악랄하다",
+      "곤하다", "곤란하다", "곤궁하다",
+      "더럽다", "더럽히다",
+      "쪼다", "쪼들리다", "쪼그라들다",
+      "썩다", "썩히다", "썩어가다",
+      "탐하다", "탐욕스럽다",
+      "꼬이다", "꼬꾸라지다", "꼬라지",
+      "찌질하다", "찌푸리다",
+      "삐치다", "삐뚤어지다",
+      "처지다", "처량하다",
+      "고생하다", "고달프다", "고단하다"
+    ],
+    "negative_phrases": [
+      "허추", "추허", "허허", "추추",
+      "허허추", "추추허", "허해",
+      "추광", "허광", "추해",
+      "망신", "망조", "망상", "망명",
+      "죽음", "죽창", "죽음의",
+      "흉기", "흉터", "흉계",
+      "악마", "악당", "악취", "악몽",
+      "병자", "병원", "병동",
+      "곤란", "곤혹", "곤욕",
+      "더러", "더럼",
+      "고생", "고통", "고난", "고독",
+      "사기", "사망", "사형",
+      "썩음", "썩어"
+    ],
+    "morpheme_patterns": {
+      "description": "형태소 겹침으로 인한 부정적 의미 패턴",
+      "patterns": [
+        {
+          "pattern": "허*해*",
+          "description": "허+해 조합은 '허해지다'와 연상",
+          "penalty": 30,
+          "examples": ["허해진", "허해지", "허해"]
+        },
+        {
+          "pattern": "*추*광",
+          "description": "추+광 조합은 '추하다'와 연상",
+          "penalty": 25,
+          "examples": ["추광", "허추광"]
+        },
+        {
+          "pattern": "허*추*",
+          "description": "허+추 조합은 부정적 어감",
+          "penalty": 30,
+          "examples": ["허추광", "허추"]
+        },
+        {
+          "pattern": "*망*",
+          "description": "이름 안 망 글자는 망조와 연상",
+          "penalty": 20,
+          "examples": ["망호", "망지"]
+        },
+        {
+          "pattern": "*죽*",
+          "description": "이름 안 죽 글자는 죽음과 직결",
+          "penalty": 35,
+          "examples": ["죽현", "은죽"]
+        },
+        {
+          "pattern": "*악*",
+          "description": "이름 안 악 글자는 악과 연상",
+          "penalty": 20,
+          "examples": ["악현", "윤악"]
+        },
+        {
+          "pattern": "*흉*",
+          "description": "이름 안 흉 글자는 흉과 직결",
+          "penalty": 25,
+          "examples": ["흉호", "민흉"]
+        },
+        {
+          "pattern": "*병*",
+          "description": "병 글자 단독 사용은 질병 연상",
+          "penalty": 15,
+          "examples": ["병호", "은병"]
+        }
+      ]
+    },
+    "homophone_negative": {
+      "description": "동음이의어 중 부정적 의미를 가진 것들",
+      "patterns": [
+        {
+          "sound": "추",
+          "negative_meanings": ["추하다", "추잡하다", "추악하다"],
+          "penalty": 20
+        },
+        {
+          "sound": "허",
+          "negative_meanings": ["허하다", "허탈하다", "허약하다"],
+          "penalty": 20
+        },
+        {
+          "sound": "망",
+          "negative_meanings": ["망하다", "망조", "망신"],
+          "penalty": 18
+        },
+        {
+          "sound": "흉",
+          "negative_meanings": ["흉하다", "흉기", "흉터"],
+          "penalty": 22
+        },
+        {
+          "sound": "죽",
+          "negative_meanings": ["죽음", "죽다"],
+          "penalty": 30
+        },
+        {
+          "sound": "악",
+          "negative_meanings": ["악하다", "악마", "악취"],
+          "penalty": 20
+        },
+        {
+          "sound": "병",
+          "negative_meanings": ["병약", "질병", "병자"],
+          "penalty": 15
+        },
+        {
+          "sound": "약",
+          "negative_meanings": ["약하다", "병약", "허약"],
+          "penalty": 12
+        },
+        {
+          "sound": "곤",
+          "negative_meanings": ["곤란", "곤혹", "곤궁"],
+          "penalty": 12
+        },
+        {
+          "sound": "탐",
+          "negative_meanings": ["탐욕", "탐닉"],
+          "penalty": 10
+        },
+        {
+          "sound": "도",
+          "negative_meanings": ["도둑", "도주", "도피"],
+          "penalty": 8
+        },
+        {
+          "sound": "살",
+          "negative_meanings": ["살인", "살해"],
+          "penalty": 15
+        },
+        {
+          "sound": "탈",
+          "negative_meanings": ["탈락", "탈출", "탈진"],
+          "penalty": 8
+        },
+        {
+          "sound": "쪼",
+          "negative_meanings": ["쪼들림", "쪼개짐"],
+          "penalty": 12
+        },
+        {
+          "sound": "썩",
+          "negative_meanings": ["썩음", "부패"],
+          "penalty": 18
+        }
+      ]
+    }
+  },
+  "harsh_consonant_patterns": {
+    "description": "딱딱하고 거친 느낌을 주는 자음 패턴",
+    "strong_plosives": ["ㅊ", "ㄲ", "ㅋ", "ㅌ", "ㅍ"],
+    "consecutive_strong_plosives": {
+      "penalty": 25,
+      "description": "강한 파열음이 연속되면 딱딱한 느낌"
+    },
+    "same_consonant_repetition": {
+      "penalty": 20,
+      "description": "동일 자음 반복으로 딱딱한 느낌"
+    }
+  }
+}
