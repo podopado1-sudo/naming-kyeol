@@ -1,0 +1,45 @@
+# Build 출력 (멀티 스테이지에서 새로 빌드)
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Frontend (별도 배포)
+frontend/
+
+# Tests (운영에 불필요)
+Tests/
+
+# 디자인 자산
+NameForm_design/
+NameForm_design.zip
+
+# 로컬 DB·로그
+*.db
+*.db-shm
+*.db-wal
+logs/
+*.log
+
+# Git/IDE
+.git/
+.gitignore
+.gitattributes
+.vs/
+.vscode/
+.idea/
+.claude/
+
+# 문서 (Docker 이미지에 불필요)
+*.md
+docs/
+
+# 임시
+tmp/
+*.tmp
+
+# 환경변수 파일 (Render는 별도 주입)
+*.env
+.env*
+appsettings.Production.json
+appsettings.*.local.json

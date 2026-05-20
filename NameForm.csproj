@@ -36,30 +36,25 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
+  <!-- 데이터 파일을 publish 산출물에 포함 (운영 배포 시 누락 방지)
+       SDK가 기본적으로 Content 항목을 자동 포함하므로 Update로 속성만 변경 -->
   <ItemGroup>
-    <None Update="data-gov.csv">
+    <!-- data/ 디렉토리 전체 — 한자 사전·음운·3음절 큐레이션 등 -->
+    <Content Update="data\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="data-naver.csv">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+
+    <!-- scripts/ 디렉토리의 JSON만 (Python 스크립트는 제외) -->
+    <Content Update="scripts\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="hanja_meanings.json">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+
+    <!-- Unicode Unihan 원본 (HanjaData enhancement용) -->
+    <None Update="Unihan_*.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="hanja_unihan.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="hanja_category_mapping.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="scripts\category_keywords.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="scripts\negative_phonetic_patterns.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="data\hanja_strokes.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
 
