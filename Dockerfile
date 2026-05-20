@@ -42,7 +42,8 @@ ENV ASPNETCORE_URLS=http://+:${PORT:-10000}
 EXPOSE 10000
 
 # 비루트 사용자로 실행 (보안)
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+# .NET 10 공식 이미지는 이미 UID 1000 사용자를 가지고 있으므로 1001 사용
+RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app
 USER appuser
 
 ENTRYPOINT ["dotnet", "NameForm.dll"]
