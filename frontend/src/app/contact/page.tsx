@@ -70,7 +70,7 @@ export default function ContactPage() {
 
         {/* 이메일 CTA */}
         <a
-          href="mailto:podopado1@gmail.com"
+          href="mailto:contact@namingkyeol.com"
           style={{
             display: "flex",
             alignItems: "center",
@@ -87,7 +87,7 @@ export default function ContactPage() {
           <Mail size={20} strokeWidth={1.8} />
           <div>
             <div style={{ fontWeight: 600, fontSize: 15 }}>
-              podopado1@gmail.com
+              contact@namingkyeol.com
             </div>
             <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
               이메일로 문의하기
