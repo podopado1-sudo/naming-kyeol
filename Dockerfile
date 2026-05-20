@@ -41,9 +41,8 @@ COPY --from=build /app/publish ./
 ENV ASPNETCORE_URLS=http://+:${PORT:-10000}
 EXPOSE 10000
 
-# 비루트 사용자로 실행 (보안)
-# .NET 10 공식 이미지는 이미 UID 1000 사용자를 가지고 있으므로 1001 사용
-RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app
-USER appuser
+# 비루트 사용자 — .NET 10 공식 이미지가 제공하는 기본 사용자 사용 ($APP_UID는 보통 1654)
+# Microsoft 공식 권장 패턴: https://github.com/dotnet/dotnet-docker/blob/main/documentation/scenarios/nonroot.md
+USER $APP_UID
 
 ENTRYPOINT ["dotnet", "NameForm.dll"]
