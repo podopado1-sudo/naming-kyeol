@@ -10,6 +10,11 @@ using NameForm.Domain.Models;
 using NameForm.Infrastructure.Data;
 using NameForm.Infrastructure.Repositories;
 
+// Npgsql 6+ 부터 PostgreSQL timestamp with time zone에는 UTC DateTime만 허용.
+// 기존 코드가 DateTime.Parse 등으로 Kind=Unspecified를 만들기 때문에 legacy 호환 모드 활성화.
+// (코드 전체에서 DateTime.SpecifyKind(d, Utc)를 채워 넣는 대안보다 안전)
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: true)
