@@ -101,12 +101,33 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Database 설정
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+// 환경변수 우선순위: DATABASE_URL > ConnectionStrings__DefaultConnection > 기본 SQLite
+// Render/Heroku 등 PaaS는 보통 DATABASE_URL을 postgresql://user:pass@host:port/db 형태로 주입
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=nameform.db";
+
+// PostgreSQL URI 형식(postgresql:// 또는 postgres://)을 Npgsql 형식으로 자동 변환
+// 예: postgresql://user:pass@host:6543/db → Host=host;Port=6543;Database=db;Username=user;Password=pass;...
+if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase)
+    || connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+{
+    var uri = new Uri(connectionString);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var username = Uri.UnescapeDataString(userInfo[0]);
+    var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
+    var database = uri.AbsolutePath.TrimStart('/');
+    var port = uri.Port > 0 ? uri.Port : 5432;
+
+    connectionString =
+        $"Host={uri.Host};Port={port};Database={database};Username={username};Password={password};" +
+        // Supabase/PaaS는 대부분 SSL 필수. Trust Server Certificate=true는 자체서명 인증서 허용
+        "SSL Mode=Require;Trust Server Certificate=true";
+}
 
 if (connectionString.StartsWith("Host=") || connectionString.StartsWith("Server="))
 {
-    // PostgreSQL (프로덕션)
+    // PostgreSQL (프로덕션 — Supabase/Neon/Render PG 등)
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(connectionString));
 }
