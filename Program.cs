@@ -169,11 +169,69 @@ builder.Services.AddScoped<IScoringService, ScoringService>();
 
 var app = builder.Build();
 
-// DB 자동 마이그레이션 (개발 환경에서 편의용)
+// ── DB 스키마 초기화 (운영 환경 견고화) ────────────────────────────────
+// 첫 부팅 시 EnsureCreated가 silent fail하는 케이스 방지:
+// 1. EnsureCreated 호출 → 결과 로깅
+// 2. 핵심 테이블(Recommendations) 존재 여부 직접 확인
+// 3. 없으면 GenerateCreateScript()로 SQL 추출 후 강제 실행
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.EnsureCreated();
+    var initLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        initLogger.LogInformation("DB 초기화 시작: connection 검증 중...");
+        var canConnect = dbContext.Database.CanConnect();
+        initLogger.LogInformation("DB 연결 가능 여부: {CanConnect}", canConnect);
+
+        if (!canConnect)
+        {
+            initLogger.LogWarning("DB 연결 실패 — connection string 확인 필요");
+        }
+        else
+        {
+            initLogger.LogInformation("DB EnsureCreated 호출...");
+            var created = dbContext.Database.EnsureCreated();
+            initLogger.LogInformation("EnsureCreated 결과: {Created} (true=새로 생성, false=이미 존재 또는 일부만 존재)", created);
+
+            // 검증: 핵심 테이블이 실제로 존재하는지 직접 쿼리
+            bool recommendationsExists = false;
+            try
+            {
+                // SELECT 1 FROM "Recommendations" LIMIT 0 — 테이블이 있으면 성공, 없으면 예외
+                dbContext.Database.ExecuteSqlRaw("SELECT 1 FROM \"Recommendations\" LIMIT 0");
+                recommendationsExists = true;
+                initLogger.LogInformation("Recommendations 테이블 존재 확인 OK");
+            }
+            catch (Exception ex)
+            {
+                initLogger.LogWarning("Recommendations 테이블 미존재 — 강제 생성 시도. ({Error})", ex.Message);
+            }
+
+            if (!recommendationsExists)
+            {
+                // GenerateCreateScript로 SQL 추출 후 직접 실행
+                var script = dbContext.Database.GenerateCreateScript();
+                initLogger.LogInformation("강제 스키마 생성 SQL 실행 (길이: {Len} chars)", script.Length);
+                try
+                {
+                    dbContext.Database.ExecuteSqlRaw(script);
+                    initLogger.LogInformation("강제 스키마 생성 성공");
+                }
+                catch (Exception ex)
+                {
+                    // 일부 객체가 이미 존재해서 부분 실패해도 무시 (CREATE TABLE IF NOT EXISTS 아닌 경우)
+                    initLogger.LogWarning("강제 스키마 생성 중 일부 충돌 (이미 존재하는 객체일 수 있음): {Error}", ex.Message);
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        initLogger.LogError(ex, "DB 초기화 실패");
+        // 운영에서 DB 없이도 일단 부팅은 시키되 로그로 명확히 표시
+    }
 }
 
 // 한자 데이터 초기화 (통합 JSON 파일 로드)
