@@ -70,6 +70,14 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  // 검색엔진 사이트 소유 확인 (Google/Naver/Daum)
+  verification: {
+    // Naver Search Advisor — searchadvisor.naver.com에 사이트 등록 후 받은 값
+    other: {
+      "naver-site-verification": "0d1c0eec6b513bc57b51a6e2aa95bcd2ca0072fb",
+    },
+    // Google은 DNS TXT로 이미 인증 완료 (Cloudflare에 google-site-verification 레코드)
+  },
   // Open Graph — 카카오톡/페이스북 공유 미리보기
   openGraph: {
     type: "website",
