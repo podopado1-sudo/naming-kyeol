@@ -20,9 +20,16 @@ const apiOrigin = (() => {
   }
 })();
 
+// dev 모드는 React Fast Refresh / Turbopack 디버거가 eval()을 사용 →
+// 'unsafe-eval'을 dev에서만 허용. production은 그대로 엄격 유지.
+const isDev = process.env.NODE_ENV === "development";
+const scriptSrc = isDev
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'";
+
 const ContentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  scriptSrc,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: https:",
   "font-src 'self' https://fonts.gstatic.com data:",

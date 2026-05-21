@@ -77,6 +77,10 @@ tmp/
 NameForm_design.zip
 NameForm_design/
 
+# 마스코트 작업 산출물 — favicon.io ZIP과 추출 폴더 (이미 public/ 루트로 복사됨)
+frontend/public/mascot/favicon_io*
+frontend/public/mascot/*.zip
+
 # Node modules (frontend)
 node_modules/
 

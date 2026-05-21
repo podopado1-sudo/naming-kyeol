@@ -111,6 +111,13 @@ function Card({
   );
 }
 
+/**
+ * Mascot — 붓요정 실사 이미지 (Midjourney 생성)
+ * 이전 추상 SVG → /brush-sprite.png 로 통일.
+ * pose prop은 호환성 위해 유지 (현재 동일 이미지, 향후 표정별 PNG 추가 시 확장).
+ *
+ * "puzzled" 포즈는 살짝 회전시켜 어리둥절한 분위기를 흉내.
+ */
 function Mascot({
   pose = "default",
   size = 84,
@@ -120,99 +127,46 @@ function Mascot({
   size?: number;
   style?: CSSProperties;
 }) {
-  const eyeOffset = pose === "puzzled" ? -1.2 : 0;
   return (
     <div
-      style={{ width: size, height: size * 1.5, ...style }}
+      style={{
+        width: size,
+        height: size * 1.4,
+        position: "relative",
+        ...style,
+      }}
       aria-hidden="true"
     >
-      <svg viewBox="0 0 120 180" width="100%" height="100%">
-        <g
-          fill="none"
-          stroke="var(--color-teal)"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brush-sprite.png"
+        alt=""
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          transform: pose === "puzzled" ? "rotate(-6deg)" : undefined,
+          filter: "drop-shadow(0 6px 12px rgba(44, 42, 38, 0.10))",
+        }}
+      />
+      {pose === "puzzled" && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: -4,
+            right: -8,
+            fontFamily: "var(--font-mono)",
+            fontSize: size * 0.28,
+            fontWeight: 700,
+            color: "var(--color-vermilion)",
+            transform: "rotate(8deg)",
+            lineHeight: 1,
+          }}
         >
-          <path
-            d="M50 28 Q50 22 60 22 Q70 22 70 28 L70 96 Q70 100 60 100 Q50 100 50 96 Z"
-            strokeWidth="2"
-          />
-          <path d="M54 34 L54 90" strokeWidth="0.7" opacity=".35" />
-          <path d="M60 32 L60 92" strokeWidth="0.7" opacity=".25" />
-          <path d="M66 34 L66 90" strokeWidth="0.7" opacity=".35" />
-          <path d="M50 92 Q60 96 70 92" strokeWidth="1.2" />
-          <path d="M50 96 Q60 100 70 96" strokeWidth="1.2" />
-          <path d="M48 102 L72 102 L69 110 L51 110 Z" strokeWidth="1.8" />
-          <path
-            d="M51 110 Q50 126 54 140 Q57 150 60 160"
-            strokeWidth="2.6"
-          />
-          <path d="M57 110 Q57 132 60 160" strokeWidth="2.6" opacity=".7" />
-          <path
-            d="M63 110 Q64 130 62 144 Q61 152 60 160"
-            strokeWidth="2.6"
-            opacity=".75"
-          />
-          <path
-            d="M69 110 Q70 124 66 140 Q63 152 60 160"
-            strokeWidth="2.6"
-            opacity=".6"
-          />
-          <path
-            d="M52 156 Q56 160 60 156 T68 156"
-            strokeWidth="1.2"
-            opacity=".55"
-          />
-          <circle
-            cx="55"
-            cy={48 + eyeOffset}
-            r="1.9"
-            fill="var(--color-teal)"
-            stroke="none"
-          />
-          <circle
-            cx="65"
-            cy={48 + eyeOffset}
-            r="1.9"
-            fill="var(--color-teal)"
-            stroke="none"
-          />
-          {pose === "puzzled" && (
-            <g>
-              <path d="M53 54 Q60 51 67 54" strokeWidth="1.1" />
-              <text
-                x="78"
-                y="36"
-                fontSize="10"
-                fill="var(--color-text-3)"
-                stroke="none"
-                fontFamily="Inter"
-              >
-                ?
-              </text>
-            </g>
-          )}
-          {pose === "reading" && (
-            <g>
-              <rect
-                x="18"
-                y="58"
-                width="22"
-                height="28"
-                rx="1.5"
-                strokeWidth="1.2"
-                fill="var(--color-surface)"
-              />
-              <path
-                d="M22 64 H36 M22 68 H34 M22 72 H35 M22 76 H32"
-                strokeWidth="0.6"
-                opacity=".55"
-              />
-              <path d="M53 56 Q60 58 67 56" strokeWidth="1.1" />
-            </g>
-          )}
-        </g>
-      </svg>
+          ?
+        </span>
+      )}
     </div>
   );
 }

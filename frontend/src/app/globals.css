@@ -149,6 +149,16 @@
   --color-gold-100-token: #efe3cb;
   --color-gold-50-token: #f7efdd;
 
+  /* === 주홍 印章 (vermilion seal) — 한국 전통 포인트 컬러 (붓요정 마스코트와 통일) ===
+     사용처: 印 스탬프, top-pick 마이크로 액센트, hero 강조점.
+     절대 본문 컬러로 쓰지 말 것 — 어디까지나 액센트 1% 미만으로만. */
+  --color-vermilion-token: #a23b3b;
+  --color-vermilion-600-token: #8a2f2f;
+  --color-vermilion-100-token: #f0d8d8;
+  /* 한지(hanji) 따뜻한 종이톤 — 붓요정 배경색과 통일된 paper-warm */
+  --color-hanji-token: #f5efe2;
+  --color-ink-token: #2c2a26; /* 먹 — 차콜보다 살짝 더 따뜻 */
+
   --color-score-high-token: #4a7c59; /* 90+ calm green */
   --color-score-mid-token: #5b7faa;  /* 80+ soft blue */
   --color-score-low-token: #b5874c;  /* 70+ mustard */
@@ -179,6 +189,12 @@
   --color-gold-600: var(--color-gold-600-token);
   --color-gold-100: var(--color-gold-100-token);
   --color-gold-50: var(--color-gold-50-token);
+
+  --color-vermilion: var(--color-vermilion-token);
+  --color-vermilion-600: var(--color-vermilion-600-token);
+  --color-vermilion-100: var(--color-vermilion-100-token);
+  --color-hanji: var(--color-hanji-token);
+  --color-ink: var(--color-ink-token);
 
   --color-score-high: var(--color-score-high-token);
   --color-score-mid: var(--color-score-mid-token);

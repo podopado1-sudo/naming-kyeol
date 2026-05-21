@@ -70,6 +70,17 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  // 파비콘 / 앱 아이콘 / PWA 매니페스트 (붓요정 마스코트)
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/site.webmanifest",
   // 검색엔진 사이트 소유 확인 (Google/Naver/Daum)
   verification: {
     // Naver Search Advisor — searchadvisor.naver.com에 사이트 등록 후 받은 값
@@ -79,6 +90,7 @@ export const metadata: Metadata = {
     // Google은 DNS TXT로 이미 인증 완료 (Cloudflare에 google-site-verification 레코드)
   },
   // Open Graph — 카카오톡/페이스북 공유 미리보기
+  // TODO: og-image.png (1200×630) 제작 후 이미지가 표시됨. 아직 미제작이면 폴백으로 apple-touch-icon이 사용됨.
   openGraph: {
     type: "website",
     locale: "ko_KR",
@@ -86,12 +98,21 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: `${SITE_NAME} — 한국어 이름 추천 서비스`,
     description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: `${SITE_NAME} — 한국어 이름 추천 서비스`,
+      },
+    ],
   },
   // Twitter/X 카드
   twitter: {
     card: "summary_large_image",
     title: `${SITE_NAME} — 한국어 이름 추천`,
     description: SITE_DESCRIPTION,
+    images: ["/og-image.png"],
   },
   // 모바일/PWA 메타
   formatDetection: {

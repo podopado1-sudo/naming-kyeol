@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>디자인 컨셉 비교 — 이름의 결</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #F4F1EC;
+    color: #2B2B2B;
+    line-height: 1.6;
+    padding: 48px 24px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 56px; }
+  .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 0.25em;
+    color: #2E7D7A;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  h1 { font-size: 36px; font-weight: 700; margin-bottom: 14px; }
+  .sub { color: #6B6B6B; font-size: 15px; max-width: 620px; margin: 0 auto; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 28px;
+  }
+  .card {
+    background: white;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid #E5E0D8;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.06);
+    display: flex; flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 48px rgba(0,0,0,0.1);
+  }
+  .preview {
+    height: 220px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 700;
+  }
+  .preview.a {
+    background: linear-gradient(135deg, #F5EFE2, #E9DDC6);
+    color: #2C2A26;
+    font-family: 'Noto Sans KR', serif;
+  }
+  .preview.b {
+    background: linear-gradient(135deg, #0A0A0A, #1A1714);
+    color: #C9A96E;
+  }
+  .preview.c {
+    background:
+      radial-gradient(circle at 30% 30%, #FFD6E0, transparent 50%),
+      radial-gradient(circle at 70% 70%, #CFE8FF, transparent 50%),
+      #FFFAF5;
+    color: #FF8FA3;
+  }
+  .preview .seal {
+    position: absolute; top: 16px; right: 16px;
+    width: 38px; height: 38px;
+    border-radius: 4px;
+    background: #A23B3B; color: #F5EFE2;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700;
+  }
+  .preview .dot {
+    position: absolute; top: 18px; right: 18px;
+    width: 10px; height: 10px;
+    background: #C9A96E; border-radius: 50%;
+    box-shadow: 0 0 14px #C9A96E;
+  }
+  .preview .star {
+    position: absolute; top: 18px; right: 22px;
+    font-size: 24px;
+  }
+  .card-body { padding: 24px 26px 26px; }
+  .tag {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.15em;
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+  .tag.a { background: #F5EFE2; color: #A23B3B; }
+  .tag.b { background: #1A1714; color: #C9A96E; }
+  .tag.c { background: #FFD6E0; color: #FF8FA3; }
+  h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .desc { color: #6B6B6B; font-size: 14px; margin-bottom: 16px; }
+  .palette { display: flex; gap: 6px; margin-bottom: 18px; }
+  .swatch {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.08);
+  }
+  .specs {
+    font-size: 13px;
+    color: #4A4A4A;
+    line-height: 1.9;
+    border-top: 1px solid #EFEAE2;
+    padding-top: 14px;
+    margin-bottom: 20px;
+  }
+  .specs strong { color: #2B2B2B; font-weight: 600; }
+  .open-btn {
+    display: block;
+    text-align: center;
+    background: #2B2B2B;
+    color: white;
+    text-decoration: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+  .open-btn:hover { background: #111; }
+  .open-btn.b { background: #C9A96E; color: #0A0A0A; }
+  .open-btn.b:hover { background: #d4b377; }
+  .open-btn.c { background: #FF8FA3; }
+  .open-btn.c:hover { background: #ff7a91; }
+
+  footer {
+    margin-top: 64px;
+    text-align: center;
+    color: #8B8270;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="eyebrow">Design Concepts</div>
+    <h1>3가지 디자인 컨셉 비교</h1>
+    <p class="sub">
+      현재 사이트가 "너무 Claude 디자인 같다"는 피드백을 반영해<br/>
+      방향성이 다른 3개의 시안을 준비했습니다. 클릭해서 전체 화면으로 확인하세요.
+    </p>
+  </header>
+
+  <div class="grid">
+    <!-- A: Traditional -->
+    <div class="card">
+      <div class="preview a">
+        <span class="seal">印</span>
+        이름의 결
+      </div>
+      <div class="card-body">
+        <span class="tag a">CONCEPT A</span>
+        <h2>한국 전통</h2>
+        <p class="desc">한지·먹·단청. 명조체와 한자 중심. 사전 충실형, 격조 있는 분위기.</p>
+        <div class="palette">
+          <div class="swatch" style="background:#F5EFE2"></div>
+          <div class="swatch" style="background:#2C2A26"></div>
+          <div class="swatch" style="background:#A23B3B"></div>
+          <div class="swatch" style="background:#8C7548"></div>
+          <div class="swatch" style="background:#5A6B4E"></div>
+        </div>
+        <div class="specs">
+          <strong>색감</strong> 한지색 + 먹색 + 단청 주홍<br/>
+          <strong>폰트</strong> Nanum Myeongjo / Noto Serif KR<br/>
+          <strong>장식</strong> 印章, 창살 패턴<br/>
+          <strong>타겟</strong> 작명 전문성 어필
+        </div>
+        <a href="design-a-traditional.html" class="open-btn" target="_blank">전체 화면으로 보기 →</a>
+      </div>
+    </div>
+
+    <!-- B: Premium -->
+    <div class="card">
+      <div class="preview b">
+        <span class="dot"></span>
+        이름의 결
+      </div>
+      <div class="card-body">
+        <span class="tag b">CONCEPT B</span>
+        <h2>프리미엄</h2>
+        <p class="desc">검정 + 골드. 어둡고 고급스러운 럭셔리 톤. 절제된 여백.</p>
+        <div class="palette">
+          <div class="swatch" style="background:#0A0A0A"></div>
+          <div class="swatch" style="background:#1A1714"></div>
+          <div class="swatch" style="background:#C9A96E"></div>
+          <div class="swatch" style="background:#7B2A2A"></div>
+          <div class="swatch" style="background:#F5EFE5"></div>
+        </div>
+        <div class="specs">
+          <strong>색감</strong> 검정 + 골드 + 와인색<br/>
+          <strong>폰트</strong> Noto Serif KR Black + Inter<br/>
+          <strong>장식</strong> 골드 라인, 미니멀<br/>
+          <strong>타겟</strong> 고급/유료 서비스 느낌
+        </div>
+        <a href="design-b-premium.html" class="open-btn b" target="_blank">전체 화면으로 보기 →</a>
+      </div>
+    </div>
+
+    <!-- C: Family -->
+    <div class="card">
+      <div class="preview c">
+        <span class="star">🌸</span>
+        이름의 결
+      </div>
+      <div class="card-body">
+        <span class="tag c">CONCEPT C</span>
+        <h2>가족 친화</h2>
+        <p class="desc">파스텔 + 둥근 폰트. 아기 이름·신생아 부모 타겟. 따뜻하고 친근.</p>
+        <div class="palette">
+          <div class="swatch" style="background:#FFFAF5"></div>
+          <div class="swatch" style="background:#FFD6E0"></div>
+          <div class="swatch" style="background:#CFE8FF"></div>
+          <div class="swatch" style="background:#C8F0DC"></div>
+          <div class="swatch" style="background:#F4C95D"></div>
+        </div>
+        <div class="specs">
+          <strong>색감</strong> 크림 + 파스텔 핑크/하늘/민트<br/>
+          <strong>폰트</strong> Jua / Gaegu (둥근 손글씨)<br/>
+          <strong>장식</strong> 별·달·구름·하트 이모지<br/>
+          <strong>타겟</strong> 신생아 부모, 가족형 사용자
+        </div>
+        <a href="design-c-family.html" class="open-btn c" target="_blank">전체 화면으로 보기 →</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    선택 후 알려주시면 실제 사이트에 적용합니다 · D:\MyDev\NameForm\docs\mockups\
+  </footer>
+</div>
+
+</body>
+</html>

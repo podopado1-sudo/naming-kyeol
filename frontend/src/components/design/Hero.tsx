@@ -133,6 +133,65 @@ export function Hero({
           textAlign: "center",
         }}
       >
+        {/* 붓요정 마스코트 — Hero 상단 중앙. 옆에 작은 朱印(주인) 액센트 */}
+        <div
+          style={{
+            position: "relative",
+            display: "inline-block",
+            marginBottom: 20,
+            animation: "nk-mascot-float 4.5s ease-in-out infinite",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brush-sprite.png"
+            alt="이름의 결 마스코트 — 붓요정"
+            width={140}
+            height={140}
+            style={{
+              display: "block",
+              objectFit: "contain",
+              filter: "drop-shadow(0 8px 16px rgba(44, 42, 38, 0.12))",
+            }}
+          />
+          {/* 朱印 vermilion seal — 전통 한국화/서예식: 작품 하단 우측 발치에 위치, 살짝 회전.
+              글자: 名(이름 명) — 작명 서비스 정체성과 직결. */}
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              right: -2,
+              bottom: 6,
+              width: 26,
+              height: 26,
+              borderRadius: 3,
+              background: "var(--color-vermilion)",
+              color: "#f5efe2",
+              fontFamily: "var(--font-serif)",
+              fontSize: 15,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transform: "rotate(-3deg)",
+              boxShadow: "0 2px 6px rgba(162, 59, 59, 0.22)",
+              letterSpacing: 0,
+              lineHeight: 1,
+            }}
+          >
+            名
+          </span>
+          <style>{`
+            @keyframes nk-mascot-float {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-6px); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              @keyframes nk-mascot-float { 0%, 100% { transform: none; } }
+            }
+          `}</style>
+        </div>
+
         <div
           style={{
             display: "inline-flex",

@@ -5,7 +5,144 @@
 
 ---
 
-## 마지막 세션 요약 (2026-05-18 종료 — 채점 일관성 + 작명 보강 4건)
+## 마지막 세션 요약 (2026-05-20 — 🎊 정식 출범)
+
+### 🚀 https://namingkyeol.com 공식 서비스 운영 시작
+
+총 1시간 30분 작업으로 도메인 등록부터 SSL 자동 발급까지 풀스택 배포 완료.
+
+### 운영 인프라 (전체 구성)
+
+| 영역 | 서비스 | 상태 | 비용 |
+|------|--------|------|------|
+| **도메인** | Cloudflare Registrar | ✅ namingkyeol.com Active | $10.46/년 (auto-renew ON) |
+| **이메일** | Cloudflare Email Routing | ✅ contact@namingkyeol.com → podopado1@gmail.com | 무료 |
+| **DNS** | Cloudflare DNS | ✅ A/CNAME/MX 등 자동 + 수동 | 무료 |
+| **프론트엔드** | Vercel Hobby | ✅ naming-kyeol.vercel.app + namingkyeol.com | 무료 |
+| **백엔드** | Render Free | ✅ naming-kyeol-api.onrender.com | 무료 (15분 idle sleep) |
+| **DB** | Supabase PostgreSQL | ✅ ap-northeast-2 (Seoul) | 무료 (500MB) |
+| **SSL** | Let's Encrypt (Vercel 자동) | ✅ valid + trusted, TLS 1.3 | 무료 |
+| **저장소** | GitHub | ✅ podopado1-sudo/naming-kyeol | 무료 |
+
+**월 운영비**: 도메인만 **약 ₩1,200/월** (연 ₩14,000) — 호스팅·DB·이메일 모두 무료
+
+### 도메인·계정 운영 정보
+
+| 항목 | 값 |
+|------|-----|
+| 도메인 | namingkyeol.com |
+| 등록일 | 2026-05-19 |
+| **만료일** | **2027-05-19** (Auto-renew ON) |
+| Renewal price | $10.46/년 |
+| Registrar | Cloudflare |
+| 이메일 라우팅 | contact@namingkyeol.com → podopado1@gmail.com |
+| Vercel project | naming-kyeol (podopado's projects) |
+| Render service | naming-kyeol-api (Singapore region) |
+| Supabase project | svcsxemnivymmybyirkn (Seoul region) |
+| GitHub repo | https://github.com/podopado1-sudo/naming-kyeol |
+
+> ⚠️ DB 비밀번호, API Key 등은 **별도 메모장**(`Documents/namingkyeol-secrets.txt`)에 저장됨. 절대 git 커밋 금지.
+
+### 트러블슈팅 5건 (Render 배포 과정)
+
+1. **Render Python 자동 인식** → Dockerfile 추가 + Language Docker 변경
+2. **useradd UID 1000 충돌** (.NET 10 기본 사용자와) → `USER $APP_UID` 패턴 (Microsoft 공식)
+3. **Supabase Transaction Pooler IPv6 timeout** → Session Pooler (포트 5432) 변경
+4. **EnsureCreated silent fail** → SELECT 1로 테이블 존재 검증 + GenerateCreateScript fallback
+5. **Npgsql UTC strict (DateTime Kind=Unspecified)** → `Npgsql.EnableLegacyTimestampBehavior` 활성화
+
+각 fix는 Program.cs / Dockerfile / csproj에 영구 반영.
+
+### 배포 관련 신규 파일·변경
+
+- **`Dockerfile`** (신규) — .NET 10 멀티 스테이지 빌드, $APP_UID 비루트 실행
+- **`.dockerignore`** (신규) — Tests/, frontend/, bin/, logs/ 제외
+- **`NameForm.csproj`** — data/**, scripts/*.json, Unihan_*.txt를 `CopyToPublishDirectory`로 명시
+- **`Program.cs`**
+  - `Npgsql.EnableLegacyTimestampBehavior=true` (최상단)
+  - `DATABASE_URL` 환경변수 우선순위
+  - `postgresql://` URI 자동 → Npgsql 형식 변환
+  - EnsureCreated + 검증 + 강제 스키마 생성 fallback
+- **`.gitignore`** — secrets/*.env 패턴 추가, frontend/.git 제거 (monorepo 통합)
+
+### Vercel/Render 환경변수 (운영)
+
+**Vercel** (`naming-kyeol` 프로젝트):
+- `NEXT_PUBLIC_SITE_URL` = `https://namingkyeol.com`
+- `NEXT_PUBLIC_API_URL` = `https://naming-kyeol-api.onrender.com/api/v1`
+  - ⚠️ `api.namingkyeol.com` 검증 완료되면 `https://api.namingkyeol.com/api/v1`로 교체
+
+**Render** (`naming-kyeol-api`):
+- `DATABASE_URL` = Supabase Session Pooler URI (포트 5432)
+- `ASPNETCORE_ENVIRONMENT` = `Production`
+- `Authentication__Enabled` = `false` (현재 — 필요 시 true로 + ApiKeys 추가)
+- `Cors__AllowedOrigins__0` = `https://namingkyeol.com`
+- `Cors__AllowedOrigins__1` = `https://www.namingkyeol.com`
+- (필요 시 `__3` = `https://naming-kyeol.vercel.app` Vercel 백업)
+
+### Cloudflare DNS 레코드 (자동 + 수동)
+
+| Type | Name | Content | Proxy |
+|------|------|---------|-------|
+| A or CNAME | @ (apex) | Vercel auto-config | DNS only |
+| CNAME | www | (Vercel auto-config hash).vercel-dns.com | DNS only |
+| CNAME | api | naming-kyeol-api.onrender.com | DNS only |
+| MX × 3 | @ | Cloudflare Email Routing | DNS only |
+| TXT (SPF) | @ | v=spf1 include:_spf.mx.cloudflare.net ~all | DNS only |
+| TXT (DMARC) | _dmarc | v=DMARC1; p=none; rua=mailto:... | DNS only |
+
+### 보안 검증 결과 (배포 완료 후 — 2026-05-20 측정)
+
+#### 기본 SSL/TLS
+- ✅ HTTPS: TLS 1.3, AES_128_GCM
+- ✅ Certificate: valid + trusted (Let's Encrypt R12)
+- ✅ All resources served securely
+- ✅ Cloudflare DDoS 자동 방어 (proxy off라 부분 적용)
+
+#### 외부 평가 도구 점수
+
+| 도구 | 등급 | 점수 | 비고 |
+|------|------|------|------|
+| **SecurityHeaders.com** | **A** | 6/6 헤더 모두 ✅ | "Grade capped at A" |
+| **Mozilla Observatory** | **B+** | 80/100 (9/10 통과) | CSP `unsafe-inline` 1건 감점 |
+| **SSL Labs** (예상) | A | TLS 1.3 + Let's Encrypt | Vercel 자동 |
+
+**적용된 보안 헤더 (6/6)**:
+- Content-Security-Policy
+- Permissions-Policy
+- Referrer-Policy
+- Strict-Transport-Security (preload-ready)
+- X-Content-Type-Options
+- X-Frame-Options (DENY)
+
+#### A+ 등급으로 가는 길 (선택, 트래픽 모인 후)
+유일한 감점: **CSP의 `'unsafe-inline'`** — Next.js JSON-LD 인라인 스크립트 때문에 필수
+- 해결책: nonce 도입 (middleware로 매 요청 랜덤 nonce 생성 + CSP에 주입)
+- 작업 시간: 1~2시간
+- 효과: SecurityHeaders.com A → A+, Mozilla Observatory B+ → A 또는 A+
+- 우선순위: 낮음 (현재 B+/A 등급으로도 일반 운영 충분)
+
+### 도메인 만료 관리
+
+- **자동 갱신 ON** — 카드 결제 자동, 별도 메모 불필요
+- Cloudflare 알림: 만료 30일/15일/7일 전 + 결제 실패 시 podopado1@gmail.com으로 이메일
+- 권장 추가 안전장치: Google Calendar에 2027-04-19 (만료 1달 전) 알림 등록
+
+### 남은 후속 작업 (선택, 우선순위 낮음)
+
+1. **`api.namingkyeol.com` 검증 완료** — Render Custom Domain "Retry Verification" 클릭 후 검증 ✅되면 Vercel `NEXT_PUBLIC_API_URL`을 `https://api.namingkyeol.com/api/v1`로 교체 → Redeploy
+2. ~~**보안 점수 측정**~~ ✅ 완료 (2026-05-20): SecurityHeaders A, Mozilla Observatory B+ (80/100). A+ 작업은 트래픽 모인 후
+3. **SEO 등록** — Google Search Console / Naver Search Advisor / Daum 사이트 등록 + sitemap 제출
+4. **og-image 추가** — 1200×630 PNG → `frontend/public/og-image.png` 배치
+5. **`namingkyeol.kr` 등록 (선택)** — 가비아 ₩22,000/년 (브랜드 보호)
+6. **Render Free spin-down 회피 (선택)** — Uptime Robot 무료 ping 5분마다 → cold start 없음
+7. **사용자 테스트** — 친구·지인 5~10명에게 https://namingkyeol.com 공유 + 피드백
+8. **#4 NicknameEngine 패턴 추가** (보류)
+9. **Coming Soon** — 회사명·반려동물 카테고리 실현
+
+---
+
+## 이전 세션 요약 (2026-05-18 — 채점 일관성 + 작명 보강 4건)
 
 ### 1. 채점 단일 진입점 완성 — TwinNameService / NameAnalysisService 통합
 
@@ -722,3 +859,4 @@ npm run build  # 프로덕션 빌드
 | 2026-05-15 (오전) | HarmonyEngine→SajuCalculationService 마이그레이션, 발음오행(25점)/수리사격(15점) 추가, hanja_strokes.json 9,190자, 프론트 HarmonyBreakdownCard 5항목으로 갱신 |
 | 2026-05-15 (오후) | ScoringService 단일 진실의 원천 도입, 채점 미스매치 7건 정리, ExplanationEngine 리포트 형식 전환, LLM 서비스 제거, NamingPrinciples 공통 추출, 5개 엔진 보강 (NamePool/Twin/Required/PureKorean/Creative), 채점 분포 정상화 (creative/three-syllable/pure-korean), 즐겨찾기(localStorage)+PDF(인쇄)+♥/공유 버튼, 한국어 조사 유틸 9곳 적용, 참고용 안내 박스, 로그인 제거 → 저장한 이름, 후원 보류 |
 | 2026-05-18 | TwinNameService/NameAnalysisService도 ScoringService 경유로 통합, `/method`에 "리포트 방식" 섹션, 의미 선호 키워드 입력(#1), 항렬자 한자 직접 지정(#2), 부정 발음 패턴 데이터 v2.0(#3)+snake_case 파싱 버그 수정, NamingPrinciples 새 스킬 4종(#8: 어색결합/받침에코/외래어/음절균형), 용신 보완 가중치 강화(#5), 자원오행 ConfidenceGrade 반영(#6), 81수리 5단계 매핑(#7), 음운론 3종(#9: 동화/단조/두음), 사전 확장(#10: 순우리말 274→326/3음절 91→139), CreativeNamingEngine 성씨 검증(#11), 품질 회귀 테스트(#12), Saju/YongshinService 단위 테스트(#13), 다양성 회귀 +4, 사전 중복 정리, 영한 매핑 90→122, 복성 키워드 4→6, 3개 로더 ResetCache 통일, SEO 풀셋(robots.ts+sitemap.ts+페이지별 layout 12개+JSON-LD+OG/Twitter card). 테스트 +167개 (710→877), 정적 라우트 19→22 |
+| 2026-05-20 | 🎊 **정식 출범** — namingkyeol.com 도메인 등록(Cloudflare $10.46/년, auto-renew ON, 만료 2027-05-19), Email Routing(contact@→podopado1@gmail.com), Supabase PostgreSQL(Seoul ap-northeast-2), Render 백엔드 배포(Dockerfile + $APP_UID), Vercel 프론트 배포(Hobby 무료), DNS 연결 + Let's Encrypt SSL 자동, TLS 1.3. 트러블슈팅 5건 해결(Python자동인식/UID충돌/IPv6timeout/EnsureCreated silent fail/UTC strict). 코드 변경: Dockerfile/.dockerignore 신규, csproj data publish 보장, Program.cs Npgsql legacy timestamp + DB 초기화 견고화, .gitignore secrets 패턴 강화, frontend/.git 제거(monorepo). contact 페이지 mailto를 도메인 이메일로 교체. 보안 점수 측정: **SecurityHeaders A**, **Mozilla Observatory B+ (80/100)**. 877개 테스트 유지. 월 운영비 ~₩1,200 (도메인만) |
