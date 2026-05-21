@@ -110,8 +110,8 @@ export function EvaluateInputPage({
             style={{
               fontFamily: "var(--font-serif)",
               fontSize: 20,
-              fontWeight: 500,
-              color: "var(--color-navy)",
+              fontWeight: 700,
+              color: "var(--color-text)",
               letterSpacing: "-0.01em",
             }}
           >
@@ -122,10 +122,10 @@ export function EvaluateInputPage({
               fontFamily: "Inter, var(--font-sans)",
               fontSize: 11,
               color: "var(--color-text-3)",
-              letterSpacing: "0.06em",
+              letterSpacing: "0.08em",
             }}
           >
-            Naming.kyeol
+            NAMING.KYEOL
           </span>
         </Link>
         <Link
@@ -143,28 +143,20 @@ export function EvaluateInputPage({
       <main
         style={{ padding: "48px 24px 32px", maxWidth: 720, margin: "0 auto" }}
       >
-        {/* Hero */}
-        <div style={{ marginBottom: 32 }}>
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 11,
-              fontWeight: 500,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: "var(--color-text-3)",
-            }}
-          >
+        {/* Hero — 수묵화 톤: eyebrow + 명조 헤드라인 */}
+        <div style={{ marginBottom: 32, textAlign: "center" }}>
+          <div className="eyebrow" style={{ marginBottom: 16 }}>
             Evaluate
           </div>
           <h1
             style={{
-              fontFamily: "var(--font-sans)",
+              fontFamily: "var(--font-serif)",
               fontSize: 34,
-              fontWeight: 500,
-              margin: "10px 0 12px",
+              fontWeight: 700,
+              margin: "0 0 14px",
               letterSpacing: "-0.018em",
-              lineHeight: 1.25,
+              lineHeight: 1.3,
+              color: "var(--color-text)",
             }}
           >
             마음에 둔 이름,
@@ -256,15 +248,12 @@ export function EvaluateInputPage({
           </aside>
         </div>
 
-        {/* Form card */}
+        {/* Form card — 수묵화 톤: 직선 + 모서리 ㄱㄴ + sumi-form (underline 입력) */}
         <div
+          className="sumi-card sumi-form"
           style={{
             maxWidth: 560,
             margin: "0 auto",
-            background: "var(--color-surface)",
-            borderRadius: "var(--radius-lg)",
-            border: "1px solid var(--color-border)",
-            boxShadow: "var(--shadow-md)",
             padding: 0,
           }}
         >
@@ -415,29 +404,37 @@ export function EvaluateInputPage({
               borderTop: "1px solid #F0EAE0",
             }}
           >
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              style={{
-                width: "100%",
-                padding: "14px 22px",
-                background: canSubmit
-                  ? "var(--color-navy)"
-                  : "var(--color-surface-2)",
-                color: canSubmit ? "#fff" : "var(--color-text-3)",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                fontFamily: "var(--font-sans)",
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: canSubmit ? "pointer" : "not-allowed",
-                letterSpacing: "-0.01em",
-                transition: "all 180ms",
-              }}
-            >
-              {canSubmit ? "이 이름 평가받기 →" : "이름을 입력해주세요"}
-            </button>
+            {/* 제출 — 수묵화 톤: 풀폭 명조 + 朱印 名 도장. 비활성 시도 cursor:default로 부드럽게 */}
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                style={{
+                  width: "100%",
+                  padding: "16px 22px",
+                  background: canSubmit
+                    ? "var(--color-ink-jiao)"
+                    : "var(--color-surface-2)",
+                  color: canSubmit
+                    ? "var(--color-background)"
+                    : "var(--color-text-3)",
+                  border: "none",
+                  borderRadius: 0,
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 15,
+                  fontWeight: 700,
+                  cursor: canSubmit ? "pointer" : "default",
+                  letterSpacing: "0.1em",
+                  transition: "all 180ms",
+                }}
+              >
+                {canSubmit ? "이 이름 살펴보기" : "이름을 입력해주세요"}
+              </button>
+              {canSubmit && (
+                <span className="sumi-stamp-name" aria-hidden>名</span>
+              )}
+            </div>
             {canSubmit && !birth && (
               <div
                 style={{

@@ -23,14 +23,13 @@ export function Mark({ size = 36 }: { size?: number }) {
         width: size,
         height: size,
         flexShrink: 0,
-        background: "var(--color-hanji)",
+        background: "var(--color-surface-2)",
         borderRadius: radius,
-        border: "1px solid rgba(43, 43, 43, 0.08)",
+        border: "1px solid var(--color-ink-qing)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",
-        boxShadow: "0 1px 2px rgba(43, 43, 43, 0.04)",
       }}
     >
       <Image

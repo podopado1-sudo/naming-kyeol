@@ -4,8 +4,7 @@
  */
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { Baby, Briefcase, PawPrint, Pencil } from "lucide-react";
+import { useState } from "react";
 
 export type CategoryKey = "baby" | "rename" | "company" | "pet";
 
@@ -14,10 +13,11 @@ export interface CategoryItem {
   title: string;
   copy: string;
   status: "live" | "coming";
-  icon: ReactNode;
+  /** 수묵화 톤 — 카드 좌상단에 큰 한자 한 글자 (lucide 아이콘 대체) */
+  hanja: string;
+  /** 한자 옆 작은 음 (한글) */
+  reading: string;
 }
-
-const ICON_PROPS = { size: 28, strokeWidth: 1.4 } as const;
 
 const ITEMS: CategoryItem[] = [
   {
@@ -25,28 +25,32 @@ const ITEMS: CategoryItem[] = [
     title: "아기 이름",
     copy: "첫 선물이 되는 이름",
     status: "live",
-    icon: <Baby {...ICON_PROPS} />,
+    hanja: "兒",
+    reading: "아이",
   },
   {
     key: "rename",
     title: "개명",
     copy: "지금 나에게 맞는 이름으로",
     status: "live",
-    icon: <Pencil {...ICON_PROPS} />,
+    hanja: "改",
+    reading: "개명",
   },
   {
     key: "company",
     title: "회사명",
     copy: "오래 불릴 이름의 결",
     status: "coming",
-    icon: <Briefcase {...ICON_PROPS} />,
+    hanja: "商",
+    reading: "상호",
   },
   {
     key: "pet",
     title: "반려동물 이름",
     copy: "함께하는 이름",
     status: "coming",
-    icon: <PawPrint {...ICON_PROPS} />,
+    hanja: "寵",
+    reading: "반려",
   },
 ];
 
@@ -114,76 +118,108 @@ export function Categories({
                 display: "flex",
                 flexDirection: "column",
                 position: "relative",
-                background: isComing
-                  ? "var(--color-surface-2)"
-                  : "var(--color-surface)",
-                borderRadius: "var(--radius-lg)",
-                boxShadow: isHover
-                  ? "var(--shadow-md)"
-                  : "var(--shadow-sm)",
-                padding: "28px 24px",
+                background: "var(--color-background)",
+                border: `1px solid ${isHover ? "var(--color-ink-jiao)" : "var(--color-ink-qing)"}`,
+                padding: "28px 22px",
                 textDecoration: "none",
                 color: "var(--color-text)",
                 transition: "all 280ms cubic-bezier(.2,.6,.2,1)",
                 transform: isHover ? "translateY(-2px)" : "none",
                 minHeight: 196,
-                opacity: isComing ? 0.92 : 1,
+                opacity: isComing ? 0.78 : 1,
               }}
             >
+              {/* hover 시 우상단 朱印 — 작품 인증 도장 메타포 */}
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 14,
+                  right: 14,
+                  width: 18,
+                  height: 18,
+                  background: "var(--color-vermilion)",
+                  color: "var(--color-background)",
+                  borderRadius: 2,
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: "rotate(-3deg)",
+                  opacity: isHover && !isComing ? 1 : 0,
+                  transition: "opacity 200ms",
+                }}
+              >
+                名
+              </span>
+
               {isComing && (
                 <div
                   style={{
                     position: "absolute",
                     top: 14,
                     right: 14,
-                    fontSize: 11,
-                    fontWeight: 500,
-                    letterSpacing: "0.01em",
-                    color: "#8a6d3b",
-                    background: "#f5eed8",
-                    padding: "3px 9px",
-                    borderRadius: 999,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "var(--color-text-3)",
+                    border: "1px solid var(--color-ink-qing)",
+                    padding: "2px 8px",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  🔜 준비 중
+                  Coming
                 </div>
               )}
 
+              {/* 한자 아이콘 — 수묵화: 큰 명조 한 글자 + 작은 한글 음 */}
               <div
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background: isComing
-                    ? "var(--color-surface)"
-                    : "var(--color-teal-50)",
-                  color: isComing
-                    ? "var(--color-text-2)"
-                    : "var(--color-teal)",
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 44,
+                  fontWeight: 700,
+                  color: "var(--color-text)",
+                  lineHeight: 1,
+                  marginBottom: 18,
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 20,
+                  alignItems: "baseline",
+                  gap: 8,
                 }}
               >
-                {it.icon}
+                {it.hanja}
+                <span
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 11,
+                    fontWeight: 400,
+                    color: "var(--color-text-3)",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {it.reading}
+                </span>
               </div>
               <h3
                 style={{
-                  fontSize: 18,
-                  fontWeight: 600,
+                  fontFamily: "var(--font-serif)",
+                  fontSize: 17,
+                  fontWeight: 700,
                   margin: 0,
-                  marginBottom: 6,
+                  marginBottom: 8,
                   letterSpacing: "-0.01em",
+                  color: "var(--color-text)",
                 }}
               >
                 {it.title}
               </h3>
               <p
                 style={{
-                  fontSize: 13.5,
-                  lineHeight: 1.55,
+                  fontSize: 13,
+                  lineHeight: 1.7,
                   color: "var(--color-text-2)",
                   margin: 0,
                   flex: 1,
@@ -194,17 +230,16 @@ export function Categories({
               <div
                 style={{
                   marginTop: 18,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: 500,
-                  color: isComing
-                    ? "var(--color-text-2)"
-                    : "var(--color-teal)",
+                  color: "var(--color-text-2)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 4,
+                  letterSpacing: "0.02em",
                 }}
               >
-                {isComing ? "알림 받기" : "자세히"}
+                {isComing ? "알림 받기" : "자세히 보기"}
                 <span
                   style={{
                     transition: "transform 180ms",

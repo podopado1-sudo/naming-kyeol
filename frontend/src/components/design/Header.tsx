@@ -98,24 +98,27 @@ export function Header({
           <div>
             <div
               style={{
-                fontSize: 16,
+                fontFamily: "var(--font-serif)",
+                fontSize: 17,
                 fontWeight: 700,
                 color: "var(--color-text)",
                 letterSpacing: "-0.01em",
+                lineHeight: 1.2,
               }}
             >
               이름의 결
             </div>
             <div
               style={{
-                fontSize: 11,
-                color: "var(--color-text-2)",
-                letterSpacing: "0.04em",
-                marginTop: -2,
+                fontFamily: "var(--font-mono)",
+                fontSize: 10.5,
+                color: "var(--color-text-3)",
+                letterSpacing: "0.08em",
+                marginTop: -1,
                 whiteSpace: "nowrap",
               }}
             >
-              Naming.kyeol
+              NAMING.KYEOL
             </div>
           </div>
         </Link>

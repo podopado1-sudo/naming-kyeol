@@ -260,7 +260,13 @@ function BabyNamingInner() {
       {/* Hero */}
       <header className="mb-12 space-y-4 text-center">
         <p className="eyebrow">NAMING · 이름 찾기</p>
-        <h1 className="text-3xl md:text-4xl font-medium leading-snug tracking-tight text-navy">
+        <h1
+          className="text-3xl md:text-4xl font-bold leading-snug tracking-tight"
+          style={{
+            fontFamily: "var(--font-serif)",
+            color: "var(--color-text)",
+          }}
+        >
           당신이라는 고유한 흐름이
           <br />
           아름다운 문장이 되도록.
@@ -295,7 +301,7 @@ function BabyNamingInner() {
       )}
 
       {/* ===== Form ===== */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="sumi-form space-y-6">
         {/* 기본 정보 */}
         <fieldset className="space-y-4">
           <legend className="text-sm font-semibold">기본 정보</legend>
@@ -518,16 +524,31 @@ function BabyNamingInner() {
 
         <Separator />
 
-        {/* 제출 */}
-        <Button
-          type="submit"
-          size="lg"
-          className="w-full"
-          disabled={loading}
-        >
-          {loading && <Loader2 className="size-4 animate-spin" />}
-          {loading ? "추천 생성 중..." : "이름 추천받기"}
-        </Button>
+        {/* 제출 — 수묵화 톤: 풀폭 + 명조 + 朱印 名 도장 */}
+        <div style={{ position: "relative" }}>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={loading}
+            style={{
+              borderRadius: 0,
+              padding: "18px",
+              height: "auto",
+              fontFamily: "var(--font-serif)",
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              fontSize: 15,
+            }}
+          >
+            {loading && <Loader2 className="size-4 animate-spin" />}
+            {loading ? "추천 생성 중..." : "이름 추천받기"}
+          </Button>
+          {/* 朱印 名 도장 — 로딩 중에는 숨김 (시각적 노이즈 방지) */}
+          {!loading && (
+            <span className="sumi-stamp-name" aria-hidden>名</span>
+          )}
+        </div>
       </form>
 
       </div>

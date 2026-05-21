@@ -13,6 +13,7 @@ import {
 } from "@/components/design/Categories";
 import { ProPaths, type ProPathKey } from "@/components/design/ProPaths";
 import { WhyKyeol } from "@/components/design/WhyKyeol";
+import { BrushDivider } from "@/components/design/BrushDivider";
 import {
   ComingSoonModal,
   type ComingSoonMode,
@@ -97,11 +98,14 @@ export default function HomePage() {
 
       <main>
         <Hero onStart={handleHeroStart} />
+        <BrushDivider />
         <Categories
           onSelect={handleCategorySelect}
           onNotify={handleCategoryNotify}
         />
+        <BrushDivider />
         <ProPaths onSelect={handleProPathSelect} />
+        <BrushDivider />
         <WhyKyeol />
       </main>
 

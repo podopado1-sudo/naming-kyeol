@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>이름의 결 — 수묵화 톤 (D)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700;900&family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* === 한지/먹 톤 — 베이지에서 탈피 === */
+    --paper:        #FBFAF5;   /* 화선지 백색 (현재 #FAF7F2보다 차가움) */
+    --paper-2:      #F4F2EB;   /* 살짝 깊은 종이 */
+    --paper-tint:   #F8F6F0;   /* 카드 등 미세 톤 차이 */
+
+    /* === 먹의 다섯 농도 (五墨) === */
+    --ink-焦:       #14120F;   /* 焦 — 가장 짙은 먹, 헤드라인 */
+    --ink-濃:       #2C2A26;   /* 濃 — 본문 */
+    --ink-重:       #4A4640;   /* 重 — 강조되지 않은 본문 */
+    --ink-淡:       #8A857C;   /* 淡 — 보조 텍스트 */
+    --ink-清:       #C2BDB3;   /* 清 — 옅은 윤곽선 */
+
+    --vermilion:    #A23B3B;   /* 朱 — 印章, 강조 */
+    --vermilion-bg: #F0D8D8;
+
+    --shadow-ink:   0 6px 18px rgba(20, 18, 15, 0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--paper);
+    color: var(--ink-濃);
+    font-family: 'Noto Sans KR', sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    word-break: keep-all;
+  }
+  .container { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+  .font-serif { font-family: 'Noto Serif KR', serif; }
+  .font-tabular { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+
+  /* ──────────────────────────────────────────────────────────────
+     먹 번짐 SVG 배경 (Hero 뒤 + 모서리 곳곳)
+     ────────────────────────────────────────────────────────────── */
+  .ink-wash {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.55;
+  }
+  .ink-wash.tl { top: -60px; left: -80px; width: 380px; height: 380px; }
+  .ink-wash.br { bottom: -100px; right: -120px; width: 480px; height: 380px; }
+  .ink-wash.hero-mist { top: 80px; right: 12%; width: 320px; height: 280px; opacity: 0.35; }
+
+  /* ──────────────────────────────────────────────────────────────
+     Header
+     ────────────────────────────────────────────────────────────── */
+  header {
+    background: rgba(251, 250, 245, 0.88);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--ink-清);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; }
+  .logo-wrap { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .logo-frame {
+    width: 40px; height: 40px;
+    background: var(--paper-2);
+    border-radius: 10px;
+    border: 1px solid var(--ink-清);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .logo-frame img { width: 36px; height: 36px; object-fit: contain; }
+  .logo-title {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink-焦);
+    letter-spacing: -0.01em;
+  }
+  .logo-sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px;
+    color: var(--ink-淡);
+    letter-spacing: 0.08em;
+    margin-top: -2px;
+  }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    color: var(--ink-重);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 2px;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .nav-links a:hover { color: var(--ink-焦); border-bottom-color: var(--ink-焦); }
+  .nav-links a.active { color: var(--ink-焦); border-bottom-color: var(--ink-焦); }
+
+  /* ──────────────────────────────────────────────────────────────
+     Hero
+     ────────────────────────────────────────────────────────────── */
+  .hero {
+    position: relative;
+    padding: 80px 0 96px;
+    overflow: hidden;
+    text-align: center;
+  }
+  .hero-inner { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; }
+  .mascot-wrap {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 20px;
+  }
+  .mascot-wrap img {
+    width: 160px; height: 160px;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 18px rgba(20, 18, 15, 0.12));
+  }
+  .seal-stamp {
+    position: absolute;
+    right: -2px; bottom: 6px;
+    width: 30px; height: 30px;
+    background: var(--vermilion);
+    color: var(--paper);
+    border-radius: 4px;
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+    transform: rotate(-3deg);
+    box-shadow: 0 3px 8px rgba(162, 59, 59, 0.28);
+  }
+  .eyebrow {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--vermilion);
+    padding: 4px 14px;
+    border-top: 1px solid var(--ink-清);
+    border-bottom: 1px solid var(--ink-清);
+    margin-bottom: 28px;
+  }
+  h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: clamp(34px, 5vw, 52px);
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    color: var(--ink-焦);
+    margin-bottom: 24px;
+  }
+  h1 .light { font-weight: 400; color: var(--ink-濃); }
+  .hero-sub {
+    font-size: 16px;
+    color: var(--ink-重);
+    max-width: 540px;
+    margin: 0 auto 40px;
+    line-height: 1.85;
+  }
+
+  /* ──────────────────────────────────────────────────────────────
+     Form Card — 수묵화: 카드 fill 거의 없음, 얇은 먹선
+     ────────────────────────────────────────────────────────────── */
+  .form-card {
+    position: relative;
+    max-width: 640px;
+    margin: 0 auto;
+    background: var(--paper);
+    border: 1px solid var(--ink-清);
+    padding: 32px;
+    text-align: left;
+  }
+  .form-card::before {
+    /* 좌상단 모서리 먹 한방울 — 손그림 느낌 */
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 24px; height: 24px;
+    border-top: 2px solid var(--ink-焦);
+    border-left: 2px solid var(--ink-焦);
+  }
+  .form-card::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 24px; height: 24px;
+    border-bottom: 2px solid var(--ink-焦);
+    border-right: 2px solid var(--ink-焦);
+  }
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--ink-清);
+    margin: -8px -8px 24px;
+  }
+  .tab {
+    flex: 1;
+    background: none; border: none;
+    padding: 12px 0;
+    font-family: 'Noto Serif KR', serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink-淡);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+  }
+  .tab.active { color: var(--ink-焦); }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 2px;
+    background: var(--ink-焦);
+  }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .field label {
+    display: block;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12px;
+    color: var(--ink-淡);
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--ink-清);
+    color: var(--ink-焦);
+    padding: 8px 0;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-bottom-color: var(--ink-焦);
+  }
+
+  /* 朱印 스타일 CTA 버튼 */
+  .submit {
+    position: relative;
+    width: 100%;
+    margin-top: 16px;
+    background: var(--ink-焦);
+    color: var(--paper);
+    border: none;
+    padding: 16px;
+    font-family: 'Noto Serif KR', serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .submit::before {
+    /* 우측 朱印 액센트 */
+    content: '名';
+    position: absolute;
+    top: 6px; right: 8px;
+    width: 22px; height: 22px;
+    background: var(--vermilion);
+    color: var(--paper);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 2px;
+    transform: rotate(-2deg);
+  }
+  .submit:hover { background: #000; }
+
+  /* ──────────────────────────────────────────────────────────────
+     Section divider — 붓 자국
+     ────────────────────────────────────────────────────────────── */
+  .divider-brush {
+    display: block;
+    margin: 0 auto;
+    width: 220px;
+    height: 24px;
+    opacity: 0.7;
+  }
+
+  /* ──────────────────────────────────────────────────────────────
+     Categories — 4개 카드, 흰 안쪽 + 얇은 먹선 + 한자 아이콘
+     ────────────────────────────────────────────────────────────── */
+  .section {
+    position: relative;
+    padding: 96px 0;
+  }
+  .section-head { text-align: center; margin-bottom: 48px; }
+  .section-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    color: var(--vermilion);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--ink-焦);
+    margin-bottom: 12px;
+  }
+  .section-sub { color: var(--ink-重); font-size: 15px; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--ink-清);
+    padding: 28px 22px;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: pointer;
+  }
+  .card:hover {
+    border-color: var(--ink-焦);
+    transform: translateY(-2px);
+  }
+  .card-hanja {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--ink-焦);
+    line-height: 1;
+    margin-bottom: 16px;
+  }
+  .card-hanja .small {
+    font-size: 11px;
+    color: var(--ink-淡);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 400;
+    margin-left: 6px;
+    letter-spacing: 0.05em;
+  }
+  .card-title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink-焦);
+    margin-bottom: 8px;
+  }
+  .card-desc {
+    font-size: 13px;
+    color: var(--ink-重);
+    line-height: 1.7;
+  }
+  .card-seal {
+    position: absolute;
+    top: 16px; right: 16px;
+    width: 18px; height: 18px;
+    background: var(--vermilion);
+    color: var(--paper);
+    border-radius: 2px;
+    font-family: 'Noto Serif KR', serif;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transform: rotate(-3deg);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .card:hover .card-seal { opacity: 1; }
+
+  /* ──────────────────────────────────────────────────────────────
+     Footer
+     ────────────────────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--ink-清);
+    padding: 36px 0 48px;
+    text-align: center;
+    color: var(--ink-淡);
+    font-size: 13px;
+  }
+  footer .seal-line {
+    display: inline-flex; align-items: center; gap: 14px;
+    margin-bottom: 12px;
+    font-family: 'Noto Serif KR', serif;
+    color: var(--ink-濃);
+  }
+  footer .seal-line .stamp {
+    width: 22px; height: 22px; background: var(--vermilion); color: var(--paper);
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 2px;
+    transform: rotate(-3deg);
+  }
+
+  /* concept note */
+  .concept-note {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    background: var(--ink-焦); color: var(--paper);
+    font-family: 'Noto Serif KR', serif;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    padding: 10px 18px;
+    border-radius: 2px;
+    z-index: 100;
+  }
+  .concept-note .stamp {
+    display: inline-block;
+    width: 16px; height: 16px;
+    background: var(--vermilion);
+    margin-right: 8px;
+    vertical-align: -3px;
+    border-radius: 2px;
+  }
+
+  @media (max-width: 800px) {
+    .cards { grid-template-columns: 1fr 1fr; }
+    .field-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SVG defs: 먹 번짐 ═══════════════ -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <radialGradient id="ink-wash-grad" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#2C2A26" stop-opacity="0.16" />
+      <stop offset="55%" stop-color="#2C2A26" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#2C2A26" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="ink-wash-grad-light" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#2C2A26" stop-opacity="0.10" />
+      <stop offset="60%" stop-color="#2C2A26" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#2C2A26" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+</svg>
+
+<header>
+  <div class="container nav">
+    <a href="#" class="logo-wrap">
+      <div class="logo-frame">
+        <img src="../../frontend/public/brush-sprite-head.png" alt="이름의 결 마스코트" />
+      </div>
+      <div>
+        <div class="logo-title">이름의 결</div>
+        <div class="logo-sub">NAMING.KYEOL</div>
+      </div>
+    </a>
+    <nav class="nav-links">
+      <a href="#" class="active">홈</a>
+      <a href="#">이름 찾기</a>
+      <a href="#">작명 가이드</a>
+      <a href="#">작명 원리</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero">
+  <!-- 먹 번짐 배경 얼룩 -->
+  <svg class="ink-wash tl" viewBox="0 0 400 400">
+    <ellipse cx="200" cy="200" rx="180" ry="140" fill="url(#ink-wash-grad)" />
+  </svg>
+  <svg class="ink-wash hero-mist" viewBox="0 0 400 400">
+    <ellipse cx="200" cy="200" rx="180" ry="120" fill="url(#ink-wash-grad-light)" />
+  </svg>
+
+  <div class="container hero-inner">
+    <div class="mascot-wrap">
+      <img src="../../frontend/public/brush-sprite.png" alt="붓요정 마스코트" />
+      <span class="seal-stamp">名</span>
+    </div>
+
+    <div class="eyebrow">발음 · 의미 · 세대 중립</div>
+
+    <h1>
+      <span class="light">결이 고운 이름은</span><br/>
+      시간이 흐를수록 증명됩니다
+    </h1>
+
+    <p class="hero-sub">
+      유행이 아닌 발음과 의미, 세대 중립도를 기준으로 이름을 살펴봅니다.<br/>
+      아기·개명·회사명·반려동물 — 목적에 맞게 이름의 결을 읽어드려요.
+    </p>
+
+    <!-- 입력 폼 -->
+    <div class="form-card">
+      <div class="tabs">
+        <button class="tab active">이름 추천</button>
+        <button class="tab">이름 평가</button>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>성씨</label>
+          <input type="text" placeholder="예: 김" />
+        </div>
+        <div class="field">
+          <label>성별</label>
+          <select><option>중립</option><option>남아</option><option>여아</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>생년월일</label>
+          <input type="date" />
+        </div>
+        <div class="field">
+          <label>이름 톤</label>
+          <select><option>균형</option><option>부드러움</option><option>강함</option></select>
+        </div>
+      </div>
+      <button class="submit">이름 추천 받기</button>
+    </div>
+  </div>
+</section>
+
+<!-- 붓 자국 구분선 -->
+<svg class="divider-brush" viewBox="0 0 220 24">
+  <path d="M 4 14 Q 30 6, 60 12 T 120 13 Q 160 10, 200 16 L 216 14"
+        stroke="#2C2A26" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.55" />
+  <path d="M 8 16 Q 40 11, 80 15 T 160 13" stroke="#2C2A26" stroke-width="0.9" stroke-linecap="round" fill="none" opacity="0.3" />
+</svg>
+
+<!-- ═══════════════ CATEGORIES ═══════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-eyebrow">Categories</div>
+      <h2 class="section-title">목적에 따라 다른 결</h2>
+      <p class="section-sub">아기·개명·회사명·반려동물 — 상황에 맞는 작명 흐름을 안내합니다.</p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <span class="card-seal">名</span>
+        <div class="card-hanja">兒<span class="small">아이</span></div>
+        <div class="card-title">아기 이름</div>
+        <div class="card-desc">신생아·태명. 사주와 발음 조화로 미래의 결을 살펴봅니다.</div>
+      </div>
+      <div class="card">
+        <span class="card-seal">名</span>
+        <div class="card-hanja">改<span class="small">개명</span></div>
+        <div class="card-title">개명</div>
+        <div class="card-desc">기존 이름을 다시. 본인의 결을 분석해 더 어울리는 이름을 찾습니다.</div>
+      </div>
+      <div class="card">
+        <span class="card-seal">名</span>
+        <div class="card-hanja">商<span class="small">상호</span></div>
+        <div class="card-title">회사명</div>
+        <div class="card-desc">사업의 결. 발음·상징·기억성을 기준으로 상호 후보를 제안합니다.</div>
+      </div>
+      <div class="card">
+        <span class="card-seal">名</span>
+        <div class="card-hanja">寵<span class="small">반려</span></div>
+        <div class="card-title">반려동물</div>
+        <div class="card-desc">함께할 가족. 부르기 쉬운 발음과 따뜻한 의미로 결을 잡습니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <div class="container">
+    <div class="seal-line">
+      이름의 결 <span class="stamp">印</span> NAMING.KYEOL
+    </div>
+    <div>© 2026 · contact@namingkyeol.com</div>
+  </div>
+</footer>
+
+<div class="concept-note">
+  <span class="stamp"></span>CONCEPT D — 수묵화
+</div>
+
+</body>
+</html>

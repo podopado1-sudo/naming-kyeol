@@ -106,8 +106,8 @@ export function Footer() {
   return (
     <footer
       style={{
-        borderTop: "1px solid var(--color-divider)",
-        background: "var(--color-surface-2)",
+        borderTop: "1px solid var(--color-ink-qing)",
+        background: "var(--color-background)",
         padding: "48px 32px 40px",
         marginTop: 64,
       }}
@@ -128,21 +128,32 @@ export function Footer() {
               display: "flex",
               alignItems: "center",
               gap: 10,
-              marginBottom: 12,
+              marginBottom: 14,
             }}
           >
-            <Mark size={28} />
+            <Mark size={32} />
             <div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>이름의 결</div>
               <div
                 style={{
-                  fontSize: 11,
-                  color: "var(--color-text-3)",
-                  letterSpacing: "0.04em",
-                  marginTop: -2,
+                  fontFamily: "var(--font-serif)",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  color: "var(--color-text)",
+                  letterSpacing: "-0.01em",
                 }}
               >
-                Naming.kyeol
+                이름의 결
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10.5,
+                  color: "var(--color-text-3)",
+                  letterSpacing: "0.08em",
+                  marginTop: -1,
+                }}
+              >
+                NAMING.KYEOL
               </div>
             </div>
           </div>

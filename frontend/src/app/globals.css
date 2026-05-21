@@ -119,24 +119,28 @@
 }
 
 :root {
-  /* === 이름의 결 — 핵심 컬러 (Claude Design 정의) === */
-  --color-background-token: #faf7f2; /* warm ivory */
+  /* === 이름의 결 — 핵심 컬러 (수묵화 톤, 2026-05-21 개편) ===
+     베이지(Claude 톤) → 차가운 화선지 백색 + 五墨(다섯 농도) 먹.
+     이전 톤(warm ivory #FAF7F2, charcoal #2B2B2B)은 token 값만 교체. */
+  --color-background-token: #fbfaf5; /* 화선지 백색 — 베이지 탈피 (차가운 백색 위주) */
   --color-surface-token: #ffffff;
-  --color-surface-2-token: #f3eee6; /* ivory tinted deeper */
-  --color-text-token: #2b2b2b; /* charcoal body */
-  --color-text-2-token: #6b6b6b; /* secondary */
-  --color-text-3-token: #9a948b; /* muted */
-  --color-border-token: rgba(43, 43, 43, 0.12);
-  --color-divider-token: rgba(43, 43, 43, 0.08);
+  --color-surface-2-token: #f4f2eb; /* 살짝 깊은 종이 */
+  /* 五墨 — 焦/濃/重/淡/清 */
+  --color-text-token: #14120f; /* 焦 — 가장 짙은 먹, 헤드라인 */
+  --color-text-2-token: #4a4640; /* 重 — 본문 강조 */
+  --color-text-3-token: #8a857c; /* 淡 — 보조/캡션 */
+  --color-border-token: rgba(20, 18, 15, 0.14);
+  --color-divider-token: rgba(20, 18, 15, 0.08);
+  /* 본문 기본은 濃(#2C2A26)으로. 별도 토큰. */
+  --color-text-body-token: #2c2a26;
 
-  /* === Primary accent: 차콜 모노톤 (네이비 제거, 옵션 A) ===
-     토큰명은 호환성 위해 navy 그대로 유지하지만 값은 차콜 계열.
-     Primary CTA, h1 강조 등에 사용 → 베이지+그린+검정 3색 미니멀 팔레트로 통일. */
-  --color-navy-token: #2b2b2b; /* primary accent — charcoal */
-  --color-navy-600-token: #111111; /* hover — near black */
-  --color-navy-500-token: #4a4a4a; /* mid */
-  --color-navy-100-token: #e5e3df; /* light tint (paper-tinted gray) */
-  --color-navy-50-token: #f0ede7; /* lightest tint */
+  /* === Primary accent — 焦墨(가장 짙은 먹) ===
+     토큰명은 호환성 위해 navy 그대로 유지. 값은 五墨 계열로 통일. */
+  --color-navy-token: #14120f; /* primary accent — 焦 */
+  --color-navy-600-token: #000000; /* hover — pure ink */
+  --color-navy-500-token: #4a4640; /* 重 */
+  --color-navy-100-token: #e6e3da; /* light ink tint */
+  --color-navy-50-token: #f0ede4; /* lightest ink tint */
 
   --color-teal-token: #2e7d7a; /* secondary accent */
   --color-teal-600-token: #3b9390;
@@ -156,8 +160,14 @@
   --color-vermilion-600-token: #8a2f2f;
   --color-vermilion-100-token: #f0d8d8;
   /* 한지(hanji) 따뜻한 종이톤 — 붓요정 배경색과 통일된 paper-warm */
-  --color-hanji-token: #f5efe2;
-  --color-ink-token: #2c2a26; /* 먹 — 차콜보다 살짝 더 따뜻 */
+  --color-hanji-token: #f5efe2; /* 한지(따뜻한 종이) — 마스코트 로고 프레임 등 액센트용 */
+  --color-ink-token: #2c2a26; /* 먹(濃) — 본문 기본 */
+  /* 五墨 별도 토큰 — 컴포넌트가 색 농도 직접 선택 가능 */
+  --color-ink-jiao-token: #14120f;  /* 焦 — 가장 짙음 */
+  --color-ink-nong-token: #2c2a26;  /* 濃 */
+  --color-ink-zhong-token: #4a4640; /* 重 */
+  --color-ink-dan-token: #8a857c;   /* 淡 */
+  --color-ink-qing-token: #c2bdb3;  /* 清 — 가장 옅음, 윤곽선 */
 
   --color-score-high-token: #4a7c59; /* 90+ calm green */
   --color-score-mid-token: #5b7faa;  /* 80+ soft blue */
@@ -195,6 +205,11 @@
   --color-vermilion-100: var(--color-vermilion-100-token);
   --color-hanji: var(--color-hanji-token);
   --color-ink: var(--color-ink-token);
+  --color-ink-jiao: var(--color-ink-jiao-token);
+  --color-ink-nong: var(--color-ink-nong-token);
+  --color-ink-zhong: var(--color-ink-zhong-token);
+  --color-ink-dan: var(--color-ink-dan-token);
+  --color-ink-qing: var(--color-ink-qing-token);
 
   --color-score-high: var(--color-score-high-token);
   --color-score-mid: var(--color-score-mid-token);
@@ -353,6 +368,8 @@
   }
 
   h1, .h1 {
+    /* 수묵화 톤 — 헤드라인은 명조(Noto Serif KR)로 붓글씨 무게감 */
+    font-family: var(--font-serif);
     font-size: var(--fs-h1);
     line-height: var(--lh-h1);
     font-weight: var(--fw-bold);
@@ -360,6 +377,7 @@
     color: var(--color-text);
   }
   h2, .h2 {
+    font-family: var(--font-serif);
     font-size: var(--fs-h2);
     line-height: var(--lh-h2);
     font-weight: var(--fw-bold);
@@ -401,15 +419,285 @@
     letter-spacing: -0.01em;
   }
 
-  /* === Eyebrow 라벨 === */
+  /* === Eyebrow 라벨 — 수묵화 톤 (위아래 먹선 + 朱印 색) === */
   .eyebrow {
+    display: inline-block;
     font-family: var(--font-mono);
     font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
+    font-weight: 600;
+    letter-spacing: 0.25em;
     text-transform: uppercase;
-    color: var(--color-teal);
+    color: var(--color-vermilion);
+    padding: 4px 14px;
+    border-top: 1px solid var(--color-ink-qing);
+    border-bottom: 1px solid var(--color-ink-qing);
+    background: transparent;
   }
+}
+
+/* =========================================================
+   수묵화 톤 — Hero 폼 카드 (모서리 ㄱㄴ 액센트 + 얇은 먹선)
+   ========================================================= */
+.sumi-card {
+  position: relative;
+  background: var(--color-background);
+  border: 1px solid var(--color-ink-qing);
+  border-radius: 0;
+  box-shadow: none;
+}
+.sumi-card::before,
+.sumi-card::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+.sumi-card::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--color-ink-jiao);
+  border-left: 2px solid var(--color-ink-jiao);
+}
+.sumi-card::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--color-ink-jiao);
+  border-right: 2px solid var(--color-ink-jiao);
+}
+
+/* 수묵화 톤 — underline-only input/select (서예 종이 필기 느낌)
+   select 의 inline backgroundImage (chevron) 가 살아남도록 !important 없이.
+   inline padding-right 32 도 정상 덮어쓰기 가능 (longhand wins). */
+.sumi-field {
+  width: 100%;
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  border-bottom: 1px solid var(--color-ink-qing);
+  border-radius: 0;
+  padding: 10px 0;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--color-text);
+  transition: border-color 180ms;
+  outline: none;
+}
+.sumi-field:focus {
+  border-bottom-color: var(--color-ink-jiao);
+}
+
+/* =========================================================
+   수묵화 톤 — shadcn 폼 컨테이너 오버라이드
+   사용: <div className="sumi-form">…</div> 으로 감싸면
+        내부의 input/select/textarea 가 underline-only 톤으로 표시됨.
+   ========================================================= */
+.sumi-form input[type="text"],
+.sumi-form input[type="date"],
+.sumi-form input[type="time"],
+.sumi-form input[type="email"],
+.sumi-form input[type="search"],
+.sumi-form input[type="number"],
+.sumi-form input[type="tel"],
+.sumi-form input:not([type]),
+.sumi-form textarea {
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  border-bottom: 1px solid var(--color-ink-qing);
+  border-radius: 0;
+  padding: 10px 0;
+  height: auto;
+  min-height: 40px;
+  transition: border-color 180ms;
+  box-shadow: none;
+}
+.sumi-form input:focus,
+.sumi-form input:focus-visible,
+.sumi-form textarea:focus,
+.sumi-form textarea:focus-visible {
+  border-bottom-color: var(--color-ink-jiao);
+  outline: none;
+  box-shadow: none;
+  ring: 0;
+}
+/* shadcn Select 의 trigger 버튼 (combobox role) */
+.sumi-form [data-slot="select-trigger"],
+.sumi-form button[role="combobox"] {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--color-ink-qing) !important;
+  border-radius: 0 !important;
+  padding: 10px 0 !important;
+  height: auto !important;
+  min-height: 40px;
+  box-shadow: none !important;
+  font-weight: 400;
+}
+.sumi-form button[role="combobox"]:focus,
+.sumi-form button[role="combobox"][data-state="open"] {
+  border-bottom-color: var(--color-ink-jiao) !important;
+}
+/* shadcn Label 톤 통일 */
+.sumi-form label {
+  font-size: 12px;
+  color: var(--color-text-3);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+/* shadcn Tabs — 수묵 밑줄 탭 */
+.sumi-form [role="tablist"] {
+  background: transparent !important;
+  border-bottom: 1px solid var(--color-ink-qing);
+  border-radius: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  height: auto !important;
+}
+.sumi-form [role="tab"] {
+  background: transparent !important;
+  color: var(--color-text-3) !important;
+  font-family: var(--font-serif) !important;
+  font-weight: 500 !important;
+  border-radius: 0 !important;
+  padding: 12px 16px !important;
+  position: relative;
+  box-shadow: none !important;
+}
+.sumi-form [role="tab"][data-state="active"] {
+  color: var(--color-ink-jiao) !important;
+  font-weight: 700 !important;
+  box-shadow: inset 0 -2px 0 0 var(--color-ink-jiao) !important;
+}
+
+/* 수묵화 톤 — 필수 입력 누락 알림 (shake + 주홍 밑줄 잠시 강조) */
+.sumi-field--needs {
+  animation: nk-shake 480ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  border-bottom-color: var(--color-vermilion) !important;
+}
+@keyframes nk-shake {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-5px); }
+  36% { transform: translateX(5px); }
+  54% { transform: translateX(-3px); }
+  72% { transform: translateX(3px); }
+  90% { transform: translateX(-1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sumi-field--needs { animation: none; }
+}
+
+/* 수묵화 톤 — 朱印 名 도장 액센트 (제출 버튼 우측에) */
+.sumi-stamp-name {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%) rotate(-3deg);
+  width: 26px;
+  height: 26px;
+  background: var(--color-vermilion);
+  color: var(--color-background);
+  border-radius: 2px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* =========================================================
+   수묵화 톤 — 글자별 잉크 드롭 reveal
+   사용: <InkChars text="결이 고운 이름은" delay={200} /> (Hero.tsx helper 참조)
+
+   원리: 각 글자는 작게(0.65) 시작해 본래 크기로 커지면서 opacity 0→1.
+        붓이 종이에 닿는 점에서 잉크가 퍼져 안정되는 모습을 흉내.
+        80ms 간격으로 한 글자씩 등장 → 손글씨/필사 느낌.
+   ========================================================= */
+.ink-char {
+  display: inline-block;
+  opacity: 0;
+  transform: scale(1.3) translateY(-3px);
+  transform-origin: center 60%;
+  text-shadow: 0 0 8px currentColor;
+  /* longhand 로 분리 — shorthand 의 implicit animation-delay:0 으로 인해
+     inline style 의 delay 가 무시되는 cascade 버그 방지 */
+  animation-name: nk-ink-char;
+  animation-duration: 650ms;
+  animation-timing-function: cubic-bezier(0.34, 0.0, 0.2, 1);
+  animation-fill-mode: forwards;
+  animation-iteration-count: 1;
+  /* animation-delay 는 inline style 로 글자마다 다르게 부여됨 */
+}
+.ink-char--space {
+  /* 공백은 너비만 보존, 애니메이션·shadow 모두 제외 */
+  animation: none;
+  opacity: 1;
+  transform: none;
+  text-shadow: none;
+}
+/*
+ * 수묵화 글자 reveal — 젖은 잉크가 종이에 닿아 마르는 흐름:
+ *   0%  : 위에서 큰 잉크 방울이 떨어진 직후 — scale 1.3 + halo 8px + 살짝 위
+ *   35% : 잉크가 종이에 흡수 시작 — opacity 솟구침, halo 절반으로
+ *   70% : 거의 마른 상태 — halo 미세, scale 정상 근접
+ *   100%: 완전히 마름 — halo 0, scale 1
+ */
+@keyframes nk-ink-char {
+  0% {
+    opacity: 0;
+    transform: scale(1.3) translateY(-3px);
+    text-shadow: 0 0 8px currentColor, 0 0 14px currentColor;
+  }
+  35% {
+    opacity: 0.65;
+    transform: scale(1.12) translateY(-1px);
+    text-shadow: 0 0 5px currentColor, 0 0 10px currentColor;
+  }
+  70% {
+    opacity: 0.92;
+    transform: scale(1.02) translateY(0);
+    text-shadow: 0 0 2px currentColor;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    text-shadow: 0 0 0 currentColor;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ink-char {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    text-shadow: none;
+  }
+}
+
+/* =========================================================
+   수묵화 톤 — 먹 번짐(ink wash) 배경 그라데이션
+   사용: <span class="ink-wash ink-wash--tl" /> 식으로 절대 배치
+   ========================================================= */
+.ink-wash {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+  filter: blur(28px);
+  opacity: 0.45;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(44, 42, 38, 0.18) 0%,
+    rgba(44, 42, 38, 0.06) 55%,
+    rgba(44, 42, 38, 0) 100%
+  );
+}
+.ink-wash--soft {
+  opacity: 0.28;
+  filter: blur(40px);
 }
 
 /* =========================================================

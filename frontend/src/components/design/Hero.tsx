@@ -9,37 +9,50 @@
  */
 "use client";
 
-import { Fragment, useEffect, useState, type CSSProperties } from "react";
+import { Fragment, useRef, useState, type CSSProperties } from "react";
 import { Button } from "./Primitives";
 
-// ============================================================
-// useTypewriter — 문자 단위 타이핑 효과
-// 줄 구분은 "\n"으로. (마운트 후 한 번만 재생, 완료 후 cursor blink 유지)
-// ============================================================
-function useTypewriter(fullText: string, speedMs = 70, startDelayMs = 200) {
-  const [shown, setShown] = useState("");
-  const [done, setDone] = useState(false);
+// 타이핑 효과는 수묵화 톤과 어울리지 않아 제거됨.
+// 헤드라인은 글자별 잉크 드롭 (.ink-char) 으로 표시.
+// (globals.css 의 nk-ink-char keyframes 참조)
 
-  useEffect(() => {
-    setShown("");
-    setDone(false);
-    let i = 0;
-    const start = window.setTimeout(() => {
-      const id = window.setInterval(() => {
-        i += 1;
-        setShown(fullText.slice(0, i));
-        if (i >= fullText.length) {
-          window.clearInterval(id);
-          setDone(true);
+/**
+ * InkChars — 텍스트를 한 글자씩 분해해 .ink-char 애니메이션을 부여.
+ * baseDelay: 첫 글자 등장까지 대기 (ms)
+ * step:      글자 간 간격 (ms, default 80)
+ */
+function InkChars({
+  text,
+  baseDelay = 0,
+  step = 80,
+}: {
+  text: string;
+  baseDelay?: number;
+  step?: number;
+}) {
+  return (
+    <>
+      {Array.from(text).map((ch, i) => {
+        if (ch === " ") {
+          // 공백은 너비만 보존, 애니메이션 제외
+          return (
+            <span key={i} className="ink-char ink-char--space">
+              &nbsp;
+            </span>
+          );
         }
-      }, speedMs);
-    }, startDelayMs);
-    return () => {
-      window.clearTimeout(start);
-    };
-  }, [fullText, speedMs, startDelayMs]);
-
-  return { shown, done };
+        return (
+          <span
+            key={i}
+            className="ink-char"
+            style={{ animationDelay: `${baseDelay + i * step}ms` }}
+          >
+            {ch}
+          </span>
+        );
+      })}
+    </>
+  );
 }
 
 export type HeroStartPayload =
@@ -85,19 +98,29 @@ export function Hero({
   // evaluate inputs
   const [evalQuery, setEvalQuery] = useState("");
 
-  // 타이핑 효과 — 2줄로 분할, "\n"이 줄바꿈
-  const HERO_HEADLINE = "결이 고운 이름은 시간이 흐를수록\n그 가치를 증명합니다.";
-  const { shown: typed, done: typingDone } = useTypewriter(HERO_HEADLINE, 65, 250);
+  // 필수 입력 누락 시 shake 안내용
+  // birth input은 recommend/evaluate 모드 모두 동일 ref 공유 (한 번에 한 모드만 렌더됨)
+  const lastNameRef = useRef<HTMLInputElement | null>(null);
+  const evalQueryRef = useRef<HTMLInputElement | null>(null);
+  const birthRef = useRef<HTMLInputElement | null>(null);
+  const [shakeKey, setShakeKey] = useState(0); // 재트리거용 key
 
+  function notifyEmpty(ref: React.RefObject<HTMLInputElement | null>) {
+    ref.current?.focus();
+    setShakeKey((k) => k + 1);
+  }
+
+  // 헤드라인 — 글자별 잉크 드롭 reveal (붓이 종이 위에 한 글자씩 쓰는 느낌)
+  const HERO_LINE_1 = "결이 고운 이름은";
+  const HERO_LINE_2 = "시간이 흐를수록 증명됩니다.";
+
+  // 수묵화 톤 — underline-only 필드 (서예 종이 필기 느낌).
+  // background/border/radius는 .sumi-field 클래스의 !important로 제어,
+  // 여기서는 폰트/사이즈/색만 지정.
   const fieldStyle: CSSProperties = {
     fontFamily: "var(--font-sans)",
-    fontSize: 14,
+    fontSize: 15,
     color: "var(--color-text)",
-    background: "var(--color-surface)",
-    border: "1px solid var(--color-border)",
-    borderRadius: "var(--radius-md)",
-    padding: "10px 12px",
-    outline: "none",
     minHeight: 40,
   };
 
@@ -125,6 +148,18 @@ export function Hero({
         overflow: "hidden",
       }}
     >
+      {/* 수묵화 톤 — 먹 번짐 배경 얼룩 2개 (Hero의 회화적 분위기) */}
+      <span
+        aria-hidden
+        className="ink-wash"
+        style={{ top: -40, left: -80, width: 380, height: 320 }}
+      />
+      <span
+        aria-hidden
+        className="ink-wash ink-wash--soft"
+        style={{ top: 80, right: -40, width: 320, height: 280 }}
+      />
+
       <div
         style={{
           position: "relative",
@@ -192,29 +227,9 @@ export function Hero({
           `}</style>
         </div>
 
-        <div
-          style={{
-            display: "inline-flex",
-            gap: 6,
-            alignItems: "center",
-            fontSize: 12,
-            fontWeight: 500,
-            color: "var(--color-teal)",
-            background: "var(--color-teal-50)",
-            padding: "5px 12px",
-            borderRadius: "var(--radius-sm)",
-            marginBottom: 24,
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 999,
-              background: "var(--color-teal)",
-            }}
-          />
-          발음·의미·세대 중립 기반 분석
+        {/* eyebrow — globals.css .eyebrow 클래스 (수묵 톤 통일) */}
+        <div className="eyebrow" style={{ marginBottom: 24 }}>
+          발음 · 의미 · 세대 중립
         </div>
         <h1
           style={{
@@ -225,38 +240,25 @@ export function Hero({
             color: "var(--color-text)",
             margin: 0,
             marginBottom: 20,
-            // 빈 글자 동안에도 높이가 잡혀 layout shift 방지 (2줄 기준)
-            minHeight: "calc(52px * 1.25 * 2)",
-            whiteSpace: "pre-line",
             wordBreak: "keep-all",
           }}
           aria-label="결이 고운 이름은 시간이 흐를수록 그 가치를 증명합니다."
         >
-          {typed}
+          {/* 1줄: 옅은 농도(濃) — 한 글자씩 80ms 간격 */}
           <span
-            aria-hidden
             style={{
               display: "inline-block",
-              width: "0.06em",
-              height: "0.95em",
-              marginLeft: 4,
-              verticalAlign: "-0.1em",
-              background: "var(--color-text)",
-              animation: typingDone
-                ? "nk-blink 1s steps(2, start) infinite"
-                : "none",
-              opacity: typingDone ? undefined : 1,
+              fontWeight: 400,
+              color: "var(--color-ink-nong)",
             }}
-          />
-          <style>{`
-            @keyframes nk-blink {
-              0%, 50% { opacity: 1; }
-              50.01%, 100% { opacity: 0; }
-            }
-            @media (prefers-reduced-motion: reduce) {
-              @keyframes nk-blink { 0%, 100% { opacity: 1; } }
-            }
-          `}</style>
+          >
+            <InkChars text={HERO_LINE_1} baseDelay={200} step={80} />
+          </span>
+          <br />
+          {/* 2줄: 짙은 농도(焦) — 1줄이 절반쯤 진행될 때 시작 */}
+          <span style={{ display: "inline-block" }}>
+            <InkChars text={HERO_LINE_2} baseDelay={1000} step={80} />
+          </span>
         </h1>
         <p
           style={{
@@ -268,73 +270,75 @@ export function Hero({
           }}
         >
           유행이 아닌 발음, 의미, 세대 중립도를 기준으로 이름을 살펴봅니다.
-          아기·개명·회사명·반려동물 — 목적에 맞게 이름의 결을 읽어드려요.
+          <br />
+          아기·개명 — 목적에 맞게 이름의 결을 읽어드려요.
         </p>
 
-        {/* Segmented control */}
+        {/* Form card — 수묵화 톤: 모서리 ㄱㄴ 액센트 + 얇은 먹선 */}
         <div
+          className="sumi-card"
           style={{
-            display: "inline-flex",
-            background: "var(--color-surface-2)",
-            padding: 4,
-            borderRadius: 999,
-            marginBottom: 18,
-          }}
-        >
-          {[
-            { key: "recommend" as const, label: "이름 추천", glyph: "🎨" },
-            { key: "evaluate" as const, label: "이름 평가", glyph: "📋" },
-          ].map((t) => {
-            const active = mode === t.key;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setMode(t.key)}
-                style={{
-                  appearance: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "9px 22px",
-                  borderRadius: 999,
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  letterSpacing: "-0.005em",
-                  backgroundColor: active
-                    ? "var(--color-teal-50)"
-                    : "transparent",
-                  color: active ? "var(--color-teal)" : "var(--color-text-2)",
-                  transition: "all 220ms cubic-bezier(.2,.6,.2,1)",
-                  display: "inline-flex",
-                  gap: 6,
-                  alignItems: "center",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span aria-hidden style={{ fontSize: 13 }}>
-                  {t.glyph}
-                </span>
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Form card */}
-        <div
-          style={{
-            background: "var(--color-surface)",
-            borderRadius: "var(--radius-xl)",
-            boxShadow: "var(--shadow-md)",
-            padding: 20,
+            padding: 28,
             maxWidth: 640,
             margin: "0 auto",
-            position: "relative",
-            overflow: "hidden",
-            textAlign: "left", // 폼 내부는 다시 좌측 정렬 (라벨/입력 정렬용)
+            textAlign: "left",
           }}
         >
+          {/* 탭 (recommend/evaluate) — 수묵화: pill → 밑줄 탭 */}
+          <div
+            style={{
+              display: "flex",
+              borderBottom: "1px solid var(--color-ink-qing)",
+              margin: "-4px -4px 24px",
+            }}
+          >
+            {[
+              { key: "recommend" as const, label: "이름 추천" },
+              { key: "evaluate" as const, label: "이름 평가" },
+            ].map((t) => {
+              const active = mode === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setMode(t.key)}
+                  style={{
+                    flex: 1,
+                    appearance: "none",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "12px 0",
+                    fontFamily: "var(--font-serif)",
+                    fontSize: 15,
+                    fontWeight: active ? 700 : 500,
+                    color: active
+                      ? "var(--color-ink-jiao)"
+                      : "var(--color-text-3)",
+                    position: "relative",
+                    transition: "color 180ms",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {t.label}
+                  {active && (
+                    <span
+                      aria-hidden
+                      style={{
+                        position: "absolute",
+                        bottom: -1,
+                        left: 0,
+                        right: 0,
+                        height: 2,
+                        background: "var(--color-ink-jiao)",
+                      }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
           <div
             style={{
               transition:
@@ -359,11 +363,18 @@ export function Hero({
                       </span>
                     </label>
                     <input
+                      ref={lastNameRef}
+                      key={`lastName-${shakeKey}`}
                       value={lastName}
                       onChange={(e) =>
                         setLastName(e.target.value.slice(0, 2))
                       }
                       placeholder="예: 김"
+                      className={
+                        !lastName.trim() && shakeKey > 0
+                          ? "sumi-field sumi-field--needs"
+                          : "sumi-field"
+                      }
                       style={fieldStyle}
                     />
                   </div>
@@ -372,6 +383,7 @@ export function Hero({
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
+                      className="sumi-field"
                       style={{
                         ...fieldStyle,
                         appearance: "none",
@@ -391,6 +403,7 @@ export function Hero({
                     <select
                       value={tone}
                       onChange={(e) => setTone(e.target.value)}
+                      className="sumi-field"
                       style={{
                         ...fieldStyle,
                         appearance: "none",
@@ -419,13 +432,20 @@ export function Hero({
                     <label style={labelStyle}>
                       생년월일{" "}
                       <span style={{ color: "var(--color-text-3)" }}>
-                        (선택 · 사주 반영 시)
+                        (사주 반영)
                       </span>
                     </label>
                     <input
+                      ref={birthRef}
+                      key={`birth-${shakeKey}`}
                       type="date"
                       value={birth}
                       onChange={(e) => setBirth(e.target.value)}
+                      className={
+                        !birth && shakeKey > 0
+                          ? "sumi-field sumi-field--needs"
+                          : "sumi-field"
+                      }
                       style={fieldStyle}
                     />
                   </div>
@@ -440,6 +460,7 @@ export function Hero({
                       type="time"
                       value={birthTime}
                       onChange={(e) => setBirthTime(e.target.value)}
+                      className="sumi-field"
                       style={fieldStyle}
                     />
                   </div>
@@ -547,7 +568,8 @@ export function Hero({
                         value={parentName}
                         onChange={(e) => setParentName(e.target.value)}
                         placeholder="예: 김민호 · 이수정"
-                        style={fieldStyle}
+                        className="sumi-field"
+                      style={fieldStyle}
                       />
                     </div>
                     <div>
@@ -556,7 +578,8 @@ export function Hero({
                         value={story}
                         onChange={(e) => setStory(e.target.value)}
                         placeholder="예: 바다, 새벽"
-                        style={fieldStyle}
+                        className="sumi-field"
+                      style={fieldStyle}
                       />
                     </div>
                     <div>
@@ -570,7 +593,8 @@ export function Hero({
                         value={englishName}
                         onChange={(e) => setEnglishName(e.target.value)}
                         placeholder="예: Ethan"
-                        style={fieldStyle}
+                        className="sumi-field"
+                      style={fieldStyle}
                       />
                     </div>
                   </div>
@@ -578,14 +602,21 @@ export function Hero({
 
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    marginTop: 14,
+                    position: "relative",
+                    marginTop: 18,
                   }}
                 >
                   <Button
                     variant="primary"
-                    onClick={() =>
+                    onClick={() => {
+                      if (!lastName.trim()) {
+                        notifyEmpty(lastNameRef);
+                        return;
+                      }
+                      if (!birth) {
+                        notifyEmpty(birthRef);
+                        return;
+                      }
                       onStart?.({
                         mode: "recommend",
                         lastName,
@@ -596,12 +627,40 @@ export function Hero({
                         parentName,
                         story,
                         englishName,
-                      })
-                    }
+                      });
+                    }}
+                    style={{
+                      width: "100%",
+                      borderRadius: 0,
+                      padding: "16px 18px",
+                      fontFamily: "var(--font-serif)",
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      fontSize: 15,
+                    }}
                   >
-                    추천 시작 →
+                    이름 찾기 시작 →
                   </Button>
+                  {/* 朱印 名 도장 — 작품 인증 도장 메타포 */}
+                  <span className="sumi-stamp-name" aria-hidden>名</span>
                 </div>
+                {/* 안내 — 빈 항목을 우선순위 순서로 한 줄씩 노출 */}
+                {(!lastName.trim() || !birth) && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      fontSize: 12,
+                      color: "var(--color-text-3)",
+                      textAlign: "center",
+                      fontFamily: "var(--font-sans)",
+                      letterSpacing: "0.01em",
+                    }}
+                  >
+                    {!lastName.trim()
+                      ? "성씨를 입력하면 결과를 바로 보여드려요."
+                      : "생년월일을 입력하면 사주 조화도 함께 살펴봐요."}
+                  </div>
+                )}
               </div>
             )}
 
@@ -619,9 +678,16 @@ export function Hero({
                   <div>
                     <label style={labelStyle}>분석할 이름</label>
                     <input
+                      ref={evalQueryRef}
+                      key={`evalQuery-${shakeKey}`}
                       value={evalQuery}
                       onChange={(e) => setEvalQuery(e.target.value)}
                       placeholder="예: 김서준"
+                      className={
+                        !evalQuery.trim() && shakeKey > 0
+                          ? "sumi-field sumi-field--needs"
+                          : "sumi-field"
+                      }
                       style={fieldStyle}
                     />
                   </div>
@@ -630,6 +696,7 @@ export function Hero({
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
+                      className="sumi-field"
                       style={{
                         ...fieldStyle,
                         appearance: "none",
@@ -649,6 +716,7 @@ export function Hero({
                     <select
                       value={tone}
                       onChange={(e) => setTone(e.target.value)}
+                      className="sumi-field"
                       style={{
                         ...fieldStyle,
                         appearance: "none",
@@ -677,13 +745,20 @@ export function Hero({
                     <label style={labelStyle}>
                       생년월일{" "}
                       <span style={{ color: "var(--color-text-3)" }}>
-                        (선택 · 사주 반영 시)
+                        (사주 반영)
                       </span>
                     </label>
                     <input
+                      ref={birthRef}
+                      key={`birth-${shakeKey}`}
                       type="date"
                       value={birth}
                       onChange={(e) => setBirth(e.target.value)}
+                      className={
+                        !birth && shakeKey > 0
+                          ? "sumi-field sumi-field--needs"
+                          : "sumi-field"
+                      }
                       style={fieldStyle}
                     />
                   </div>
@@ -698,6 +773,7 @@ export function Hero({
                       type="time"
                       value={birthTime}
                       onChange={(e) => setBirthTime(e.target.value)}
+                      className="sumi-field"
                       style={fieldStyle}
                     />
                   </div>
@@ -705,27 +781,62 @@ export function Hero({
 
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    marginTop: 14,
+                    position: "relative",
+                    marginTop: 18,
                   }}
                 >
                   <Button
                     variant="primary"
-                    onClick={() =>
+                    onClick={() => {
+                      if (!evalQuery.trim()) {
+                        notifyEmpty(evalQueryRef);
+                        return;
+                      }
+                      if (!birth) {
+                        notifyEmpty(birthRef);
+                        return;
+                      }
                       onStart?.({
                         mode: "evaluate",
-                        name: evalQuery || "김서준",
+                        name: evalQuery.trim(),
                         gender,
                         tone,
                         birth,
                         birthTime,
-                      })
-                    }
+                      });
+                    }}
+                    style={{
+                      width: "100%",
+                      borderRadius: 0,
+                      padding: "16px 18px",
+                      fontFamily: "var(--font-serif)",
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      fontSize: 15,
+                    }}
                   >
-                    분석 시작 →
+                    이름 살펴보기 시작 →
                   </Button>
+                  {/* 朱印 名 도장 */}
+                  <span className="sumi-stamp-name" aria-hidden>名</span>
                 </div>
+                {/* 검증 안내 — 빈 항목 우선순위 순 */}
+                {(!evalQuery.trim() || !birth) && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      fontSize: 12,
+                      color: "var(--color-text-3)",
+                      textAlign: "center",
+                      fontFamily: "var(--font-sans)",
+                      letterSpacing: "0.01em",
+                    }}
+                  >
+                    {!evalQuery.trim()
+                      ? "평가할 이름(예: 김서준)을 입력하세요."
+                      : "생년월일을 입력하면 사주 조화도 함께 살펴봐요."}
+                  </div>
+                )}
               </div>
             )}
           </div>
