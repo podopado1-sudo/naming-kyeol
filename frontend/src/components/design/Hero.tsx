@@ -413,8 +413,14 @@ export function Hero({
                   <div>
                     <label style={labelStyle}>
                       출생 시각{" "}
-                      <span style={{ color: "var(--color-text-3)" }}>
-                        (선택 · 시주 반영)
+                      <span
+                        style={{
+                          color: "var(--color-text-3)",
+                          whiteSpace: "nowrap",
+                          fontSize: 11,
+                        }}
+                      >
+                        (선택)
                       </span>
                     </label>
                     <input
@@ -726,8 +732,14 @@ export function Hero({
                   <div>
                     <label style={labelStyle}>
                       출생 시각{" "}
-                      <span style={{ color: "var(--color-text-3)" }}>
-                        (선택 · 시주 반영)
+                      <span
+                        style={{
+                          color: "var(--color-text-3)",
+                          whiteSpace: "nowrap",
+                          fontSize: 11,
+                        }}
+                      >
+                        (선택)
                       </span>
                     </label>
                     <input

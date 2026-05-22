@@ -92,6 +92,7 @@ export function WhyKyeol() {
         </div>
 
         <div
+          className="sumi-why-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",

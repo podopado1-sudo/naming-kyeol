@@ -113,12 +113,10 @@ export function Footer() {
       }}
     >
       <div
+        className="sumi-footer-grid"
         style={{
           maxWidth: 1120,
           margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "1.6fr 1.2fr 1fr 1fr",
-          gap: 40,
         }}
       >
         {/* 브랜드 */}
