@@ -610,6 +610,48 @@
 }
 
 /* =========================================================
+   수묵화 톤 — Hero 일러스트 반응형 wrapper
+   사용: <div class="hero-illustration-wrap"><img .../></div>
+
+   - Desktop (≥901px): section padding 32px 침범 → 100% + 64px 확장
+   - Tablet (601~900px): 살짝만 확장 (padding 24px 추정)
+   - Mobile (≤600px): 컨테이너 안에 fit (마이너스 마진 제거)
+     + aspectRatio 더 정사각에 가깝게 → 마스코트 세로 공간 확보
+   ========================================================= */
+.hero-illustration-wrap {
+  position: relative;
+  width: calc(100% + 64px);
+  margin-left: -32px;
+  margin-right: -32px;
+  margin-bottom: 16px;
+  aspect-ratio: 16 / 6;
+  animation: nk-hero-float 6s ease-in-out infinite;
+}
+@media (max-width: 900px) {
+  .hero-illustration-wrap {
+    width: calc(100% + 32px);
+    margin-left: -16px;
+    margin-right: -16px;
+    aspect-ratio: 16 / 7;
+  }
+}
+@media (max-width: 600px) {
+  .hero-illustration-wrap {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    aspect-ratio: 4 / 3;
+  }
+}
+@keyframes nk-hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-illustration-wrap { animation: none; }
+}
+
+/* =========================================================
    수묵화 톤 — 글자별 잉크 드롭 reveal
    사용: <InkChars text="결이 고운 이름은" delay={200} /> (Hero.tsx helper 참조)
 
