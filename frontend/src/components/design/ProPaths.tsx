@@ -105,13 +105,7 @@ export function ProPaths({
         </p>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 14,
-        }}
-      >
+      <div className="sumi-grid-3">
         {CARDS.map((c) => {
           const isHover = hover === c.key;
           return (

@@ -610,6 +610,57 @@
 }
 
 /* =========================================================
+   수묵화 톤 — 카드 그리드 반응형 (Categories / ProPaths)
+   기본 4컬럼 → 태블릿 2컬럼 → 모바일 1컬럼
+   ========================================================= */
+.sumi-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+@media (max-width: 900px) {
+  .sumi-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+@media (max-width: 480px) {
+  .sumi-grid-4 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.sumi-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+@media (max-width: 900px) {
+  .sumi-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+@media (max-width: 480px) {
+  .sumi-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* 모바일 폼 그리드 — 2컬럼 → 1컬럼 */
+@media (max-width: 600px) {
+  .sumi-form .grid-2,
+  .sumi-form [style*="grid-template-columns: 1fr 1.1fr 1.1fr"],
+  .sumi-form [style*="grid-template-columns: repeat(2"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+}
+
+/* =========================================================
    수묵화 톤 — Hero 일러스트 반응형 wrapper
    사용: <div class="hero-illustration-wrap"><img .../></div>
 

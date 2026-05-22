@@ -193,8 +193,9 @@ export function Hero({
         </div>
         <h1
           style={{
-            fontSize: 52,
-            lineHeight: 1.25,
+            // 반응형 — 모바일 28px → 데스크탑 52px 사이에서 viewport 비례 스케일
+            fontSize: "clamp(26px, 6vw, 52px)",
+            lineHeight: 1.3,
             fontWeight: 700,
             letterSpacing: "-0.02em",
             color: "var(--color-text)",

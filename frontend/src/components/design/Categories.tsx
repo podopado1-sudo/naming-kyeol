@@ -93,13 +93,7 @@ export function Categories({
           목적에 따라 분석 관점이 달라집니다. 쓰임새에 맞춰 살펴봐요.
         </p>
       </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 20,
-        }}
-      >
+      <div className="sumi-grid-4">
         {ITEMS.map((it) => {
           const isHover = hover === it.key;
           const isComing = it.status === "coming";
