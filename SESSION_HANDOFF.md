@@ -14,6 +14,67 @@
 3. **frontend/public의 무관 파일 정리** — "노출 정지 상품 리스트.csv"(꽃배달 사업 파일, 커밋 시 웹에 공개 서빙될 뻔) → `C:\Users\HappyFlower\Documents\`로 이동.
 4. **CLAUDE.md 현행화** — 테스트 수(17→877), 운영 상태(배포 완료), 라우트(15→22, about/contact/favorites 반영), 알려진 이슈 갱신.
 
+## 같은 날 후속 세션 (2026-06-13 — 🎯 작명 엔진 품질 대수술)
+
+사용자 요청 "좋은 이름이 나오도록 엔진을 신경써야겠다" → 실측 기반 진단 + 구조 수정.
+
+### 실측 진단 (수정 전, 6성씨 × 남/녀 smart 호출)
+
+- **standard 탭**: "광부(87)", "백기(86)", "우상", "유신", "비광"(화투), "빈기", "경타", "아상" 등 비(非)이름/부정 연상 조합이 상위 도배
+- **creative 탭**: 허/윤 성씨에서 민준·도현·서윤·하윤·시우·지호 등 **최고 유행 이름**이 고점 (세대 중립 철학 정면 위반)
+- **점수 소수점**: `89.39999999999999` 그대로 API 노출
+- **3글자 큐레이션**: "수빈아" (호격) 포함
+
+### 근본 원인 2개
+
+1. **`AestheticEngine.EvaluateGenerationalNeutrality` 5단계**: "DB에도 없고 흔한 어미도 없는 이름 = 만점(100)" — 독특함과 이름다움을 혼동. 경타/빈기처럼 이름 같지도 않은 조합이 세대중립 만점을 받음
+2. **`CreativeNamingEngine.GetGenericExpansions`** (미등록 성씨 폴백): 유행 이름이 사전에 직접 수록되어 있었음
+
+### 수정 내역
+
+#### ① NamingPrinciples — `EvalNameLikeness` 신설 (이름다움 평가)
+- 실명에서 음절이 해당 위치(첫째/둘째)에 쓰이는 빈도를 3단계(흔함 1.0 / 가능 0.6 / 이례적 0.2·0.15)로 평가
+- 첫째 45% + 둘째 55% 가중. 한쪽이 이례적이면 ×0.6 (예: "균비" — 균이 비이름 음절인데 비가 흔하다고 통과 방지)
+- 음절 테이블: 첫음절 흔함 47 + 가능 31 / 끝음절 흔함 46 + 가능 20 (순우리말 어미 포함: 슬/을/늘/름/빛/별 등)
+- 2음절만 평가, 그 외 중립값 0.7
+
+#### ② NamePoolEngine (standard 풀 생성)
+- 조합 점수에 `nameLikeness × 350` 가중 추가 (성씨연음 250보다 강함)
+- 이름다움 < 0.5 조합은 풀에서 하드 제외
+- **두음법칙**: 첫음절이 `RequiresDueum`(룡/림/량 등)이면 제외 — "룡규" 같은 위반 차단
+
+#### ③ AestheticEngine
+- 세대중립 5단계(독특)를 이름다움 3단 차등: ≥0.85 → 100 / ≥0.55 → 85 / 미만 → 70
+- `_oldStyleEndings`에 "경" 추가 (미경/수경 류)
+- 부정 연상 동음이의어 -10점 감점 신설
+
+#### ④ ForbiddenWordData — `NegativeHomophoneNames` 신설 (이름 완전 일치 전용)
+- 광부/백기/우상/유신/비광/구민/수용/조용/정유/아성/아재/아수 등 30개
+- ⚠️ ForbiddenWords(부분 일치)에 넣으면 "백기"가 백씨 성 "백기훈"까지 차단 → **완전 일치 전용 목록으로 분리**한 것이 핵심
+- NamePoolEngine 필터 + AestheticEngine 감점 + CreativeEngine 필터 3곳 적용
+
+#### ⑤ CreativeNamingEngine
+- 폴백 사전의 유행 이름 14개 교체 (서윤→윤슬, 유나→예솔, 채원→단아, 하윤→다온, 민준→재윤, 도현→진혁, 시우→수혁, 준서→범준, 건우→건휘, 도윤→주안, 지호→태온, 하린→누리, 아린→아람, 소율→소담)
+- 출력 단계에 `IsTrendyName` + `IsNegativeHomophoneName` 필터 추가 (성씨별 패턴에 남은 유행 이름도 일괄 차단)
+
+#### ⑥ 기타
+- SmartRecommendationService: creative/3글자 Score `Math.Round(x, 1)` (소수점 쓰레기 제거)
+- 3글자 큐레이션 "수빈아" → "수아린" (JSON + 엔진 폴백 2곳)
+- xUnit1026 경고 수정 (ApplyDueum 테스트)
+
+### 검증 결과 (수정 후 동일 입력)
+
+- 남아: **유승·아승·우준·유재·건규·민규·규린** 등 정상 이름 (광부/백기/규룡 전멸)
+- 여아: 우준·유승·수민·선유·은규 등 (빈기/경타/우상/유신 전멸)
+- creative: 예솔·윤슬·다온·단아·수혁·주안·재윤·태온 (유행 이름 0)
+- 테스트: **877 → 905개 (+28)**, 실패 0 — EvalNameLikeness 단위 테스트 + 비이름/유행/이름다움 회귀 테스트 추가
+
+### 남은 품질 개선 방향 (다음 후보)
+
+1. **여아 1위 "미규" 문제** — 규/승 등 남성형 어미가 여아 추천 상위에 옴. **성별 인지 이름다움**(어미 음절의 성별 적합도) 필요
+2. **실명 통계 결합** — 메모리 `reference_namechart_crawl.md`의 네임차트/대법원 연대별 이름 크롤링과 결합하면 음절 테이블을 데이터 기반으로 교체 가능 (현재는 수동 큐레이션)
+3. 아승/승아 같은 "아+한자" 어색 패턴의 위치별 페어 평가
+
 ### 남은 작업 후보 (이전과 동일)
 - api.namingkyeol.com Render 검증 → Vercel `NEXT_PUBLIC_API_URL` 교체
 - Google Search Console 등록 + 사이트맵 제출 (Naver 인증 메타는 커밋됨 — 제출 여부 확인)
@@ -877,4 +938,5 @@ npm run build  # 프로덕션 빌드
 | 2026-05-15 (오후) | ScoringService 단일 진실의 원천 도입, 채점 미스매치 7건 정리, ExplanationEngine 리포트 형식 전환, LLM 서비스 제거, NamingPrinciples 공통 추출, 5개 엔진 보강 (NamePool/Twin/Required/PureKorean/Creative), 채점 분포 정상화 (creative/three-syllable/pure-korean), 즐겨찾기(localStorage)+PDF(인쇄)+♥/공유 버튼, 한국어 조사 유틸 9곳 적용, 참고용 안내 박스, 로그인 제거 → 저장한 이름, 후원 보류 |
 | 2026-05-18 | TwinNameService/NameAnalysisService도 ScoringService 경유로 통합, `/method`에 "리포트 방식" 섹션, 의미 선호 키워드 입력(#1), 항렬자 한자 직접 지정(#2), 부정 발음 패턴 데이터 v2.0(#3)+snake_case 파싱 버그 수정, NamingPrinciples 새 스킬 4종(#8: 어색결합/받침에코/외래어/음절균형), 용신 보완 가중치 강화(#5), 자원오행 ConfidenceGrade 반영(#6), 81수리 5단계 매핑(#7), 음운론 3종(#9: 동화/단조/두음), 사전 확장(#10: 순우리말 274→326/3음절 91→139), CreativeNamingEngine 성씨 검증(#11), 품질 회귀 테스트(#12), Saju/YongshinService 단위 테스트(#13), 다양성 회귀 +4, 사전 중복 정리, 영한 매핑 90→122, 복성 키워드 4→6, 3개 로더 ResetCache 통일, SEO 풀셋(robots.ts+sitemap.ts+페이지별 layout 12개+JSON-LD+OG/Twitter card). 테스트 +167개 (710→877), 정적 라우트 19→22 |
 | 2026-06-13 | 운영 정비: keepalive 워크플로(Render cold start 회피), NameForm.slnx(루트 dotnet test 877개 정상화), public 무관 CSV 정리, CLAUDE.md 현행화 |
+| 2026-06-13 (후속) | 🎯 **작명 엔진 품질 대수술**: EvalNameLikeness 신설(실명 음절 위치별 3단계 평가), NamePool 이름다움 가중 350+하드 필터+두음법칙, 세대중립 "독특=만점" 구조 수정(이름다움 3단 차등), NegativeHomophoneNames 30개(완전 일치 전용 — 부분 일치의 백씨 오폭 방지), creative 폴백 유행 이름 14개 교체+출력 필터, 점수 반올림, 수빈아→수아린. 광부/백기/빈기/경타/우상/유신/비광/민준/서윤 등 전멸 확인. 테스트 877→905 (+28) |
 | 2026-05-20 | 🎊 **정식 출범** — namingkyeol.com 도메인 등록(Cloudflare $10.46/년, auto-renew ON, 만료 2027-05-19), Email Routing(contact@→podopado1@gmail.com), Supabase PostgreSQL(Seoul ap-northeast-2), Render 백엔드 배포(Dockerfile + $APP_UID), Vercel 프론트 배포(Hobby 무료), DNS 연결 + Let's Encrypt SSL 자동, TLS 1.3. 트러블슈팅 5건 해결(Python자동인식/UID충돌/IPv6timeout/EnsureCreated silent fail/UTC strict). 코드 변경: Dockerfile/.dockerignore 신규, csproj data publish 보장, Program.cs Npgsql legacy timestamp + DB 초기화 견고화, .gitignore secrets 패턴 강화, frontend/.git 제거(monorepo). contact 페이지 mailto를 도메인 이메일로 교체. 보안 점수 측정: **SecurityHeaders A**, **Mozilla Observatory B+ (80/100)**. 877개 테스트 유지. 월 운영비 ~₩1,200 (도메인만) |

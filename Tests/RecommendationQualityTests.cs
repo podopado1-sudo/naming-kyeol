@@ -163,6 +163,107 @@ public class RecommendationQualityTests
         }
     }
 
+    /// <summary>
+    /// 비이름 음절 조합·부정 연상 이름 회귀 방지 (2026-06-13 실측 문제 사례).
+    /// 경타/빈기/아상 같은 조합과 광부/백기/우상 같은 동음이의어가
+    /// 표준 추천 상위에 다시 나타나면 안 된다.
+    /// </summary>
+    [Theory]
+    [InlineData("김", "male")]
+    [InlineData("김", "female")]
+    [InlineData("이", "female")]
+    [InlineData("박", "male")]
+    [InlineData("최", "female")]
+    [InlineData("허", "male")]
+    public async Task Quality_StandardCategory_NoNonNameCombinations(string lastName, string gender)
+    {
+        var knownOffenders = new HashSet<string>
+        {
+            "경타", "빈기", "아상", "건부", "반광", "규룡", "부광",
+            "광부", "백기", "우상", "유신", "비광", "구민", "수용"
+        };
+
+        var request = new SmartRecommendationRequestDto
+        {
+            LastName = lastName,
+            BirthDate = "2026-03-15",
+            Gender = gender,
+            Tone = "neutral",
+        };
+
+        var result = await _service.GenerateSmartRecommendationsAsync(request);
+        var standardCategory = result.Categories.FirstOrDefault(c => c.Type == "standard");
+        Assert.NotNull(standardCategory);
+
+        foreach (var candidate in standardCategory!.Names)
+        {
+            Assert.False(knownOffenders.Contains(candidate.Name),
+                $"비이름/부정 연상 이름 '{candidate.Name}'이 표준 추천에 포함됨 ({lastName}/{gender})");
+            Assert.False(ForbiddenWordData.IsNegativeHomophoneName(candidate.Name),
+                $"부정 연상 동음이의어 '{candidate.Name}'이 표준 추천에 포함됨 ({lastName}/{gender})");
+        }
+    }
+
+    /// <summary>
+    /// 표준 추천 상위 10개의 평균 이름다움이 충분히 높아야 한다.
+    /// 음운만 매끄러운 비이름 조합이 풀을 채우는 회귀 방지.
+    /// </summary>
+    [Theory]
+    [InlineData("김")]
+    [InlineData("허")]
+    public async Task Quality_StandardCategory_AverageNameLikeness(string lastName)
+    {
+        var request = new SmartRecommendationRequestDto
+        {
+            LastName = lastName,
+            BirthDate = "2026-03-15",
+            Gender = "female",
+            Tone = "neutral",
+        };
+
+        var result = await _service.GenerateSmartRecommendationsAsync(request);
+        var standardCategory = result.Categories.FirstOrDefault(c => c.Type == "standard");
+        Assert.NotNull(standardCategory);
+
+        var top10 = standardCategory!.Names.Take(10).Select(n => n.Name).ToList();
+        Assert.NotEmpty(top10);
+
+        var avgLikeness = top10.Average(NamingPrinciples.EvalNameLikeness);
+        Assert.True(avgLikeness >= 0.7,
+            $"표준 상위 10개 평균 이름다움 {avgLikeness:F2} < 0.7 — 후보: {string.Join(", ", top10)}");
+    }
+
+    /// <summary>
+    /// 창의적 작명 카테고리에 유행 이름이 나오면 안 된다 (세대 중립 철학).
+    /// 미등록 성씨 폴백 사전에 유행 이름이 섞여 있던 회귀 방지 (2026-06-13).
+    /// </summary>
+    [Theory]
+    [InlineData("허", "male")]
+    [InlineData("허", "female")]
+    [InlineData("윤", "male")]
+    [InlineData("윤", "female")]
+    [InlineData("김", "female")]
+    public async Task Quality_CreativeCategory_NoTrendyNames(string lastName, string gender)
+    {
+        var request = new SmartRecommendationRequestDto
+        {
+            LastName = lastName,
+            BirthDate = "2026-03-15",
+            Gender = gender,
+            Tone = "neutral",
+        };
+
+        var result = await _service.GenerateSmartRecommendationsAsync(request);
+        var creativeCategory = result.Categories.FirstOrDefault(c => c.Type == "creative");
+        Assert.NotNull(creativeCategory);
+
+        foreach (var candidate in creativeCategory!.Names)
+        {
+            Assert.False(NamingPrinciples.IsTrendyName(candidate.Name),
+                $"유행 이름 '{candidate.Name}'이 창의적 작명에 포함됨 ({lastName}/{gender})");
+        }
+    }
+
     // ============================================================
     // 외래어 발음 회피 (NamingPrinciples.EvalForeignPhonotactics)
     // ============================================================

@@ -288,16 +288,51 @@ public class NamingPrinciplesTests
     [InlineData("락", "락")] // 매핑 없는 음절은 원본 유지 ('락'은 두음 적용)
     public void ApplyDueum_TransformsAsExpected(string input, string expected)
     {
-        // '락'은 사실 두음 매핑에 없으므로 원본 반환
+        // '락'은 두음 매핑에 없으므로 원본 반환
         var actual = NamingPrinciples.ApplyDueum(input);
-        if (NamingPrinciples.RequiresDueum(input))
-        {
-            Assert.NotEqual(input, actual);
-        }
-        else
-        {
-            Assert.Equal(input, actual);
-        }
+        Assert.Equal(expected, actual);
+    }
+
+    // ============================================================
+    // EvalNameLikeness — 이름다움 (비이름 음절 조합 배제)
+    // ============================================================
+
+    /// <summary>실명에서 쓰이는 음절 조합은 임계값(0.55) 이상이어야 한다</summary>
+    [Theory]
+    [InlineData("서", "진")] // 한자 이름 전형
+    [InlineData("수", "현")]
+    [InlineData("도", "윤")]
+    [InlineData("이", "슬")] // 순우리말 이름
+    [InlineData("노", "을")]
+    [InlineData("우", "람")]
+    [InlineData("하", "늘")]
+    public void EvalNameLikeness_RealNameSyllables_AboveThreshold(string first, string second)
+    {
+        var score = NamingPrinciples.EvalNameLikeness(first, second);
+        Assert.True(score >= 0.55, $"{first}{second} 이름다움 {score:F2} < 0.55");
+    }
+
+    /// <summary>비이름 음절 조합(경타/빈기 등 실제 발견된 문제 사례)은 임계값 미만</summary>
+    [Theory]
+    [InlineData("경", "타")] // 실측 문제 사례 (2026-06-13)
+    [InlineData("빈", "기")]
+    [InlineData("아", "상")]
+    [InlineData("건", "부")]
+    [InlineData("반", "광")]
+    [InlineData("규", "룡")]
+    public void EvalNameLikeness_NonNameSyllables_BelowThreshold(string first, string second)
+    {
+        var score = NamingPrinciples.EvalNameLikeness(first, second);
+        Assert.True(score < 0.55, $"{first}{second} 이름다움 {score:F2} >= 0.55 (비이름 조합인데 통과)");
+    }
+
+    /// <summary>2음절이 아닌 이름은 중립값 0.7 반환 (평가 대상 아님)</summary>
+    [Theory]
+    [InlineData("솔")]
+    [InlineData("누리빛")]
+    public void EvalNameLikeness_NonTwoSyllable_ReturnsNeutral(string name)
+    {
+        Assert.Equal(0.7, NamingPrinciples.EvalNameLikeness(name), precision: 2);
     }
 
     [Fact]

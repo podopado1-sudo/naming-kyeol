@@ -151,7 +151,7 @@ public class ThreeSyllableEngine : IThreeSyllableEngine
         new("다인서", "많은 인연의 서광", "hanja", "female", "soft", 81),
         new("하윤서", "하늘 빛남의 서광", "hanja", "female", "soft", 84),
         new("예서윤", "예쁘고 빛나는 윤기", "hanja", "female", "soft", 83),
-        new("수빈아", "맑은 빛의 아이", "hanja", "female", "soft", 82),
+        new("수아린", "맑고 빛나는 아이", "hanja", "female", "soft", 82),
         new("소윤빈", "맑은 윤기의 빛", "hanja", "female", "soft", 81),
         new("나윤서", "나아가는 윤기 서광", "hanja", "female", "soft", 80),
         new("채윤서", "화사한 윤기 서광", "hanja", "female", "soft", 82),

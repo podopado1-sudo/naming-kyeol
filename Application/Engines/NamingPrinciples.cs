@@ -36,6 +36,87 @@ public static class NamingPrinciples
     public static bool IsTrendyName(string name) => TrendyNames.Contains(name);
 
     // ═══════════════════════════════════════════════════════════════
+    // 작명 스킬 0 — 이름다움 (Name-Likeness)
+    // ═══════════════════════════════════════════════════════════════
+    //
+    // 음운론적으로 매끄러워도 "경타", "빈기"처럼 실제 이름에 쓰이지 않는
+    // 음절 조합은 이름답지 않다. 실명에서 각 음절이 해당 위치(첫째/둘째)에
+    // 등장하는 빈도를 3단계로 평가해 조합의 이름다움을 0~1로 반환한다.
+    // 독창성(희귀한 "조합")은 장려하되, 비(非)이름 "음절"은 걸러내는 것이 목적.
+
+    /// <summary>이름 첫째 음절로 흔히 쓰이는 음절</summary>
+    private static readonly HashSet<string> CommonFirstSyllables = new()
+    {
+        "가", "건", "경", "규", "나", "다", "도", "동", "라", "민",
+        "범", "보", "상", "서", "선", "성", "세", "소", "수", "승",
+        "시", "연", "영", "예", "온", "우", "원", "유", "윤",
+        "은", "이", "인", "재", "정", "주", "준", "지", "진", "채",
+        "태", "하", "한", "해", "현", "호", "효", "희"
+    };
+
+    /// <summary>이름 첫째 음절로 가끔 쓰이는 음절</summary>
+    private static readonly HashSet<string> AcceptableFirstSyllables = new()
+    {
+        // "아"는 아린/아인처럼 부드러운 어미와는 어울리지만
+        // 아승/아수처럼 한자 어미와 붙으면 어색 → 가능 등급으로만 인정
+        "아", "강", "근", "금", "기", "남", "노", "누", "단", "대",
+        "란", "루", "리", "마", "명", "무", "미", "별", "비", "새",
+        "슬", "애", "여", "오", "용", "율", "청", "초", "형", "환", "휘"
+    };
+
+    /// <summary>이름 끝(둘째) 음절로 흔히 쓰이는 음절</summary>
+    private static readonly HashSet<string> CommonFinalSyllables = new()
+    {
+        "결", "경", "규", "나", "린", "람", "리", "미", "민", "빈",
+        "비", "서", "석", "선", "성", "솔", "수", "승", "슬", "아",
+        "안", "연", "영", "온", "우", "욱", "원", "유", "윤", "율",
+        "은", "인", "재", "정", "주", "준", "지", "진", "찬", "하",
+        "현", "혁", "호", "환", "훈", "희"
+    };
+
+    /// <summary>이름 끝(둘째) 음절로 가끔 쓰이는 음절 (순우리말 어미 포함)</summary>
+    private static readonly HashSet<string> AcceptableFinalSyllables = new()
+    {
+        "기", "늘", "을", "름", "담", "솜", "랑", "산", "해", "별",
+        "빛", "들", "래", "라", "루", "용", "든", "봄", "단", "새"
+    };
+
+    /// <summary>
+    /// 2음절 이름의 이름다움 평가 (0~1).
+    /// 첫째 음절 45% + 둘째 음절 55% 가중 (끝음절이 이름 인상을 더 좌우).
+    /// 흔함 1.0 / 가능 0.6 / 이례적 0.2(첫째)·0.15(둘째).
+    /// </summary>
+    public static double EvalNameLikeness(string firstSyllable, string secondSyllable)
+    {
+        double first = CommonFirstSyllables.Contains(firstSyllable) ? 1.0
+                     : AcceptableFirstSyllables.Contains(firstSyllable) ? 0.6
+                     : 0.2;
+        double second = CommonFinalSyllables.Contains(secondSyllable) ? 1.0
+                      : AcceptableFinalSyllables.Contains(secondSyllable) ? 0.6
+                      : 0.15;
+        double score = first * 0.45 + second * 0.55;
+
+        // 한쪽 음절이 이례적이면 다른 쪽이 아무리 흔해도 이름답지 않다
+        // (예: "균비" — 균은 이름 첫음절로 안 쓰이는데 비가 흔하다고 통과되면 안 됨)
+        if (first <= 0.2 || second <= 0.15)
+        {
+            score *= 0.6;
+        }
+
+        return score;
+    }
+
+    /// <summary>
+    /// 이름 문자열 전체에 대한 이름다움 평가.
+    /// 2음절만 평가 대상 — 그 외 길이는 중립값(0.7) 반환.
+    /// </summary>
+    public static double EvalNameLikeness(string name)
+    {
+        if (string.IsNullOrEmpty(name) || name.Length != 2) return 0.7;
+        return EvalNameLikeness(name[0].ToString(), name[1].ToString());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // 작명 스킬 1 — 성씨 연음
     // ═══════════════════════════════════════════════════════════════
     //

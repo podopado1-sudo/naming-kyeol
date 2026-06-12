@@ -95,6 +95,10 @@ public class NamePoolEngine : INamePoolEngine
 
         foreach (var (h1, s1) in firstPool)
         {
+            // 두음법칙 위반 음절(룡/림/량 등)은 이름 첫음절로 쓸 수 없다
+            // (같은 한자의 두음 적용 발음이 사전에 별도로 존재함 — 龍은 '용'으로)
+            if (NamingPrinciples.RequiresDueum(h1.Reading)) continue;
+
             double surnameFlow = NamingPrinciples.EvalSurnameFlow(lastName, h1.Reading);
 
             foreach (var (h2, s2) in secondPool)
@@ -106,9 +110,15 @@ public class NamePoolEngine : INamePoolEngine
                 if (NamingPrinciples.IsTrendyName(name)) continue;
                 if (ForbiddenWordData.ContainsForbiddenWord(name)) continue;
                 if (ForbiddenWordData.IsCollisionWithCommonWord(name)) continue;
+                if (ForbiddenWordData.IsNegativeHomophoneName(name)) continue;
+
+                // 이름다움이 낮은 조합은 풀에서 제외 (음운만 매끄러운 비이름 차단)
+                double nameLikeness = NamingPrinciples.EvalNameLikeness(h1.Reading, h2.Reading);
+                if (nameLikeness < 0.5) continue;
 
                 double pairScore =
                     (s1 + s2) * 0.5                                                            // 개인화 점수 평균
+                    + nameLikeness * 350                                                       // 이름다움 (비이름 음절 조합 배제)
                     + surnameFlow * 250                                                        // 성씨 연음 (보편)
                     + NamingPrinciples.EvalOhaengSynergy(h1.Reading, h2.Reading) * 180         // 음령오행 상생 (보편)
                     + EvalSemanticSynergy(h1, h2) * 120                                        // 의미 카테고리 시너지 (한자 특화)

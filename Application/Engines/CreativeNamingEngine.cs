@@ -1,3 +1,4 @@
+using NameForm.Application.Engines.Data;
 using NameForm.Application.Engines.Utils;
 
 namespace NameForm.Application.Engines;
@@ -213,9 +214,12 @@ public class CreativeNamingEngine : ICreativeNamingEngine
         // 패턴 3: 성씨 음절 활용 패턴
         candidates.AddRange(GeneratePhoneticPatternCandidates(lastName, normalizedGender, normalizedTone));
 
-        // 금칙어/부정 발음 필터링
+        // 금칙어/부정 발음/유행 이름 필터링 (세대 중립 철학 — 패턴 사전에
+        // 유행 이름이 섞여 들어와도 출력 단계에서 일관되게 차단)
         candidates = candidates
             .Where(c => !ContainsForbiddenWord(c.FullName))
+            .Where(c => !NamingPrinciples.IsTrendyName(c.Name))
+            .Where(c => !ForbiddenWordData.IsNegativeHomophoneName(c.Name))
             .ToList();
 
         // 중복 제거
@@ -492,31 +496,31 @@ public class CreativeNamingEngine : ICreativeNamingEngine
             new("다솜", "사랑(고어)", "순우리말 이름", "neutral", "neutral"),
             new("가온", "가운데, 중심", "범용 순우리말", "neutral", "neutral"),
             // neutral / soft
-            new("하린", "하늘의 보석", "자연 연상 이름", "neutral", "soft"),
+            new("누리", "온 세상", "순우리말 이름", "neutral", "soft"),
             new("이안", "편안하고 안온한", "평화 이름", "neutral", "soft"),
             new("나윤", "날아오르는 윤기", "자연+빛 이름", "neutral", "soft"),
-            new("아린", "빛나고 아름다운", "순우리말 이름", "neutral", "soft"),
+            new("아람", "탐스러운 가을 열매", "순우리말 이름", "neutral", "soft"),
             new("라온", "즐거운(고어)", "순우리말 이름", "neutral", "soft"),
             // neutral / strong
             new("한결", "한결같은", "결의 이름", "neutral", "strong"),
             new("세찬", "세차고 힘찬", "강인한 이름", "neutral", "strong"),
             new("한빛", "큰 빛", "빛 이름", "neutral", "strong"),
             // female / soft
-            new("서윤", "밝고 고운", "부드러운 이름", "female", "soft"),
-            new("소율", "소박하고 율동적인", "율동감 이름", "female", "soft"),
-            new("유나", "유연하고 아름다운", "부드러운 이름", "female", "soft"),
-            new("채원", "빛깔있는 동산", "자연 이름", "female", "soft"),
+            new("윤슬", "햇빛에 반짝이는 물결", "자연 이름", "female", "soft"),
+            new("소담", "소담스럽고 탐스러운", "순우리말 이름", "female", "soft"),
+            new("예솔", "곱고 소나무 같은", "자연+덕목 이름", "female", "soft"),
+            new("단아", "단정하고 아담한", "덕목 이름", "female", "soft"),
             new("보라", "고귀한 보라빛", "빛깔 이름", "female", "soft"),
-            new("하윤", "하늘의 윤기", "자연+빛 이름", "female", "soft"),
+            new("다온", "좋은 모든 일이 오는", "순우리말 이름", "female", "soft"),
             // male / strong
-            new("준서", "준수하고 서린", "남성적 이름", "male", "strong"),
-            new("건우", "건장하고 씩씩한", "힘찬 이름", "male", "strong"),
-            new("도현", "도를 깨달은 현명함", "덕목 이름", "male", "strong"),
-            new("시우", "시작하는 비(雨)", "자연 이름", "male", "strong"),
+            new("범준", "비범하고 준수한", "남성적 이름", "male", "strong"),
+            new("건휘", "건장하고 빛나는", "힘찬 이름", "male", "strong"),
+            new("진혁", "참되고 빛나는", "덕목 이름", "male", "strong"),
+            new("수혁", "빼어나고 빛나는", "덕목 이름", "male", "strong"),
             // male / neutral
-            new("도윤", "도를 닦고 빛나는", "덕목 이름", "male", "neutral"),
-            new("민준", "영민하고 준수한", "덕목 이름", "male", "neutral"),
-            new("지호", "연못같은 호연지기", "자연+덕목 이름", "male", "neutral"),
+            new("주안", "두루 평안한", "평화 이름", "male", "neutral"),
+            new("재윤", "재능이 윤택한", "덕목 이름", "male", "neutral"),
+            new("태온", "크고 따뜻한", "덕목 이름", "male", "neutral"),
         };
     }
 

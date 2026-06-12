@@ -189,6 +189,13 @@ public class AestheticEngine : IAestheticEngine
             breakdown.Notes.Add("생활어와 충돌");
         }
 
+        // 부정 연상 동음이의어 (10점 — 광부/백기/우상 등 일상어와 완전 일치)
+        if (Data.ForbiddenWordData.IsNegativeHomophoneName(name))
+        {
+            penaltyTotal += 10;
+            breakdown.Notes.Add("부정 연상 단어와 동음");
+        }
+
         // 유행 이름 감점 (5점 — NeutralityScore에서 이미 세대중립성 감점이 반영되므로 이중 처벌 방지)
         if (_trendyNames.Contains(name))
         {
@@ -415,7 +422,7 @@ public class AestheticEngine : IAestheticEngine
     private static readonly HashSet<string> _oldStyleEndings = new()
     {
         "길", "복", "남", "숙", "순", "자", "영", "옥", "희", "미",
-        "철", "호", "석", "수"
+        "철", "호", "석", "수", "경"
     };
 
     // 현세대 흔한 끝글자
@@ -470,7 +477,13 @@ public class AestheticEngine : IAestheticEngine
         }
 
         // 5단계: 독특한 이름 (DB에도 없고 흔한 어미도 없음)
-        return 100;
+        // 단, "독특함"과 "이름답지 않음"은 구분한다 — 빈기/경타처럼 실명 음절
+        // 통계에서 벗어난 조합은 세대중립이 아니라 비(非)이름이므로 만점 제외.
+        // 두 음절 모두 실명에서 흔한 조합만 만점, 한쪽이 어중간하면 차등.
+        double likeness = NamingPrinciples.EvalNameLikeness(name);
+        if (likeness >= 0.85) return 100;
+        if (likeness >= 0.55) return 85;
+        return 70;
     }
 
     // ========== 의미 평가 ==========

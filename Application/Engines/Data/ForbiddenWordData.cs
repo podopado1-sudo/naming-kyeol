@@ -66,6 +66,25 @@ public static class ForbiddenWordData
     };
 
     /// <summary>
+    /// 부정/희화 연상 동음이의어 이름 (이름 완전 일치 전용)
+    /// 발음은 가능하지만 일상어와 정확히 겹쳐 놀림감이 되거나
+    /// 부정적 연상을 일으키는 이름. ForbiddenWords와 달리 부분 일치로
+    /// 검사하면 안 됨 — "백기"가 백씨 성의 "백기훈"까지 차단하게 되므로
+    /// 반드시 이름(given name)과의 완전 일치로만 검사한다.
+    /// </summary>
+    public static readonly HashSet<string> NegativeHomophoneNames = new(StringComparer.Ordinal)
+    {
+        "광부", "백기", "우상", "유신", "비광", "구민", "수용",
+        "사장", "반장", "주방", "변소", "간부", "정상", "고장",
+        "부상", "비상", "시상", "구상", "수상", "조상", "영정",
+        "조용", "정유", "아성", "아재", "아주", "아무", "아수"
+    };
+
+    /// <summary>이름이 부정 연상 동음이의어와 완전 일치하는지 검사</summary>
+    public static bool IsNegativeHomophoneName(string name)
+        => NegativeHomophoneNames.Contains(name);
+
+    /// <summary>
     /// 생활어 충돌 단어 (음식, 가구, 사물 등)
     /// 이름으로 쓰기에 부적절한 일상 사물 단어
     /// 완전일치 + 포함 여부 양쪽 모두 체크 권장

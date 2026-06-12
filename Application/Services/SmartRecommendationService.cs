@@ -132,7 +132,7 @@ public class SmartRecommendationService : ISmartRecommendationService
                     Name = c.Name,
                     FullName = c.FullName,
                     Meaning = c.Meaning,
-                    Score = c.CreativityScore,
+                    Score = Math.Round(c.CreativityScore, 1),
                     Tags = new List<string> { c.Concept, c.SurnameConnection }
                 }).ToList();
 
@@ -156,7 +156,7 @@ public class SmartRecommendationService : ISmartRecommendationService
                         Name = c.Name,
                         FullName = c.FullName,
                         Meaning = c.Meaning,
-                        Score = c.PronunciationScore,
+                        Score = Math.Round(c.PronunciationScore, 1),
                         Tags = new List<string> { c.NameType, "3글자" }
                             .Concat(c.Components).ToList(),
                         PhonologyNotes = c.PhonologyNotes.Select(n => new PhonologyNoteDto
