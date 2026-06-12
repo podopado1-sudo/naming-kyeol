@@ -119,6 +119,7 @@ public class NamePoolEngine : INamePoolEngine
                 double pairScore =
                     (s1 + s2) * 0.5                                                            // 개인화 점수 평균
                     + nameLikeness * 350                                                       // 이름다움 (비이름 음절 조합 배제)
+                    + NamingPrinciples.EvalGenderSyllableFit(h1.Reading, h2.Reading, gender) * 220 // 성별 어미 적합 (여아에 남성형 어미 회피)
                     + surnameFlow * 250                                                        // 성씨 연음 (보편)
                     + NamingPrinciples.EvalOhaengSynergy(h1.Reading, h2.Reading) * 180         // 음령오행 상생 (보편)
                     + EvalSemanticSynergy(h1, h2) * 120                                        // 의미 카테고리 시너지 (한자 특화)

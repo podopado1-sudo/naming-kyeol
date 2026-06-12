@@ -335,6 +335,49 @@ public class NamingPrinciplesTests
         Assert.Equal(0.7, NamingPrinciples.EvalNameLikeness(name), precision: 2);
     }
 
+    // ============================================================
+    // EvalGenderSyllableFit — 성별 어미 적합 (위치별 평가)
+    // ============================================================
+
+    /// <summary>
+    /// 같은 음절도 위치에 따라 다르다 — "규"는 어미(미규)로는 남성형이지만
+    /// 첫음절(규민/규희)로는 여아에게도 자연스럽다 (2026-06-13 사용자 피드백).
+    /// </summary>
+    [Theory]
+    [InlineData("규", "민", "female")] // 규민 — 여아 OK
+    [InlineData("규", "희", "female")] // 규희 — 여아 OK
+    [InlineData("유", "승", "male")]   // 유승 — 남아 OK
+    [InlineData("준", "아", "female")] // 준아 — 여아 OK
+    [InlineData("수", "민", "female")] // 중립 어미
+    public void EvalGenderSyllableFit_MatchingPosition_NoPenalty(string first, string second, string gender)
+    {
+        var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
+        Assert.True(fit >= 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} < 0.7");
+    }
+
+    /// <summary>반대 성별 전형 어미는 감점 — 여아에 민규형, 남아에 ○희/○아형</summary>
+    [Theory]
+    [InlineData("미", "규", "female")] // 미규 — 남성형 어미 (실측 문제 사례)
+    [InlineData("은", "준", "female")]
+    [InlineData("수", "혁", "female")]
+    [InlineData("성", "아", "male")]   // 성아 — 여성형 어미
+    [InlineData("승", "희", "male")]
+    [InlineData("도", "린", "male")]
+    public void EvalGenderSyllableFit_OppositeFinal_Penalized(string first, string second, string gender)
+    {
+        var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
+        Assert.True(fit < 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.7 (반대 성별 어미인데 통과)");
+    }
+
+    /// <summary>성별 미지정이면 항상 중립 (영향 없음)</summary>
+    [Theory]
+    [InlineData("미", "규", "none")]
+    [InlineData("성", "아", "neutral")]
+    public void EvalGenderSyllableFit_NoGender_ReturnsOne(string first, string second, string gender)
+    {
+        Assert.Equal(1.0, NamingPrinciples.EvalGenderSyllableFit(first, second, gender), precision: 2);
+    }
+
     [Fact]
     public void RequiresDueum_NonDueumSyllables_ReturnFalse()
     {

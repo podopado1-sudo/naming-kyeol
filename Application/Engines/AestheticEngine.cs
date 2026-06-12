@@ -203,6 +203,13 @@ public class AestheticEngine : IAestheticEngine
             breakdown.Notes.Add("유행 이름 감점");
         }
 
+        // 성별 어미 불일치 감점 (3점 — 여아에 민규/승규형 어미, 남아에 ○희/○숙형 어미)
+        if (NamingPrinciples.EvalGenderSyllableFit(name, gender) < 0.7)
+        {
+            penaltyTotal += 3;
+            breakdown.Notes.Add(gender == "female" ? "남성형 어미 (여아 기준 참고)" : "여성형 어미 (남아 기준 참고)");
+        }
+
         // 전체 이름(성+이름) 평가
         int fullNamePenalty = 0;
         int surnameBonus = 0;

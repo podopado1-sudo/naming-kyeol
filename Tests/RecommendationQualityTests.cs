@@ -234,6 +234,39 @@ public class RecommendationQualityTests
     }
 
     /// <summary>
+    /// 성별 지정 시 반대 성별 전형 어미가 표준 추천 상위 10에 오면 안 된다.
+    /// 여아 1위가 "미규"(민규형 남성 어미)였던 회귀 방지 (2026-06-13).
+    /// </summary>
+    [Theory]
+    [InlineData("김", "female")]
+    [InlineData("이", "female")]
+    [InlineData("최", "female")]
+    [InlineData("김", "male")]
+    [InlineData("윤", "male")]
+    public async Task Quality_StandardCategory_GenderSyllableFit(string lastName, string gender)
+    {
+        var request = new SmartRecommendationRequestDto
+        {
+            LastName = lastName,
+            BirthDate = "2026-03-15",
+            Gender = gender,
+            Tone = "neutral",
+        };
+
+        var result = await _service.GenerateSmartRecommendationsAsync(request);
+        var standardCategory = result.Categories.FirstOrDefault(c => c.Type == "standard");
+        Assert.NotNull(standardCategory);
+
+        var top10 = standardCategory!.Names.Take(10).Select(n => n.Name).ToList();
+        var mismatches = top10
+            .Where(n => NamingPrinciples.EvalGenderSyllableFit(n, gender) < 0.7)
+            .ToList();
+
+        Assert.True(mismatches.Count == 0,
+            $"반대 성별 전형 어미가 상위 10에 포함됨 ({lastName}/{gender}): {string.Join(", ", mismatches)}");
+    }
+
+    /// <summary>
     /// 창의적 작명 카테고리에 유행 이름이 나오면 안 된다 (세대 중립 철학).
     /// 미등록 성씨 폴백 사전에 유행 이름이 섞여 있던 회귀 방지 (2026-06-13).
     /// </summary>

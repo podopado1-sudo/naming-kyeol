@@ -1,3 +1,4 @@
+using NameForm.Application.Engines.Data;
 using NameForm.Application.Engines.Utils;
 
 namespace NameForm.Application.Engines;
@@ -114,6 +115,107 @@ public static class NamingPrinciples
     {
         if (string.IsNullOrEmpty(name) || name.Length != 2) return 0.7;
         return EvalNameLikeness(name[0].ToString(), name[1].ToString());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 작명 스킬 0-2 — 성별 어미 적합 (Gender Syllable Fit)
+    // ═══════════════════════════════════════════════════════════════
+    //
+    // 미규/규미처럼 남성형 어미(민규·승규의 "규")가 여아 추천 상위에 오는
+    // 문제를 막는다. 끝음절의 성별 전형성은 GenerationNameData 실명 통계
+    // (연대별 인기 이름 + 성별)에서 파생하고, 표본이 작아 쏠려 보이는 어미는
+    // 중립 보정한다. 같은 음절도 위치가 다르면 평가가 다르다 —
+    // "규"는 어미(민규)로는 남성형이지만 첫음절(규민·규희)로는 중성.
+
+    /// <summary>남아 이름 어미로 전형적인 끝음절</summary>
+    private static readonly HashSet<string> MaleTypicalFinals;
+
+    /// <summary>여아 이름 어미로 전형적인 끝음절</summary>
+    private static readonly HashSet<string> FemaleTypicalFinals;
+
+    /// <summary>여아 이름에 전형적인 첫음절 (확실한 것만 수동 큐레이션)</summary>
+    private static readonly HashSet<string> FemaleTypicalFirsts = new()
+    {
+        "아", "채", "미", "혜"
+    };
+
+    /// <summary>남아 이름에 전형적인 첫음절 (확실한 것만 수동 큐레이션)</summary>
+    private static readonly HashSet<string> MaleTypicalFirsts = new()
+    {
+        "철", "병", "종"
+    };
+
+    static NamingPrinciples()
+    {
+        // 실명 통계 표본이 작아 한쪽 성별로 쏠려 보이지만 실제로는 중성인 어미
+        var neutralOverrides = new HashSet<string>
+        {
+            "수", "민", "윤", "진", "현", "우", "영", "서", "원", "지",
+            "빈", "온", "율", "안", "주", "비", "후"
+        };
+
+        // 통계에 없거나 표본 부족이지만 전형성이 확실한 어미 (수동 큐레이션)
+        var maleFinals = new HashSet<string>
+        {
+            "철", "호", "석", "식", "규", "욱", "혁", "환", "훈",
+            "균", "섭", "표", "헌", "승", "준", "용"
+        };
+        var femaleFinals = new HashSet<string>
+        {
+            "희", "숙", "순", "자", "미", "나", "라", "리", "혜",
+            "경", "아", "은", "연", "화", "린", "슬"
+        };
+
+        // GenerationNameData 실명 통계에서 어미별 성별 비율 파생
+        // (2음절 이름, 표본 3개 이상, 한쪽 성별 80% 이상일 때만 전형으로 인정)
+        var counts = new Dictionary<string, (int male, int female)>();
+        foreach (var entry in GenerationNameData.Entries)
+        {
+            if (entry.Name.Length != 2) continue;
+            var final = entry.Name[1].ToString();
+            var c = counts.TryGetValue(final, out var v) ? v : (male: 0, female: 0);
+            if (entry.Gender == "male") c.male++;
+            else if (entry.Gender == "female") c.female++;
+            counts[final] = c;
+        }
+
+        foreach (var (syllable, c) in counts)
+        {
+            if (neutralOverrides.Contains(syllable)) continue;
+            int total = c.male + c.female;
+            if (total < 3) continue;
+            if (c.male >= total * 0.8) maleFinals.Add(syllable);
+            else if (c.female >= total * 0.8) femaleFinals.Add(syllable);
+        }
+
+        MaleTypicalFinals = maleFinals;
+        FemaleTypicalFinals = femaleFinals;
+    }
+
+    /// <summary>
+    /// 음절 위치별 성별 적합 평가 (0~1).
+    /// 어미가 반대 성별 전형이면 크게(−0.65), 첫음절이면 작게(−0.35) 감점.
+    /// gender가 male/female이 아니면 항상 1.0 (중성 요청은 영향 없음).
+    /// </summary>
+    public static double EvalGenderSyllableFit(string firstSyllable, string secondSyllable, string gender)
+    {
+        if (gender != "male" && gender != "female") return 1.0;
+
+        bool isFemale = gender == "female";
+        var oppositeFinals = isFemale ? MaleTypicalFinals : FemaleTypicalFinals;
+        var oppositeFirsts = isFemale ? MaleTypicalFirsts : FemaleTypicalFirsts;
+
+        double fit = 1.0;
+        if (oppositeFinals.Contains(secondSyllable)) fit -= 0.65;
+        if (oppositeFirsts.Contains(firstSyllable)) fit -= 0.35;
+        return Math.Max(0.0, fit);
+    }
+
+    /// <summary>이름 문자열 전체에 대한 성별 어미 적합 (2음절 외에는 중립 1.0)</summary>
+    public static double EvalGenderSyllableFit(string name, string gender)
+    {
+        if (string.IsNullOrEmpty(name) || name.Length != 2) return 1.0;
+        return EvalGenderSyllableFit(name[0].ToString(), name[1].ToString(), gender);
     }
 
     // ═══════════════════════════════════════════════════════════════

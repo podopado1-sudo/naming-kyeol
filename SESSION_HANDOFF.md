@@ -71,9 +71,25 @@
 
 ### 남은 품질 개선 방향 (다음 후보)
 
-1. **여아 1위 "미규" 문제** — 규/승 등 남성형 어미가 여아 추천 상위에 옴. **성별 인지 이름다움**(어미 음절의 성별 적합도) 필요
-2. **실명 통계 결합** — 메모리 `reference_namechart_crawl.md`의 네임차트/대법원 연대별 이름 크롤링과 결합하면 음절 테이블을 데이터 기반으로 교체 가능 (현재는 수동 큐레이션)
-3. 아승/승아 같은 "아+한자" 어색 패턴의 위치별 페어 평가
+1. ~~**여아 1위 "미규" 문제**~~ ✅ 해소 (같은 날 3차 — 아래 참조)
+2. **실명 통계 결합 (외부 크롤링)** — 네임차트/대법원 크롤링으로 음절 테이블을 더 큰 데이터 기반으로 교체 (현재는 GenerationNameData 내부 통계 + 수동 큐레이션)
+3. ~~아승/승아 "아+한자" 패턴~~ ✅ 대부분 해소 (성별 어미 적합이 위치별로 처리)
+
+### 3차 — 성별 어미 적합 (Gender Syllable Fit, 같은 날 후속)
+
+사용자 피드백: "규민, 규희는 여아 이름으로 좋다" → **같은 음절도 위치에 따라 평가가 달라야 한다**.
+"규"는 어미(민규·승규)로는 남성형이지만 첫음절(규민·규희)로는 여아에게 자연스러움.
+
+- **`NamingPrinciples.EvalGenderSyllableFit(first, second, gender)`** 신설 (0~1)
+  - 끝음절 성별 전형성: **GenerationNameData 실명 통계(~190개, 성별 라벨)에서 파생**
+    (2음절·표본 3+·한쪽 80%+) + 수동 큐레이션 병합 + 중립 보정(수/민/윤/진/현/우 등 17개)
+  - 어미가 반대 성별 전형이면 −0.65, 첫음절이면 −0.35 / gender 미지정은 항상 1.0
+  - 남성형 어미: 철/호/석/규/욱/혁/환/훈/승/준/용 등 + 통계 파생
+  - 여성형 어미: 희/숙/순/자/미/나/라/아/은/연/린/슬 등 + 통계 파생
+- NamePoolEngine 조합 점수에 ×220 가중 / AestheticEngine에 불일치 −3 + 노트("남성형 어미 (여아 기준 참고)")
+- **검증**: 여아 상위 10에서 미규/아수/규린(남성형) 소멸 → 수민·준아·선유·은수·은재·**규미** 등.
+  남아에서 성아/승아(여성형 어미) 소멸 → 유승·우준·건규·민규·호승 등
+- 테스트 **905 → 923 (+18)**: 위치별 적합 단위 테스트(규민/규희 여아 OK 케이스 포함) + 성별 어미 회귀 테스트(상위 10 불일치 0 보장)
 
 ### 남은 작업 후보 (이전과 동일)
 - api.namingkyeol.com Render 검증 → Vercel `NEXT_PUBLIC_API_URL` 교체
@@ -939,4 +955,5 @@ npm run build  # 프로덕션 빌드
 | 2026-05-18 | TwinNameService/NameAnalysisService도 ScoringService 경유로 통합, `/method`에 "리포트 방식" 섹션, 의미 선호 키워드 입력(#1), 항렬자 한자 직접 지정(#2), 부정 발음 패턴 데이터 v2.0(#3)+snake_case 파싱 버그 수정, NamingPrinciples 새 스킬 4종(#8: 어색결합/받침에코/외래어/음절균형), 용신 보완 가중치 강화(#5), 자원오행 ConfidenceGrade 반영(#6), 81수리 5단계 매핑(#7), 음운론 3종(#9: 동화/단조/두음), 사전 확장(#10: 순우리말 274→326/3음절 91→139), CreativeNamingEngine 성씨 검증(#11), 품질 회귀 테스트(#12), Saju/YongshinService 단위 테스트(#13), 다양성 회귀 +4, 사전 중복 정리, 영한 매핑 90→122, 복성 키워드 4→6, 3개 로더 ResetCache 통일, SEO 풀셋(robots.ts+sitemap.ts+페이지별 layout 12개+JSON-LD+OG/Twitter card). 테스트 +167개 (710→877), 정적 라우트 19→22 |
 | 2026-06-13 | 운영 정비: keepalive 워크플로(Render cold start 회피), NameForm.slnx(루트 dotnet test 877개 정상화), public 무관 CSV 정리, CLAUDE.md 현행화 |
 | 2026-06-13 (후속) | 🎯 **작명 엔진 품질 대수술**: EvalNameLikeness 신설(실명 음절 위치별 3단계 평가), NamePool 이름다움 가중 350+하드 필터+두음법칙, 세대중립 "독특=만점" 구조 수정(이름다움 3단 차등), NegativeHomophoneNames 30개(완전 일치 전용 — 부분 일치의 백씨 오폭 방지), creative 폴백 유행 이름 14개 교체+출력 필터, 점수 반올림, 수빈아→수아린. 광부/백기/빈기/경타/우상/유신/비광/민준/서윤 등 전멸 확인. 테스트 877→905 (+28) |
+| 2026-06-13 (3차) | 🚻 **성별 어미 적합**: EvalGenderSyllableFit 신설 — GenerationNameData 실명 통계 파생 + 수동 큐레이션. 같은 음절도 위치별 평가(규=어미는 남성형, 첫음절 규민/규희는 여아 OK — 사용자 피드백 반영). NamePool ×220 + Aesthetic −3. 여아 미규/아수 소멸, 남아 성아/승아 소멸. 테스트 905→923 (+18) |
 | 2026-05-20 | 🎊 **정식 출범** — namingkyeol.com 도메인 등록(Cloudflare $10.46/년, auto-renew ON, 만료 2027-05-19), Email Routing(contact@→podopado1@gmail.com), Supabase PostgreSQL(Seoul ap-northeast-2), Render 백엔드 배포(Dockerfile + $APP_UID), Vercel 프론트 배포(Hobby 무료), DNS 연결 + Let's Encrypt SSL 자동, TLS 1.3. 트러블슈팅 5건 해결(Python자동인식/UID충돌/IPv6timeout/EnsureCreated silent fail/UTC strict). 코드 변경: Dockerfile/.dockerignore 신규, csproj data publish 보장, Program.cs Npgsql legacy timestamp + DB 초기화 견고화, .gitignore secrets 패턴 강화, frontend/.git 제거(monorepo). contact 페이지 mailto를 도메인 이메일로 교체. 보안 점수 측정: **SecurityHeaders A**, **Mozilla Observatory B+ (80/100)**. 877개 테스트 유지. 월 운영비 ~₩1,200 (도메인만) |
