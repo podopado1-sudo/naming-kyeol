@@ -1,0 +1,24 @@
+name: Keep Render API awake
+
+# Render Free 플랜은 15분 idle 시 spin-down → 첫 요청이 30초+ 걸림.
+# 10분 간격 ping으로 cold start 회피. (GitHub Actions cron은 부하에 따라 수 분 지연될 수 있음)
+# 주의: 저장소에 60일간 커밋이 없으면 GitHub이 스케줄 워크플로를 자동 비활성화함 — 알림 메일에서 재활성화 가능.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping API health endpoint
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 \
+            "https://naming-kyeol-api.onrender.com/api/v1/recommendations/hanja-stats")
+          echo "API responded with HTTP $status"
+          if [ "$status" -ne 200 ]; then
+            echo "::warning::API ping returned $status"
+          fi

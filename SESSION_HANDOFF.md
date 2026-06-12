@@ -5,7 +5,24 @@
 
 ---
 
-## 마지막 세션 요약 (2026-05-20 — 🎊 정식 출범)
+## 마지막 세션 요약 (2026-06-13 — 운영 정비 3건)
+
+전반 상태 점검(테스트 877/877 ✅, 프론트 22 라우트 빌드 ✅, namingkyeol.com 200 ✅) 후 발견 이슈 처리:
+
+1. **Render cold start 회피** — 운영 API 첫 응답 34초 실측. `.github/workflows/keepalive.yml` 신규: 10분 간격 cron으로 `hanja-stats` 엔드포인트 ping (GitHub Actions 무료). ⚠️ 저장소 60일 무커밋 시 스케줄 자동 비활성화 — GitHub 알림 메일 오면 재활성화.
+2. **루트 `dotnet test` 무동작 수정** — 솔루션 파일이 없어 루트에서 테스트 0개 실행+exit 0(성공처럼 보임)이던 문제. `NameForm.slnx` 신규 (메인+Tests 포함) → 루트 `dotnet test`로 877개 실행 확인.
+3. **frontend/public의 무관 파일 정리** — "노출 정지 상품 리스트.csv"(꽃배달 사업 파일, 커밋 시 웹에 공개 서빙될 뻔) → `C:\Users\HappyFlower\Documents\`로 이동.
+4. **CLAUDE.md 현행화** — 테스트 수(17→877), 운영 상태(배포 완료), 라우트(15→22, about/contact/favorites 반영), 알려진 이슈 갱신.
+
+### 남은 작업 후보 (이전과 동일)
+- api.namingkyeol.com Render 검증 → Vercel `NEXT_PUBLIC_API_URL` 교체
+- Google Search Console 등록 + 사이트맵 제출 (Naver 인증 메타는 커밋됨 — 제출 여부 확인)
+- 사용자 테스트 5~10명 + 피드백
+- NicknameEngine 실구현 / Coming Soon 카테고리 (보류)
+
+---
+
+## 이전 세션 요약 (2026-05-20 — 🎊 정식 출범)
 
 ### 🚀 https://namingkyeol.com 공식 서비스 운영 시작
 
@@ -859,4 +876,5 @@ npm run build  # 프로덕션 빌드
 | 2026-05-15 (오전) | HarmonyEngine→SajuCalculationService 마이그레이션, 발음오행(25점)/수리사격(15점) 추가, hanja_strokes.json 9,190자, 프론트 HarmonyBreakdownCard 5항목으로 갱신 |
 | 2026-05-15 (오후) | ScoringService 단일 진실의 원천 도입, 채점 미스매치 7건 정리, ExplanationEngine 리포트 형식 전환, LLM 서비스 제거, NamingPrinciples 공통 추출, 5개 엔진 보강 (NamePool/Twin/Required/PureKorean/Creative), 채점 분포 정상화 (creative/three-syllable/pure-korean), 즐겨찾기(localStorage)+PDF(인쇄)+♥/공유 버튼, 한국어 조사 유틸 9곳 적용, 참고용 안내 박스, 로그인 제거 → 저장한 이름, 후원 보류 |
 | 2026-05-18 | TwinNameService/NameAnalysisService도 ScoringService 경유로 통합, `/method`에 "리포트 방식" 섹션, 의미 선호 키워드 입력(#1), 항렬자 한자 직접 지정(#2), 부정 발음 패턴 데이터 v2.0(#3)+snake_case 파싱 버그 수정, NamingPrinciples 새 스킬 4종(#8: 어색결합/받침에코/외래어/음절균형), 용신 보완 가중치 강화(#5), 자원오행 ConfidenceGrade 반영(#6), 81수리 5단계 매핑(#7), 음운론 3종(#9: 동화/단조/두음), 사전 확장(#10: 순우리말 274→326/3음절 91→139), CreativeNamingEngine 성씨 검증(#11), 품질 회귀 테스트(#12), Saju/YongshinService 단위 테스트(#13), 다양성 회귀 +4, 사전 중복 정리, 영한 매핑 90→122, 복성 키워드 4→6, 3개 로더 ResetCache 통일, SEO 풀셋(robots.ts+sitemap.ts+페이지별 layout 12개+JSON-LD+OG/Twitter card). 테스트 +167개 (710→877), 정적 라우트 19→22 |
+| 2026-06-13 | 운영 정비: keepalive 워크플로(Render cold start 회피), NameForm.slnx(루트 dotnet test 877개 정상화), public 무관 CSV 정리, CLAUDE.md 현행화 |
 | 2026-05-20 | 🎊 **정식 출범** — namingkyeol.com 도메인 등록(Cloudflare $10.46/년, auto-renew ON, 만료 2027-05-19), Email Routing(contact@→podopado1@gmail.com), Supabase PostgreSQL(Seoul ap-northeast-2), Render 백엔드 배포(Dockerfile + $APP_UID), Vercel 프론트 배포(Hobby 무료), DNS 연결 + Let's Encrypt SSL 자동, TLS 1.3. 트러블슈팅 5건 해결(Python자동인식/UID충돌/IPv6timeout/EnsureCreated silent fail/UTC strict). 코드 변경: Dockerfile/.dockerignore 신규, csproj data publish 보장, Program.cs Npgsql legacy timestamp + DB 초기화 견고화, .gitignore secrets 패턴 강화, frontend/.git 제거(monorepo). contact 페이지 mailto를 도메인 이메일로 교체. 보안 점수 측정: **SecurityHeaders A**, **Mozilla Observatory B+ (80/100)**. 877개 테스트 유지. 월 운영비 ~₩1,200 (도메인만) |

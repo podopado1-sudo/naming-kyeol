@@ -7,7 +7,9 @@
 
 ## 프로젝트 개요
 
-**NameForm** (이름격) — 미학 기반 + 출생 정보 조화로 한국어 이름을 추천하는 웹 서비스. "사주로 이름을 만들지 않는다"는 철학 아래, 먼저 미학적으로 좋은 이름을 고르고 조화 점수로 추천률을 조정한다.
+**NameForm** (이름의 결 / namingkyeol.com) — 미학 기반 + 출생 정보 조화로 한국어 이름을 추천하는 웹 서비스. "사주로 이름을 만들지 않는다"는 철학 아래, 먼저 미학적으로 좋은 이름을 고르고 조화 점수로 추천률을 조정한다.
+
+> 🚀 **운영 중**: https://namingkyeol.com (2026-05-20 출범) — Vercel(프론트) + Render Free(백엔드 API) + Supabase PostgreSQL(서울). 상세 인프라는 `SESSION_HANDOFF.md` 참조.
 
 ### 백엔드
 - **언어:** C# (.NET 10.0)
@@ -20,7 +22,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 30일 보존)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (5파일, 17 테스트)
+- **테스트:** xUnit (877 테스트 — 엔진별 단위 테스트 16/16 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -39,7 +41,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행
+# 테스트 실행 (NameForm.slnx 경유 — 877개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -74,6 +76,7 @@ npm run lint
 D:\MyDev\NameForm\
 ├── CLAUDE.md                           ← 이 파일
 ├── Program.cs                          ← 진입점 (DI 등록, 미들웨어, Serilog/CORS)
+├── NameForm.slnx                       ← 솔루션 (메인 + Tests — 루트 dotnet test용)
 ├── NameForm.csproj                     ← 프로젝트 파일 (.NET 10.0)
 ├── nameform.db (+ .db-shm, .db-wal)    ← SQLite DB (개발)
 ├── appsettings.json / .Development.json ← 설정 (DB 연결, CORS, API Key 등)
@@ -265,11 +268,11 @@ D:\MyDev\NameForm\
 Twin Result / Dual Result / Specialty Input 4종 / Evaluate Input / Coming Soon / 시스템 상태 4종 /
 Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 
-## 라우트 (15개, 2026-05-14 기준)
+## 라우트 (22개 정적 생성, 2026-06-13 기준)
 
 ```
 /                  홈 (Hero + Categories + ProPaths + WhyKyeol)
-/search            이름 추천 (구 /baby — 마이그레이션 완료)
+/search            이름 추천 (구 /baby — 301 리다이렉트 구성됨)
 /evaluate          이름 평가
 /analysis          이름 분석
 /twin              쌍둥이
@@ -281,7 +284,12 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 /creative          창의적 작명
 /three-syllable    3글자
 /guide             작명 가이드 (7 챕터, 사용자 교육)
-/method            작명 원리 (5 섹션, 알고리즘 설명)
+/method            작명 원리 (알고리즘 설명, "리포트 방식" 포함)
+/favorites         저장한 이름 (localStorage 즐겨찾기)
+/about             소개
+/contact           문의 (contact@namingkyeol.com)
+/robots.txt        robots.ts 자동 생성 (AI 봇 18종 차단)
+/sitemap.xml       sitemap.ts 자동 생성
 /_not-found        404
 ```
 
@@ -289,16 +297,15 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 
 ### 백엔드
 - **NicknameEngine**: 더미 구현 (실제 로직 없음)
-- **엔진 테스트 0%**: 핵심 점수 계산 로직 미검증 (5파일 17 테스트는 다른 영역)
-- **API Key 인증**: 현재 단순 키 검증 — 본격 인증/인가 시스템 필요 (OAuth, JWT 등)
+- **API Key 인증**: 현재 단순 키 검증 — 본격 인증/인가 시스템 필요 (OAuth, JWT 등). 운영은 `Authentication__Enabled=false` 상태
 - **EF Core warning**: `Candidate.Reasons`, `Recommendation.BonusNicknames` 컬렉션에 ValueComparer 미설정 (동작엔 문제 없지만 경고 발생)
+- **xUnit1026 경고 1건**: `NamingPrinciplesTests.ApplyDueum_TransformsAsExpected`의 미사용 파라미터
 
 ### 프론트엔드
 - **/guide의 회사명/반려동물은 "준비 중" 안내**: 해당 라우트 미구현
-- **Footer "소개"/"문의" 페이지 미구현**: "준비 중" 뱃지로 처리
 - **Home Categories의 `company`/`pet` 카드**: 클릭 시 ComingSoonModal만 표시
-- ~~**`/baby` 외부 북마크 호환성**~~ (2026-05-18 완료): `next.config.ts`에 `/baby` → `/search` permanent(301) 리다이렉트 구성됨
 
 ### 인프라/운영
-- **배포 설정 미정**: Azure/Vercel/온프레미스 등 미결정
+- **Render Free cold start**: 15분 idle 후 첫 요청 30초+ — `.github/workflows/keepalive.yml`이 10분 간격 ping으로 회피 (저장소 60일 무커밋 시 GitHub이 자동 비활성화하므로 알림 메일 주의)
+- **api.namingkyeol.com 커스텀 도메인**: Render 검증 미완 — 완료 시 Vercel `NEXT_PUBLIC_API_URL` 교체 필요
 - **dev 환경 확인**: `Properties/launchSettings.json`으로 `dotnet run`만 쳐도 Development 모드 자동 적용됨
