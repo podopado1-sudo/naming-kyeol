@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "nameform:favorites:v1";
 
@@ -35,6 +35,7 @@ function readAll(): FavoriteName[] {
 function writeAll(items: FavoriteName[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  cachedItems = null;
   // 같은 탭 내 다른 컴포넌트에 알림
   window.dispatchEvent(new CustomEvent("nameform:favorites:changed"));
 }
@@ -70,44 +71,40 @@ export function toggleFavorite(fav: Omit<FavoriteName, "savedAt">) {
   }
 }
 
+// useSyncExternalStore용 스냅샷 캐시 — 렌더 간 참조 동일성 유지
+let cachedItems: FavoriteName[] | null = null;
+const EMPTY_ITEMS: FavoriteName[] = [];
+
+function getSnapshot(): FavoriteName[] {
+  if (cachedItems === null) cachedItems = readAll();
+  return cachedItems;
+}
+
+function getServerSnapshot(): FavoriteName[] {
+  return EMPTY_ITEMS;
+}
+
+function subscribe(onStoreChange: () => void): () => void {
+  function refresh() {
+    cachedItems = null;
+    onStoreChange();
+  }
+  window.addEventListener("nameform:favorites:changed", refresh);
+  window.addEventListener("storage", refresh); // 다른 탭 변경 감지
+  return () => {
+    window.removeEventListener("nameform:favorites:changed", refresh);
+    window.removeEventListener("storage", refresh);
+  };
+}
+
 /** 컴포넌트에서 사용 — 자동으로 갱신됨. */
 export function useFavorites(): FavoriteName[] {
-  const [items, setItems] = useState<FavoriteName[]>([]);
-
-  useEffect(() => {
-    setItems(readAll());
-
-    function refresh() {
-      setItems(readAll());
-    }
-    window.addEventListener("nameform:favorites:changed", refresh);
-    window.addEventListener("storage", refresh); // 다른 탭 변경 감지
-    return () => {
-      window.removeEventListener("nameform:favorites:changed", refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, []);
-
-  return items;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 /** 단일 이름의 즐겨찾기 상태를 추적하는 훅. */
 export function useIsFavorite(fullName: string, birthDate?: string): boolean {
-  const [val, setVal] = useState(false);
-
-  useEffect(() => {
-    setVal(isFavorite(fullName, birthDate));
-
-    function refresh() {
-      setVal(isFavorite(fullName, birthDate));
-    }
-    window.addEventListener("nameform:favorites:changed", refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      window.removeEventListener("nameform:favorites:changed", refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, [fullName, birthDate]);
-
-  return val;
+  const items = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const k = makeKey(fullName, birthDate);
+  return items.some(f => makeKey(f.fullName, f.birthDate) === k);
 }

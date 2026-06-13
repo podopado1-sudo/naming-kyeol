@@ -299,8 +299,8 @@ export default function MethodPage() {
                   fontStyle: "italic",
                 }}
               >
-                "이 이름은 부드럽고 따뜻한 느낌을 주며, 자연의 생동감을 담고 있어
-                아이의 밝은 미래를 상징합니다."
+                &ldquo;이 이름은 부드럽고 따뜻한 느낌을 주며, 자연의 생동감을 담고 있어
+                아이의 밝은 미래를 상징합니다.&rdquo;
               </p>
               <div
                 style={{

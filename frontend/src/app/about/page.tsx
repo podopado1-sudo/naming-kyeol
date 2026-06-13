@@ -150,8 +150,8 @@ export default function AboutPage() {
               fontStyle: "italic",
             }}
           >
-            "사주로 이름을 만들지 않는다. 먼저 미학적으로 좋은 이름을 고르고,
-            조화 점수로 추천률을 조정한다."
+            &ldquo;사주로 이름을 만들지 않는다. 먼저 미학적으로 좋은 이름을 고르고,
+            조화 점수로 추천률을 조정한다.&rdquo;
           </p>
         </div>
 

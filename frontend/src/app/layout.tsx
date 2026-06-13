@@ -145,7 +145,6 @@ export default function RootLayout({
         {/* 구조화 데이터: Organization + WebSite (Google Knowledge Panel 후보) */}
         <script
           type="application/ld+json"
-          // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: JSON.stringify([
               {

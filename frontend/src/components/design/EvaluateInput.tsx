@@ -10,7 +10,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { BookOpen, Leaf, Music } from "lucide-react";
 
 export type EvalSubmitPayload = {
@@ -653,6 +653,8 @@ function Input({
   );
 }
 
+const emptySubscribe = () => () => {};
+
 function DateInput({
   value,
   onChange,
@@ -663,11 +665,12 @@ function DateInput({
   const formatted = value
     ? `${value.slice(0, 4)}년 ${parseInt(value.slice(5, 7), 10)}월 ${parseInt(value.slice(8, 10), 10)}일`
     : "";
-  // SSR/hydration 안전: 클라이언트 마운트 후에만 today 설정
-  const [today, setToday] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    setToday(new Date().toISOString().slice(0, 10));
-  }, []);
+  // SSR/hydration 안전: 서버 스냅샷은 undefined, 클라이언트에서만 today 계산
+  const today = useSyncExternalStore(
+    emptySubscribe,
+    () => new Date().toISOString().slice(0, 10),
+    () => undefined,
+  );
   return (
     <div style={{ position: "relative" }}>
       <input

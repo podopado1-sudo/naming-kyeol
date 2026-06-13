@@ -5,7 +5,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Mark } from "./Mark";
 import { Button } from "./Primitives";
 import { SPField, SPInput, SPSection, SPSelect, SPSlider } from "./SpecialtyPrimitives";
@@ -588,16 +588,6 @@ export function SpecialtyPage({
     useHeritage: false,
   });
 
-  // twin.births 길이를 count에 맞춰 동기화
-  useEffect(() => {
-    if (twin.births.length !== twin.count) {
-      const nb = [...twin.births];
-      while (nb.length < twin.count) nb.push("");
-      while (nb.length > twin.count) nb.pop();
-      setTwin({ ...twin, births: nb });
-    }
-  }, [twin]);
-
   const m = MODE_META[mode];
 
   function handleSubmit() {
@@ -631,7 +621,19 @@ export function SpecialtyPage({
         {mode === "twin" && (
           <TwinBlock
             state={twin}
-            set={(p) => setTwin({ ...twin, ...p })}
+            set={(p) =>
+              setTwin((t) => {
+                const next = { ...t, ...p };
+                // births 길이를 count에 맞춰 동기화
+                if (next.births.length !== next.count) {
+                  const nb = [...next.births];
+                  while (nb.length < next.count) nb.push("");
+                  while (nb.length > next.count) nb.pop();
+                  next.births = nb;
+                }
+                return next;
+              })
+            }
           />
         )}
         {mode === "dual" && (

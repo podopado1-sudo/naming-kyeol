@@ -63,10 +63,7 @@ function buildMappingNote(c: DualNameCandidate): string {
   return pairs.join(" · ");
 }
 
-function mapResponse(
-  candidates: DualNameCandidate[],
-  mode: DualMode
-): DualCandidate[] {
+function mapResponse(candidates: DualNameCandidate[]): DualCandidate[] {
   return candidates.map((c, i) => {
     const koreanSyllables = syllabify(c.koreanName);
     const englishSyllables = splitEnglishToSyllables(
@@ -171,7 +168,7 @@ export default function DualNamePage() {
     return (
       <DualResultPage
         context={ctx}
-        candidates={mapResponse(candidates, mode)}
+        candidates={mapResponse(candidates)}
         onRegenerate={handleReset}
       />
     );

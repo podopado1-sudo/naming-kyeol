@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Accordion,
   AccordionItem,
@@ -554,32 +553,6 @@ function BabyNamingInner() {
       </div>
       <Footer />
     </>
-  );
-}
-
-// ---- Results — SmartResultPage 래핑 ----
-function ResultSection({
-  result,
-  onReset,
-  requestSummary,
-  onCandidateDetail,
-}: {
-  result: SmartRecommendationResponse | null;
-  onReset: () => void;
-  requestSummary: RequestSummary;
-  onCandidateDetail?: (fullName: string) => void;
-}) {
-  if (result === null) return null;
-  if (result.categories.length === 0) return <EmptyState />;
-
-  return (
-    <SmartResultPage
-      data={result}
-      requestSummary={requestSummary}
-      editHref="/search"
-      onRegenerate={onReset}
-      onCandidateDetail={onCandidateDetail}
-    />
   );
 }
 

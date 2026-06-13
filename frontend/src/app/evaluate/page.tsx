@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import {
@@ -492,12 +492,3 @@ export default function EvaluatePage() {
     </Suspense>
   );
 }
-
-function EvaluateInnerPlaceholder(): null {
-  // type-only utility (avoid unused import warning)
-  void EvaluateInnerPlaceholder;
-  return null;
-}
-
-// (intentionally unused) placeholder to suppress eslint unused on FormEvent
-void ({} as FormEvent);
