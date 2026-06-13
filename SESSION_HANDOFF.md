@@ -5,7 +5,62 @@
 
 ---
 
-## 마지막 세션 요약 (2026-06-13 — 운영 정비 3건)
+## 마지막 세션 요약 (2026-06-13 — 🧹 프론트엔드 lint 완전 정리)
+
+**배경**: `frontend`에서 `npm run lint`가 사전 존재하던 에러 8건으로 실패 (한자 SEO 작업과 무관). 직전 세션이 "별도 작업 칩으로 분리"해 둔 이슈를 해소.
+
+### 수정 (에러 8건)
+- **about/method**: 따옴표를 `&ldquo;`/`&rdquo;`로 이스케이프 (`react/no-unescaped-entities`)
+- **EvaluateInput**: `today` 계산을 `useState`+`useEffect` → **`useSyncExternalStore`** 전환 (`set-state-in-effect`). 서버 스냅샷 `undefined`·클라이언트만 계산으로 SSR/하이드레이션 동작 동일
+- **SpecialtyPage**: `twin.births` 길이 동기화를 effect → `setTwin` 업데이터로 이동 (불일치 프레임 제거, 미사용 `useEffect` import 제거)
+- **favorites**: `useFavorites`/`useIsFavorite`를 `useSyncExternalStore` 기반 재작성. 모듈 레벨 스냅샷 캐시로 참조 안정성 확보, `writeAll`+이벤트 양쪽에서 무효화
+
+### 정리 (경고 9건, 추가 요청)
+- search(`useMemo`·`Tabs`·미사용 `ResultSection`) / dual-name(미사용 `mode` 파라미터) / evaluate(더미 함수+`FormEvent`) / layout(무효 `eslint-disable` 주석) 제거 — 모두 dead code
+
+### 결과
+- `npm run lint` **에러 0·경고 0** 완전 통과, `npm run build` 통과 (정적 2,563 페이지)
+- 커밋 `18eee18` — 내 9개 파일만 명시 스테이징 (다른 세션 작업 파일 보존). **push 보류** (Vercel 배포 트리거 회피 + 워킹 트리에 병렬 세션 미커밋 변경 존재)
+- AGENTS.md 지침대로 Next.js 16 번들 docs(`node_modules/next/dist/docs/`) 확인 후 작업
+
+---
+
+## 직전 세션 (2026-06-13 — 🔍 한자 사전 SEO 페이지 출시)
+
+**배경**: 사용자가 jsflower.co.kr/jsflower.kr "투사이트 SEO 전략"(별도 광고 없이 검색 상위 노출) 분석 요청 → 이름결 적용.
+
+**jsflower 분석 결론**: 같은 회사가 역할 다른 두 사이트 운영(.co.kr 그누보드 쇼핑몰=거래 / .kr 워드프레스=정보). 효과 핵심은 ① 검색결과 2칸 점유 ② 정보성 검색어를 정보 사이트가 흡수해 거래 사이트로 퍼널 ③ 비정상적으로 깊은 카테고리로 롱테일 대량 흡수. **단, 신생 도메인 2개로 나누면 권위 분산으로 역효과** — jsflower는 한쪽이 이미 랭크된 상태에서 추가한 케이스.
+
+**적용 우선순위 결정**: (1순위) 같은 도메인 내 프로그래매틱 SEO → (2순위) 네이버 블로그 → (3순위) 제2도메인. 보유 자산 한자 9,595자가 jsflower엔 없는 무기.
+
+### 구현: `/hanja` 인명용 한자 사전 (라이브 ✅)
+
+- **데이터**: `scripts/build_hanja_seo_data.py` — 한자 JSON 4종(dictionary_final/strokes/core_v1/radical_map) 병합 → `frontend/src/data/hanja-seo.json`(1.2MB). 오행 등급 S(검수 2,054)/C(자동 1,484)/D(획수 5,652), 백엔드 `HanjaData.cs` 우선순위와 동일. 데이터 정제: 쉼표 묶음 독음 863자 분리 + nan 오염 제거.
+- **라우트**: `/hanja`(초성 ㄱ~ㅎ 인덱스) + `/hanja/[slug]`(한글=독음 목록 / 한자=글자 상세). 독음 489개 + 글자 9,096개 = **9,585페이지**.
+- **퍼널**: 전 페이지 CTA "이 글자로 이름 추천받기" → `/required-char?char=` 프리필. 한자 직접 입력 시 항렬자 모드(`requiredHanja`)로 동작.
+- **SEO**: generateMetadata + canonical + JSON-LD(글자=DefinedTerm / 독음=ItemList / Breadcrumb). 디자인은 기존 ConfidenceGrade 4축 뱃지 재사용. Footer에 "인명용 한자 사전" 링크.
+- **sitemap**: 2,557 URL(정적 17 + 독음 489 + S급 글자 2,052). **단계적 공개** — thin-content 판정 회피 위해 1차는 검수 글자만 등재, 나머지는 내부링크로 자연 발견.
+
+### ⚠️ 빌드 전략 — 온디맨드(ISR) 폐기, 전량 prerender
+
+1차로 하이브리드(S급만 prerender + 나머지 `dynamicParams=true` 온디맨드)로 배포했으나 **Vercel에서 온디맨드 생성 페이지만 500** 반환(로컬 `next start` 재현 불가, vercel/next.js#81155·#71757 계열 미해결 이슈). → **전량 빌드 타임 생성**(`dynamicParams=false`, 9,608페이지/15.9초)으로 전환. 산출물 ~2GB지만 Vercel 파일 수 하드캡 없음. 프로덕션 전 구간(S/D/확장A/SMP 글자, 404, CTA) 200 검증 완료.
+
+> 설계 상세: `docs/hanja-seo-design.md`
+
+### 다음 할 일 (한자 SEO 후속)
+
+1. **색인 추이 확인 (2~4주 뒤)** — 구글/네이버 서치콘솔은 이미 등록·사이트맵 제출 완료(아래 운영 정비 세션 참조), 사이트맵 URL 동일하므로 **재제출 불필요·자동 재수집**. `/hanja/*` 색인 진행률만 모니터링.
+2. **단계적 공개 2단계** — 색인 양호 시 `sitemap.ts`의 `getCuratedChars()` → `getAllDetailChars()` 한 줄 교체로 전체 9,585 URL 공개.
+3. **제2도메인 선점(방어용)** — `namingkyeol.kr`/`namingkyeol.co.kr` 둘 다 미등록 확인됨(2026-06-13). 가비아 등에서 연 1~2만원 선점 후 Vercel 301 리다이렉트만. **콘텐츠 분산은 본체 랭크 후** 검토.
+4. **2단계 프로그래매틱 SEO(후순위)** — `/name/[이름]` 이름 뜻 페이지, `/surname/[성]` 성씨 랜딩, 네이버 블로그 연계.
+
+### 미커밋 참고
+- 한자 사전 관련 파일만 선택 커밋(`aa6a183`, `dd2c06d`) + push 완료. 다른 병렬 세션의 작업 파일(엔진, about/method lint 등)은 워킹 트리에 남겨둠 — `git add -A` 금지, 내 파일만 명시 스테이징.
+- ~~기존 프론트 lint 에러 8건(about/method 따옴표, EvaluateInput/SpecialtyPage/favorites의 effect 내 setState)은 별도 작업 칩으로 분리~~ ✅ **해소** (위 lint 정리 세션, 커밋 `18eee18`) — 에러 8건 + 경고 9건 모두 처리.
+
+---
+
+## 이전 세션 (2026-06-13 — 운영 정비 3건)
 
 전반 상태 점검(테스트 877/877 ✅, 프론트 22 라우트 빌드 ✅, namingkyeol.com 200 ✅) 후 발견 이슈 처리:
 
