@@ -12,8 +12,8 @@ import {
 import {
   ELEMENT_GENERATES,
   ELEMENT_KO,
+  getAllDetailChars,
   getAllReadings,
-  getCuratedChars,
   getElementDistribution,
   getHanja,
   getReadingChars,
@@ -32,16 +32,17 @@ import {
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://namingkyeol.com";
 
-// 빌드 타임에는 독음 767개 + 검수(S급) 글자만 생성 (~2,800 페이지).
-// 나머지 글자(~7,000자)는 첫 방문 시 온디맨드 생성 후 캐시 —
-// Vercel 배포 산출물 한도(파일 수/크기)를 피하면서 전체 사전을 서빙한다.
-// 사전에 없는 slug는 resolveSlug → notFound()로 404.
-export const dynamicParams = true;
+// 전체 빌드 타임 생성 (독음 489 + 상세 글자 9,096 ≈ 9,600 페이지, 생성 ~16초).
+// 처음엔 S급만 prerender + 나머지 온디맨드(ISR)로 운영하려 했으나,
+// Vercel에서 온디맨드 생성 페이지만 500을 반환하는 문제(프레임워크 레벨,
+// 로컬 next start에서는 재현 안 됨)가 있어 전량 prerender로 전환.
+// 미생성 slug는 함수 호출 없이 즉시 404.
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return [
     ...getAllReadings().map((reading) => ({ slug: reading })),
-    ...getCuratedChars().map((char) => ({ slug: char })),
+    ...getAllDetailChars().map((char) => ({ slug: char })),
   ];
 }
 
