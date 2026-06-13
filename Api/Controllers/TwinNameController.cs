@@ -12,13 +12,16 @@ public class TwinNameController : ControllerBase
 {
     private readonly ITwinNameService _twinNameService;
     private readonly ILogger<TwinNameController> _logger;
+    private readonly IUsageTracker _usageTracker;
 
     public TwinNameController(
         ITwinNameService twinNameService,
-        ILogger<TwinNameController> logger)
+        ILogger<TwinNameController> logger,
+        IUsageTracker usageTracker)
     {
         _twinNameService = twinNameService;
         _logger = logger;
+        _usageTracker = usageTracker;
     }
 
     /// <summary>
@@ -45,6 +48,7 @@ public class TwinNameController : ControllerBase
 
             _logger.LogInformation("쌍둥이 이름 요청: 성={LastName}, 자녀수={ChildCount}",
                 request.LastName, request.ChildCount);
+            await _usageTracker.TrackAsync("endpoint", "twin");
 
             var result = await _twinNameService.GenerateTwinNamesAsync(request);
             return Ok(result);

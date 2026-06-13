@@ -12,13 +12,16 @@ public class NameAnalysisController : ControllerBase
 {
     private readonly INameAnalysisService _nameAnalysisService;
     private readonly ILogger<NameAnalysisController> _logger;
+    private readonly IUsageTracker _usageTracker;
 
     public NameAnalysisController(
         INameAnalysisService nameAnalysisService,
-        ILogger<NameAnalysisController> logger)
+        ILogger<NameAnalysisController> logger,
+        IUsageTracker usageTracker)
     {
         _nameAnalysisService = nameAnalysisService;
         _logger = logger;
+        _usageTracker = usageTracker;
     }
 
     /// <summary>
@@ -50,6 +53,7 @@ public class NameAnalysisController : ControllerBase
 
             _logger.LogInformation("이름 분석 요청: 성={LastName}, 이름={FirstName}",
                 request.LastName, request.FirstName);
+            await _usageTracker.TrackAsync("endpoint", "analysis");
 
             var result = await _nameAnalysisService.AnalyzeNameAsync(request);
             return Ok(result);

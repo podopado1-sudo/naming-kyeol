@@ -28,6 +28,7 @@ public class RecommendationsController : ControllerBase
     private readonly ICreativeNamingEngine _creativeNamingEngine;
     private readonly ISmartRecommendationService _smartRecommendationService;
     private readonly INameEvaluationService _nameEvaluationService;
+    private readonly IUsageTracker _usageTracker;
 
     public RecommendationsController(
         IRecommendationService recommendationService,
@@ -42,7 +43,8 @@ public class RecommendationsController : ControllerBase
         IThreeSyllableEngine threeSyllableEngine,
         ICreativeNamingEngine creativeNamingEngine,
         ISmartRecommendationService smartRecommendationService,
-        INameEvaluationService nameEvaluationService)
+        INameEvaluationService nameEvaluationService,
+        IUsageTracker usageTracker)
     {
         _recommendationService = recommendationService;
         _repository = repository;
@@ -57,6 +59,7 @@ public class RecommendationsController : ControllerBase
         _creativeNamingEngine = creativeNamingEngine;
         _smartRecommendationService = smartRecommendationService;
         _nameEvaluationService = nameEvaluationService;
+        _usageTracker = usageTracker;
     }
 
     /// <summary>
@@ -587,6 +590,7 @@ public class RecommendationsController : ControllerBase
 
             _logger.LogInformation("필수 글자 이름 요청: 성={LastName}, 글자={RequiredChar}, 위치={Position}",
                 request.LastName, request.RequiredChar, request.Position);
+            await _usageTracker.TrackAsync("endpoint", "required-char");
 
             var candidates = await _requiredCharEngine.GenerateCandidatesAsync(
                 request.LastName,
@@ -638,6 +642,7 @@ public class RecommendationsController : ControllerBase
 
             _logger.LogInformation("부모 기반 작명 요청: 성={LastName}, 성별={Gender}, 톤={Tone}",
                 request.LastName, request.Gender, request.Tone);
+            await _usageTracker.TrackAsync("endpoint", "parent-based");
 
             var candidates = await _parentBasedNamingEngine.GenerateCandidatesAsync(
                 request.LastName,
@@ -690,6 +695,7 @@ public class RecommendationsController : ControllerBase
 
             _logger.LogInformation("이중 이름 요청: 성={LastName}, 영어이름={EnglishName}, 성별={Gender}",
                 request.LastName, request.PreferredEnglishName, request.Gender);
+            await _usageTracker.TrackAsync("endpoint", "dual-name");
 
             var candidates = await _dualNameEngine.GenerateDualNamesAsync(
                 request.LastName,
@@ -733,6 +739,7 @@ public class RecommendationsController : ControllerBase
 
             _logger.LogInformation("별명 생성 요청: 성={LastName}, 이름수={NameCount}",
                 request.LastName, request.Names.Count);
+            await _usageTracker.TrackAsync("endpoint", "nickname");
 
             var nicknames = await _nicknameEngine.GenerateNicknamesAsync(
                 request.LastName,
@@ -778,6 +785,7 @@ public class RecommendationsController : ControllerBase
 
             _logger.LogInformation("순우리말 이름 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 개수={Count}",
                 request.LastName, request.Gender, request.Tone, request.Count);
+            await _usageTracker.TrackAsync("endpoint", "pure-korean");
 
             var candidates = await _pureKoreanNameEngine.GenerateCandidatesAsync(
                 request.LastName,
@@ -844,6 +852,7 @@ public class RecommendationsController : ControllerBase
 
             _logger.LogInformation("희귀 성씨 이름 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 개수={Count}",
                 request.LastName, request.Gender, request.Tone, request.Count);
+            await _usageTracker.TrackAsync("endpoint", "rare-surname");
 
             var analysis = await _rareSurnameEngine.AnalyzeAndRecommendAsync(
                 request.LastName,
@@ -914,6 +923,7 @@ public class RecommendationsController : ControllerBase
 
             _logger.LogInformation("3글자 이름 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 유형={NameType}, 개수={Count}",
                 request.LastName, request.Gender, request.Tone, request.NameType, request.Count);
+            await _usageTracker.TrackAsync("endpoint", "three-syllable");
 
             var candidates = await _threeSyllableEngine.GenerateCandidatesAsync(
                 request.LastName,
@@ -962,6 +972,7 @@ public class RecommendationsController : ControllerBase
 
             _logger.LogInformation("창의적 작명 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 개수={Count}",
                 request.LastName, request.Gender, request.Tone, request.Count);
+            await _usageTracker.TrackAsync("endpoint", "creative");
 
             var candidates = await _creativeNamingEngine.GenerateCandidatesAsync(
                 request.LastName,
@@ -1007,6 +1018,7 @@ public class RecommendationsController : ControllerBase
             if (!validTones.Contains(request.Tone?.ToLower() ?? "neutral"))
                 return BadRequest(new { error = "Tone은 'neutral', 'soft', 'strong' 중 하나입니다." });
 
+            await _usageTracker.TrackAsync("endpoint", "smart");
             var result = await _smartRecommendationService.GenerateSmartRecommendationsAsync(request);
             return Ok(result);
         }
@@ -1088,6 +1100,7 @@ public class RecommendationsController : ControllerBase
 
             _logger.LogInformation("이름 평가 요청: 이름={Name}, 성={LastName}, 성별={Gender}, 톤={Tone}",
                 request.Name, request.LastName, request.Gender, request.Tone);
+            await _usageTracker.TrackAsync("endpoint", "evaluate");
 
             TimeSpan? birthTime = null;
             if (!string.IsNullOrEmpty(request.BirthTime) &&

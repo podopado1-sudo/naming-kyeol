@@ -123,3 +123,15 @@ export function evaluate(
 ): Promise<NameEvaluationResponse> {
   return request("/recommendations/evaluate", req);
 }
+
+// 탭 클릭 이벤트 (fire-and-forget, 실패 무시)
+export function trackTabView(key: string): void {
+  const url = `${API_BASE}/usage/event`;
+  const body = JSON.stringify({ eventType: "tab_view", key });
+  const blob = new Blob([body], { type: "application/json" });
+  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+    navigator.sendBeacon(url, blob);
+  } else {
+    fetch(url, { method: "POST", body, headers: { "Content-Type": "application/json" }, keepalive: true }).catch(() => {});
+  }
+}

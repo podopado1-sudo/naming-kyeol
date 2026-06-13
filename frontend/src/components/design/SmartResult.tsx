@@ -11,7 +11,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { trackTabView } from "@/lib/api";
 import type {
   PhonologyNote,
   SmartNameCandidate,
@@ -1642,13 +1643,27 @@ export function SmartResultPage({
   onCandidateDetail?: (fullName: string) => void;
 }) {
   const { topPick, categories } = mapResponse(data);
-  const [tab, setTab] = useState(
-    initialTab ?? categories[0]?.type ?? "standard"
-  );
+  const initialTabType = initialTab ?? categories[0]?.type ?? "standard";
+  const [tab, setTab] = useState(initialTabType);
   const bannerRef = useRef<HTMLDivElement>(null);
+  // 세션 내 탭별 1회만 전송
+  const trackedTabs = useRef<Set<string>>(new Set());
+
+  // 초기 탭(standard) 분모 확보
+  useEffect(() => {
+    if (!trackedTabs.current.has(initialTabType)) {
+      trackedTabs.current.add(initialTabType);
+      trackTabView(initialTabType);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onTabChange = (t: string) => {
     setTab(t);
+    if (!trackedTabs.current.has(t)) {
+      trackedTabs.current.add(t);
+      trackTabView(t);
+    }
     setTimeout(() => {
       if (bannerRef.current) {
         const y =

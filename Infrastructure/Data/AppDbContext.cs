@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();
     public DbSet<Candidate> Candidates => Set<Candidate>();
     public DbSet<UserFeedback> UserFeedbacks => Set<UserFeedback>();
+    public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +63,15 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Reason).HasMaxLength(500);
 
             entity.HasIndex(e => e.RecommendationId);
+        });
+
+        // UsageEvent
+        modelBuilder.Entity<UsageEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EventType).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.Key).IsRequired().HasMaxLength(40);
+            entity.HasIndex(e => e.CreatedAt);
         });
     }
 }
