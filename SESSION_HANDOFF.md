@@ -93,8 +93,10 @@
 
 ### 남은 작업 후보 (이전과 동일)
 - api.namingkyeol.com Render 검증 → Vercel `NEXT_PUBLIC_API_URL` 교체
-- Google Search Console 등록 + 사이트맵 제출 (Naver 인증 메타는 커밋됨 — 제출 여부 확인)
+- ~~Google Search Console 등록 + 사이트맵 제출~~ ✅ 확인 완료 (2026-06-13): 구글(도메인 속성, DNS TXT)·네이버 모두 2026-05-21에 이미 등록·사이트맵 제출되어 있었음. 사이트맵 URL 동일·내용만 2,557개로 확장이라 재등록 불필요 — 자동 재수집됨. 구글은 전체 URL로 재제출하여 재수집 트리거함 (도메인 속성은 상대경로 `sitemap.xml` 입력 시 거부 — 전체 URL 필요)
+- 실명 통계 외부 크롤링 (네임차트/대법원) — EvalNameLikeness/GenderSyllableFit 음절 테이블 확장
 - 사용자 테스트 5~10명 + 피드백
+- usage/summary 데이터 누적 후 (한 달~) creative·nickname 등 약한 엔진 존폐 판단
 - NicknameEngine 실구현 / Coming Soon 카테고리 (보류)
 
 ---
