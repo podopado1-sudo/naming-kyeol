@@ -25,6 +25,7 @@ const GUIDE_LINKS: FooterLink[] = [
   // 헤더 nav와 동일 라벨 — 일관성 유지
   { label: "작명 가이드", href: "/guide" },
   { label: "작명 원리", href: "/method" },
+  { label: "인명용 한자 사전", href: "/hanja" },
 ];
 
 const COMPANY_LINKS: FooterLink[] = [

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getAllReadings, getCuratedChars } from "@/lib/hanja-seo";
 
 /**
  * /sitemap.xml 자동 생성
@@ -43,14 +44,40 @@ const ROUTES: Array<{
   // 운영 페이지
   { path: "about", priority: 0.4, changeFrequency: "yearly" },
   { path: "contact", priority: 0.4, changeFrequency: "yearly" },
+
+  // 한자 사전 인덱스
+  { path: "hanja", priority: 0.8, changeFrequency: "monthly" },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
-  return ROUTES.map((r) => ({
+
+  const staticRoutes: MetadataRoute.Sitemap = ROUTES.map((r) => ({
     url: r.path ? `${SITE_URL}/${r.path}` : SITE_URL,
     lastModified,
     changeFrequency: r.changeFrequency,
     priority: r.priority,
   }));
+
+  // 한자 사전 — 단계적 공개 전략:
+  // 1차로 독음 페이지(767) + 검수 완료(S급) 글자만 등재해 thin-content 판정을 피한다.
+  // 색인율 확인 후 scripts/build_hanja_seo_data.py 기준 나머지 글자를 추가 예정.
+  // (sitemap 미등재 글자 페이지도 생성은 되며 내부링크로 크롤된다)
+  const readingRoutes: MetadataRoute.Sitemap = getAllReadings().map(
+    (reading) => ({
+      url: `${SITE_URL}/hanja/${encodeURIComponent(reading)}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    }),
+  );
+
+  const charRoutes: MetadataRoute.Sitemap = getCuratedChars().map((char) => ({
+    url: `${SITE_URL}/hanja/${encodeURIComponent(char)}`,
+    lastModified,
+    changeFrequency: "monthly" as const,
+    priority: 0.5,
+  }));
+
+  return [...staticRoutes, ...readingRoutes, ...charRoutes];
 }

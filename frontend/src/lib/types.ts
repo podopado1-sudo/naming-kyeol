@@ -137,6 +137,8 @@ export interface ThreeSyllableRequest {
 export interface RequiredCharRequest {
   lastName: string;
   requiredChar: string;
+  /** 항렬자 (한자 1글자, 선택) — 지정 시 발음은 한자의 음으로 자동 도출 */
+  requiredHanja?: string;
   position?: string;
   birthDate?: string;
   /** 출생 시각 (HH:mm, 선택) */

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import {
   Card,
@@ -68,10 +69,23 @@ const POSITION_LABEL: Record<string, string> = {
   any: "어디든",
 };
 
-export default function RequiredCharPage() {
+/** CJK 한자 여부 (기본 + 확장A + 호환 영역) */
+function isHanjaChar(ch: string): boolean {
+  return /^[㐀-䶿一-鿿豈-﫿]$/.test(ch);
+}
+
+function RequiredCharForm() {
   const [lastName, setLastName] = useState("");
   const navDetail = useCandidateDetail();
   const [reqChar, setReqChar] = useState("");
+
+  // /hanja 사전 페이지 CTA에서 ?char=潤 / ?char=윤 형태로 진입 시 프리필
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const prefill = searchParams.get("char");
+    if (prefill && [...prefill].length === 1) setReqChar(prefill);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [position, setPosition] = useState("any");
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
@@ -98,9 +112,13 @@ export default function RequiredCharPage() {
     setError(null);
     setResult(null);
     try {
+      const trimmedChar = reqChar.trim();
+      const isHanja = isHanjaChar(trimmedChar);
       const data = await requiredChar({
         lastName: lastName.trim(),
-        requiredChar: reqChar.trim(),
+        // 한자 입력이면 항렬자 모드 — 발음은 백엔드가 한자의 음으로 자동 도출
+        requiredChar: isHanja ? "" : trimmedChar,
+        requiredHanja: isHanja ? trimmedChar : undefined,
         position,
         birthDate: birthDate || undefined,
         birthTime: birthTime || undefined,
@@ -201,7 +219,7 @@ export default function RequiredCharPage() {
               <Label htmlFor="reqChar">필수 글자</Label>
               <Input
                 id="reqChar"
-                placeholder="한 글자"
+                placeholder="한 글자 (한글·한자)"
                 maxLength={1}
                 value={reqChar}
                 onChange={(e) => setReqChar(e.target.value)}
@@ -321,5 +339,14 @@ export default function RequiredCharPage() {
       </div>
       <Footer />
     </>
+  );
+}
+
+// useSearchParams는 정적 렌더링 시 Suspense 경계가 필요
+export default function RequiredCharPage() {
+  return (
+    <Suspense>
+      <RequiredCharForm />
+    </Suspense>
   );
 }
