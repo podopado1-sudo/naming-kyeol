@@ -15,10 +15,11 @@ public class ExplanationEngineTests
     // =========================================================================
 
     [Fact]
-    public async Task GenerateReasonsAsync_ReturnsMaxThreeReasons()
+    public async Task GenerateReasonsAsync_ReturnsMaxFiveReasons()
     {
+        // 2026-06-15: 추천 이유 보강 — 오행과 한자 뜻을 함께 노출하도록 최대 5개로 확장
         var reasons = await _engine.GenerateReasonsAsync("서연", 85, 80);
-        Assert.True(reasons.Count <= 3);
+        Assert.True(reasons.Count <= 5);
         Assert.True(reasons.Count >= 1);
     }
 

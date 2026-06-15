@@ -73,7 +73,7 @@ function mapCandidate(c: SmartNameCandidate): UICandidate {
     finalScore: Math.round(score),
     rarity: Math.max(40, Math.min(95, Math.round(score - 10))),
     tags: c.tags ?? [],
-    reasons: [], // 백엔드 응답에 없음
+    reasons: c.reasons ?? [],
     phonologyNotes: c.phonologyNotes ?? [],
   };
 }
@@ -728,15 +728,17 @@ function TopPickCard({
                   {c.hanjaName}
                 </span>
               )}
-              <span
-                style={{
-                  fontSize: 14,
-                  color: "var(--color-text-2)",
-                }}
-              >
-                {c.hanjaName && "· "}
-                {c.meaning}
-              </span>
+              {c.meaning && (
+                <span
+                  style={{
+                    fontSize: 14,
+                    color: "var(--color-text-2)",
+                  }}
+                >
+                  {c.hanjaName && "· "}
+                  {c.meaning}
+                </span>
+              )}
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
@@ -1167,15 +1169,17 @@ function CandidateCard({
                 {c.hanjaName}
               </span>
             )}
-            <span
-              style={{
-                fontSize: 13,
-                color: "var(--color-text-2)",
-              }}
-            >
-              {c.hanjaName && "· "}
-              {c.meaning}
-            </span>
+            {c.meaning && (
+              <span
+                style={{
+                  fontSize: 13,
+                  color: "var(--color-text-2)",
+                }}
+              >
+                {c.hanjaName && "· "}
+                {c.meaning}
+              </span>
+            )}
           </div>
           <div
             style={{

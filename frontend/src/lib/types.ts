@@ -77,6 +77,11 @@ export interface SmartNameCandidate {
   harmonyScore?: number;
   tags: string[];
   /**
+   * 추천 이유 (수치+근거 형식). standard·twin 등에서 채워지며,
+   * 비어 있으면 meaning 한 줄만 표시.
+   */
+  reasons?: string[];
+  /**
    * 음운 특성 노트 (감점 없음, 정보 노출 용도).
    * 이름의 발음/모음 리듬 특성을 사용자에게 정보로 노출.
    * (백엔드 2026-04-21 옵션 C Phase 2)

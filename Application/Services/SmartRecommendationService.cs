@@ -92,7 +92,8 @@ public class SmartRecommendationService : ISmartRecommendationService
             {
                 Name = c.Name,
                 FullName = lastName + c.Name,
-                Meaning = string.Join("; ", c.Reasons),
+                Meaning = "", // 이유는 Reasons 불릿으로 표시 (한 줄 뭉침 방지)
+                Reasons = c.Reasons,
                 Score = c.FinalScore,
                 AestheticScore = c.AestheticScore,
                 HarmonyScore = c.HarmonyScore,
@@ -221,7 +222,8 @@ public class SmartRecommendationService : ISmartRecommendationService
                     {
                         Name = c.Name,
                         FullName = lastName + c.Name,
-                        Meaning = string.Join("; ", c.Reasons),
+                        Meaning = "", // 이유는 Reasons 불릿으로 표시
+                        Reasons = c.Reasons,
                         Score = c.FinalScore,
                         Tags = new List<string> { set.Theme, "쌍둥이" }
                     })).ToList();

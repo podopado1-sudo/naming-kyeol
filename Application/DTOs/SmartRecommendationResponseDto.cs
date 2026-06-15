@@ -56,6 +56,13 @@ public class SmartNameCandidateDto
     public List<string> Tags { get; set; } = new();
 
     /// <summary>
+    /// 추천 이유 (수치+근거 형식, 카드 불릿으로 표시).
+    /// standard·twin 등 ExplanationEngine 기반 카테고리에서 채워짐.
+    /// 비어 있으면 프론트는 Meaning 한 줄만 표시.
+    /// </summary>
+    public List<string> Reasons { get; set; } = new();
+
+    /// <summary>
     /// 음운 특성 노트 (감점 없음, Explanation 용도).
     /// 이름의 발음/모음 리듬 특성을 사용자에게 정보로 노출.
     /// 2026-04-21 옵션 C Phase 2.

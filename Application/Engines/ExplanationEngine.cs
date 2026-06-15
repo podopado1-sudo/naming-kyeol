@@ -27,16 +27,18 @@ public class ExplanationEngine : IExplanationEngine
         if (!string.IsNullOrEmpty(pronEvidence))
             reasons.Add($"발음 {aestheticScore}점 — {pronEvidence}");
 
+        // 음령오행 (상생/상극/동일)
         var ohaeng = BuildOhaengEvidence(name);
         if (!string.IsNullOrEmpty(ohaeng))
             reasons.Add(ohaeng);
-        else
-        {
-            var meaning = BuildMeaningEvidence(name);
-            if (!string.IsNullOrEmpty(meaning)) reasons.Add(meaning);
-        }
 
-        return await Task.FromResult(reasons.Take(3).ToList());
+        // 한자 뜻 — 오행 유무와 무관하게 항상 포함.
+        // (기존엔 오행이 있으면 뜻이 누락돼 정작 사용자가 궁금한 의미가 안 보였음)
+        var meaning = BuildMeaningEvidence(name);
+        if (!string.IsNullOrEmpty(meaning))
+            reasons.Add($"한자 뜻 — {meaning}");
+
+        return await Task.FromResult(reasons.Take(5).ToList());
     }
 
     public async Task<ExplanationResult> GenerateDetailedReasonsAsync(
