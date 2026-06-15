@@ -70,7 +70,9 @@ function EvaluateInner() {
   const [result, setResult] = useState<NameEvaluationResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const autoSubmittedRef = useRef(false);
+  // 마지막으로 자동 평가한 파라미터 시그니처 — 같은 이름 재요청만 막고,
+  // 다른 이름(파라미터 변경)이 오면 재평가하도록 함 (라우터 인스턴스 보존 시 잔상 방지)
+  const lastAutoSigRef = useRef("");
 
   async function handleSubmit(payload: EvalSubmitPayload) {
     setLoading(true);
@@ -96,15 +98,26 @@ function EvaluateInner() {
     }
   }
 
-  // 추천 페이지의 "상세 보기"에서 넘어온 경우 — URL에 모든 정보가 있으면 자동 평가
+  // 추천 페이지의 "상세 보기"에서 넘어온 경우 — URL 파라미터가 바뀌면 (다른 이름) 자동 재평가
   useEffect(() => {
-    if (autoSubmittedRef.current) return;
     if (!initialLast || !initialFirst || !initialBirthDate || !initialGender || !initialTone) return;
-    autoSubmittedRef.current = true;
+    const sig = [
+      initialLast,
+      initialFirst,
+      initialBirthDate,
+      initialBirthTime,
+      initialGender,
+      initialTone,
+    ].join("|");
+    if (lastAutoSigRef.current === sig) return; // 같은 이름 재요청 방지
+    lastAutoSigRef.current = sig;
+
+    let cancelled = false;
+    setResult(null); // 이전 이름 결과 잔상 제거
+    setLoading(true);
+    setError(null);
 
     (async () => {
-      setLoading(true);
-      setError(null);
       try {
         const data = await evaluate({
           lastName: initialLast,
@@ -114,13 +127,18 @@ function EvaluateInner() {
           gender: initialGender,
           tone: initialTone,
         });
-        setResult(data);
+        if (!cancelled) setResult(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "평가 중 오류가 발생했어요.");
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "평가 중 오류가 발생했어요.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [initialLast, initialFirst, initialBirthDate, initialBirthTime, initialGender, initialTone]);
 
   // 결과 있을 때 — 디자인 페이지
