@@ -490,6 +490,14 @@ function ResultActions({ data }: { data: NameEvaluationResponse }) {
   );
 }
 
+// URL 쿼리(이름/생일/성별/톤)가 바뀌면 EvaluateInner를 강제 리마운트.
+// 추천 '상세 보기'로 다른 이름이 올 때, 라우터 캐시/bfcache로 이전 평가 결과가
+// 잔존하던 문제를 근본 차단 (key가 바뀌면 React가 상태를 완전히 새로 시작).
+function EvaluateRoute() {
+  const searchParams = useSearchParams();
+  return <EvaluateInner key={searchParams.toString()} />;
+}
+
 export default function EvaluatePage() {
   return (
     <Suspense
@@ -506,7 +514,7 @@ export default function EvaluatePage() {
         </div>
       }
     >
-      <EvaluateInner />
+      <EvaluateRoute />
     </Suspense>
   );
 }
