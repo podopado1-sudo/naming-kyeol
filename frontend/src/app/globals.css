@@ -49,6 +49,10 @@
   --color-gold-600: var(--color-gold-600-token);
   --color-gold-100: var(--color-gold-100-token);
   --color-gold-50: var(--color-gold-50-token);
+  --color-gold-700: var(--color-gold-700-token);
+
+  /* === 경고/참고 톤 (amber-warm — red 회피) === */
+  --color-amber-warm: var(--color-amber-warm-token);
 
   /* === Score 분기 === */
   --color-score-high: var(--color-score-high-token);
@@ -152,6 +156,10 @@
   --color-gold-600-token: #b49258;
   --color-gold-100-token: #efe3cb;
   --color-gold-50-token: #f7efdd;
+  --color-gold-700-token: #9a7d44; /* 짙은 골드 — 火 오행/뱃지 외곽선 */
+
+  /* 경고/참고 톤 — score-low·destructive와 동일값 (red 회피) */
+  --color-amber-warm-token: #b5874c;
 
   /* === 주홍 印章 (vermilion seal) — 한국 전통 포인트 컬러 (붓요정 마스코트와 통일) ===
      사용처: 印 스탬프, top-pick 마이크로 액센트, hero 강조점.
@@ -887,5 +895,50 @@
   section,
   .breakdown-panel {
     break-inside: avoid;
+  }
+}
+
+/* ─── 모바일 헤더: 640px 이하에서 가로 nav 접고 햄버거 메뉴 노출 ────────── */
+.site-header-burger {
+  display: none;
+}
+.site-header-mobile {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .site-header-inner {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    gap: 12px !important;
+  }
+  /* 가로 nav 숨기고 햄버거 노출 */
+  .site-header-nav {
+    display: none !important;
+  }
+  .site-header-fav-label {
+    display: none;
+  }
+  .site-header-burger {
+    display: inline-flex;
+    align-items: center;
+  }
+  /* 드롭다운 메뉴 — 터치 타깃 ≥44px 확보 */
+  .site-header-mobile.open {
+    display: block;
+    background: var(--color-background);
+    border-top: 1px solid var(--color-divider);
+    padding: 4px 16px 12px;
+  }
+  .site-header-mobile.open a {
+    display: block;
+    padding: 13px 4px;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .site-header-mobile.open a:last-child {
+    border-bottom: none;
   }
 }

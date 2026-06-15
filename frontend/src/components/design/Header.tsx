@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { useEffect, useState, type CSSProperties } from "react";
 import { Mark } from "./Mark";
-import { Heart } from "lucide-react";
+import { Heart, Menu, X } from "lucide-react";
 
 type NavKey = "home" | "search" | "guide" | "method";
 
@@ -31,6 +31,7 @@ export function Header({
   onNav?: (key: NavKey) => void;
 }) {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -74,6 +75,7 @@ export function Header({
       }}
     >
       <div
+        className="site-header-inner"
         style={{
           maxWidth: 1120,
           margin: "0 auto",
@@ -124,6 +126,7 @@ export function Header({
         </Link>
 
         <nav
+          className="site-header-nav"
           style={{
             display: "flex",
             gap: 28,
@@ -153,6 +156,7 @@ export function Header({
         >
           <Link
             href="/favorites"
+            aria-label="저장한 이름"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -167,9 +171,51 @@ export function Header({
             }}
           >
             <Heart size={14} strokeWidth={1.8} />
-            저장한 이름
+            <span className="site-header-fav-label">저장한 이름</span>
           </Link>
+          <button
+            type="button"
+            className="site-header-burger"
+            aria-label={menuOpen ? "메뉴 닫기" : "메뉴 열기"}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            style={{
+              appearance: "none",
+              background: "transparent",
+              border: "none",
+              padding: 8,
+              margin: 0,
+              cursor: "pointer",
+              color: "var(--color-text)",
+              lineHeight: 0,
+            }}
+          >
+            {menuOpen ? <X size={22} strokeWidth={1.8} /> : <Menu size={22} strokeWidth={1.8} />}
+          </button>
         </div>
+      </div>
+
+      {/* 모바일 전용 드롭다운 메뉴 (640px 이하에서만 노출) */}
+      <div className={`site-header-mobile${menuOpen ? " open" : ""}`}>
+        {NAV_ITEMS.map((item) => (
+          <Link
+            key={item.key}
+            href={item.href}
+            onClick={() => {
+              onNav?.(item.key);
+              setMenuOpen(false);
+            }}
+            style={{
+              color:
+                current === item.key
+                  ? "var(--color-navy)"
+                  : "var(--color-text-2)",
+              fontWeight: current === item.key ? 600 : 500,
+            }}
+          >
+            {item.label}
+          </Link>
+        ))}
       </div>
     </header>
   );
