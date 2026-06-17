@@ -340,16 +340,18 @@ public class NamingPrinciplesTests
     // ============================================================
 
     /// <summary>
-    /// 같은 음절도 위치에 따라 다르다 — "규"는 어미(미규)로는 남성형이지만
-    /// 첫음절(규민/규희)로는 여아에게도 자연스럽다 (2026-06-13 사용자 피드백).
+    /// 자기 성별로 우세하거나 혼용인 이름은 감점 없음 (실명 빈도 데이터 기반).
+    /// 영주(0.61)처럼 혼용이면 통과 — '주' 어미를 광범위 차단하지 않음.
     /// </summary>
     [Theory]
-    [InlineData("규", "민", "female")] // 규민 — 여아 OK
-    [InlineData("규", "희", "female")] // 규희 — 여아 OK
-    [InlineData("유", "승", "male")]   // 유승 — 남아 OK
-    [InlineData("준", "아", "female")] // 준아 — 여아 OK
-    [InlineData("수", "민", "female")] // 중립 어미
-    public void EvalGenderSyllableFit_MatchingPosition_NoPenalty(string first, string second, string gender)
+    [InlineData("규", "희", "female")] // 규희(0.83 여) — 여아 OK
+    [InlineData("유", "승", "male")]   // 유승(0.05 남) — 남아 OK
+    [InlineData("준", "아", "female")] // 준아(0.41 혼용) — 여아 OK
+    [InlineData("수", "민", "female")] // 수민(0.79 여) — 여아 OK
+    [InlineData("유", "주", "female")] // 유주(0.98 여) — 여아 OK
+    [InlineData("영", "주", "male")]   // 영주(0.61 혼용) — 남아도 OK (주 어미 광범위 차단 안 함)
+    [InlineData("규", "민", "male")]   // 규민(0.12 남) — 남아 OK
+    public void EvalGenderSyllableFit_OwnOrMixed_NoPenalty(string first, string second, string gender)
     {
         var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
         Assert.True(fit >= 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} < 0.7");
@@ -357,41 +359,31 @@ public class NamingPrinciplesTests
 
     /// <summary>반대 성별 전형 어미는 감점 — 여아에 민규형, 남아에 ○희/○아형</summary>
     [Theory]
-    [InlineData("미", "규", "female")] // 미규 — 남성형 어미 (실측 문제 사례)
+    [InlineData("미", "규", "female")] // 미규 — 표본 부족 → '규' 어미 폴백(남성형)
     [InlineData("은", "준", "female")]
     [InlineData("수", "혁", "female")]
-    [InlineData("성", "아", "male")]   // 성아 — 여성형 어미
+    [InlineData("성", "아", "male")]   // 성아 — 여성형
     [InlineData("승", "희", "male")]
-    [InlineData("도", "린", "male")]
+    [InlineData("도", "린", "male")]   // 도린(0.77 여) — 남아엔 다소 기움
     public void EvalGenderSyllableFit_OppositeFinal_Penalized(string first, string second, string gender)
     {
         var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
-        Assert.True(fit < 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.7 (반대 성별 어미인데 통과)");
+        Assert.True(fit < 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.7 (반대 성별인데 통과)");
     }
 
-    /// <summary>이름 단위 큐레이션 — 음절은 중성이지만 한쪽 성별로 기우는 이름은 반대 성별 요청 시 감점</summary>
+    /// <summary>실명 빈도상 반대 성별로 강하게 우세한 이름은 감점 (유주↔남아 등)</summary>
     [Theory]
-    [InlineData("유", "주", "male")]   // 유주 — '주' 중성 어미지만 여아로 기움
-    [InlineData("서", "유", "male")]
-    [InlineData("지", "유", "male")]
-    [InlineData("도", "윤", "female")] // 도윤 — 남아로 기움
-    [InlineData("주", "원", "female")]
-    public void EvalGenderSyllableFit_CuratedLeaningName_Penalized(string first, string second, string gender)
+    [InlineData("유", "주", "male")]   // 유주(0.98 여) — 남아 요청 감점
+    [InlineData("현", "주", "male")]   // 현주(0.96 여) — '주' 어미지만 데이터상 여아
+    [InlineData("서", "유", "male")]   // 서유(0.85 여)
+    [InlineData("지", "유", "male")]   // 지유(0.96 여)
+    [InlineData("도", "윤", "female")] // 도윤(0.05 남) — 여아 요청 감점
+    [InlineData("주", "원", "female")] // 주원(0.14 남)
+    [InlineData("규", "민", "female")] // 규민(0.12 남) — 데이터가 남아로 판정
+    public void EvalGenderSyllableFit_DataOppositeGender_Penalized(string first, string second, string gender)
     {
         var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
-        Assert.True(fit < 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.7 (큐레이션 반대 성별인데 통과)");
-    }
-
-    /// <summary>큐레이션 이름이라도 같은 성별 요청이면 감점 없음 + 미등록 중성 이름(영주)은 보호</summary>
-    [Theory]
-    [InlineData("유", "주", "female")] // 유주 — 여아 요청은 정상
-    [InlineData("도", "윤", "male")]   // 도윤 — 남아 요청은 정상
-    [InlineData("영", "주", "male")]   // 영주 — 큐레이션 미등록, '주' 중성 유지(부수 피해 없음)
-    [InlineData("현", "주", "male")]
-    public void EvalGenderSyllableFit_CuratedOrNeutral_NotPenalized(string first, string second, string gender)
-    {
-        var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
-        Assert.True(fit >= 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} < 0.7 (정상인데 감점됨)");
+        Assert.True(fit < 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.7 (데이터상 반대 성별인데 통과)");
     }
 
     /// <summary>성별 미지정이면 항상 중립 (영향 없음)</summary>

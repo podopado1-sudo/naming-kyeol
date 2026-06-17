@@ -118,99 +118,25 @@ public static class NamingPrinciples
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 작명 스킬 0-2 — 성별 어미 적합 (Gender Syllable Fit)
+    // 작명 스킬 0-2 — 성별 적합 (Gender Fit) — 실명 빈도 데이터 기반
     // ═══════════════════════════════════════════════════════════════
     //
-    // 미규/규미처럼 남성형 어미(민규·승규의 "규")가 여아 추천 상위에 오는
-    // 문제를 막는다. 끝음절의 성별 전형성은 GenerationNameData 실명 통계
-    // (연대별 인기 이름 + 성별)에서 파생하고, 표본이 작아 쏠려 보이는 어미는
-    // 중립 보정한다. 같은 음절도 위치가 다르면 평가가 다르다 —
-    // "규"는 어미(민규)로는 남성형이지만 첫음절(규민·규희)로는 중성.
-
-    /// <summary>남아 이름 어미로 전형적인 끝음절</summary>
-    private static readonly HashSet<string> MaleTypicalFinals;
-
-    /// <summary>여아 이름 어미로 전형적인 끝음절</summary>
-    private static readonly HashSet<string> FemaleTypicalFinals;
-
-    /// <summary>여아 이름에 전형적인 첫음절 (확실한 것만 수동 큐레이션)</summary>
-    private static readonly HashSet<string> FemaleTypicalFirsts = new()
-    {
-        "아", "채", "미", "혜"
-    };
-
-    /// <summary>남아 이름에 전형적인 첫음절 (확실한 것만 수동 큐레이션)</summary>
-    private static readonly HashSet<string> MaleTypicalFirsts = new()
-    {
-        "철", "병", "종"
-    };
+    // 유주(여아 인기)가 남아 1위에 오거나 민규형 어미가 여아에 오는 문제를 막는다.
+    // 수동 큐레이션 대신 NameGenderData(대법원 출생신고 2008~2019 실명 빈도)로 판정:
+    //   1) 이름 전체 빈도비 우선 — 가장 구체적. 반대 성별로 강하게 우세하면 감점,
+    //      혼용(영주 0.61 등)이면 통과.
+    //   2) 이름 표본 부족 시 끝음절 빈도비로 폴백 (한국 이름의 성별 신호는 어미가 주도).
+    // 데이터가 틀리거나 부족한 소수 케이스만 ManualGenderLean으로 보정(하이브리드).
 
     /// <summary>
-    /// 음절(특히 어미)은 중성으로 분류되지만 실제 사용에서 여아로 뚜렷이 기우는 이름.
-    /// 예: "유주"는 어미 '주'가 중성(영주·현주·민주 등 양성 공용)이라 감점이 없었음.
-    /// 실명 빈도 통계 도입 전까지의 보수적 보정 — 확실한 것만 추가할 것.
+    /// 수동 성별 오버라이드 (하이브리드) — 실명 통계가 틀리거나 부족한 소수 이름만.
+    /// 값은 그 이름이 실제로 기우는 성별("male"/"female"). 비어 있어도 정상 동작.
+    /// 예: ["이름"] = "female"  ← 데이터가 잘못 잡는 케이스 발견 시 추가.
     /// </summary>
-    private static readonly HashSet<string> FemaleLeaningNames = new()
-    {
-        "유주", "서유", "지유", "시유"
-    };
-
-    /// <summary>음절은 중성이지만 실제 사용에서 남아로 뚜렷이 기우는 이름 (보수적 큐레이션).</summary>
-    private static readonly HashSet<string> MaleLeaningNames = new()
-    {
-        "도윤", "주원"
-    };
-
-    static NamingPrinciples()
-    {
-        // 실명 통계 표본이 작아 한쪽 성별로 쏠려 보이지만 실제로는 중성인 어미
-        var neutralOverrides = new HashSet<string>
-        {
-            "수", "민", "윤", "진", "현", "우", "영", "서", "원", "지",
-            "빈", "온", "율", "안", "주", "비", "후"
-        };
-
-        // 통계에 없거나 표본 부족이지만 전형성이 확실한 어미 (수동 큐레이션)
-        var maleFinals = new HashSet<string>
-        {
-            "철", "호", "석", "식", "규", "욱", "혁", "환", "훈",
-            "균", "섭", "표", "헌", "승", "준", "용"
-        };
-        var femaleFinals = new HashSet<string>
-        {
-            "희", "숙", "순", "자", "미", "나", "라", "리", "혜",
-            "경", "아", "은", "연", "화", "린", "슬"
-        };
-
-        // GenerationNameData 실명 통계에서 어미별 성별 비율 파생
-        // (2음절 이름, 표본 3개 이상, 한쪽 성별 80% 이상일 때만 전형으로 인정)
-        var counts = new Dictionary<string, (int male, int female)>();
-        foreach (var entry in GenerationNameData.Entries)
-        {
-            if (entry.Name.Length != 2) continue;
-            var final = entry.Name[1].ToString();
-            var c = counts.TryGetValue(final, out var v) ? v : (male: 0, female: 0);
-            if (entry.Gender == "male") c.male++;
-            else if (entry.Gender == "female") c.female++;
-            counts[final] = c;
-        }
-
-        foreach (var (syllable, c) in counts)
-        {
-            if (neutralOverrides.Contains(syllable)) continue;
-            int total = c.male + c.female;
-            if (total < 3) continue;
-            if (c.male >= total * 0.8) maleFinals.Add(syllable);
-            else if (c.female >= total * 0.8) femaleFinals.Add(syllable);
-        }
-
-        MaleTypicalFinals = maleFinals;
-        FemaleTypicalFinals = femaleFinals;
-    }
+    private static readonly Dictionary<string, string> ManualGenderLean = new();
 
     /// <summary>
-    /// 음절 위치별 성별 적합 평가 (0~1).
-    /// 어미가 반대 성별 전형이면 크게(−0.65), 첫음절이면 작게(−0.35) 감점.
+    /// 음절 기반 성별 적합 평가 (0~1). 실명 빈도 데이터로 판정.
     /// gender가 male/female이 아니면 항상 1.0 (중성 요청은 영향 없음).
     /// </summary>
     public static double EvalGenderSyllableFit(string firstSyllable, string secondSyllable, string gender)
@@ -218,20 +144,32 @@ public static class NamingPrinciples
         if (gender != "male" && gender != "female") return 1.0;
 
         bool isFemale = gender == "female";
+        var name = firstSyllable + secondSyllable;
 
-        // 이름 단위 큐레이션 우선 — 음절은 중성으로 분류되지만 실제 사용에서
-        // 한쪽 성별로 뚜렷이 기우는 이름(예: 유주↔남아) 강한 감점.
-        var fullName = firstSyllable + secondSyllable;
-        if (isFemale && MaleLeaningNames.Contains(fullName)) return 0.3;
-        if (!isFemale && FemaleLeaningNames.Contains(fullName)) return 0.3;
+        // 0) 수동 오버라이드 (하이브리드)
+        if (ManualGenderLean.TryGetValue(name, out var lean))
+            return (lean == "female") == isFemale ? 1.0 : 0.3;
 
-        var oppositeFinals = isFemale ? MaleTypicalFinals : FemaleTypicalFinals;
-        var oppositeFirsts = isFemale ? MaleTypicalFirsts : FemaleTypicalFirsts;
+        // 1) 이름 전체 실명 빈도 우선 (가장 구체적)
+        var nameRatio = NameGenderData.FemaleRatioForName(name);
+        if (nameRatio.HasValue)
+        {
+            // 요청 성별의 '반대'로 기우는 정도 (0~1)
+            double oppositeLean = isFemale ? 1.0 - nameRatio.Value : nameRatio.Value;
+            if (oppositeLean >= 0.85) return 0.3;  // 반대 성별로 강하게 우세 (유주·현주 ↔ 남아)
+            if (oppositeLean >= 0.65) return 0.55; // 반대로 다소 기움 (도린 ↔ 남아)
+            return 1.0;                             // 자기 성별 우세 또는 혼용(영주 0.61 등)
+        }
 
-        double fit = 1.0;
-        if (oppositeFinals.Contains(secondSyllable)) fit -= 0.65;
-        if (oppositeFirsts.Contains(firstSyllable)) fit -= 0.35;
-        return Math.Max(0.0, fit);
+        // 2) 이름 표본 부족 → 끝음절 빈도로 폴백
+        var lastRatio = NameGenderData.FemaleRatioForLastSyllable(secondSyllable);
+        if (lastRatio.HasValue)
+        {
+            double oppositeLean = isFemale ? 1.0 - lastRatio.Value : lastRatio.Value;
+            if (oppositeLean >= 0.80) return 0.35; // 반대 성별 전형 어미 (민규의 '규' 등)
+        }
+
+        return 1.0;
     }
 
     /// <summary>이름 문자열 전체에 대한 성별 어미 적합 (2음절 외에는 중립 1.0)</summary>

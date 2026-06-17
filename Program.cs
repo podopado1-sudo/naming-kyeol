@@ -280,6 +280,9 @@ using (var scope = app.Services.CreateScope())
 // 한자 데이터 초기화 (통합 JSON 파일 로드)
 NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
 
+// 실명 성별 빈도 통계 초기화 (성별 적합 판정용)
+NameForm.Application.Engines.Data.NameGenderData.LoadExternalData();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
