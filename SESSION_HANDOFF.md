@@ -5,7 +5,44 @@
 
 ---
 
-## 마지막 세션 요약 (2026-06-13 — 🧹 프론트엔드 lint 완전 정리)
+## 마지막 세션 요약 (2026-06-17 — 🐛 상세보기 버그 + 🧬 성별/세대 실명 데이터화)
+
+실사용 피드백 기반 버그 수정 + 성별/세대 적합을 수동 큐레이션에서 **대법원 실명 빈도 데이터**로 전환. 모두 커밋·push 완료 (Render/Vercel 자동 배포).
+
+### ⏭️ 다음 세션 최우선 — 세대 적합 "활성화" (미완)
+- **상황**: 세대 적합 기능이 **운영 경로에서 비활성(dormant)**. `ScoringService.EvaluateAsync`가 `AestheticEngine.CalculateScoreWithBreakdownAsync`에 **birthYear를 안 넘김**([ScoringService.cs:36](Application/Services/ScoringService.cs:36)). 그래서 세대 로직(하이브리드 포함)이 화면에 안 나옴.
+- **사용자 결정**: **"평가+추천 모두 활성"** 선택함. → 아직 구현 안 함.
+- **할 일**:
+  1. `ScoringService.EvaluateAsync`가 `birthDate.Year`를 AestheticEngine에 전달 (세대 적합 ON).
+  2. `NameEvaluationService`(평가)에서 breakdown의 `GenerationFit`을 ExplanationEngine에 넘겨 cautions에 세대 안내 노출 (현재 generationFit 없이 호출 — [NameEvaluationService.cs:32](Application/Services/NameEvaluationService.cs:32)).
+  3. **랭킹 영향 검증**: 활성화 시 추천이 세대 불일치 이름을 감점(-2/-5 NeutralityScore). 2024 신생아엔 옛이름(철수)만 감점(영향 적음), 개명(옛 출생)엔 현대명 감점. API로 박/2024 vs 박/1985 비교해 정상인지 확인.
+  4. 검증: 김지민 평가 — 1985생 → "개명한 인상" 안내 / 2024생 → 안내 없음.
+
+### 이번 세션 커밋 (시간순)
+| 커밋 | 내용 |
+|------|------|
+| `b08225f` | 디자인: amber-warm/gold-700 토큰 누락 복구(6개 컴포넌트 경고색) + 모바일 헤더 햄버거 |
+| `e78e202`→`331fd52`→`ba2f490` | **상세보기 잔상 버그** 3단 수정. 최종: `/evaluate` 정적 라우트 + 클라이언트 라우터 캐시가 이전 `?name=` 재사용 → **모든 /evaluate 네비를 풀 페이지 이동(window.location/`<a>`)**으로 우회. (시그니처·key-remount는 컴포넌트 레벨이라 실패) |
+| `ce7d070` | 추천 이유 보강: 불릿 표시(프론트가 빈배열로 고정했던 것) + 한자 뜻 항상 노출, ExplanationEngine 3→5개 |
+| `56506ad`→`ecbed3d`→`e3b885d` | **성별 적합 실명 데이터화**: 수동 큐레이션 → 대법원 2008~2019 빈도(`data/name-gender-stats.json`, `NameGenderData`). 유주=98%여 등 데이터가 직관 교정(현주=여, 규민=남, 영주=혼용). 최종: **배제 아닌 "강등+라벨"** — 반대 성별로 기울수록 점진 감점(바닥 0.55), 소수 사용량 많으면 완화, 1위/TopPick 제외, 카드에 "주로 ○아 이름" 앰버 라벨 |
+| `3e2e81d` | 추천 이름 감사 스크립트(`audit_recommended_names.py`). 결론: **금칙 필터 보강 불필요**(누수 0, 추천 전부 실명). 단어형(주인/시정)도 실제 등록 이름 |
+| `e9886e6` | 세대 하이브리드: 수동 DB(옛 세대) + 실명 데이터(현대 유행) — 단 **위 "활성화" 전엔 dormant** |
+
+### 데이터/스크립트
+- `scripts/build_name_gender_data.py` → `data/name-gender-stats.json`(끝음절·첫음절·이름 전체 남/여 빈도). 원천 CSV는 `scripts/_name_raw/`(gitignore, randkid/name 대법원 재가공).
+- 성별 데이터 오류 발견 시 `NamingPrinciples.ManualGenderLean`에 한 줄 추가(하이브리드 오버라이드).
+
+### 알려진 이슈 (이번 발견)
+- **`PhonologyJointLoader` 병렬 로딩 레이스** — 전체 테스트 병렬 실행 시 `NormalizeFinal`(7종성)이 간헐 실패(단독은 통과). 데이터 lazy-load가 race-safe하지 않음 → **운영 cold-start 동시요청에서도 잠재 위험**. 별도 수정 후보.
+- 2008년 이전 연대별 이름 데이터는 어디에도 기계가독 형태로 없음(대법원 2008+, 서술형 요약뿐) → 세대 옛 구간은 수동 DB 유지가 최선. [[reference_namechart_crawl]]
+
+### 폐기/비채택
+- 단어형 이름 필터 보강 → 감사 결과 불필요로 종결.
+- 세대 데이터 크롤링 → 2008년 이전 부재 + 3자 ToS로 ROI 낮음, 하이브리드가 최적.
+
+---
+
+## 이전 세션 요약 (2026-06-13 — 🧹 프론트엔드 lint 완전 정리)
 
 **배경**: `frontend`에서 `npm run lint`가 사전 존재하던 에러 8건으로 실패 (한자 SEO 작업과 무관). 직전 세션이 "별도 작업 칩으로 분리"해 둔 이슈를 해소.
 
