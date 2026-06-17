@@ -240,4 +240,36 @@ public class GenerationNameDataTests
         Assert.NotNull(result.Summary);
         Assert.True(result.Strengths.Count >= 2);
     }
+
+    // ── 하이브리드: 수동 DB에 없는 현대 인기 이름은 실명 데이터로 세대 판정 ──
+
+    /// <summary>수동 DB에 없는 현대 인기 이름(실명 5000+)을 옛 출생자가 쓰면 강한 불일치</summary>
+    [Theory]
+    [InlineData("지민")] // 실명 28,539 · 수동 DB 없음
+    [InlineData("현서")] // 17,872
+    [InlineData("민재")] // 16,781
+    public void AnalyzeGenerationFit_ModernPopular_OldBirth_StrongMismatch(string name)
+    {
+        var r = GenerationNameData.AnalyzeGenerationFit(name, 1985);
+        Assert.Equal("strong_mismatch", r.FitLevel);
+        Assert.Equal("2010년대", r.PeakDecade);
+    }
+
+    /// <summary>같은 현대 인기 이름도 현대(2008+) 출생자에겐 적합 (신생아 작명 감점 없음)</summary>
+    [Theory]
+    [InlineData("지민")]
+    [InlineData("현서")]
+    public void AnalyzeGenerationFit_ModernPopular_ModernBirth_Perfect(string name)
+    {
+        var r = GenerationNameData.AnalyzeGenerationFit(name, 2024);
+        Assert.Equal("perfect", r.FitLevel);
+    }
+
+    /// <summary>실명 표본도 적고 수동 DB에도 없으면 판단 보류(unknown) — 오탐 방지</summary>
+    [Fact]
+    public void AnalyzeGenerationFit_RareName_NotInData_Unknown()
+    {
+        var r = GenerationNameData.AnalyzeGenerationFit("쩡뫼", 1985);
+        Assert.Equal("unknown", r.FitLevel);
+    }
 }

@@ -183,16 +183,12 @@ public static class GenerationNameData
             };
         }
 
-        // 2. DB에서 이름 찾기
+        // 2. 수동 DB(옛 세대)에서 이름 찾기
         if (!_entryMap.TryGetValue(name, out var entries) || entries.Count == 0)
         {
-            return new GenerationFitResult
-            {
-                FitLevel = "unknown",
-                YearGap = 0,
-                PeakDecade = null,
-                Description = ""
-            };
+            // 2b. 하이브리드 — 수동 DB에 없으면 2008~2019 실명 인기도로 '현대 유행' 판정.
+            //     옛 세대는 수동 DB, 현대 유행은 실명 데이터(NameGenderData)로 보강.
+            return AnalyzeModernEraFit(name, birthYear);
         }
 
         // 가장 가까운 유행 시기를 찾기 (동명이인 중)
@@ -272,6 +268,54 @@ public static class GenerationNameData
                 Description = $"{peakDecade} 유행 이름으로, {birthYear}년생이 사용 시 개명한 인상을 줄 수 있습니다"
             };
         }
+    }
+
+    // 현대(2008+) 유행 판정 임계 — 대법원 2008~2019 실명 등록 합계가 이 이상이면
+    // '뚜렷한 현대 유행 이름'으로 본다 (NameGenderData 기반).
+    private const int ModernEraStart = 2008;
+    private const long ModernPopularThreshold = 5000;
+
+    /// <summary>
+    /// 수동 DB에 없는 이름의 현대(2008+) 유행 여부를 실명 빈도로 판정 (하이브리드).
+    /// 현대 출생자에겐 적합, 옛 출생자(개명 등)에겐 '개명한 티' 불일치로 본다.
+    /// </summary>
+    private static GenerationFitResult AnalyzeModernEraFit(string name, int birthYear)
+    {
+        var counts = NameGenderData.NameCounts(name, minTotal: ModernPopularThreshold);
+        if (counts == null)
+        {
+            // 현대 유행으로 보기엔 표본 부족 → 판단 보류
+            return new GenerationFitResult
+            {
+                FitLevel = "unknown", YearGap = 0, PeakDecade = null, Description = ""
+            };
+        }
+
+        // 현대(2008+) 출생 → 현대 유행 이름과 자연스럽게 맞음 (신생아 작명은 감점 없음)
+        if (birthYear >= ModernEraStart)
+        {
+            return new GenerationFitResult
+            {
+                FitLevel = "perfect", YearGap = 0, PeakDecade = "2010년대",
+                Description = "2010년대 이후 인기 이름으로, 출생연도와 잘 맞습니다"
+            };
+        }
+
+        // 옛 출생자가 현대 유행 이름 → 세대 불일치
+        int gap = ModernEraStart - birthYear;
+        if (gap <= 10)
+        {
+            return new GenerationFitResult
+            {
+                FitLevel = "mild_mismatch", YearGap = gap, PeakDecade = "2010년대",
+                Description = "2010년대 이후 인기 이름으로, 약간의 세대 차이가 있습니다"
+            };
+        }
+        return new GenerationFitResult
+        {
+            FitLevel = "strong_mismatch", YearGap = gap, PeakDecade = "2010년대",
+            Description = $"2010년대 이후 인기 이름으로, {birthYear}년생이 사용 시 개명한 인상을 줄 수 있습니다"
+        };
     }
 
     /// <summary>
