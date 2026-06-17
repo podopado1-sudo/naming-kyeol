@@ -33,8 +33,9 @@ public class ScoringService : IScoringService
         var normalizedGender = NormalizeGender(gender);
         var normalizedTone = NormalizeTone(tone);
 
+        // birthDate.Year를 넘겨 세대 적합도 보정을 활성화 (신생아=출생연도 기준)
         var aesthetic = await _aestheticEngine.CalculateScoreWithBreakdownAsync(
-            firstName, lastName, normalizedTone, normalizedGender);
+            firstName, lastName, normalizedTone, normalizedGender, birthDate.Year);
 
         var harmony = await _harmonyEngine.CalculateScoreWithBreakdownAsync(
             firstName, lastName, birthDate, normalizedGender, birthTime);
