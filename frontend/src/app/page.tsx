@@ -73,7 +73,9 @@ export default function HomePage() {
       if (payload.gender && payload.gender !== "any" && payload.gender !== "none")
         params.set("gender", payload.gender);
       if (payload.tone) params.set("tone", payload.tone);
-      router.push(`/evaluate?${params.toString()}`);
+      // 풀 페이지 이동 — /evaluate 정적 라우트의 클라이언트 라우터 캐시가
+      // 이전 ?name=... 을 재사용하는 문제 우회 (검색 상세보기와 동일 처리).
+      window.location.assign(`/evaluate?${params.toString()}`);
     }
   }
 

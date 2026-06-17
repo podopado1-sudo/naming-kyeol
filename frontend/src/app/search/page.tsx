@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -48,7 +48,6 @@ const HERO_SUBLINES = [
 
 function BabyNamingInner() {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   function handleCandidateDetail(fullName: string) {
     // fullName = lastName + firstName (예: "허기태"). 분리해서 /evaluate로 이동.
@@ -62,7 +61,10 @@ function BabyNamingInner() {
     if (birthTime) params.set("birthTime", birthTime);
     if (gender) params.set("gender", gender);
     if (tone) params.set("tone", tone);
-    router.push(`/evaluate?${params.toString()}`);
+    // router.push 대신 풀 페이지 이동 — /evaluate는 정적(○) 라우트라 클라이언트
+    // 라우터 캐시가 이전에 방문한 ?name=... 항목을 그대로 내놓아(다른 이름인데
+    // 직전 평가 이름이 표시되던 버그) searchParams가 갱신되지 않는 문제를 우회.
+    window.location.assign(`/evaluate?${params.toString()}`);
   }
 
   // ---- hero subline rotation ----

@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 export interface CandidateDetailContext {
   birthDate?: string; // "YYYY-MM-DD"
   birthTime?: string; // "HH:MM"
@@ -15,7 +13,6 @@ export interface CandidateDetailContext {
  * 추천 요청의 컨텍스트(생일/성별/톤)도 함께 전달 → /evaluate에서 자동 평가됨.
  */
 export function useCandidateDetail() {
-  const router = useRouter();
   return (lastName: string, fullName: string, ctx?: CandidateDetailContext) => {
     const ln = lastName.trim();
     const first = ln && fullName.startsWith(ln) ? fullName.slice(ln.length) : fullName;
@@ -26,6 +23,8 @@ export function useCandidateDetail() {
     if (ctx?.birthTime) params.set("birthTime", ctx.birthTime);
     if (ctx?.gender) params.set("gender", ctx.gender);
     if (ctx?.tone) params.set("tone", ctx.tone);
-    router.push(`/evaluate?${params.toString()}`);
+    // 풀 페이지 이동 — /evaluate 정적 라우트의 클라이언트 라우터 캐시가
+    // 이전 ?name=... 을 재사용해 다른 이름인데 직전 평가가 표시되던 버그 우회.
+    window.location.assign(`/evaluate?${params.toString()}`);
   };
 }

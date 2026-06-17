@@ -111,7 +111,9 @@ export default function FavoritesPage() {
                   </div>
                 </div>
 
-                <Link
+                {/* 일반 <a>로 풀 페이지 이동 — /evaluate 정적 라우트의 클라이언트
+                    라우터 캐시가 이전 ?name=... 을 재사용하는 잔상 버그 우회 */}
+                <a
                   href={buildEvaluateUrl(f)}
                   style={{
                     fontSize: 13,
@@ -121,7 +123,7 @@ export default function FavoritesPage() {
                   }}
                 >
                   다시 보기 →
-                </Link>
+                </a>
                 <button
                   type="button"
                   onClick={() => removeFavorite(f.fullName, f.birthDate)}
