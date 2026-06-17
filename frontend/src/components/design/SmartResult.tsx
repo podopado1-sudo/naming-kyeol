@@ -43,6 +43,7 @@ interface UICandidate {
   rarity: number;
   tags: string[];
   reasons: string[];
+  genderNote?: string;
   phonologyNotes: PhonologyNote[];
 }
 
@@ -74,6 +75,7 @@ function mapCandidate(c: SmartNameCandidate): UICandidate {
     rarity: Math.max(40, Math.min(95, Math.round(score - 10))),
     tags: c.tags ?? [],
     reasons: c.reasons ?? [],
+    genderNote: c.genderNote,
     phonologyNotes: c.phonologyNotes ?? [],
   };
 }
@@ -1179,6 +1181,24 @@ function CandidateCard({
                 {c.hanjaName && "· "}
                 {c.meaning}
               </span>
+            )}
+            {c.genderNote && (
+              <div
+                style={{
+                  marginTop: 8,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: "var(--color-amber-warm)",
+                  background: "rgba(181,135,76,0.10)",
+                  border: "1px solid rgba(181,135,76,0.3)",
+                  borderRadius: 999,
+                  padding: "2px 9px",
+                }}
+              >
+                {c.genderNote}
+              </div>
             )}
           </div>
           <div

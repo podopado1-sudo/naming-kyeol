@@ -339,51 +339,63 @@ public class NamingPrinciplesTests
     // EvalGenderSyllableFit — 성별 어미 적합 (위치별 평가)
     // ============================================================
 
-    /// <summary>
-    /// 자기 성별로 우세하거나 혼용인 이름은 감점 없음 (실명 빈도 데이터 기반).
-    /// 영주(0.61)처럼 혼용이면 통과 — '주' 어미를 광범위 차단하지 않음.
-    /// </summary>
+    /// <summary>자기 성별 우세거나 혼용(영주 0.61)이면 감점 없음 (실명 빈도 데이터 기반)</summary>
     [Theory]
-    [InlineData("규", "희", "female")] // 규희(0.83 여) — 여아 OK
-    [InlineData("유", "승", "male")]   // 유승(0.05 남) — 남아 OK
-    [InlineData("준", "아", "female")] // 준아(0.41 혼용) — 여아 OK
-    [InlineData("수", "민", "female")] // 수민(0.79 여) — 여아 OK
-    [InlineData("유", "주", "female")] // 유주(0.98 여) — 여아 OK
-    [InlineData("영", "주", "male")]   // 영주(0.61 혼용) — 남아도 OK (주 어미 광범위 차단 안 함)
-    [InlineData("규", "민", "male")]   // 규민(0.12 남) — 남아 OK
+    [InlineData("규", "희", "female")] // 규희(0.83 여)
+    [InlineData("유", "승", "male")]   // 유승(0.05 남)
+    [InlineData("준", "아", "female")] // 준아(0.41 혼용)
+    [InlineData("수", "민", "female")] // 수민(0.79 여)
+    [InlineData("유", "주", "female")] // 유주 — 여아 요청은 정상
+    [InlineData("영", "주", "male")]   // 영주(0.61 혼용) — 주 어미 광범위 차단 안 함
+    [InlineData("규", "민", "male")]   // 규민(0.12 남) — 남아 요청 정상
     public void EvalGenderSyllableFit_OwnOrMixed_NoPenalty(string first, string second, string gender)
     {
         var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
-        Assert.True(fit >= 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} < 0.7");
+        Assert.True(fit >= 0.95, $"{first}{second}({gender}) 적합도 {fit:F2} < 0.95");
     }
 
-    /// <summary>반대 성별 전형 어미는 감점 — 여아에 민규형, 남아에 ○희/○아형</summary>
+    /// <summary>반대 성별로 강하게 우세 + 소수 사용량 적으면 뚜렷이 강등 (유주↔남아 등)</summary>
     [Theory]
-    [InlineData("미", "규", "female")] // 미규 — 표본 부족 → '규' 어미 폴백(남성형)
-    [InlineData("은", "준", "female")]
-    [InlineData("수", "혁", "female")]
-    [InlineData("성", "아", "male")]   // 성아 — 여성형
-    [InlineData("승", "희", "male")]
-    [InlineData("도", "린", "male")]   // 도린(0.77 여) — 남아엔 다소 기움
-    public void EvalGenderSyllableFit_OppositeFinal_Penalized(string first, string second, string gender)
+    [InlineData("유", "주", "male")]   // 유주(0.98 여), 남아 227
+    [InlineData("현", "주", "male")]   // 현주(0.96 여), 남아 96
+    [InlineData("미", "규", "female")] // 미규 — 표본부족 → '규' 어미 폴백
+    [InlineData("성", "아", "male")]   // 성아(0.93 여), 남아 55
+    [InlineData("은", "준", "female")] // 은준(0.02 여), 여아 42
+    public void EvalGenderSyllableFit_StrongOpposite_ClearlyDemoted(string first, string second, string gender)
     {
         var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
-        Assert.True(fit < 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.7 (반대 성별인데 통과)");
+        Assert.True(fit < 0.70, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.70 (강하게 반대인데)");
     }
 
-    /// <summary>실명 빈도상 반대 성별로 강하게 우세한 이름은 감점 (유주↔남아 등)</summary>
+    /// <summary>
+    /// 강등하되 배제 아님 — 반대로 기우는 이름도 바닥(0.55) 위로 유지.
+    /// 소수 성별 실사용 많은 이름(규민 여 863·주원 여 3997)은 더 약하게 감점.
+    /// </summary>
     [Theory]
-    [InlineData("유", "주", "male")]   // 유주(0.98 여) — 남아 요청 감점
-    [InlineData("현", "주", "male")]   // 현주(0.96 여) — '주' 어미지만 데이터상 여아
-    [InlineData("서", "유", "male")]   // 서유(0.85 여)
-    [InlineData("지", "유", "male")]   // 지유(0.96 여)
-    [InlineData("도", "윤", "female")] // 도윤(0.05 남) — 여아 요청 감점
-    [InlineData("주", "원", "female")] // 주원(0.14 남)
-    [InlineData("규", "민", "female")] // 규민(0.12 남) — 데이터가 남아로 판정
-    public void EvalGenderSyllableFit_DataOppositeGender_Penalized(string first, string second, string gender)
+    [InlineData("규", "민", "female")] // 규민 — 여아 863명 → 양성 공용, 약한 강등
+    [InlineData("주", "원", "female")] // 주원 — 여아 3997명
+    [InlineData("도", "린", "male")]   // 도린(0.77) — 다소 기움
+    [InlineData("서", "유", "male")]   // 서유(0.85)
+    public void EvalGenderSyllableFit_CrossUsable_DemotedNotExcluded(string first, string second, string gender)
     {
         var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
-        Assert.True(fit < 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.7 (데이터상 반대 성별인데 통과)");
+        Assert.True(fit >= 0.55 && fit < 1.0,
+            $"{first}{second}({gender}) 적합도 {fit:F2} (강등≠배제, 0.55~1.0 기대)");
+        // 소수 사용량 많은 규민·주원은 약한 강등(>= 0.7)으로 여전히 선택 가능
+        if ((first + second) is "규민" or "주원")
+            Assert.True(fit >= 0.70, $"{first}{second} 양성 공용인데 과도 강등 {fit:F2}");
+    }
+
+    /// <summary>성별 안내 라벨 — 반대로 뚜렷이 기우면(0.70↑) 라벨, 아니면 null</summary>
+    [Theory]
+    [InlineData("유", "주", "male", "주로 여아 이름")]
+    [InlineData("도", "윤", "female", "주로 남아 이름")]
+    [InlineData("영", "주", "male", null)]      // 혼용(0.61) — 라벨 없음
+    [InlineData("유", "주", "female", null)]    // 같은 성별 — 라벨 없음
+    [InlineData("유", "주", "none", null)]      // 성별 미지정
+    public void GenderLeanLabel_OppositeLean_ReturnsNote(string first, string second, string gender, string? expected)
+    {
+        Assert.Equal(expected, NamingPrinciples.GenderLeanLabel(first + second, gender));
     }
 
     /// <summary>성별 미지정이면 항상 중립 (영향 없음)</summary>

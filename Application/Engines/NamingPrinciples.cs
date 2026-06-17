@@ -121,55 +121,66 @@ public static class NamingPrinciples
     // 작명 스킬 0-2 — 성별 적합 (Gender Fit) — 실명 빈도 데이터 기반
     // ═══════════════════════════════════════════════════════════════
     //
-    // 유주(여아 인기)가 남아 1위에 오거나 민규형 어미가 여아에 오는 문제를 막는다.
+    // 유주(여아 인기)가 남아 1위에 오는 문제를 막되, '배제'가 아니라 '강등'한다.
     // 수동 큐레이션 대신 NameGenderData(대법원 출생신고 2008~2019 실명 빈도)로 판정:
-    //   1) 이름 전체 빈도비 우선 — 가장 구체적. 반대 성별로 강하게 우세하면 감점,
-    //      혼용(영주 0.61 등)이면 통과.
-    //   2) 이름 표본 부족 시 끝음절 빈도비로 폴백 (한국 이름의 성별 신호는 어미가 주도).
-    // 데이터가 틀리거나 부족한 소수 케이스만 ManualGenderLean으로 보정(하이브리드).
+    //   1) 이름 전체 빈도비 우선 — 가장 구체적. 혼용(영주 0.61)이면 통과.
+    //   2) 표본 부족 시 끝음절 빈도비로 폴백.
+    // 반대 성별로 기울수록 점진 감점(바닥 0.55)하고, 소수 성별 실제 사용량이 많으면
+    // (규민 여 863 등) 양성 공용으로 보고 완화. 라벨(주로 ○아 이름)은 0.70↑ 노출.
+    // 데이터가 틀린 소수 케이스만 ManualGenderLean으로 보정(하이브리드).
 
     /// <summary>
     /// 수동 성별 오버라이드 (하이브리드) — 실명 통계가 틀리거나 부족한 소수 이름만.
     /// 값은 그 이름이 실제로 기우는 성별("male"/"female"). 비어 있어도 정상 동작.
-    /// 예: ["이름"] = "female"  ← 데이터가 잘못 잡는 케이스 발견 시 추가.
     /// </summary>
     private static readonly Dictionary<string, string> ManualGenderLean = new();
 
+    private const double LeanStart = 0.60;      // 감점 시작 (반대 성별 비율)
+    private const double LeanMaxPenalty = 0.45; // 최대 감점 (바닥 fit 0.55)
+    private const double LabelThreshold = 0.70; // 라벨/탑픽 제외 기준
+
     /// <summary>
-    /// 음절 기반 성별 적합 평가 (0~1). 실명 빈도 데이터로 판정.
-    /// gender가 male/female이 아니면 항상 1.0 (중성 요청은 영향 없음).
+    /// 요청 성별의 '반대'로 기우는 정도(0~1) + 요청 성별의 절대 사용량(양성 공용 판정).
+    /// 이름 전체 빈도 우선, 표본 부족 시 끝음절 폴백. 데이터 없으면 null.
+    /// </summary>
+    private static (double oppositeLean, long requestedCount, bool fromName)? GenderLean(
+        string firstSyllable, string secondSyllable, bool isFemale)
+    {
+        var name = firstSyllable + secondSyllable;
+        if (ManualGenderLean.TryGetValue(name, out var manual))
+            return ((manual == "female") == isFemale ? 0.0 : 1.0, 0, true);
+
+        var counts = NameGenderData.NameCounts(name);
+        if (counts.HasValue)
+        {
+            long m = counts.Value.m, f = counts.Value.f;
+            double femaleRatio = (double)f / (m + f);
+            return (isFemale ? 1.0 - femaleRatio : femaleRatio, isFemale ? f : m, true);
+        }
+
+        var lastRatio = NameGenderData.FemaleRatioForLastSyllable(secondSyllable);
+        if (lastRatio.HasValue)
+            return (isFemale ? 1.0 - lastRatio.Value : lastRatio.Value, 0, false);
+
+        return null;
+    }
+
+    /// <summary>
+    /// 음절 기반 성별 적합 평가 (0~1, 바닥 0.55). 실명 빈도 데이터로 판정.
+    /// 반대 성별로 기우는 이름은 점진 감점하되 소수 성별 사용량이 많으면 완화.
+    /// gender가 male/female이 아니면 항상 1.0.
     /// </summary>
     public static double EvalGenderSyllableFit(string firstSyllable, string secondSyllable, string gender)
     {
         if (gender != "male" && gender != "female") return 1.0;
+        var gl = GenderLean(firstSyllable, secondSyllable, gender == "female");
+        if (gl == null || gl.Value.oppositeLean < LeanStart) return 1.0;
 
-        bool isFemale = gender == "female";
-        var name = firstSyllable + secondSyllable;
-
-        // 0) 수동 오버라이드 (하이브리드)
-        if (ManualGenderLean.TryGetValue(name, out var lean))
-            return (lean == "female") == isFemale ? 1.0 : 0.3;
-
-        // 1) 이름 전체 실명 빈도 우선 (가장 구체적)
-        var nameRatio = NameGenderData.FemaleRatioForName(name);
-        if (nameRatio.HasValue)
-        {
-            // 요청 성별의 '반대'로 기우는 정도 (0~1)
-            double oppositeLean = isFemale ? 1.0 - nameRatio.Value : nameRatio.Value;
-            if (oppositeLean >= 0.85) return 0.3;  // 반대 성별로 강하게 우세 (유주·현주 ↔ 남아)
-            if (oppositeLean >= 0.65) return 0.55; // 반대로 다소 기움 (도린 ↔ 남아)
-            return 1.0;                             // 자기 성별 우세 또는 혼용(영주 0.61 등)
-        }
-
-        // 2) 이름 표본 부족 → 끝음절 빈도로 폴백
-        var lastRatio = NameGenderData.FemaleRatioForLastSyllable(secondSyllable);
-        if (lastRatio.HasValue)
-        {
-            double oppositeLean = isFemale ? 1.0 - lastRatio.Value : lastRatio.Value;
-            if (oppositeLean >= 0.80) return 0.35; // 반대 성별 전형 어미 (민규의 '규' 등)
-        }
-
-        return 1.0;
+        double baseP = Math.Min(1.0, (gl.Value.oppositeLean - LeanStart) / (1.0 - LeanStart));
+        double penalty = baseP * LeanMaxPenalty;
+        if (gl.Value.fromName)
+            penalty -= Math.Min(0.15, gl.Value.requestedCount / 3000.0 * 0.15); // 양성 공용 완화
+        return Math.Max(0.55, 1.0 - Math.Max(0.0, penalty));
     }
 
     /// <summary>이름 문자열 전체에 대한 성별 어미 적합 (2음절 외에는 중립 1.0)</summary>
@@ -177,6 +188,26 @@ public static class NamingPrinciples
     {
         if (string.IsNullOrEmpty(name) || name.Length != 2) return 1.0;
         return EvalGenderSyllableFit(name[0].ToString(), name[1].ToString(), gender);
+    }
+
+    /// <summary>
+    /// 요청 성별과 반대로 뚜렷이 기우는 이름이면 안내 라벨 반환(아니면 null).
+    /// 예: 남아 요청 + '유주'(여아 우세) → "주로 여아 이름". TopPick 제외·UX 라벨용.
+    /// </summary>
+    public static string? GenderLeanLabel(string firstSyllable, string secondSyllable, string gender)
+    {
+        if (gender != "male" && gender != "female") return null;
+        bool isFemale = gender == "female";
+        var gl = GenderLean(firstSyllable, secondSyllable, isFemale);
+        if (gl == null || gl.Value.oppositeLean < LabelThreshold) return null;
+        return isFemale ? "주로 남아 이름" : "주로 여아 이름";
+    }
+
+    /// <summary>이름 전체에 대한 성별 안내 라벨 (2음절 외에는 null).</summary>
+    public static string? GenderLeanLabel(string name, string gender)
+    {
+        if (string.IsNullOrEmpty(name) || name.Length != 2) return null;
+        return GenderLeanLabel(name[0].ToString(), name[1].ToString(), gender);
     }
 
     // ═══════════════════════════════════════════════════════════════

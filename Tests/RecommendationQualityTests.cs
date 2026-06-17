@@ -234,8 +234,8 @@ public class RecommendationQualityTests
     }
 
     /// <summary>
-    /// 성별 지정 시 반대 성별 전형 어미가 표준 추천 상위 10에 오면 안 된다.
-    /// 여아 1위가 "미규"(민규형 남성 어미)였던 회귀 방지 (2026-06-13).
+    /// 성별 정책 (2026-06-17 부드러운 강등 전환): 반대 성별로 뚜렷이 기우는 이름은
+    /// 목록엔 라벨과 함께 남기되 1위/TopPick엔 오지 않는다. (옛 정책: 상위 10 전면 차단)
     /// </summary>
     [Theory]
     [InlineData("김", "female")]
@@ -243,7 +243,7 @@ public class RecommendationQualityTests
     [InlineData("최", "female")]
     [InlineData("김", "male")]
     [InlineData("윤", "male")]
-    public async Task Quality_StandardCategory_GenderSyllableFit(string lastName, string gender)
+    public async Task Quality_StandardCategory_GenderPolicy(string lastName, string gender)
     {
         var request = new SmartRecommendationRequestDto
         {
@@ -256,14 +256,25 @@ public class RecommendationQualityTests
         var result = await _service.GenerateSmartRecommendationsAsync(request);
         var standardCategory = result.Categories.FirstOrDefault(c => c.Type == "standard");
         Assert.NotNull(standardCategory);
+        var names = standardCategory!.Names;
+        Assert.NotEmpty(names);
 
-        var top10 = standardCategory!.Names.Take(10).Select(n => n.Name).ToList();
-        var mismatches = top10
-            .Where(n => NamingPrinciples.EvalGenderSyllableFit(n, gender) < 0.7)
-            .ToList();
+        // 1) 표준 1위는 반대 성별 라벨이 없어야 함 (라벨 이름은 하단 정렬)
+        Assert.True(string.IsNullOrEmpty(names[0].GenderNote),
+            $"표준 1위가 반대 성별 이름 ({lastName}/{gender}): {names[0].Name} [{names[0].GenderNote}]");
 
-        Assert.True(mismatches.Count == 0,
-            $"반대 성별 전형 어미가 상위 10에 포함됨 ({lastName}/{gender}): {string.Join(", ", mismatches)}");
+        // 2) TopPick도 반대 성별 라벨이 없어야 함
+        if (result.TopPick != null)
+            Assert.True(string.IsNullOrEmpty(result.TopPick.Candidate.GenderNote),
+                $"TopPick이 반대 성별 이름 ({lastName}/{gender}): {result.TopPick.Candidate.FullName}");
+
+        // 3) 목록에 반대 성별로 기우는 이름이 있으면 GenderNote 라벨이 붙어 있어야 함
+        foreach (var n in names.Take(10))
+        {
+            var expectedLabel = NamingPrinciples.GenderLeanLabel(n.Name, gender);
+            if (!string.IsNullOrEmpty(expectedLabel))
+                Assert.Equal(expectedLabel, n.GenderNote);
+        }
     }
 
     /// <summary>

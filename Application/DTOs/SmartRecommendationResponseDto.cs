@@ -63,6 +63,12 @@ public class SmartNameCandidateDto
     public List<string> Reasons { get; set; } = new();
 
     /// <summary>
+    /// 성별 안내 라벨 — 요청 성별과 반대로 뚜렷이 기우는 이름일 때만 설정
+    /// (예: 남아 요청에 "주로 여아 이름"). 설정되면 TopPick에서 제외되고 카드에 표시.
+    /// </summary>
+    public string? GenderNote { get; set; }
+
+    /// <summary>
     /// 음운 특성 노트 (감점 없음, Explanation 용도).
     /// 이름의 발음/모음 리듬 특성을 사용자에게 정보로 노출.
     /// 2026-04-21 옵션 C Phase 2.

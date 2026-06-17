@@ -92,6 +92,16 @@ public static class NameGenderData
     public static double? FemaleRatioForName(string name, long minTotal = 20)
         => Ratio(_names, name, minTotal);
 
+    /// <summary>이름 전체의 (남, 여) 등록 빈도. 표본 부족이면 null.
+    /// 소수 성별 절대 사용량(양성 공용 정도) 판정에 사용.</summary>
+    public static (long m, long f)? NameCounts(string name, long minTotal = 20)
+    {
+        if (!_loaded) LoadExternalData();
+        if (!_names.TryGetValue(name, out var v)) return null;
+        if (v.m + v.f < minTotal) return null;
+        return v;
+    }
+
     /// <summary>끝음절의 여아 비율(0~1). 표본 부족이면 null.</summary>
     public static double? FemaleRatioForLastSyllable(string syllable, long minTotal = 300)
         => Ratio(_lastSyll, syllable, minTotal);

@@ -97,8 +97,15 @@ public class SmartRecommendationService : ISmartRecommendationService
                 Score = c.FinalScore,
                 AestheticScore = c.AestheticScore,
                 HarmonyScore = c.HarmonyScore,
+                GenderNote = NamingPrinciples.GenderLeanLabel(c.Name, gender),
                 Tags = BuildStandardTags(c)
             }).ToList();
+
+            // 반대 성별로 기우는 이름(GenderNote)은 목록 하단으로 — 1위/상위 차단,
+            // 단 배제하지 않고 라벨과 함께 노출. OrderBy는 안정 정렬이라 그룹 내 점수순 유지.
+            names = names
+                .OrderByDescending(n => string.IsNullOrEmpty(n.GenderNote))
+                .ToList();
 
             AddCategory(categoryResults, lockObj, "standard", "한자 이름", "RecommendationService", names);
         }));
@@ -359,13 +366,16 @@ public class SmartRecommendationService : ISmartRecommendationService
     /// </summary>
     private static TopPickDto? BuildTopPick(List<NameCategoryDto> categories)
     {
-        // 1순위: standard 카테고리 최고점
+        // 1순위: standard 카테고리 최고점.
+        // 단 반대 성별로 기우는 이름(GenderNote 있음)은 TopPick에서 제외 — 1위는
+        // 요청 성별에 맞는 이름이어야 함. 전부 노트가 있으면 어쩔 수 없이 최고점 사용.
         var standard = categories.FirstOrDefault(c => c.Type == "standard");
         if (standard != null)
         {
-            var topStandard = standard.Names
-                .Where(n => n.Score.HasValue)
-                .OrderByDescending(n => n.Score!.Value)
+            var scored = standard.Names.Where(n => n.Score.HasValue);
+            var topStandard = scored
+                .OrderByDescending(n => string.IsNullOrEmpty(n.GenderNote)) // 노트 없는 이름 우선
+                .ThenByDescending(n => n.Score!.Value)
                 .FirstOrDefault();
             if (topStandard != null)
             {

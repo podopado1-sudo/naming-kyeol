@@ -81,6 +81,8 @@ export interface SmartNameCandidate {
    * 비어 있으면 meaning 한 줄만 표시.
    */
   reasons?: string[];
+  /** 성별 안내 라벨 — 요청 성별과 반대로 기우는 이름일 때만 (예: "주로 여아 이름"). */
+  genderNote?: string;
   /**
    * 음운 특성 노트 (감점 없음, 정보 노출 용도).
    * 이름의 발음/모음 리듬 특성을 사용자에게 정보로 노출.
