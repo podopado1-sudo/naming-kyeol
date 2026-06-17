@@ -369,6 +369,31 @@ public class NamingPrinciplesTests
         Assert.True(fit < 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.7 (반대 성별 어미인데 통과)");
     }
 
+    /// <summary>이름 단위 큐레이션 — 음절은 중성이지만 한쪽 성별로 기우는 이름은 반대 성별 요청 시 감점</summary>
+    [Theory]
+    [InlineData("유", "주", "male")]   // 유주 — '주' 중성 어미지만 여아로 기움
+    [InlineData("서", "유", "male")]
+    [InlineData("지", "유", "male")]
+    [InlineData("도", "윤", "female")] // 도윤 — 남아로 기움
+    [InlineData("주", "원", "female")]
+    public void EvalGenderSyllableFit_CuratedLeaningName_Penalized(string first, string second, string gender)
+    {
+        var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
+        Assert.True(fit < 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} >= 0.7 (큐레이션 반대 성별인데 통과)");
+    }
+
+    /// <summary>큐레이션 이름이라도 같은 성별 요청이면 감점 없음 + 미등록 중성 이름(영주)은 보호</summary>
+    [Theory]
+    [InlineData("유", "주", "female")] // 유주 — 여아 요청은 정상
+    [InlineData("도", "윤", "male")]   // 도윤 — 남아 요청은 정상
+    [InlineData("영", "주", "male")]   // 영주 — 큐레이션 미등록, '주' 중성 유지(부수 피해 없음)
+    [InlineData("현", "주", "male")]
+    public void EvalGenderSyllableFit_CuratedOrNeutral_NotPenalized(string first, string second, string gender)
+    {
+        var fit = NamingPrinciples.EvalGenderSyllableFit(first, second, gender);
+        Assert.True(fit >= 0.7, $"{first}{second}({gender}) 적합도 {fit:F2} < 0.7 (정상인데 감점됨)");
+    }
+
     /// <summary>성별 미지정이면 항상 중립 (영향 없음)</summary>
     [Theory]
     [InlineData("미", "규", "none")]

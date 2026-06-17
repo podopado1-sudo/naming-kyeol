@@ -145,6 +145,22 @@ public static class NamingPrinciples
         "철", "병", "종"
     };
 
+    /// <summary>
+    /// 음절(특히 어미)은 중성으로 분류되지만 실제 사용에서 여아로 뚜렷이 기우는 이름.
+    /// 예: "유주"는 어미 '주'가 중성(영주·현주·민주 등 양성 공용)이라 감점이 없었음.
+    /// 실명 빈도 통계 도입 전까지의 보수적 보정 — 확실한 것만 추가할 것.
+    /// </summary>
+    private static readonly HashSet<string> FemaleLeaningNames = new()
+    {
+        "유주", "서유", "지유", "시유"
+    };
+
+    /// <summary>음절은 중성이지만 실제 사용에서 남아로 뚜렷이 기우는 이름 (보수적 큐레이션).</summary>
+    private static readonly HashSet<string> MaleLeaningNames = new()
+    {
+        "도윤", "주원"
+    };
+
     static NamingPrinciples()
     {
         // 실명 통계 표본이 작아 한쪽 성별로 쏠려 보이지만 실제로는 중성인 어미
@@ -202,6 +218,13 @@ public static class NamingPrinciples
         if (gender != "male" && gender != "female") return 1.0;
 
         bool isFemale = gender == "female";
+
+        // 이름 단위 큐레이션 우선 — 음절은 중성으로 분류되지만 실제 사용에서
+        // 한쪽 성별로 뚜렷이 기우는 이름(예: 유주↔남아) 강한 감점.
+        var fullName = firstSyllable + secondSyllable;
+        if (isFemale && MaleLeaningNames.Contains(fullName)) return 0.3;
+        if (!isFemale && FemaleLeaningNames.Contains(fullName)) return 0.3;
+
         var oppositeFinals = isFemale ? MaleTypicalFinals : FemaleTypicalFinals;
         var oppositeFirsts = isFemale ? MaleTypicalFirsts : FemaleTypicalFirsts;
 
