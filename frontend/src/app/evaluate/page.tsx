@@ -21,8 +21,8 @@ import {
 import { ScoreTile } from "@/components/design/DetailPrimitives";
 
 import { evaluate } from "@/lib/api";
-import type { NameEvaluationResponse } from "@/lib/types";
-import { Download, Heart, Share2 } from "lucide-react";
+import type { GenerationFit, NameEvaluationResponse } from "@/lib/types";
+import { Clock, Download, Heart, Share2, Sparkles } from "lucide-react";
 import { toggleFavorite, useIsFavorite } from "@/lib/favorites";
 import { toast } from "sonner";
 
@@ -267,6 +267,12 @@ function EvaluateResultView({
             {data.summary}
           </div>
 
+          {data.generationFit && data.generationFit.fitLevel !== "perfect" && (
+            <div style={{ marginTop: 12 }}>
+              <GenerationChip fit={data.generationFit} />
+            </div>
+          )}
+
           <div
             style={{
               marginTop: 32,
@@ -411,6 +417,62 @@ function EvaluateResultView({
       </main>
       <Footer />
     </>
+  );
+}
+
+// 세대 감각 칩 — fitLevel별 색/아이콘. perfect는 호출부에서 제외(잡음 방지).
+function GenerationChip({ fit }: { fit: GenerationFit }) {
+  const palette = {
+    timeless: {
+      bg: "rgba(46,125,122,0.10)",
+      border: "rgba(46,125,122,0.32)",
+      color: "var(--color-teal)",
+    },
+    mild_mismatch: {
+      bg: "rgba(201,169,110,0.14)",
+      border: "rgba(201,169,110,0.42)",
+      color: "#8A6A2E",
+    },
+    strong_mismatch: {
+      bg: "rgba(181,135,76,0.14)",
+      border: "rgba(181,135,76,0.46)",
+      color: "#7A5B22",
+    },
+    perfect: {
+      bg: "rgba(46,125,122,0.10)",
+      border: "rgba(46,125,122,0.32)",
+      color: "var(--color-teal)",
+    },
+  }[fit.fitLevel];
+
+  const isTimeless = fit.fitLevel === "timeless";
+  const Icon = isTimeless ? Sparkles : Clock;
+  const prefix = isTimeless ? "세대 중립" : "세대 감각";
+
+  return (
+    <span
+      title={fit.description}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "6px 13px",
+        borderRadius: 999,
+        background: palette.bg,
+        border: `1px solid ${palette.border}`,
+        color: palette.color,
+        fontSize: 12.5,
+        fontWeight: 600,
+        letterSpacing: "0.01em",
+      }}
+    >
+      <Icon size={13} strokeWidth={2} />
+      <span>
+        {prefix}
+        <span style={{ opacity: 0.55, fontWeight: 500 }}> · </span>
+        <span style={{ fontWeight: 500 }}>{fit.headline}</span>
+      </span>
+    </span>
   );
 }
 

@@ -450,6 +450,24 @@ export interface HanjaSyllable {
   candidates: HanjaCandidate[];
 }
 
+export type GenerationFitLevel =
+  | "timeless"
+  | "perfect"
+  | "mild_mismatch"
+  | "strong_mismatch";
+
+export interface GenerationFit {
+  fitLevel: GenerationFitLevel;
+  /** "younger"(또래보다 젊은) | "older"(예스러운) | ""(방향 없음) */
+  direction: "younger" | "older" | "";
+  /** 칩용 짧은 라벨 (예: "또래보다 젊은 느낌") */
+  headline: string;
+  /** 전체 설명 문장 */
+  description: string;
+  /** 유행 연대 (예: "2010년대") */
+  peakDecade: string | null;
+}
+
 export interface NameEvaluationResponse {
   fullName: string;
   aestheticScore: number;
@@ -465,5 +483,7 @@ export interface NameEvaluationResponse {
   pronunciationNote: string;
   meaningNote: string;
   toneReason: string;
+  /** 세대 감각 — unknown/미제공 시 null */
+  generationFit?: GenerationFit | null;
   usedFallbackHanja: boolean;
 }

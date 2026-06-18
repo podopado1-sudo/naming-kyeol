@@ -88,7 +88,25 @@ public class NameEvaluationService : INameEvaluationService
             MeaningNote = explanation.MeaningNote,
             ToneReason = explanation.ToneReason,
 
+            GenerationFit = MapGenerationFit(score.Aesthetic.GenerationFit),
+
             UsedFallbackHanja = score.Harmony.UsedFallback
+        };
+    }
+
+    /// <summary>세대 적합도 → DTO 매핑. unknown/미제공/판단보류는 null(칩 미표시).</summary>
+    private static GenerationFitDto? MapGenerationFit(Engines.Data.GenerationFitResult? fit)
+    {
+        if (fit == null || fit.FitLevel == "unknown")
+            return null;
+
+        return new GenerationFitDto
+        {
+            FitLevel = fit.FitLevel,
+            Direction = fit.Direction,
+            Headline = fit.Headline,
+            Description = fit.Description,
+            PeakDecade = fit.PeakDecade
         };
     }
 

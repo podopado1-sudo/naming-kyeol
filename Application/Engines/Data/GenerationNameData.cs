@@ -179,6 +179,7 @@ public static class GenerationNameData
                 FitLevel = "timeless",
                 YearGap = 0,
                 PeakDecade = null,
+                Headline = "어느 세대에나 어울려요",
                 Description = "어떤 세대가 써도 자연스러운 이름이에요"
             };
         }
@@ -241,6 +242,7 @@ public static class GenerationNameData
                 FitLevel = "perfect",
                 YearGap = 0,
                 PeakDecade = peakDecade,
+                Headline = "출생 시기와 잘 어울려요",
                 Description = $"{peakDecade}에 사랑받은 이름으로, 출생 시기와 잘 어울려요"
             };
         }
@@ -256,6 +258,8 @@ public static class GenerationNameData
                 FitLevel = "mild_mismatch",
                 YearGap = minGap,
                 PeakDecade = peakDecade,
+                Direction = nameIsNewer ? "younger" : "older",
+                Headline = BuildMismatchHeadline(nameIsNewer),
                 Description = BuildMismatchDescription(peakDecade, birthYear, isStrong: false, nameIsNewer)
             };
         }
@@ -267,6 +271,8 @@ public static class GenerationNameData
                 FitLevel = "strong_mismatch",
                 YearGap = minGap,
                 PeakDecade = peakDecade,
+                Direction = nameIsNewer ? "younger" : "older",
+                Headline = BuildMismatchHeadline(nameIsNewer),
                 Description = BuildMismatchDescription(peakDecade, birthYear, isStrong: true, nameIsNewer)
             };
         }
@@ -287,6 +293,10 @@ public static class GenerationNameData
             ? $"{peakDecade}에 많이 쓰인 이름이라, {birthYear}년생에게는 또래보다 한층 예스러운 느낌을 줄 수 있어요"
             : $"{peakDecade}에 자주 쓰인 이름이라, {birthYear}년생에게는 또래보다 조금 예스러운 느낌일 수 있어요";
     }
+
+    /// <summary>칩/뱃지용 짧은 방향 라벨.</summary>
+    private static string BuildMismatchHeadline(bool nameIsNewer)
+        => nameIsNewer ? "또래보다 젊은 느낌" : "또래보다 예스러운 느낌";
 
     // 현대(2008+) 유행 판정 임계 — 대법원 2008~2019 실명 등록 합계가 이 이상이면
     // '뚜렷한 현대 유행 이름'으로 본다 (NameGenderData 기반).
@@ -315,6 +325,7 @@ public static class GenerationNameData
             return new GenerationFitResult
             {
                 FitLevel = "perfect", YearGap = 0, PeakDecade = "2010년대",
+                Headline = "출생 시기와 잘 어울려요",
                 Description = "2010년대 이후 사랑받은 이름으로, 출생 시기와 잘 어울려요"
             };
         }
@@ -326,12 +337,14 @@ public static class GenerationNameData
             return new GenerationFitResult
             {
                 FitLevel = "mild_mismatch", YearGap = gap, PeakDecade = "2010년대",
+                Direction = "younger", Headline = BuildMismatchHeadline(nameIsNewer: true),
                 Description = BuildMismatchDescription("2010년대", birthYear, isStrong: false, nameIsNewer: true)
             };
         }
         return new GenerationFitResult
         {
             FitLevel = "strong_mismatch", YearGap = gap, PeakDecade = "2010년대",
+            Direction = "younger", Headline = BuildMismatchHeadline(nameIsNewer: true),
             Description = BuildMismatchDescription("2010년대", birthYear, isStrong: true, nameIsNewer: true)
         };
     }
@@ -381,6 +394,14 @@ public class GenerationFitResult
 
     /// <summary>유행 연대 레이블 (예: "2010년대")</summary>
     public string? PeakDecade { get; set; }
+
+    /// <summary>
+    /// 불일치 방향: "younger"(또래보다 젊은 느낌), "older"(예스러운 느낌), ""(방향 없음/적합·중립)
+    /// </summary>
+    public string Direction { get; set; } = "";
+
+    /// <summary>칩/뱃지용 짧은 라벨 (예: "또래보다 젊은 느낌", "어느 세대에나")</summary>
+    public string Headline { get; set; } = "";
 
     /// <summary>설명 문장</summary>
     public string Description { get; set; } = "";

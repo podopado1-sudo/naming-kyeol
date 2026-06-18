@@ -33,8 +33,32 @@ public class NameEvaluationResultDto
     public string MeaningNote { get; set; } = "";
     public string ToneReason { get; set; } = "";
 
+    // 세대 감각 (출생연도 대비 이름 유행기). unknown/미제공 시 null.
+    public GenerationFitDto? GenerationFit { get; set; }
+
     // 메타
     public bool UsedFallbackHanja { get; set; }
+}
+
+/// <summary>
+/// 세대 감각 — 출생연도와 이름 유행기의 관계. 프론트 칩/뱃지 렌더용.
+/// </summary>
+public class GenerationFitDto
+{
+    /// <summary>"timeless" | "perfect" | "mild_mismatch" | "strong_mismatch"</summary>
+    public string FitLevel { get; set; } = "";
+
+    /// <summary>"younger"(또래보다 젊은) | "older"(예스러운) | ""(방향 없음)</summary>
+    public string Direction { get; set; } = "";
+
+    /// <summary>칩용 짧은 라벨 (예: "또래보다 젊은 느낌")</summary>
+    public string Headline { get; set; } = "";
+
+    /// <summary>전체 설명 문장 (툴팁/부가 안내용)</summary>
+    public string Description { get; set; } = "";
+
+    /// <summary>유행 연대 (예: "2010년대"), 없으면 null</summary>
+    public string? PeakDecade { get; set; }
 }
 
 /// <summary>
