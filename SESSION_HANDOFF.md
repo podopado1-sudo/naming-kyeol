@@ -5,18 +5,31 @@
 
 ---
 
-## 마지막 세션 요약 (2026-06-17 — 🐛 상세보기 버그 + 🧬 성별/세대 실명 데이터화)
+## 마지막 세션 요약 (2026-06-18 — ✅ 세대 적합 "활성화" 완료)
+
+직전 세션이 최우선 미완으로 남긴 **세대 적합(Generation Fit) 운영 경로 활성화**를 완료. 평가·추천 양쪽에서 세대 로직이 실제로 화면에 반영됨을 API로 검증.
+
+### 변경 (1줄 배선)
+- **평가 경로 배선**: `NameEvaluationService.EvaluateNameAsync`가 `ExplanationEngine.GenerateDetailedReasonsAsync`에 `score.Aesthetic.GenerationFit`을 전달하도록 수정 ([NameEvaluationService.cs:32](Application/Services/NameEvaluationService.cs:32)). 이제 cautions에 세대 불일치 안내, strengths에 시대중립 노출.
+- **추천 경로**: 이미 직전 세션 커밋 `66f2b97`에서 `ScoringService.EvaluateAsync`가 `birthDate.Year`를 AestheticEngine에 넘기고 있었음 → **이번엔 평가 경로만 미배선이었던 것**. (직전 핸드오프의 "ScoringService가 birthYear 안 넘김" 기록은 그 커밋 이전 상태 기준이라 stale했음)
+
+### 검증 (로컬 `dotnet run` + API)
+- **평가**: `김지민` — **1985생** → neutrality 1(−5 감점) + caution "세대 불일치(강) … 2010년대 유행 … 1985년생이 사용 시 개명한 인상" / **2024생** → neutrality 6, caution 없음. ✅ 의도대로
+- **추천 랭킹**: `박/1985` vs `박/2024` smart 호출 — 연도에 맞게 다른 standard 리스트 생성(1985: 박윤주·박우준·박은주… / 2024: 박수환·박소인·박경리…), 모두 정상 이름·점수(77~83), TopPick 정상(박수환 82). 세대 적합이 랭킹에 반영되되 추천 품질을 깨지 않음. ✅
+- 빌드 경고 0(기존 xUnit1026 1건 제외), 테스트 **946개 전부 통과**.
+
+### 참고
+- 세대 안내는 `ExplanationEngine`의 cautions/strengths 텍스트로 노출됨(별도 DTO 필드 신설 안 함). 프론트가 cautions를 이미 렌더하므로 추가 프론트 작업 불필요.
+
+---
+
+## 이전 세션 요약 (2026-06-17 — 🐛 상세보기 버그 + 🧬 성별/세대 실명 데이터화)
 
 실사용 피드백 기반 버그 수정 + 성별/세대 적합을 수동 큐레이션에서 **대법원 실명 빈도 데이터**로 전환. 모두 커밋·push 완료 (Render/Vercel 자동 배포).
 
-### ⏭️ 다음 세션 최우선 — 세대 적합 "활성화" (미완)
-- **상황**: 세대 적합 기능이 **운영 경로에서 비활성(dormant)**. `ScoringService.EvaluateAsync`가 `AestheticEngine.CalculateScoreWithBreakdownAsync`에 **birthYear를 안 넘김**([ScoringService.cs:36](Application/Services/ScoringService.cs:36)). 그래서 세대 로직(하이브리드 포함)이 화면에 안 나옴.
-- **사용자 결정**: **"평가+추천 모두 활성"** 선택함. → 아직 구현 안 함.
-- **할 일**:
-  1. `ScoringService.EvaluateAsync`가 `birthDate.Year`를 AestheticEngine에 전달 (세대 적합 ON).
-  2. `NameEvaluationService`(평가)에서 breakdown의 `GenerationFit`을 ExplanationEngine에 넘겨 cautions에 세대 안내 노출 (현재 generationFit 없이 호출 — [NameEvaluationService.cs:32](Application/Services/NameEvaluationService.cs:32)).
-  3. **랭킹 영향 검증**: 활성화 시 추천이 세대 불일치 이름을 감점(-2/-5 NeutralityScore). 2024 신생아엔 옛이름(철수)만 감점(영향 적음), 개명(옛 출생)엔 현대명 감점. API로 박/2024 vs 박/1985 비교해 정상인지 확인.
-  4. 검증: 김지민 평가 — 1985생 → "개명한 인상" 안내 / 2024생 → 안내 없음.
+### ✅ 세대 적합 "활성화" — 2026-06-18 완료 (위 최신 세션 참조)
+- 직전 세션이 남긴 이 최우선 미완 작업은 **다음 세션(2026-06-18)에서 완료됨**. 평가 경로 1줄 배선 + API 검증.
+- (당시 기록) 사용자 결정: **"평가+추천 모두 활성"**. → 둘 다 활성 완료.
 
 ### 이번 세션 커밋 (시간순)
 | 커밋 | 내용 |

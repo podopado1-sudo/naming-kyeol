@@ -29,11 +29,13 @@ public class NameEvaluationService : INameEvaluationService
         var score = await _scoringService.EvaluateAsync(name, lastName, birthDate, gender, tone, birthTime);
 
         // 설명 생성 (점수와 동일한 값으로)
+        // 세대 적합도(GenerationFit)를 함께 넘겨 cautions에 세대 불일치 안내, strengths에 시대중립 노출
         var explanation = await _explanationEngine.GenerateDetailedReasonsAsync(
             name, lastName, score.AestheticScore, score.HarmonyScore,
             score.RarityScore,
             ScoringService.NormalizeGender(gender),
-            ScoringService.NormalizeTone(tone));
+            ScoringService.NormalizeTone(tone),
+            score.Aesthetic.GenerationFit);
 
         var hanjaCandidates = BuildHanjaCandidates(name);
 
