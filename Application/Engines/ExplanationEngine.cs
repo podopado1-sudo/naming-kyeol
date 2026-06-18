@@ -191,11 +191,11 @@ public class ExplanationEngine : IExplanationEngine
             }
         }
 
-        // 세대 불일치
+        // 세대 감각 (출생 세대와 또래 감각 차이)
         if (generationFit?.FitLevel == "strong_mismatch")
-            cautions.Add($"세대 불일치(강) — {generationFit.Description}");
+            cautions.Add($"세대 감각 — {generationFit.Description}");
         else if (generationFit?.FitLevel == "mild_mismatch")
-            cautions.Add($"세대 불일치(약) — {generationFit.Description}");
+            cautions.Add($"세대 감각 — {generationFit.Description}");
 
         // 흔한 이름
         if (rarityScore < 20)

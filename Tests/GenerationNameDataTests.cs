@@ -19,7 +19,7 @@ public class GenerationNameDataTests
         Assert.Equal("strong_mismatch", result.FitLevel);
         Assert.True(result.YearGap > 10, $"YearGap({result.YearGap})이 10보다 커야 함");
         Assert.NotNull(result.PeakDecade);
-        Assert.Contains("개명", result.Description);
+        Assert.Contains("또래", result.Description);
     }
 
     [Fact]

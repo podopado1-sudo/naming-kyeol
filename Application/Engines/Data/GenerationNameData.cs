@@ -179,7 +179,7 @@ public static class GenerationNameData
                 FitLevel = "timeless",
                 YearGap = 0,
                 PeakDecade = null,
-                Description = "어떤 세대가 사용해도 자연스러운 이름입니다"
+                Description = "어떤 세대가 써도 자연스러운 이름이에요"
             };
         }
 
@@ -241,7 +241,7 @@ public static class GenerationNameData
                 FitLevel = "perfect",
                 YearGap = 0,
                 PeakDecade = peakDecade,
-                Description = $"{peakDecade} 유행 이름으로, 출생연도와 잘 맞습니다"
+                Description = $"{peakDecade}에 사랑받은 이름으로, 출생 시기와 잘 어울려요"
             };
         }
 
@@ -254,18 +254,18 @@ public static class GenerationNameData
                 FitLevel = "mild_mismatch",
                 YearGap = minGap,
                 PeakDecade = peakDecade,
-                Description = $"{peakDecade} 유행 이름으로, 약간의 세대 차이가 있습니다"
+                Description = $"{peakDecade}에 많이 쓰인 이름이라, {birthYear}년생 또래와는 분위기가 조금 다를 수 있어요"
             };
         }
         else
         {
-            // 20년 이상: 강한 불일치 ("개명한 티")
+            // 20년 이상: 강한 불일치 (출생 세대와 또래 감각이 크게 다름)
             return new GenerationFitResult
             {
                 FitLevel = "strong_mismatch",
                 YearGap = minGap,
                 PeakDecade = peakDecade,
-                Description = $"{peakDecade} 유행 이름으로, {birthYear}년생이 사용 시 개명한 인상을 줄 수 있습니다"
+                Description = $"{peakDecade}에 많이 쓰인 이름이라, {birthYear}년생 또래에서는 흔치 않은 편이에요"
             };
         }
     }
@@ -277,7 +277,7 @@ public static class GenerationNameData
 
     /// <summary>
     /// 수동 DB에 없는 이름의 현대(2008+) 유행 여부를 실명 빈도로 판정 (하이브리드).
-    /// 현대 출생자에겐 적합, 옛 출생자(개명 등)에겐 '개명한 티' 불일치로 본다.
+    /// 현대 출생자에겐 적합, 옛 출생자(개명 등)에겐 또래 세대 감각과 어긋나는 것으로 본다.
     /// </summary>
     private static GenerationFitResult AnalyzeModernEraFit(string name, int birthYear)
     {
@@ -297,7 +297,7 @@ public static class GenerationNameData
             return new GenerationFitResult
             {
                 FitLevel = "perfect", YearGap = 0, PeakDecade = "2010년대",
-                Description = "2010년대 이후 인기 이름으로, 출생연도와 잘 맞습니다"
+                Description = "2010년대 이후 사랑받은 이름으로, 출생 시기와 잘 어울려요"
             };
         }
 
@@ -308,13 +308,13 @@ public static class GenerationNameData
             return new GenerationFitResult
             {
                 FitLevel = "mild_mismatch", YearGap = gap, PeakDecade = "2010년대",
-                Description = "2010년대 이후 인기 이름으로, 약간의 세대 차이가 있습니다"
+                Description = $"2010년대에 많이 쓰인 이름이라, {birthYear}년생 또래와는 분위기가 조금 다를 수 있어요"
             };
         }
         return new GenerationFitResult
         {
             FitLevel = "strong_mismatch", YearGap = gap, PeakDecade = "2010년대",
-            Description = $"2010년대 이후 인기 이름으로, {birthYear}년생이 사용 시 개명한 인상을 줄 수 있습니다"
+            Description = $"2010년대에 많이 쓰인 이름이라, {birthYear}년생 또래에서는 흔치 않은 편이에요"
         };
     }
 

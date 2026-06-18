@@ -150,7 +150,7 @@ public class AestheticEngine : IAestheticEngine
                 case "timeless":
                     // 시대무관 이름: 보너스 +3
                     breakdown.NeutralityScore = Math.Min(15, breakdown.NeutralityScore + 3);
-                    breakdown.Notes.Add("시대를 초월한 이름");
+                    breakdown.Notes.Add("어느 세대에나 어울리는 이름");
                     break;
                 case "perfect":
                     // 세대 일치: 변동 없음
@@ -158,12 +158,12 @@ public class AestheticEngine : IAestheticEngine
                 case "mild_mismatch":
                     // 약한 불일치 (10년 이내): -2
                     breakdown.NeutralityScore = Math.Max(0, breakdown.NeutralityScore - 2);
-                    breakdown.Notes.Add($"세대 약한 불일치 ({generationFit.PeakDecade} 유행)");
+                    breakdown.Notes.Add($"세대 감각 — {generationFit.PeakDecade} 인기 이름");
                     break;
                 case "strong_mismatch":
                     // 강한 불일치 (20년 이상): -5
                     breakdown.NeutralityScore = Math.Max(0, breakdown.NeutralityScore - 5);
-                    breakdown.Notes.Add($"세대 강한 불일치 ({generationFit.PeakDecade} 유행)");
+                    breakdown.Notes.Add($"세대 감각 — {generationFit.PeakDecade} 인기 이름");
                     break;
                 // "unknown": 변동 없음
             }
