@@ -5,21 +5,44 @@
 
 ---
 
-## 마지막 세션 요약 (2026-06-18 — ✅ 세대 적합 "활성화" 완료)
+## 마지막 세션 요약 (2026-06-18 — ✅ 세대 적합 활성화 → 문구 순화 → 방향성 → 칩 UI)
 
-직전 세션이 최우선 미완으로 남긴 **세대 적합(Generation Fit) 운영 경로 활성화**를 완료. 평가·추천 양쪽에서 세대 로직이 실제로 화면에 반영됨을 API로 검증.
+직전 세션이 최우선 미완으로 남긴 **세대 적합(Generation Fit)**을 활성화하고, 사용자 피드백을 받아 4단계로 완결. 커밋 4개 모두 push 완료(자동 배포).
 
-### 변경 (1줄 배선)
-- **평가 경로 배선**: `NameEvaluationService.EvaluateNameAsync`가 `ExplanationEngine.GenerateDetailedReasonsAsync`에 `score.Aesthetic.GenerationFit`을 전달하도록 수정 ([NameEvaluationService.cs:32](Application/Services/NameEvaluationService.cs:32)). 이제 cautions에 세대 불일치 안내, strengths에 시대중립 노출.
-- **추천 경로**: 이미 직전 세션 커밋 `66f2b97`에서 `ScoringService.EvaluateAsync`가 `birthDate.Year`를 AestheticEngine에 넘기고 있었음 → **이번엔 평가 경로만 미배선이었던 것**. (직전 핸드오프의 "ScoringService가 birthYear 안 넘김" 기록은 그 커밋 이전 상태 기준이라 stale했음)
+### 커밋 (시간순)
+| 커밋 | 내용 |
+|------|------|
+| `4d95093` | **활성화** — 평가 경로 1줄 배선 |
+| `08dc6bb` | **문구 순화** — "개명한 인상" 제거 → 또래 중심 톤, 라벨 "불일치(강/약)" → "세대 감각" |
+| `44833f1` | **방향성** — "또래보다 젊은 느낌 / 예스러운 느낌" (출생연도 vs 이름 유행기 비교) |
+| `ecf54d7` | **칩 UI** — GenerationFit 구조화 노출 + 평가 결과 상단 전용 칩 |
 
-### 검증 (로컬 `dotnet run` + API)
-- **평가**: `김지민` — **1985생** → neutrality 1(−5 감점) + caution "세대 불일치(강) … 2010년대 유행 … 1985년생이 사용 시 개명한 인상" / **2024생** → neutrality 6, caution 없음. ✅ 의도대로
-- **추천 랭킹**: `박/1985` vs `박/2024` smart 호출 — 연도에 맞게 다른 standard 리스트 생성(1985: 박윤주·박우준·박은주… / 2024: 박수환·박소인·박경리…), 모두 정상 이름·점수(77~83), TopPick 정상(박수환 82). 세대 적합이 랭킹에 반영되되 추천 품질을 깨지 않음. ✅
-- 빌드 경고 0(기존 xUnit1026 1건 제외), 테스트 **946개 전부 통과**.
+### ① 활성화 (`4d95093`)
+- **평가 경로 배선**: `NameEvaluationService`가 `ExplanationEngine.GenerateDetailedReasonsAsync`에 `score.Aesthetic.GenerationFit` 전달 ([NameEvaluationService.cs:32](Application/Services/NameEvaluationService.cs:32)).
+- **추천 경로**: 이미 직전 세션 `66f2b97`에서 `ScoringService`가 `birthDate.Year`를 넘기고 있었음 → 이번엔 **평가 경로만 미배선이었던 것**. (직전 핸드오프 "ScoringService가 birthYear 안 넘김" 기록은 그 커밋 이전 기준이라 stale)
 
-### 참고
-- 세대 안내는 `ExplanationEngine`의 cautions/strengths 텍스트로 노출됨(별도 DTO 필드 신설 안 함). 프론트가 cautions를 이미 렌더하므로 추가 프론트 작업 불필요.
+### ② 문구 순화 (`08dc6bb`) — 사용자 "개명한 인상이 너무 직관적"
+- `GenerationNameData`의 모든 Description을 또래 중심 정보형 + `~요` 종결로 교체.
+- `ExplanationEngine` 라벨 "세대 불일치(강/약)" → **"세대 감각"**, `AestheticEngine` notes도 "세대 감각 — {연대} 인기 이름"으로 통일.
+
+### ③ 방향성 (`44833f1`) — 사용자 "더 손볼 여지 보강"
+- 출생연도 < 이름 유행기 시작 → `nameIsNewer`(또래보다 **젊은** 느낌) / 반대 → **예스러운** 느낌.
+- `BuildMismatchDescription` 헬퍼로 수동 DB·현대 하이브리드 양쪽 통일. 정도는 "조금"(약)/"한층"(강).
+- 회귀 테스트 2건(젊은/예스러운) 추가.
+
+### ④ 칩 UI (`ecf54d7`) — 사용자 "같이 설계해서 진행"
+- **이유**: 세대 안내가 `cautions[]`(`.Take(2)`)에만 텍스트로 실려 다른 경고에 밀릴 수 있었음.
+- 백엔드: `GenerationFitResult`에 `Direction`·`Headline` 추가, `NameEvaluationResultDto.GenerationFit`(DTO) 구조화 노출(unknown→null).
+- 프론트: [page.tsx](frontend/src/app/evaluate/page.tsx)에 `GenerationChip` — fitLevel별 색(timeless=teal ✨ / mild=gold 🕐 / strong=amber 🕐). **perfect는 칩 제외**(신생아 대부분 perfect라 잡음 방지).
+- 프론트 타입: [types.ts](frontend/src/lib/types.ts) `GenerationFit`.
+
+### 검증
+- 백엔드 테스트 **946 → 948 (+2)**, 빌드 경고 0(기존 xUnit1026 제외). 프론트 `tsc --noEmit`·`npm run lint` 클린.
+- 로컬 `dotnet run` + 프리뷰(`ff-verify`)로 3케이스 실렌더 확인: 김지민/1985 "젊은 느낌" 칩, 김영희/2024 "예스러운 느낌" 칩, 김지민/2024 칩 없음(perfect). 추천 랭킹도 박/1985 vs 2024 연도별 정상 분기(품질 안 깨짐).
+
+### 검증 환경 메모 (다음 세션 참고)
+- 프리뷰는 **repo root `.claude/launch.json`**을 읽음(`frontend/.claude`가 아님). "frontend-prod"는 `npm run start`(프로덕션 빌드) → 소스 수정이 반영 안 되니, 최신 소스 확인은 `npm run dev` 설정 필요.
+- 로컬 풀스택 프리뷰 시 3대 함정: ① `UseHttpsRedirection`(Program.cs:296)이 http:5000→https:5001 리다이렉트(헤드리스 브라우저는 self-signed 거부) → 백엔드를 `--no-launch-profile ASPNETCORE_URLS=http://localhost:5000`로 http 단독 기동하면 회피. ② 프론트 CSP `connect-src`는 `NEXT_PUBLIC_API_URL`에서 파생(미설정 시 `'self'`만 → fetch 차단). ③ dev CORS는 `localhost:3000`만 허용 → 프리뷰도 3000 사용.
 
 ---
 
