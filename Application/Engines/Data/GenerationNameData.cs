@@ -246,6 +246,8 @@ public static class GenerationNameData
         }
 
         // 4. 범위를 벗어나면 거리에 따라 불일치 정도 계산
+        //    nameIsNewer: 이름 유행기가 출생연도보다 뒤 → 또래보다 '젊은' 느낌 / 반대면 '예스러운' 느낌
+        bool nameIsNewer = birthYear < bestMatch!.PeakStart;
         if (minGap <= 10)
         {
             // 10년 이내: 약한 불일치
@@ -254,7 +256,7 @@ public static class GenerationNameData
                 FitLevel = "mild_mismatch",
                 YearGap = minGap,
                 PeakDecade = peakDecade,
-                Description = $"{peakDecade}에 많이 쓰인 이름이라, {birthYear}년생 또래와는 분위기가 조금 다를 수 있어요"
+                Description = BuildMismatchDescription(peakDecade, birthYear, isStrong: false, nameIsNewer)
             };
         }
         else
@@ -265,9 +267,25 @@ public static class GenerationNameData
                 FitLevel = "strong_mismatch",
                 YearGap = minGap,
                 PeakDecade = peakDecade,
-                Description = $"{peakDecade}에 많이 쓰인 이름이라, {birthYear}년생 또래에서는 흔치 않은 편이에요"
+                Description = BuildMismatchDescription(peakDecade, birthYear, isStrong: true, nameIsNewer)
             };
         }
+    }
+
+    /// <summary>
+    /// 세대 불일치 안내 문구를 방향(젊은/예스러운)과 정도(약/강)에 맞춰 생성.
+    /// 직설적 표현 대신 '또래보다 ~한 느낌'으로 부드럽게 안내한다.
+    /// </summary>
+    private static string BuildMismatchDescription(string peakDecade, int birthYear, bool isStrong, bool nameIsNewer)
+    {
+        if (nameIsNewer)
+            return isStrong
+                ? $"{peakDecade}에 많이 쓰인 이름이라, {birthYear}년생에게는 또래보다 한층 젊은 느낌을 줄 수 있어요"
+                : $"{peakDecade}에 자주 쓰인 이름이라, {birthYear}년생에게는 또래보다 조금 젊은 느낌일 수 있어요";
+
+        return isStrong
+            ? $"{peakDecade}에 많이 쓰인 이름이라, {birthYear}년생에게는 또래보다 한층 예스러운 느낌을 줄 수 있어요"
+            : $"{peakDecade}에 자주 쓰인 이름이라, {birthYear}년생에게는 또래보다 조금 예스러운 느낌일 수 있어요";
     }
 
     // 현대(2008+) 유행 판정 임계 — 대법원 2008~2019 실명 등록 합계가 이 이상이면
@@ -301,20 +319,20 @@ public static class GenerationNameData
             };
         }
 
-        // 옛 출생자가 현대 유행 이름 → 세대 불일치
+        // 옛 출생자가 현대 유행 이름 → 항상 '또래보다 젊은' 방향의 불일치
         int gap = ModernEraStart - birthYear;
         if (gap <= 10)
         {
             return new GenerationFitResult
             {
                 FitLevel = "mild_mismatch", YearGap = gap, PeakDecade = "2010년대",
-                Description = $"2010년대에 많이 쓰인 이름이라, {birthYear}년생 또래와는 분위기가 조금 다를 수 있어요"
+                Description = BuildMismatchDescription("2010년대", birthYear, isStrong: false, nameIsNewer: true)
             };
         }
         return new GenerationFitResult
         {
             FitLevel = "strong_mismatch", YearGap = gap, PeakDecade = "2010년대",
-            Description = $"2010년대에 많이 쓰인 이름이라, {birthYear}년생 또래에서는 흔치 않은 편이에요"
+            Description = BuildMismatchDescription("2010년대", birthYear, isStrong: true, nameIsNewer: true)
         };
     }
 

@@ -32,6 +32,30 @@ public class GenerationNameDataTests
         Assert.True(result.YearGap >= 40, $"YearGap({result.YearGap})이 40 이상이어야 함");
     }
 
+    // ===== 불일치 방향성 (젊은 / 예스러운) =====
+
+    [Fact]
+    public void AnalyzeGenerationFit_OldBorn_ModernName_FeelsYounger()
+    {
+        // 1985년생 + 현대 유행 이름 → 또래보다 '젊은' 느낌으로 안내
+        var result = GenerationNameData.AnalyzeGenerationFit("주원", 1985);
+
+        Assert.Equal("strong_mismatch", result.FitLevel);
+        Assert.Contains("젊은", result.Description);
+        Assert.DoesNotContain("예스러운", result.Description);
+    }
+
+    [Fact]
+    public void AnalyzeGenerationFit_YoungBorn_OldName_FeelsOlder()
+    {
+        // 2024년생 + 옛 유행 이름(영희, 1950~1969) → 또래보다 '예스러운' 느낌으로 안내
+        var result = GenerationNameData.AnalyzeGenerationFit("영희", 2024);
+
+        Assert.Equal("strong_mismatch", result.FitLevel);
+        Assert.Contains("예스러운", result.Description);
+        Assert.DoesNotContain("젊은", result.Description);
+    }
+
     // ===== 세대 완벽 일치 =====
 
     [Fact]
