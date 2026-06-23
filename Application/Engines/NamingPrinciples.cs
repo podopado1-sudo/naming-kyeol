@@ -31,7 +31,8 @@ public static class NamingPrinciples
         "서준", "민준", "하준", "지호", "준서", "도윤", "예준",
         "서연", "하은", "지은", "채원", "지유", "서윤", "예은",
         "건우", "시우", "수호", "하린", "아린", "소율", "민서",
-        "서아", "지아", "다은", "서은", "수아", "예린", "유나"
+        "서아", "지아", "다은", "서은", "수아", "예린", "유나",
+        "나윤", "하윤"
     };
 
     public static bool IsTrendyName(string name) => TrendyNames.Contains(name);

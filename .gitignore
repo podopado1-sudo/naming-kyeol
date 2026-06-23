@@ -100,3 +100,4 @@ scripts/_name_raw/
 
 # 감사 스크립트 임시 출력
 scripts/_audit_report.txt
+scripts/_audit_quality_report.txt
