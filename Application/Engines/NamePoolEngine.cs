@@ -44,6 +44,7 @@ public class NamePoolEngine : INamePoolEngine
         // ── 2. 전체 한자 → 성별/톤 필터 → 개인화 점수 산출 ─────────────
         var allHanja = HanjaData.HanjaDictionary.Values
             .Where(h => !string.IsNullOrEmpty(h.Reading) && h.Reading.Length == 1)
+            .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character))   // 불용한자(부정적 의미) 배제
             .ToList();
 
         if (gender == "male")
