@@ -28,12 +28,6 @@ public class AppDbContext : DbContext
                   .WithOne()
                   .HasForeignKey("RecommendationId")
                   .OnDelete(DeleteBehavior.Cascade);
-
-            // BonusNicknames를 JSON으로 저장
-            entity.Property(e => e.BonusNicknames)
-                  .HasConversion(
-                      v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                      v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>());
         });
 
         // Candidate

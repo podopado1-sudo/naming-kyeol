@@ -141,7 +141,6 @@ D:\MyDev\NameForm\
                 NameEvaluationService   → 상세 평가 (Aesthetic·Harmony Breakdown)
                 SajuCalculationService  → 사주 4기둥 계산
                 YongshinCalculationService → 용신 분석 (억부법 + 조후법)
-                NicknameEngine          → 별명 생성 (더미 구현)
 ```
 
 ### 최종 점수 공식
@@ -177,7 +176,6 @@ D:\MyDev\NameForm\
 |--------|------|------|
 | POST | `/api/v1/name-analysis` | 이름 분석 (한자/사주/음령오행) |
 | POST | `/api/v1/recommendations/evaluate` | 이름 상세 평가 (Aesthetic·Harmony Breakdown) |
-| POST | `/api/v1/recommendations/nickname` | 별명 생성 |
 
 ### 조회/메타
 | 메서드 | 경로 | 설명 |
@@ -296,9 +294,8 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 ## 현재 한계 / 알려진 이슈
 
 ### 백엔드
-- **NicknameEngine**: 더미 구현 (실제 로직 없음)
 - **API Key 인증**: 현재 단순 키 검증 — 본격 인증/인가 시스템 필요 (OAuth, JWT 등). 운영은 `Authentication__Enabled=false` 상태
-- **EF Core warning**: `Candidate.Reasons`, `Recommendation.BonusNicknames` 컬렉션에 ValueComparer 미설정 (동작엔 문제 없지만 경고 발생)
+- **EF Core warning**: `Candidate.Reasons` 컬렉션에 ValueComparer 미설정 (동작엔 문제 없지만 경고 발생)
 - **xUnit1026 경고 1건**: `NamingPrinciplesTests.ApplyDueum_TransformsAsExpected`의 미사용 파라미터
 
 ### 프론트엔드

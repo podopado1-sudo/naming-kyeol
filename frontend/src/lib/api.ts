@@ -15,8 +15,6 @@ import type {
   NameAnalysisResponse,
   RareSurnameRequest,
   RareSurnameResponse,
-  NicknameRequest,
-  NicknameResponse,
   NameRecommendationResponse,
   NameEvaluationRequest,
   NameEvaluationResponse,
@@ -110,11 +108,6 @@ export function rareSurname(
   req: RareSurnameRequest
 ): Promise<RareSurnameResponse> {
   return request("/recommendations/rare-surname", req);
-}
-
-// 별명 생성
-export function nickname(req: NicknameRequest): Promise<NicknameResponse> {
-  return request("/recommendations/nickname", req);
 }
 
 // 이름 상세 평가

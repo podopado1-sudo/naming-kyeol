@@ -2,7 +2,8 @@
 
 > 2026-06-13 작성 (Opus 세션). 실행은 별도 세션(Sonnet 권장)에서 이 문서대로 진행.
 > **목적**: 어떤 추천 카테고리/페이지를 실제로 쓰는지 데이터를 모아, 출시 후
-> creative·nickname 등 약한 엔진의 유지/통합/제거를 데이터 기반으로 결정한다.
+> creative 등 약한 엔진의 유지/통합/제거를 데이터 기반으로 결정한다.
+> (nickname 엔진은 2026-06-23 품질 한계로 제거됨)
 
 ---
 
@@ -144,7 +145,6 @@ DI 등록 (`Program.cs`): `builder.Services.AddScoped<IUsageTracker, EfUsageTrac
 | RecommendationsController (dual-name) | `dual-name` |
 | RecommendationsController (rare-surname) | `rare-surname` |
 | RecommendationsController (evaluate) | `evaluate` |
-| RecommendationsController (nickname) | `nickname` |
 | TwinNameController | `twin` |
 | NameAnalysisController | `analysis` |
 

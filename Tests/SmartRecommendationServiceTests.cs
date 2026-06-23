@@ -27,7 +27,6 @@ public class SmartRecommendationServiceTests
             scoringService,
             new RankerEngine(),
             new ExplanationEngine(),
-            new NicknameEngine(),
             parentBasedEngine,
             new DualNameEngine(),
             NullLogger<RecommendationService>.Instance);

@@ -153,7 +153,6 @@ builder.Services.AddScoped<IAestheticEngine, AestheticEngine>();
 builder.Services.AddScoped<IHarmonyEngine, HarmonyEngine>();
 builder.Services.AddScoped<IRankerEngine, RankerEngine>();
 builder.Services.AddScoped<IExplanationEngine, ExplanationEngine>();
-builder.Services.AddScoped<INicknameEngine, NicknameEngine>();
 builder.Services.AddScoped<IParentBasedNamingEngine, ParentBasedNamingEngine>();
 builder.Services.AddScoped<IRarityScoringEngine, RarityScoringEngine>();
 builder.Services.AddScoped<INameReversalEngine, NameReversalEngine>();

@@ -13,7 +13,6 @@ public class RecommendationService : IRecommendationService
     private readonly IScoringService _scoringService;
     private readonly IRankerEngine _rankerEngine;
     private readonly IExplanationEngine _explanationEngine;
-    private readonly INicknameEngine _nicknameEngine;
     private readonly IParentBasedNamingEngine _parentBasedNamingEngine;
     private readonly IDualNameEngine _dualNameEngine;
     private readonly ILogger<RecommendationService> _logger;
@@ -24,7 +23,6 @@ public class RecommendationService : IRecommendationService
         IScoringService scoringService,
         IRankerEngine rankerEngine,
         IExplanationEngine explanationEngine,
-        INicknameEngine nicknameEngine,
         IParentBasedNamingEngine parentBasedNamingEngine,
         IDualNameEngine dualNameEngine,
         ILogger<RecommendationService> logger)
@@ -34,7 +32,6 @@ public class RecommendationService : IRecommendationService
         _scoringService = scoringService;
         _rankerEngine = rankerEngine;
         _explanationEngine = explanationEngine;
-        _nicknameEngine = nicknameEngine;
         _parentBasedNamingEngine = parentBasedNamingEngine;
         _dualNameEngine = dualNameEngine;
         _logger = logger;
@@ -161,12 +158,7 @@ public class RecommendationService : IRecommendationService
             scoredCandidates, request.PreferredFiveElement);
         var topCandidates = rankedCandidates.Take(10).ToList();
 
-        // 5. 별명 생성
-        var bonusNicknames = await _nicknameEngine.GenerateNicknamesAsync(
-            request.LastName, 
-            topCandidates.Select(c => c.Name).ToList());
-
-        // 6. Recommendation 생성 및 저장
+        // 5. Recommendation 생성 및 저장
         var recommendation = new Recommendation
         {
             Id = Guid.NewGuid().ToString("N")[..12], // 12자리 ID
@@ -174,8 +166,7 @@ public class RecommendationService : IRecommendationService
             BirthDate = birthDate,
             Gender = request.Gender,
             Tone = request.Tone,
-            TopCandidates = topCandidates,
-            BonusNicknames = bonusNicknames
+            TopCandidates = topCandidates
         };
 
         await _repository.SaveAsync(recommendation);
@@ -200,8 +191,7 @@ public class RecommendationService : IRecommendationService
                 RarityScore = c.RarityScore,
                 EnglishEquivalent = c.EnglishEquivalent,
                 HanjaMeaning = c.HanjaMeaning
-            }).ToList(),
-            BonusNicknames = bonusNicknames
+            }).ToList()
         };
     }
 
@@ -229,8 +219,7 @@ public class RecommendationService : IRecommendationService
                 RarityScore = c.RarityScore,
                 EnglishEquivalent = c.EnglishEquivalent,
                 HanjaMeaning = c.HanjaMeaning
-            }).ToList(),
-            BonusNicknames = recommendation.BonusNicknames
+            }).ToList()
         };
     }
 

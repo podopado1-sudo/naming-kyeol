@@ -106,8 +106,7 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/v1/Recommendations" `
       ]
     },
     ...
-  ],
-  "bonusNicknames": ["민이", "준이"]
+  ]
 }
 ```
 

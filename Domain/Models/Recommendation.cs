@@ -8,7 +8,6 @@ public class Recommendation
     public string Gender { get; set; } = string.Empty;
     public string Tone { get; set; } = string.Empty;
     public List<Candidate> TopCandidates { get; set; } = new();
-    public List<string> BonusNicknames { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

@@ -336,14 +336,6 @@ export interface RareSurnameCandidate {
 }
 
 // ============================================================
-// Nickname
-// ============================================================
-export interface NicknameRequest {
-  lastName: string;
-  firstName: string;
-}
-
-// ============================================================
 // Common Response (individual engines may return this)
 // ============================================================
 export interface NameRecommendationResponse {
@@ -379,10 +371,6 @@ export interface NameAnalysisResponse {
   }[];
   saju?: SajuChartData;
   eumryeongAnalysis?: EumryeongAnalysis;
-}
-
-export interface NicknameResponse {
-  nicknames: string[];
 }
 
 // ============================================================

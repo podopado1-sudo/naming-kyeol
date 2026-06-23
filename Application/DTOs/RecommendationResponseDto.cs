@@ -4,7 +4,6 @@ public class RecommendationResponseDto
 {
     public string Id { get; set; } = string.Empty;
     public List<CandidateDto> TopCandidates { get; set; } = new();
-    public List<string> BonusNicknames { get; set; } = new();
 }
 
 public class CandidateDto

@@ -20,7 +20,6 @@ public class RecommendationsController : ControllerBase
     private readonly ILogger<RecommendationsController> _logger;
     private readonly IParentBasedNamingEngine _parentBasedNamingEngine;
     private readonly IDualNameEngine _dualNameEngine;
-    private readonly INicknameEngine _nicknameEngine;
     private readonly IRequiredCharEngine _requiredCharEngine;
     private readonly IPureKoreanNameEngine _pureKoreanNameEngine;
     private readonly IRareSurnameEngine _rareSurnameEngine;
@@ -36,7 +35,6 @@ public class RecommendationsController : ControllerBase
         ILogger<RecommendationsController> logger,
         IParentBasedNamingEngine parentBasedNamingEngine,
         IDualNameEngine dualNameEngine,
-        INicknameEngine nicknameEngine,
         IRequiredCharEngine requiredCharEngine,
         IPureKoreanNameEngine pureKoreanNameEngine,
         IRareSurnameEngine rareSurnameEngine,
@@ -51,7 +49,6 @@ public class RecommendationsController : ControllerBase
         _logger = logger;
         _parentBasedNamingEngine = parentBasedNamingEngine;
         _dualNameEngine = dualNameEngine;
-        _nicknameEngine = nicknameEngine;
         _requiredCharEngine = requiredCharEngine;
         _pureKoreanNameEngine = pureKoreanNameEngine;
         _rareSurnameEngine = rareSurnameEngine;
@@ -716,47 +713,6 @@ public class RecommendationsController : ControllerBase
         {
             _logger.LogError(ex, "이중 이름 생성 중 오류 발생");
             return StatusCode(500, new { error = "이중 이름 생성 중 오류가 발생했습니다.", message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// 별명 생성
-    /// </summary>
-    [HttpPost("nickname")]
-    public async Task<ActionResult<List<string>>> GenerateNicknames(
-        [FromBody] NicknameRequestDto request)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "LastName은 필수입니다." });
-
-            if (request.Names == null || request.Names.Count == 0)
-                return BadRequest(new { error = "Names는 최소 1개 이상의 이름이 필요합니다." });
-
-            if (request.Names.Any(n => string.IsNullOrWhiteSpace(n)))
-                return BadRequest(new { error = "Names에 빈 문자열이 포함될 수 없습니다." });
-
-            _logger.LogInformation("별명 생성 요청: 성={LastName}, 이름수={NameCount}",
-                request.LastName, request.Names.Count);
-            await _usageTracker.TrackAsync("endpoint", "nickname");
-
-            var nicknames = await _nicknameEngine.GenerateNicknamesAsync(
-                request.LastName,
-                request.Names);
-
-            _logger.LogInformation("별명 생성 완료: 별명수={NicknameCount}", nicknames.Count);
-            return Ok(nicknames);
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogWarning(ex, "별명 생성 요청 검증 실패");
-            return BadRequest(new { error = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "별명 생성 중 오류 발생");
-            return StatusCode(500, new { error = "별명 생성 중 오류가 발생했습니다.", message = ex.Message });
         }
     }
 
