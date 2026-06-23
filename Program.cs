@@ -276,6 +276,31 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// orphan 컬럼 정리 — Recommendations.BonusNicknames (2026-06-23 NicknameEngine 제거).
+// EnsureCreated는 기존 스키마를 못 바꾸므로, NOT NULL 컬럼이 남으면 INSERT가 깨진다
+// (EF가 매핑 해제된 컬럼에 값을 안 줌 → NOT NULL 위반 → 추천 저장 실패 → standard 탭 누락).
+// 멱등 DROP COLUMN으로 정리. 배포 1회 정착 후 제거해도 무방.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var initLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var isNpgsql = dbContext.Database.ProviderName?.Contains("Npgsql") == true;
+    try
+    {
+        // PostgreSQL은 IF EXISTS로 멱등. SQLite는 DROP COLUMN IF EXISTS 미지원이라
+        // 컬럼이 이미 없으면 throw → catch로 무시(정상 경로).
+        dbContext.Database.ExecuteSqlRaw(isNpgsql
+            ? "ALTER TABLE \"Recommendations\" DROP COLUMN IF EXISTS \"BonusNicknames\";"
+            : "ALTER TABLE \"Recommendations\" DROP COLUMN \"BonusNicknames\";");
+        initLogger.LogInformation("orphan BonusNicknames 컬럼 정리 완료");
+    }
+    catch (Exception ex)
+    {
+        // 이미 제거됨(SQLite 재부팅 등) — 정상
+        initLogger.LogDebug("BonusNicknames 컬럼 정리 스킵(이미 없음): {Error}", ex.Message);
+    }
+}
+
 // 한자 데이터 초기화 (통합 JSON 파일 로드)
 NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
 
