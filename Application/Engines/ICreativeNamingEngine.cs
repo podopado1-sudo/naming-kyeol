@@ -31,4 +31,6 @@ public class CreativeNameCandidate
     public string GenderTag { get; set; } = "neutral";
     /// <summary>후보의 톤 태그 (soft/strong/neutral)</summary>
     public string ToneTag { get; set; } = "neutral";
+    /// <summary>성씨 고유(특화) 후보 여부 — true면 범용 풀보다 우선 노출(동질화 완화).</summary>
+    public bool SurnameTailored { get; set; }
 }

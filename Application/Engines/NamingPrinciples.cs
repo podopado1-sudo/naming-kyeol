@@ -37,6 +37,19 @@ public static class NamingPrinciples
 
     public static bool IsTrendyName(string name) => TrendyNames.Contains(name);
 
+    /// <summary>
+    /// 좋은 외자(1음절) 이름 화이트리스트 — 깨끗한 뜻 + 실제 외자명으로 쓰이는 음절만.
+    /// 1음절은 음운상 멀쩡해도 단어 조각(활·펼·물·산)이 섞이므로 알고리즘 판정이
+    /// 어려워 큐레이션. 보수적으로 운영하고 필요 시 확장한다.
+    /// </summary>
+    public static readonly HashSet<string> GoodSingleSyllableNames = new()
+    {
+        "별", "봄", "솔", "빛", "달", "샘", "결",       // 순우리말·자연
+        "윤", "율", "린", "진", "빈", "현", "온", "단"  // 한 글자 한자명
+    };
+
+    public static bool IsGoodSingleSyllableName(string name) => GoodSingleSyllableNames.Contains(name);
+
     // ═══════════════════════════════════════════════════════════════
     // 작명 스킬 0 — 이름다움 (Name-Likeness)
     // ═══════════════════════════════════════════════════════════════

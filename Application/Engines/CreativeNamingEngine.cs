@@ -196,6 +196,12 @@ public class CreativeNamingEngine : ICreativeNamingEngine
     /// </summary>
     private static readonly Dictionary<string, List<PhoneticPatternEntry>> PhoneticPatterns = BuildPhoneticPatterns();
 
+    /// <summary>이름다움 게이트 — 2음절 후보가 이 값 미만이면 단어형으로 보고 제외.</summary>
+    private const double NameLikenessGate = 0.40;
+
+    /// <summary>성씨 고유(특화) 후보 가산 — 범용 풀보다 앞세워 성씨별 동질화를 완화.</summary>
+    private const double SurnameTailoredBonus = 12.0;
+
     public async Task<List<CreativeNameCandidate>> GenerateCandidatesAsync(
         string lastName, string gender, string tone, int count)
     {
@@ -220,19 +226,32 @@ public class CreativeNamingEngine : ICreativeNamingEngine
             .Where(c => !ContainsForbiddenWord(c.FullName))
             .Where(c => !NamingPrinciples.IsTrendyName(c.Name))
             .Where(c => !ForbiddenWordData.IsNegativeHomophoneName(c.Name))
+            // 이름다움 게이트:
+            //   · 2음절 — 이름다움≥0.40 통과(단어형 넓은·솟을·수풀 제거)
+            //   · 1음절 — 좋은 외자 화이트리스트(별·솔·윤 등)만 통과,
+            //             단어 조각(활·펼·물·산)은 배제
+            .Where(c =>
+                (c.Name.Length == 2 && NamingPrinciples.EvalNameLikeness(c.Name) >= NameLikenessGate)
+                || (c.Name.Length == 1 && NamingPrinciples.IsGoodSingleSyllableName(c.Name)))
             .ToList();
 
-        // 중복 제거
+        // 중복 제거 — 같은 이름이 고유/범용 양쪽에 있으면 고유본을 우선 유지
         candidates = candidates
             .GroupBy(c => c.Name)
-            .Select(g => g.OrderByDescending(c => c.CreativityScore).First())
+            .Select(g => g
+                .OrderByDescending(c => c.SurnameTailored)
+                .ThenByDescending(c => c.CreativityScore)
+                .First())
             .ToList();
 
-        // gender/tone 보너스 적용하여 최종 점수 조정
+        // gender/tone 보너스 + 창의성(희소성×이름다움) 보정 + 성씨 고유 가산으로 최종 점수 조정.
+        // 고유 가산은 성씨 특화 이름을 범용 풀보다 앞세워 성씨별 동질화를 완화한다.
         foreach (var c in candidates)
         {
             c.CreativityScore += CalculateGenderToneBonus(c.GenderTag, c.ToneTag, normalizedGender, normalizedTone);
-            c.CreativityScore = Math.Min(c.CreativityScore, 100);
+            c.CreativityScore += CalculateCreativeQualityAdjustment(c.Name);
+            if (c.SurnameTailored) c.CreativityScore += SurnameTailoredBonus;
+            c.CreativityScore = Math.Clamp(c.CreativityScore, 0, 100);
         }
 
         // 창의성 점수 순 정렬, count만큼 반환
@@ -264,6 +283,47 @@ public class CreativeNamingEngine : ICreativeNamingEngine
         return bonus;
     }
 
+    /// <summary>
+    /// 창의성 보정 = 희소성 × 이름다움. "흔하지 않으면서(novel) 진짜 이름다운(good)"
+    /// 교집합을 상위로 올린다. 2음절만 정밀 평가, 그 외는 0(중립).
+    ///   · 이름다움: 게이트(0.40↑)를 통과한 범위에서 추가로 미세 가감.
+    ///   · 희소성: 대법원 실명 빈도(NameGenderData). 최상위 인기 이름은 감점,
+    ///     희귀하되 실명인 이름은 가점. 실명 set에 없는 신규 조어는 가점(게이트로
+    ///     이름다움은 이미 검증됨).
+    /// </summary>
+    private static double CalculateCreativeQualityAdjustment(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return 0;
+
+        // 좋은 외자(1음절)는 희소·개성이 강해 창의 가산 — 안 그러면 2음절에 밀려 노출 안 됨
+        if (name.Length == 1)
+            return NamingPrinciples.IsGoodSingleSyllableName(name) ? 10 : 0;
+
+        if (name.Length != 2) return 0;
+
+        double likeness = NamingPrinciples.EvalNameLikeness(name); // 0.40~1.0
+        double likenessAdj = (likeness - 0.7) * 12;                // -3.6 ~ +3.6
+
+        double noveltyAdj;
+        var counts = NameGenderData.NameCounts(name);
+        if (counts.HasValue)
+        {
+            long total = counts.Value.m + counts.Value.f;
+            noveltyAdj = total >= 20000 ? -12   // 서연·서윤급 최상위 인기 → 비창의
+                       : total >= 8000  ? -5    // 하율·다온급 인기
+                       : total >= 2500  ? 0     // 윤슬·예솔·단아급 — 양호
+                       : total >= 200   ? +5    // 나래·소담·도아급 — 희귀+실명 sweet spot
+                       :                  +8;   // 매우 희귀한 실명
+        }
+        else
+        {
+            // 실명 set 밖 = 신규 조어. 게이트(이름다움≥0.40) 통과분이라 창의 가산.
+            noveltyAdj = likeness >= 0.7 ? +7 : +3;
+        }
+
+        return likenessAdj + noveltyAdj;
+    }
+
     #region 패턴 1: 성씨+이름 = 단어
 
     private List<CreativeNameCandidate> GenerateWordPatternCandidates(
@@ -288,7 +348,8 @@ public class CreativeNamingEngine : ICreativeNamingEngine
                 Meaning = p.Meaning,
                 CreativityScore = CalculateWordPatternScore(lastName, p),
                 GenderTag = p.Gender,
-                ToneTag = p.Tone
+                ToneTag = p.Tone,
+                SurnameTailored = true
             });
         }
 
@@ -331,36 +392,41 @@ public class CreativeNamingEngine : ICreativeNamingEngine
         string lastName, string gender, string tone)
     {
         var results = new List<CreativeNameCandidate>();
-
-        if (!MeaningExpansions.TryGetValue(lastName, out var expansions))
-        {
-            // 미등록 성씨: 범용 이름 후보 생성
-            expansions = GetGenericExpansions();
-        }
-
         var surnameMeaning = SurnameMeanings.GetValueOrDefault(lastName);
 
-        foreach (var e in expansions)
+        void AddEntries(IEnumerable<MeaningExpansionEntry> entries, bool fromSurname)
         {
-            if (!MatchesGender(e.Gender, gender)) continue;
-            if (!MatchesTone(e.Tone, tone)) continue;
-
-            var connection = surnameMeaning != null
-                ? $"'{lastName}'({surnameMeaning.Hanja})의 뜻 '{surnameMeaning.CoreMeaning}'에서 연상"
-                : $"성씨 '{lastName}'과 조화로운 이름";
-
-            results.Add(new CreativeNameCandidate
+            foreach (var e in entries)
             {
-                Name = e.Name,
-                FullName = lastName + e.Name,
-                Concept = e.Concept,
-                SurnameConnection = connection,
-                Meaning = e.Meaning,
-                CreativityScore = CalculateMeaningExpansionScore(lastName, e, surnameMeaning),
-                GenderTag = e.Gender,
-                ToneTag = e.Tone
-            });
+                if (!MatchesGender(e.Gender, gender)) continue;
+                if (!MatchesTone(e.Tone, tone)) continue;
+
+                var connection = (fromSurname && surnameMeaning != null)
+                    ? $"'{lastName}'({surnameMeaning.Hanja})의 뜻 '{surnameMeaning.CoreMeaning}'에서 연상"
+                    : $"성씨 '{lastName}'과 조화로운 이름";
+
+                results.Add(new CreativeNameCandidate
+                {
+                    Name = e.Name,
+                    FullName = lastName + e.Name,
+                    Concept = e.Concept,
+                    SurnameConnection = connection,
+                    Meaning = e.Meaning,
+                    CreativityScore = CalculateMeaningExpansionScore(
+                        lastName, e, fromSurname ? surnameMeaning : null),
+                    GenderTag = e.Gender,
+                    ToneTag = e.Tone,
+                    SurnameTailored = fromSurname
+                });
+            }
         }
+
+        // 성씨 특화 의미연상(있으면) + 우수 범용 풀을 모든 성씨에 공급.
+        // 사전이 빈약한 성씨(최·장·임 등)도 태온·윤슬·아람급 좋은 이름을 받도록 (B안).
+        // 중복은 이후 GroupBy(Name)에서 높은 점수 1개로 정리됨.
+        if (MeaningExpansions.TryGetValue(lastName, out var specific))
+            AddEntries(specific, fromSurname: true);
+        AddEntries(GetGenericExpansions(), fromSurname: false);
 
         return results;
     }
@@ -419,7 +485,8 @@ public class CreativeNamingEngine : ICreativeNamingEngine
                 Meaning = p.Meaning,
                 CreativityScore = CalculatePhoneticPatternScore(p),
                 GenderTag = p.Gender,
-                ToneTag = p.Tone
+                ToneTag = p.Tone,
+                SurnameTailored = true
             });
         }
 
