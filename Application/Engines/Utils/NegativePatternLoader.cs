@@ -8,24 +8,21 @@ namespace NameForm.Application.Engines.Utils;
 /// </summary>
 public static class NegativePatternLoader
 {
-    private static NegativePatternData? _data;
+    // volatile — 락 밖 첫 읽기(double-checked locking)에서 완전히 빌드된 객체만 관측되도록 보장
+    private static volatile NegativePatternData? _data;
     private static readonly object _lockObject = new object();
 
     public static NegativePatternData Data
     {
         get
         {
-            if (_data == null)
+            var local = _data;
+            if (local != null) return local;
+            lock (_lockObject)
             {
-                lock (_lockObject)
-                {
-                    if (_data == null)
-                    {
-                        LoadPatterns();
-                    }
-                }
+                // _data는 완전히 빌드된 객체로만 단 한 번 할당 — 부분 채워진 상태가 외부에 노출되지 않음
+                return _data ??= LoadPatterns();
             }
-            return _data!;
         }
     }
 
@@ -40,9 +37,9 @@ public static class NegativePatternLoader
         }
     }
 
-    private static void LoadPatterns()
+    private static NegativePatternData LoadPatterns()
     {
-        _data = new NegativePatternData
+        var data = new NegativePatternData
         {
             HighPenaltySyllables = new HashSet<string>(),
             MediumPenaltySyllables = new HashSet<string>(),
@@ -72,8 +69,8 @@ public static class NegativePatternLoader
         if (patternsPath == null)
         {
             // 기본값 사용
-            InitializeDefaultPatterns();
-            return;
+            ApplyDefaultPatterns(data);
+            return data;
         }
 
         try
@@ -89,40 +86,43 @@ public static class NegativePatternLoader
 
             if (jsonData?.NegativeSyllables != null)
             {
-                _data.HighPenaltySyllables = new HashSet<string>(jsonData.NegativeSyllables.HighPenalty ?? new List<string>());
-                _data.MediumPenaltySyllables = new HashSet<string>(jsonData.NegativeSyllables.MediumPenalty ?? new List<string>());
-                _data.NegativeCombinations = jsonData.NegativeSyllables.NegativeCombinations ?? new List<NegativeCombination>();
+                data.HighPenaltySyllables = new HashSet<string>(jsonData.NegativeSyllables.HighPenalty ?? new List<string>());
+                data.MediumPenaltySyllables = new HashSet<string>(jsonData.NegativeSyllables.MediumPenalty ?? new List<string>());
+                data.NegativeCombinations = jsonData.NegativeSyllables.NegativeCombinations ?? new List<NegativeCombination>();
             }
 
             if (jsonData?.NegativeWordPatterns != null)
             {
-                _data.NegativeVerbsAndAdjectives = new HashSet<string>(jsonData.NegativeWordPatterns.VerbsAndAdjectives ?? new List<string>());
-                _data.NegativePhrases = new HashSet<string>(jsonData.NegativeWordPatterns.NegativePhrases ?? new List<string>());
-                _data.HomophoneNegative = jsonData.NegativeWordPatterns.HomophoneNegative?.Patterns ?? new List<HomophonePattern>();
-                _data.MorphemePatterns = jsonData.NegativeWordPatterns.MorphemePatterns?.Patterns ?? new List<MorphemePattern>();
+                data.NegativeVerbsAndAdjectives = new HashSet<string>(jsonData.NegativeWordPatterns.VerbsAndAdjectives ?? new List<string>());
+                data.NegativePhrases = new HashSet<string>(jsonData.NegativeWordPatterns.NegativePhrases ?? new List<string>());
+                data.HomophoneNegative = jsonData.NegativeWordPatterns.HomophoneNegative?.Patterns ?? new List<HomophonePattern>();
+                data.MorphemePatterns = jsonData.NegativeWordPatterns.MorphemePatterns?.Patterns ?? new List<MorphemePattern>();
             }
 
             if (jsonData?.HarshConsonantPatterns != null)
             {
-                _data.StrongPlosives = new HashSet<string>(jsonData.HarshConsonantPatterns.StrongPlosives ?? new List<string>());
-                _data.ConsecutiveStrongPlosivesPenalty = jsonData.HarshConsonantPatterns.ConsecutiveStrongPlosives?.Penalty ?? 25;
-                _data.SameConsonantRepetitionPenalty = jsonData.HarshConsonantPatterns.SameConsonantRepetition?.Penalty ?? 20;
+                data.StrongPlosives = new HashSet<string>(jsonData.HarshConsonantPatterns.StrongPlosives ?? new List<string>());
+                data.ConsecutiveStrongPlosivesPenalty = jsonData.HarshConsonantPatterns.ConsecutiveStrongPlosives?.Penalty ?? 25;
+                data.SameConsonantRepetitionPenalty = jsonData.HarshConsonantPatterns.SameConsonantRepetition?.Penalty ?? 20;
             }
+
+            return data;
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"negative_phonetic_patterns.json 로드 실패: {ex.Message}. 기본값을 사용합니다.");
-            InitializeDefaultPatterns();
+            ApplyDefaultPatterns(data);
+            return data;
         }
     }
 
-    private static void InitializeDefaultPatterns()
+    private static void ApplyDefaultPatterns(NegativePatternData data)
     {
-        _data!.HighPenaltySyllables = new HashSet<string> { "추", "허", "헐", "썩", "썰", "쓰", "쓸" };
-        _data.MediumPenaltySyllables = new HashSet<string> { "궂", "궤", "궐" };
-        _data.StrongPlosives = new HashSet<string> { "ㅊ", "ㄲ", "ㅋ", "ㅌ", "ㅍ" };
-        _data.NegativeVerbsAndAdjectives = new HashSet<string> { "추하다", "허하다", "허탈하다", "추잡하다" };
-        _data.NegativePhrases = new HashSet<string> { "허추", "추허", "허허", "추추" };
+        data.HighPenaltySyllables = new HashSet<string> { "추", "허", "헐", "썩", "썰", "쓰", "쓸" };
+        data.MediumPenaltySyllables = new HashSet<string> { "궂", "궤", "궐" };
+        data.StrongPlosives = new HashSet<string> { "ㅊ", "ㄲ", "ㅋ", "ㅌ", "ㅍ" };
+        data.NegativeVerbsAndAdjectives = new HashSet<string> { "추하다", "허하다", "허탈하다", "추잡하다" };
+        data.NegativePhrases = new HashSet<string> { "허추", "추허", "허허", "추추" };
     }
 
     public class NegativePatternData

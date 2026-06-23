@@ -25,7 +25,8 @@ public enum VowelClass
 /// </summary>
 public static class PhonologyVowelLoader
 {
-    private static PhonologyVowelData? _data;
+    // volatile — 락 밖 첫 읽기(double-checked locking)에서 완전히 빌드된 객체만 관측되도록 보장
+    private static volatile PhonologyVowelData? _data;
     private static readonly object _lockObject = new object();
 
     /// <summary>
@@ -64,31 +65,24 @@ public static class PhonologyVowelLoader
     {
         lock (_lockObject)
         {
-            _data = null;
-            LoadData();
+            _data = LoadData();
         }
     }
 
     // ── private 구현 ────────────────────────────────────────────────────
     private static PhonologyVowelData EnsureLoaded()
     {
-        if (_data == null)
+        var local = _data;
+        if (local != null) return local;
+        lock (_lockObject)
         {
-            lock (_lockObject)
-            {
-                if (_data == null)
-                {
-                    LoadData();
-                }
-            }
+            // _data는 완전히 빌드된 객체로만 단 한 번 할당 — 부분 초기화 상태가 외부에 노출되지 않음
+            return _data ??= LoadData();
         }
-        return _data!;
     }
 
-    private static void LoadData()
+    private static PhonologyVowelData LoadData()
     {
-        _data = PhonologyVowelData.Empty();
-
         // AppContext.BaseDirectory 우선 — 병렬 테스트에서 CWD가 가변이라 GetCurrentDirectory는 후순위
         var searchPaths = new[]
         {
@@ -104,7 +98,7 @@ public static class PhonologyVowelLoader
         {
             System.Diagnostics.Debug.WriteLine(
                 "경고: phonology-vowel-harmony.json 파일을 찾을 수 없습니다. 모음 데이터가 비어있습니다.");
-            return;
+            return PhonologyVowelData.Empty();
         }
 
         try
@@ -113,7 +107,7 @@ public static class PhonologyVowelLoader
             var file = JsonSerializer.Deserialize<PhonologyVowelFile>(jsonContent,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            if (file == null) return;
+            if (file == null) return PhonologyVowelData.Empty();
 
             // 모음 → 클래스 인덱스
             var vowelToClass = new Dictionary<string, VowelClass>();
@@ -142,13 +136,13 @@ public static class PhonologyVowelLoader
                 }
             }
 
-            _data = new PhonologyVowelData(vowelToClass, characteristics);
+            return new PhonologyVowelData(vowelToClass, characteristics);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine(
                 $"경고: phonology-vowel-harmony.json 로드 실패: {ex.Message}. 빈 데이터로 진행합니다.");
-            _data = PhonologyVowelData.Empty();
+            return PhonologyVowelData.Empty();
         }
     }
 

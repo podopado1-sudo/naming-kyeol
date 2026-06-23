@@ -10,7 +10,8 @@ namespace NameForm.Application.Engines.Data;
 /// </summary>
 public static class PhonologyJointLoader
 {
-    private static PhonologyJointData? _data;
+    // volatile — 락 밖 첫 읽기(double-checked locking)에서 완전히 빌드된 객체만 관측되도록 보장
+    private static volatile PhonologyJointData? _data;
     private static readonly object _lockObject = new object();
 
     /// <summary>
@@ -80,31 +81,24 @@ public static class PhonologyJointLoader
     {
         lock (_lockObject)
         {
-            _data = null;
-            LoadData();
+            _data = LoadData();
         }
     }
 
     // ── private 구현 ────────────────────────────────────────────────────
     private static PhonologyJointData EnsureLoaded()
     {
-        if (_data == null)
+        var local = _data;
+        if (local != null) return local;
+        lock (_lockObject)
         {
-            lock (_lockObject)
-            {
-                if (_data == null)
-                {
-                    LoadData();
-                }
-            }
+            // _data는 완전히 빌드된 객체로만 단 한 번 할당 — 부분 초기화 상태가 외부에 노출되지 않음
+            return _data ??= LoadData();
         }
-        return _data!;
     }
 
-    private static void LoadData()
+    private static PhonologyJointData LoadData()
     {
-        _data = PhonologyJointData.Empty();
-
         // AppContext.BaseDirectory 우선 — 병렬 테스트에서 CWD가 가변이라 GetCurrentDirectory는 후순위
         var searchPaths = new[]
         {
@@ -120,7 +114,7 @@ public static class PhonologyJointLoader
         {
             System.Diagnostics.Debug.WriteLine(
                 "경고: phonology-joint.json 파일을 찾을 수 없습니다. 음운 조합 데이터가 비어있습니다.");
-            return;
+            return PhonologyJointData.Empty();
         }
 
         try
@@ -129,7 +123,7 @@ public static class PhonologyJointLoader
             var file = JsonSerializer.Deserialize<PhonologyJointFile>(jsonContent,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            if (file == null) return;
+            if (file == null) return PhonologyJointData.Empty();
 
             // 7종성 매핑
             var mapping = file.SevenJongseongMapping ?? new Dictionary<string, string>();
@@ -184,13 +178,13 @@ public static class PhonologyJointLoader
                 }
             }
 
-            _data = new PhonologyJointData(mapping, blocked, characteristics, charIndex);
+            return new PhonologyJointData(mapping, blocked, characteristics, charIndex);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine(
                 $"경고: phonology-joint.json 로드 실패: {ex.Message}. 빈 데이터로 진행합니다.");
-            _data = PhonologyJointData.Empty();
+            return PhonologyJointData.Empty();
         }
     }
 

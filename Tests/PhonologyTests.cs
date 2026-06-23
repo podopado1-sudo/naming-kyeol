@@ -206,4 +206,91 @@ public class PhonologyTests
         Assert.Equal(VowelClass.Unknown, PhonologyVowelLoader.ClassifyVowel("A"));
         Assert.Equal(VowelClass.Unknown, PhonologyVowelLoader.ClassifyVowel(""));
     }
+
+    // ── 동시 로딩 레이스 회귀 (2026-06-23) ───────────────────────────────
+    // 과거 버그: LoadData가 _data에 Empty를 먼저 publish한 뒤 실제 데이터로 교체 →
+    // double-checked locking의 락 밖 첫 읽기에서 다른 스레드가 빈 데이터를 관측,
+    // NormalizeFinal/ClassifyVowel이 입력을 그대로 반환(7종성·모음분류 실패).
+    // 수정 후엔 완전히 빌드된 객체만 한 번에 할당되므로 어느 스레드도 빈 데이터를 보지 않아야 함.
+
+    [Fact]
+    public async Task PhonologyJointLoader_ConcurrentLoadAfterReset_NeverYieldsEmptyData()
+    {
+        for (int round = 0; round < 5; round++)
+        {
+            PhonologyJointLoader.ResetCache();
+
+            const int threads = 32;
+            using var start = new ManualResetEventSlim(false);
+            var failures = new System.Collections.Concurrent.ConcurrentBag<string>();
+
+            var tasks = Enumerable.Range(0, threads).Select(_ => Task.Run(() =>
+            {
+                start.Wait();
+                // ㅋ → ㄱ 매핑이 비어 있으면 입력 "ㅋ"이 그대로 반환됨 = 레이스 노출
+                var mapped = PhonologyJointLoader.NormalizeFinal("ㅋ");
+                if (mapped != "ㄱ") failures.Add($"NormalizeFinal('ㅋ')={mapped}");
+            })).ToArray();
+
+            start.Set();
+            await Task.WhenAll(tasks);
+
+            Assert.True(failures.IsEmpty,
+                $"라운드 {round}: 동시 로딩 중 빈 데이터 관측 — {string.Join(", ", failures)}");
+        }
+    }
+
+    [Fact]
+    public async Task PhonologyVowelLoader_ConcurrentLoadAfterReset_NeverYieldsEmptyData()
+    {
+        for (int round = 0; round < 5; round++)
+        {
+            PhonologyVowelLoader.ResetCache();
+
+            const int threads = 32;
+            using var start = new ManualResetEventSlim(false);
+            var failures = new System.Collections.Concurrent.ConcurrentBag<string>();
+
+            var tasks = Enumerable.Range(0, threads).Select(_ => Task.Run(() =>
+            {
+                start.Wait();
+                var cls = PhonologyVowelLoader.ClassifyVowel("ㅏ");
+                if (cls != VowelClass.Yang) failures.Add($"ClassifyVowel('ㅏ')={cls}");
+            })).ToArray();
+
+            start.Set();
+            await Task.WhenAll(tasks);
+
+            Assert.True(failures.IsEmpty,
+                $"라운드 {round}: 동시 로딩 중 빈 데이터 관측 — {string.Join(", ", failures)}");
+        }
+    }
+
+    [Fact]
+    public async Task NegativePatternLoader_ConcurrentLoadAfterReset_NeverYieldsEmptyData()
+    {
+        for (int round = 0; round < 5; round++)
+        {
+            NegativePatternLoader.ResetCache();
+
+            const int threads = 32;
+            using var start = new ManualResetEventSlim(false);
+            var failures = new System.Collections.Concurrent.ConcurrentBag<string>();
+
+            var tasks = Enumerable.Range(0, threads).Select(_ => Task.Run(() =>
+            {
+                start.Wait();
+                // in-place 변경 중인 부분 초기화 상태가 노출되면 컬렉션이 비어 있음
+                var data = NegativePatternLoader.Data;
+                if (data.StrongPlosives.Count == 0 || data.NegativeVerbsAndAdjectives.Count == 0)
+                    failures.Add($"plosives={data.StrongPlosives.Count}, verbs={data.NegativeVerbsAndAdjectives.Count}");
+            })).ToArray();
+
+            start.Set();
+            await Task.WhenAll(tasks);
+
+            Assert.True(failures.IsEmpty,
+                $"라운드 {round}: 동시 로딩 중 부분 초기화 상태 관측 — {string.Join(", ", failures)}");
+        }
+    }
 }
