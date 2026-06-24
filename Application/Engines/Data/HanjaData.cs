@@ -1113,6 +1113,9 @@ public static class HanjaData
     /// <summary>이름에 쓰지 않는 불용한자(부정적 의미)인지 판정.</summary>
     public static bool IsForbiddenNameHanja(string character) => ForbiddenNameHanjaSet.Contains(character);
 
+    /// <summary>실제 인명에 자주 쓰이는 대표 한자(인명 빈출 셋)인지 판정. 뜻 풀이 시 비(非)이름 한자 배제용.</summary>
+    public static bool IsCommonNameHanja(string character) => CommonNameHanja.Contains(character);
+
     public static int CalculateRelevanceScore(HanjaInfo hanja)
     {
         int score = 0;

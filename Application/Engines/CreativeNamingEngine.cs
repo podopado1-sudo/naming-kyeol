@@ -278,8 +278,13 @@ public class CreativeNamingEngine : ICreativeNamingEngine
             result.Add(c);
         }
 
-        // 표시용 점수 클램프 (정렬은 이미 끝났으므로 여기서만 0~100으로)
-        foreach (var c in result) c.CreativityScore = Math.Clamp(c.CreativityScore, 0, 100);
+        // 표시 점수 재계산 — 정렬용 raw 점수는 jitter(±35)가 섞여 상위권이 전부 100으로
+        // 잘려 변별력이 사라졌다. 선별은 raw 점수로 끝났으므로, 표시 점수는 실제 품질
+        // 신호(이름다움·성씨발음조화·오행·리듬·성별적합)만으로 다시 매겨 0~100 안에서
+        // 의미 있게 분산시킨다. 그 뒤 표시 점수 기준으로 재정렬(내림차순 계약 유지).
+        foreach (var c in result)
+            c.CreativityScore = CalculateDisplayScore(lastName, c, normalizedGender);
+        result = result.OrderByDescending(c => c.CreativityScore).ToList();
 
         // 실명 풀 후보의 뜻 풀이는 최종 결과에만 적용(전수 한자 조회 비용 회피)
         FillRealNameMeanings(result);
@@ -346,6 +351,52 @@ public class CreativeNamingEngine : ICreativeNamingEngine
         }
 
         return likenessAdj + noveltyAdj;
+    }
+
+    /// <summary>
+    /// 표시용 창의 점수 = 실제 품질 신호만으로 0~100 환산. 정렬용 raw 점수(jitter 포함)와
+    /// 분리해, 상위권이 전부 100으로 잘리는 현상을 없애고 이름별 변별을 보인다.
+    ///   · 2음절(성+이름): 이름다움·성씨발음조화·오행·리듬·성별적합 가중 합산.
+    ///   · 1음절/그 외: 기존 raw 점수를 0~100으로 클램프(외자·단어형 패턴 보존).
+    /// </summary>
+    private static double CalculateDisplayScore(
+        string lastName, CreativeNameCandidate c, string gender)
+    {
+        if (c.Name.Length != 2)
+            return Math.Round(Math.Clamp(c.CreativityScore, 0, 100), 1);
+
+        var a = c.Name[0].ToString();
+        var b = c.Name[1].ToString();
+
+        // 품질 신호 — 선별된 후보는 다 좋은 실명이라 상단에 몰린다(변별 약함).
+        // 절대 대역을 다른 엔진(80대~低90대)에 맞춰 천장(클램프)에 무리가 쌓여
+        // 전부 같은 값으로 눌리는 것을 막는다 → 작지만 실제인 변동이 드러난다.
+        double score = 64.0;
+        score += (NamingPrinciples.EvalNameLikeness(c.Name) - 0.55) * 18;    // -2.7 ~ +8.1
+        score += NamingPrinciples.EvalSurnameFlow(lastName, c.Name) * 7;     // 0 ~ +7
+        score += NamingPrinciples.EvalOhaengSynergy(a, b) * 5;               // 0 ~ +5
+        score += NamingPrinciples.EvalRhythm(a, b) * 4;                      // 0 ~ +4
+        score += (NamingPrinciples.EvalGenderSyllableFit(a, b, gender) - 1.0) * 12; // 불일치 감점
+
+        // 희소성 — "창의" 점수의 핵심 변별. 대법원 실명 빈도는 이름마다 달라
+        // 흔한 인기 이름은 덜 창의적(감점), 희귀하되 실재하는 이름은 더 창의적(가점).
+        var counts = NameGenderData.NameCounts(c.Name);
+        if (counts.HasValue)
+        {
+            long total = counts.Value.m + counts.Value.f;
+            score += total >= 20000 ? -10   // 서연·서윤급 최상위 인기
+                   : total >= 8000  ? -6     // 하율·다온급 인기
+                   : total >= 2500  ? -2     // 윤슬·예솔급 — 무난
+                   : total >= 500   ? +1     // 나래·소담급 — 희귀+개성
+                   : total >= 100   ? +3
+                   :                  +5;    // 매우 희귀한 실명
+        }
+        else
+        {
+            score += 4;   // 실명 set 밖 신규 조어 — 게이트 통과분이라 개성 가산
+        }
+
+        return Math.Round(Math.Clamp(score, 58, 93), 1);
     }
 
     #region 패턴 1: 성씨+이름 = 단어
@@ -559,13 +610,25 @@ public class CreativeNamingEngine : ICreativeNamingEngine
     /// <summary>뜻이 비어 있는 후보(실명 풀)에 음절→대표 한자 뜻을 채운다 ("맑을 윤 + 슬기 슬").</summary>
     private static void FillRealNameMeanings(IEnumerable<CreativeNameCandidate> finalists)
     {
+        // 한자 Meaning 필드는 다중 훈음을 ','·'/'·';'·'·'로 이어붙인 경우가 많다
+        // ("임금 주/주인 주/심지 주", "괼 담, 잠길 침, 맑을 잠..."). 표시는 첫 훈음만.
+        static string CleanGloss(string meaning)
+        {
+            if (string.IsNullOrWhiteSpace(meaning)) return "";
+            return meaning.Split(',', '/', ';', '·')[0].Trim();
+        }
+
         static string Best(string syl)
         {
-            var h = HanjaData.FindByReading(syl)
+            var cands = HanjaData.FindByReading(syl)
                 .Where(x => !HanjaData.IsForbiddenNameHanja(x.Character) && !string.IsNullOrEmpty(x.Meaning))
-                .OrderByDescending(HanjaData.CalculateRelevanceScore)
-                .FirstOrDefault();
-            return h?.Meaning ?? "";
+                .ToList();
+            // 인명 빈출 한자가 있으면 그 안에서만 고른다 — 雨(비)·塞(변방)·羅(그물) 등
+            // 이름에 어색한 글자가 사전 관련도만으로 뽑히는 것을 막는다.
+            var common = cands.Where(x => HanjaData.IsCommonNameHanja(x.Character)).ToList();
+            var pool = common.Count > 0 ? common : cands;
+            var h = pool.OrderByDescending(HanjaData.CalculateRelevanceScore).FirstOrDefault();
+            return CleanGloss(h?.Meaning ?? "");
         }
 
         foreach (var c in finalists)

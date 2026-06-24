@@ -115,6 +115,38 @@ public class CreativeNamingEngineTests
     }
 
     [Fact]
+    public async Task GenerateCandidatesAsync_MeaningHasNoMultiReadingDump()
+    {
+        // FillRealNameMeanings의 CleanGloss는 다중 훈음('임금 주/주인 주/심지 주',
+        // '괼 담, 잠길 침...')을 첫 훈음만 남긴다. '/'는 직접 작성한 패턴 뜻에는
+        // 쓰이지 않으므로, 결과 뜻에 '/'가 있으면 정제 누락이다.
+        foreach (var ln in new[] { "김", "이", "강", "윤", "박" })
+        {
+            var candidates = await _engine.GenerateCandidatesAsync(ln, "none", "neutral", 20);
+            Assert.All(candidates, c =>
+                Assert.DoesNotContain('/', c.Meaning));
+        }
+    }
+
+    [Fact]
+    public async Task GenerateCandidatesAsync_ScoresNotAllMaxedOut()
+    {
+        // 표시 점수는 정렬용 raw 점수(jitter 포함)와 분리돼 품질·희소성으로 다시 매겨진다.
+        // 과거엔 전부 100(클램프 천장)으로 눌려 변별이 없었다. 정상 대역 + 실제 변동 확인.
+        var candidates = await _engine.GenerateCandidatesAsync("김", "none", "neutral", 20);
+        var twoSyllable = candidates.Where(c => c.Name.Length == 2).ToList();
+
+        Assert.True(twoSyllable.Count >= 5, "2음절 후보가 충분히 나와야 한다.");
+        // 천장(100)에 눌리지 않음
+        Assert.All(twoSyllable, c => Assert.True(c.CreativityScore <= 97,
+            $"'{c.Name}' 점수 {c.CreativityScore} — 천장 포화 의심"));
+        // 모두 같은 값이 아니어야 함(변별 존재)
+        var distinct = twoSyllable.Select(c => c.CreativityScore).Distinct().Count();
+        Assert.True(distinct >= 3,
+            $"표시 점수 변별이 부족합니다(서로 다른 값 {distinct}종). 천장 포화 회귀 의심.");
+    }
+
+    [Fact]
     public async Task GenerateCandidatesAsync_UnregisteredSurname_StillWorks()
     {
         // 사전에 없는 희귀 성씨도 동작해야 함
