@@ -607,40 +607,56 @@ public class CreativeNamingEngine : ICreativeNamingEngine
         }
     }
 
-    /// <summary>뜻이 비어 있는 후보(실명 풀)에 음절→대표 한자 뜻을 채운다 ("맑을 윤 + 슬기 슬").</summary>
+    /// <summary>
+    /// 뜻이 비어 있는 후보(실명 풀)에 뜻 풀이를 채운다. 우선순위:
+    ///   1) LLM 폴리시(정적 파일 data/creative-name-meanings.json — "라영 → 빛나고 영명한")
+    ///   2) 기계적 정제 글로스("맑을 윤 + 슬기 슬")  3) 최종 폴백.
+    /// 파일이 없으면(미생성) 2)로 자연 폴백하므로 동작은 그대로 유지된다.
+    /// </summary>
     private static void FillRealNameMeanings(IEnumerable<CreativeNameCandidate> finalists)
     {
-        // 한자 Meaning 필드는 다중 훈음을 ','·'/'·';'·'·'로 이어붙인 경우가 많다
-        // ("임금 주/주인 주/심지 주", "괼 담, 잠길 침, 맑을 잠..."). 표시는 첫 훈음만.
-        static string CleanGloss(string meaning)
-        {
-            if (string.IsNullOrWhiteSpace(meaning)) return "";
-            return meaning.Split(',', '/', ';', '·')[0].Trim();
-        }
-
-        static string Best(string syl)
-        {
-            var cands = HanjaData.FindByReading(syl)
-                .Where(x => !HanjaData.IsForbiddenNameHanja(x.Character) && !string.IsNullOrEmpty(x.Meaning))
-                .ToList();
-            // 인명 빈출 한자가 있으면 그 안에서만 고른다 — 雨(비)·塞(변방)·羅(그물) 등
-            // 이름에 어색한 글자가 사전 관련도만으로 뽑히는 것을 막는다.
-            var common = cands.Where(x => HanjaData.IsCommonNameHanja(x.Character)).ToList();
-            var pool = common.Count > 0 ? common : cands;
-            var h = pool.OrderByDescending(HanjaData.CalculateRelevanceScore).FirstOrDefault();
-            return CleanGloss(h?.Meaning ?? "");
-        }
-
         foreach (var c in finalists)
         {
             if (!string.IsNullOrEmpty(c.Meaning) || c.Name.Length != 2) continue;
-            var m1 = Best(c.Name[0].ToString());
-            var m2 = Best(c.Name[1].ToString());
-            c.Meaning = (!string.IsNullOrEmpty(m1) && !string.IsNullOrEmpty(m2)) ? $"{m1} + {m2}"
-                      : !string.IsNullOrEmpty(m1) ? m1
-                      : !string.IsNullOrEmpty(m2) ? m2
-                      : "흔치 않은 개성 있는 이름";
+            var polished = CreativeMeaningData.Get(c.Name);
+            if (!string.IsNullOrEmpty(polished)) { c.Meaning = polished; continue; }
+            var mech = BuildMechanicalMeaning(c.Name);
+            c.Meaning = string.IsNullOrEmpty(mech) ? "흔치 않은 개성 있는 이름" : mech;
         }
+    }
+
+    /// <summary>
+    /// 음절→대표 한자 뜻을 이어붙인 기계적 뜻 풀이("맑을 윤 + 슬기 슬"). LLM 폴리시의
+    /// 입력(C# 덤프)과 런타임 폴백 양쪽에서 같은 결과를 쓰도록 공개한다. 2음절만 유효.
+    /// </summary>
+    public static string BuildMechanicalMeaning(string name)
+    {
+        if (string.IsNullOrEmpty(name) || name.Length != 2) return "";
+        var m1 = BestGloss(name[0].ToString());
+        var m2 = BestGloss(name[1].ToString());
+        return (!string.IsNullOrEmpty(m1) && !string.IsNullOrEmpty(m2)) ? $"{m1} + {m2}"
+             : !string.IsNullOrEmpty(m1) ? m1
+             : !string.IsNullOrEmpty(m2) ? m2
+             : "";
+    }
+
+    /// <summary>한자 Meaning의 다중 훈음('임금 주/주인 주', '괼 담, 잠길 침...') 중 첫 훈음만.</summary>
+    private static string CleanGloss(string meaning)
+    {
+        if (string.IsNullOrWhiteSpace(meaning)) return "";
+        return meaning.Split(',', '/', ';', '·')[0].Trim();
+    }
+
+    /// <summary>음절의 대표 한자 뜻 — 인명 빈출 한자 우선(雨·塞·羅 등 비이름 글자 회피) + 첫 훈음.</summary>
+    private static string BestGloss(string syl)
+    {
+        var cands = HanjaData.FindByReading(syl)
+            .Where(x => !HanjaData.IsForbiddenNameHanja(x.Character) && !string.IsNullOrEmpty(x.Meaning))
+            .ToList();
+        var common = cands.Where(x => HanjaData.IsCommonNameHanja(x.Character)).ToList();
+        var pool = common.Count > 0 ? common : cands;
+        var h = pool.OrderByDescending(HanjaData.CalculateRelevanceScore).FirstOrDefault();
+        return CleanGloss(h?.Meaning ?? "");
     }
 
     #endregion

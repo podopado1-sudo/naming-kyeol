@@ -15,6 +15,34 @@ using NameForm.Infrastructure.Repositories;
 // (코드 전체에서 DateTime.SpecifyKind(d, Utc)를 채워 넣는 대안보다 안전)
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
+// 1회성 CLI: 창의 실명 풀의 기계적 글로스를 덤프(LLM 폴리시 파이프라인 1단계).
+//   dotnet run -- dump-creative-glosses [outfile]
+// 엔진의 BuildMechanicalMeaning을 그대로 재사용해 HanjaData·CommonNameHanja·불용한자
+// 필터와 100% 일치하는 입력을 만든다. 웹 호스트는 띄우지 않고 종료한다.
+if (args.Length >= 1 && args[0] == "dump-creative-glosses")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+    NameForm.Application.Engines.Data.NameGenderData.LoadExternalData();
+
+    var dump = new Dictionary<string, string>();
+    foreach (var (name, _, _) in NameForm.Application.Engines.Data.NameGenderData.DistinctiveNames())
+    {
+        if (name.Length != 2 || name[0] == name[1]) continue; // 실명 풀 생성과 동일 조건
+        var gloss = NameForm.Application.Engines.CreativeNamingEngine.BuildMechanicalMeaning(name);
+        if (!string.IsNullOrEmpty(gloss)) dump[name] = gloss;
+    }
+
+    var outPath = args.Length >= 2 ? args[1] : "creative-glosses.json";
+    var json = System.Text.Json.JsonSerializer.Serialize(dump, new System.Text.Json.JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping // 한글 그대로
+    });
+    File.WriteAllText(outPath, json);
+    Console.WriteLine($"[dump-creative-glosses] {dump.Count}개 글로스 → {outPath}");
+    return;
+}
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: true)

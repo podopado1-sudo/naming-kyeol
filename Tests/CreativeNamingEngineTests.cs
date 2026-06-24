@@ -1,4 +1,5 @@
 using NameForm.Application.Engines;
+using NameForm.Application.Engines.Data;
 
 namespace NameForm.Tests;
 
@@ -144,6 +145,35 @@ public class CreativeNamingEngineTests
         var distinct = twoSyllable.Select(c => c.CreativityScore).Distinct().Count();
         Assert.True(distinct >= 3,
             $"표시 점수 변별이 부족합니다(서로 다른 값 {distinct}종). 천장 포화 회귀 의심.");
+    }
+
+    [Fact]
+    public void BuildMechanicalMeaning_TwoSyllable_NonEmptyAndCleaned()
+    {
+        // LLM 폴리시 입력 + 런타임 폴백 양쪽이 쓰는 공개 헬퍼. 2음절은 비지 않고
+        // 다중 훈음 덤프('/')가 없어야 한다.
+        foreach (var name in new[] { "윤슬", "예솔", "단아", "라영" })
+        {
+            var m = CreativeNamingEngine.BuildMechanicalMeaning(name);
+            Assert.False(string.IsNullOrEmpty(m), $"'{name}' 글로스가 비었습니다.");
+            Assert.DoesNotContain('/', m);
+        }
+    }
+
+    [Fact]
+    public void BuildMechanicalMeaning_NonTwoSyllable_ReturnsEmpty()
+    {
+        Assert.Equal("", CreativeNamingEngine.BuildMechanicalMeaning("별"));   // 1음절
+        Assert.Equal("", CreativeNamingEngine.BuildMechanicalMeaning("가나다")); // 3음절
+        Assert.Equal("", CreativeNamingEngine.BuildMechanicalMeaning(""));
+    }
+
+    [Fact]
+    public void CreativeMeaningData_AbsentFile_FallsBackToNull()
+    {
+        // 폴리시 파일(data/creative-name-meanings.json)이 없으면 Get은 null →
+        // 엔진은 기계적 글로스로 폴백한다(동작 보존). 테스트 환경엔 파일이 없다.
+        Assert.Null(CreativeMeaningData.Get("존재하지않는이름zzz"));
     }
 
     [Fact]
