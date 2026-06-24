@@ -15,7 +15,8 @@ namespace NameForm.Application.Engines.Data;
 public static class NameGenderData
 {
     private static readonly object _lock = new();
-    private static bool _loaded;
+    // volatile — 락 밖 첫 읽기(if (!_loaded))에서 딕셔너리 적재 완료가 관측되도록 보장
+    private static volatile bool _loaded;
 
     private static Dictionary<string, (long m, long f)> _lastSyll = new();
     private static Dictionary<string, (long m, long f)> _firstSyll = new();
@@ -27,22 +28,30 @@ public static class NameGenderData
         lock (_lock)
         {
             if (_loaded) return;
-            _loaded = true; // 실패해도 재시도 방지 (빈 상태 = 중립 폴백)
 
+            // 로컬에 완전히 적재한 뒤 필드에 할당하고, _loaded는 맨 마지막에 true로 둔다.
+            // (적재 전에 _loaded=true로 두면 락 밖 동시 리더가 빈 딕셔너리를 관측하는 레이스)
             var path = ResolvePath("name-gender-stats.json");
-            if (path == null) return;
-            try
+            if (path != null)
             {
-                using var doc = JsonDocument.Parse(File.ReadAllText(path));
-                var root = doc.RootElement;
-                _lastSyll = ParseSection(root, "lastSyllable");
-                _firstSyll = ParseSection(root, "firstSyllable");
-                _names = ParseSection(root, "names");
+                try
+                {
+                    using var doc = JsonDocument.Parse(File.ReadAllText(path));
+                    var root = doc.RootElement;
+                    var last = ParseSection(root, "lastSyllable");
+                    var first = ParseSection(root, "firstSyllable");
+                    var names = ParseSection(root, "names");
+                    _lastSyll = last;
+                    _firstSyll = first;
+                    _names = names;
+                }
+                catch
+                {
+                    // 파싱 실패 → 빈 상태(엔진은 중립 폴백)
+                }
             }
-            catch
-            {
-                // 파싱 실패 → 빈 상태(엔진은 중립 폴백)
-            }
+
+            _loaded = true; // 실패해도 재시도 방지 (빈 상태 = 중립 폴백). 반드시 적재 후.
         }
     }
 
@@ -109,6 +118,24 @@ public static class NameGenderData
     /// <summary>첫음절의 여아 비율(0~1). 표본 부족이면 null.</summary>
     public static double? FemaleRatioForFirstSyllable(string syllable, long minTotal = 300)
         => Ratio(_firstSyll, syllable, minTotal);
+
+    /// <summary>
+    /// 창의 작명용 '희귀하지만 실제로 쓰인' 2음절 이름 풀.
+    /// 빈도가 [minTotal, maxTotal) 구간 — 흔하지 않으나(개성) 별나지도 않은(검증된) 꼬리 —
+    /// 인 실명을 반환한다. 부모가 실제 지은 이름이라 '좋음'이 검증되면서도 독창적인 후보 소스.
+    /// </summary>
+    public static IEnumerable<(string name, long m, long f)> DistinctiveNames(
+        long minTotal = 100, long maxTotal = 2500)
+    {
+        if (!_loaded) LoadExternalData();
+        foreach (var kv in _names)
+        {
+            if (kv.Key.Length != 2) continue;
+            long total = kv.Value.m + kv.Value.f;
+            if (total >= minTotal && total < maxTotal)
+                yield return (kv.Key, kv.Value.m, kv.Value.f);
+        }
+    }
 
     /// <summary>통계가 로드되었는지 (테스트/진단용).</summary>
     public static bool HasData

@@ -202,6 +202,12 @@ public class CreativeNamingEngine : ICreativeNamingEngine
     /// <summary>성씨 고유(특화) 후보 가산 — 범용 풀보다 앞세워 성씨별 동질화를 완화.</summary>
     private const double SurnameTailoredBonus = 12.0;
 
+    // 끝음절 톤 분류 — 요청 톤(soft/strong)에 맞는 끝음절을 가산해 톤별 결과를 분화.
+    private static readonly HashSet<string> SoftLastSyllables = new()
+    { "슬","온","아","하","별","솔","빛","누","리","람","봄","솜","늘","유","린","담","래","나","미","연","화","영","은","희","이","서","유","나" };
+    private static readonly HashSet<string> StrongLastSyllables = new()
+    { "찬","혁","준","율","든","결","원","단","안","윤","호","석","철","강","광","욱","국","범","건","훈" };
+
     public async Task<List<CreativeNameCandidate>> GenerateCandidatesAsync(
         string lastName, string gender, string tone, int count)
     {
@@ -219,6 +225,9 @@ public class CreativeNamingEngine : ICreativeNamingEngine
 
         // 패턴 3: 성씨 음절 활용 패턴
         candidates.AddRange(GeneratePhoneticPatternCandidates(lastName, normalizedGender, normalizedTone));
+
+        // 패턴 4: 실명 희귀꼬리 (검증된 좋은 이름 + 개성 — 고정 범용 풀 대체)
+        candidates.AddRange(GenerateRealNameCandidates(lastName, normalizedGender, normalizedTone));
 
         // 금칙어/부정 발음/유행 이름 필터링 (세대 중립 철학 — 패턴 사전에
         // 유행 이름이 섞여 들어와도 출력 단계에서 일관되게 차단)
@@ -251,14 +260,29 @@ public class CreativeNamingEngine : ICreativeNamingEngine
             c.CreativityScore += CalculateGenderToneBonus(c.GenderTag, c.ToneTag, normalizedGender, normalizedTone);
             c.CreativityScore += CalculateCreativeQualityAdjustment(c.Name);
             if (c.SurnameTailored) c.CreativityScore += SurnameTailoredBonus;
-            c.CreativityScore = Math.Clamp(c.CreativityScore, 0, 100);
+            // 클램프하지 않음 — 100에서 잘리면 상위 후보가 동점 처리돼 시드 분산이 무력화됨.
+            // 표시용 100 클램프는 최종 result 선별 후에 적용한다.
         }
 
-        // 창의성 점수 순 정렬, count만큼 반환
-        var result = candidates
-            .OrderByDescending(c => c.CreativityScore)
-            .Take(count)
-            .ToList();
+        // 점수순 + 첫음절 다양성 캡(같은 첫음절 최대 2개)으로 count만큼 선별.
+        // 캡이 가경·가린·가민·가비 류 군집을 깨 결과를 다양하게 펼친다.
+        var result = new List<CreativeNameCandidate>();
+        var firstSyllableCount = new Dictionary<char, int>();
+        foreach (var c in candidates.OrderByDescending(c => c.CreativityScore))
+        {
+            if (result.Count >= count) break;
+            char firstSyl = c.Name[0];
+            firstSyllableCount.TryGetValue(firstSyl, out int n);
+            if (n >= 2) continue;
+            firstSyllableCount[firstSyl] = n + 1;
+            result.Add(c);
+        }
+
+        // 표시용 점수 클램프 (정렬은 이미 끝났으므로 여기서만 0~100으로)
+        foreach (var c in result) c.CreativityScore = Math.Clamp(c.CreativityScore, 0, 100);
+
+        // 실명 풀 후보의 뜻 풀이는 최종 결과에만 적용(전수 한자 조회 비용 회피)
+        FillRealNameMeanings(result);
 
         return await Task.FromResult(result);
     }
@@ -421,12 +445,10 @@ public class CreativeNamingEngine : ICreativeNamingEngine
             }
         }
 
-        // 성씨 특화 의미연상(있으면) + 우수 범용 풀을 모든 성씨에 공급.
-        // 사전이 빈약한 성씨(최·장·임 등)도 태온·윤슬·아람급 좋은 이름을 받도록 (B안).
-        // 중복은 이후 GroupBy(Name)에서 높은 점수 1개로 정리됨.
+        // 성씨 특화 의미연상만 고유 레이어로 추가. 범용 풀(과거 GetGenericExpansions)은
+        // 패턴 4 '실명 희귀꼬리'로 대체됨 — 고정 목록 반복 대신 검증된 실명에서 다양하게 공급.
         if (MeaningExpansions.TryGetValue(lastName, out var specific))
             AddEntries(specific, fromSurname: true);
-        AddEntries(GetGenericExpansions(), fromSurname: false);
 
         return results;
     }
@@ -455,6 +477,107 @@ public class CreativeNamingEngine : ICreativeNamingEngine
         if (entry.Name.Length == 2) score += 4;
 
         return Math.Min(score, 100);
+    }
+
+    #endregion
+
+    #region 패턴 4: 실명 희귀꼬리 (데이터 기반 — 검증된 좋음 + 개성)
+
+    /// <summary>
+    /// 대법원 실명 빈도의 '희귀꼬리'(흔치 않으나 실제 쓰인 이름)를 창의 후보로 생성한다.
+    /// 검증된 좋음(부모가 실제 지은 이름) + 개성(낮은 빈도)을 동시에 충족. 성씨 발음조화/
+    /// 성별 적합으로 성씨별 분산. 뜻 풀이는 비용이 커 최종 후보에만 적용하므로 여기선 비워둔다
+    /// (GenerateCandidatesAsync에서 채움). 생성물이라 SurnameTailored=false.
+    /// </summary>
+    private List<CreativeNameCandidate> GenerateRealNameCandidates(
+        string lastName, string gender, string tone)
+    {
+        var results = new List<CreativeNameCandidate>();
+
+        foreach (var (name, m, f) in NameGenderData.DistinctiveNames())
+        {
+            if (name.Length != 2) continue;
+            if (name[0] == name[1]) continue;   // 같은 음절 반복(나나·민민) 제외
+
+            // 성별이 강하게 반대면 스킵 (약한 기울기는 메인 파이프라인이 라벨 처리)
+            double femaleRatio = (double)f / (m + f);
+            if (gender == "male" && femaleRatio > 0.70) continue;
+            if (gender == "female" && femaleRatio < 0.30) continue;
+
+            // 이름다움 선차단 (메인 필터에서도 적용되나 비용 절감)
+            if (NamingPrinciples.EvalNameLikeness(name) < NameLikenessGate) continue;
+
+            var f0 = name[0].ToString();
+            var l0 = name[1].ToString();
+
+            double score = 50.0;
+            score += NamingPrinciples.EvalSurnameFlow(lastName, name) * 22;   // 성씨별 분산의 핵심
+            score += NamingPrinciples.EvalOhaengSynergy(f0, l0) * 8;
+            score += NamingPrinciples.EvalRhythm(f0, l0) * 6;
+            score += (NamingPrinciples.EvalGenderSyllableFit(f0, l0, gender) - 1.0) * 30;
+            // 톤 분화 — 요청 톤에 맞는 끝음절 가산
+            if (tone == "soft") score += SoftLastSyllables.Contains(l0) ? 12 : (StrongLastSyllables.Contains(l0) ? -8 : 0);
+            else if (tone == "strong") score += StrongLastSyllables.Contains(l0) ? 12 : (SoftLastSyllables.Contains(l0) ? -8 : 0);
+            // 성씨 시드 분산 — EvalSurnameFlow는 받침 유무로만 갈려(2버킷) 성씨 차별화가 약하다.
+            // 모든 후보가 검증된 좋은 실명이므로, 성씨별로 다른 부분집합을 결정적으로 회전시켜
+            // 동질화를 해소한다(창의 이름엔 유일한 정답이 없음 → 정당). 가중치가 커야 평탄한
+            // 점수 덩어리를 흔들어 성씨별 다양성이 확보됨.
+            score += SurnameSeededJitter(lastName, name) * 35;
+
+            results.Add(new CreativeNameCandidate
+            {
+                Name = name,
+                FullName = lastName + name,
+                Concept = "실제 쓰이는 흔치 않은 이름 (개성 있는 실명)",
+                SurnameConnection = $"성씨 '{lastName}'과 발음이 어울리는 실명",
+                Meaning = "",   // 최종 후보에만 뜻 풀이 (아래 FillRealNameMeanings)
+                CreativityScore = score,   // 정렬용 — 100 클램프는 표시 직전에만(시드 분산 보존)
+                GenderTag = femaleRatio > 0.6 ? "female" : femaleRatio < 0.4 ? "male" : "neutral",
+                ToneTag = "neutral",
+                SurnameTailored = false
+            });
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// 성씨+이름 안정적 해시 → [0,1). 런 간 동일(문자 코드 기반, GetHashCode 비사용).
+    /// 성씨별로 좋은 이름 부분집합을 결정적으로 회전시키는 분산 시드.
+    /// </summary>
+    private static double SurnameSeededJitter(string lastName, string name)
+    {
+        unchecked
+        {
+            int h = 17;
+            foreach (char c in lastName) h = h * 31 + c;
+            foreach (char c in name) h = h * 31 + c;
+            return ((h & 0x7fffffff) % 1000) / 1000.0;
+        }
+    }
+
+    /// <summary>뜻이 비어 있는 후보(실명 풀)에 음절→대표 한자 뜻을 채운다 ("맑을 윤 + 슬기 슬").</summary>
+    private static void FillRealNameMeanings(IEnumerable<CreativeNameCandidate> finalists)
+    {
+        static string Best(string syl)
+        {
+            var h = HanjaData.FindByReading(syl)
+                .Where(x => !HanjaData.IsForbiddenNameHanja(x.Character) && !string.IsNullOrEmpty(x.Meaning))
+                .OrderByDescending(HanjaData.CalculateRelevanceScore)
+                .FirstOrDefault();
+            return h?.Meaning ?? "";
+        }
+
+        foreach (var c in finalists)
+        {
+            if (!string.IsNullOrEmpty(c.Meaning) || c.Name.Length != 2) continue;
+            var m1 = Best(c.Name[0].ToString());
+            var m2 = Best(c.Name[1].ToString());
+            c.Meaning = (!string.IsNullOrEmpty(m1) && !string.IsNullOrEmpty(m2)) ? $"{m1} + {m2}"
+                      : !string.IsNullOrEmpty(m1) ? m1
+                      : !string.IsNullOrEmpty(m2) ? m2
+                      : "흔치 않은 개성 있는 이름";
+        }
     }
 
     #endregion
@@ -549,46 +672,6 @@ public class CreativeNamingEngine : ICreativeNamingEngine
             if (lower.Contains(pattern)) return true;
         }
         return false;
-    }
-
-    private static List<MeaningExpansionEntry> GetGenericExpansions()
-    {
-        // 미등록 성씨용 범용 이름 후보 (다양한 성별/톤 조합)
-        return new List<MeaningExpansionEntry>
-        {
-            // neutral / neutral
-            new("하늘", "하늘처럼 높고 넓은", "범용 자연 이름", "neutral", "neutral"),
-            new("시온", "때가 온다, 은혜", "세대 중립 이름", "neutral", "neutral"),
-            new("나루", "강을 건너는 나루터", "자연 이름", "neutral", "neutral"),
-            new("다솜", "사랑(고어)", "순우리말 이름", "neutral", "neutral"),
-            new("가온", "가운데, 중심", "범용 순우리말", "neutral", "neutral"),
-            // neutral / soft
-            new("누리", "온 세상", "순우리말 이름", "neutral", "soft"),
-            new("이안", "편안하고 안온한", "평화 이름", "neutral", "soft"),
-            new("나윤", "날아오르는 윤기", "자연+빛 이름", "neutral", "soft"),
-            new("아람", "탐스러운 가을 열매", "순우리말 이름", "neutral", "soft"),
-            new("라온", "즐거운(고어)", "순우리말 이름", "neutral", "soft"),
-            // neutral / strong
-            new("한결", "한결같은", "결의 이름", "neutral", "strong"),
-            new("세찬", "세차고 힘찬", "강인한 이름", "neutral", "strong"),
-            new("한빛", "큰 빛", "빛 이름", "neutral", "strong"),
-            // female / soft
-            new("윤슬", "햇빛에 반짝이는 물결", "자연 이름", "female", "soft"),
-            new("소담", "소담스럽고 탐스러운", "순우리말 이름", "female", "soft"),
-            new("예솔", "곱고 소나무 같은", "자연+덕목 이름", "female", "soft"),
-            new("단아", "단정하고 아담한", "덕목 이름", "female", "soft"),
-            new("보라", "고귀한 보라빛", "빛깔 이름", "female", "soft"),
-            new("다온", "좋은 모든 일이 오는", "순우리말 이름", "female", "soft"),
-            // male / strong
-            new("범준", "비범하고 준수한", "남성적 이름", "male", "strong"),
-            new("건휘", "건장하고 빛나는", "힘찬 이름", "male", "strong"),
-            new("진혁", "참되고 빛나는", "덕목 이름", "male", "strong"),
-            new("수혁", "빼어나고 빛나는", "덕목 이름", "male", "strong"),
-            // male / neutral
-            new("주안", "두루 평안한", "평화 이름", "male", "neutral"),
-            new("재윤", "재능이 윤택한", "덕목 이름", "male", "neutral"),
-            new("태온", "크고 따뜻한", "덕목 이름", "male", "neutral"),
-        };
     }
 
     #endregion
