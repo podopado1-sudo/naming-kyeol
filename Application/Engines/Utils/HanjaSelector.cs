@@ -17,6 +17,18 @@ namespace NameForm.Application.Engines.Utils;
 /// </summary>
 public static class HanjaSelector
 {
+    /// <summary>
+    /// 인명 빈출 셋에는 들어 있으나 '주어진 이름' 한자로는 약한 글자 — 관련도 점수는 높지만
+    /// 字義가 평범한 사물/어색한 명사라 더 나은 동음 대안이 있으면 양보해야 한다.
+    /// (예: 우 → 友(벗)·雨(비)보다 宇(집·우주)·祐(복)·佑(도울)이 이름다움)
+    /// "관련도 높음 ≠ 좋은 이름 한자" 보정. 감점일 뿐이라 대안이 없으면 여전히 선택됨.
+    /// 피드백으로 확장 가능.
+    /// </summary>
+    private static readonly HashSet<string> WeakGivenNameHanja = new()
+    {
+        "友", "雨", "二", "米", "株", "注", "牛", "主"
+    };
+
     /// <summary>이름 각 음절에 한자 1개씩 선택. yongshin* 인자가 null이면 용신 가산 없이 동작.</summary>
     public static List<HanjaInfo?> Select(
         string name, string gender,
@@ -77,6 +89,10 @@ public static class HanjaSelector
             else if (el == yGi) s -= 70;
             s += 4; // 오행 정보 보유 소가산 (정보 없는 한자보다 우선)
         }
+
+        // 이름용으로 약한 빈출 한자(友 벗·雨 비 등)는 감점 — 더 나은 동음 대안이 있으면 양보.
+        if (WeakGivenNameHanja.Contains(h.Character)) s -= 30;
+
         return s;
     }
 
