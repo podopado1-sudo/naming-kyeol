@@ -1,4 +1,5 @@
 using NameForm.Application.Engines;
+using static NameForm.Application.Engines.Data.HanjaData;
 using Xunit;
 
 namespace NameForm.Tests;
@@ -265,30 +266,33 @@ public class HarmonyEngineTests
     }
 
     [Fact]
-    public async Task CalculateScoreWithBreakdown_GenderMatching_PositiveBonus()
+    public async Task CalculateScoreWithBreakdown_GenderSteersHanjaSelection()
     {
-        // 花(화)는 GenderPref=Female
-        var femaleBreakdown = await _engine.CalculateScoreWithBreakdownAsync(
+        // HanjaSelector는 성별을 거의 하드 제약으로 본다 — 여아 요청엔 남성 전형 한자를,
+        // 남아 요청엔 여성 전형 한자(花 등)를 회피해 배정한다.
+        var female = await _engine.CalculateScoreWithBreakdownAsync(
             "화성", "김", new DateTime(1990, 3, 21), "female");
-
-        var maleBreakdown = await _engine.CalculateScoreWithBreakdownAsync(
+        var male = await _engine.CalculateScoreWithBreakdownAsync(
             "화성", "김", new DateTime(1990, 3, 21), "male");
 
-        // female 요청 + 花(female) = 가점, male 요청 + 花(female) = 감점
-        Assert.True(femaleBreakdown.GenderBonus > maleBreakdown.GenderBonus);
+        Assert.NotEmpty(female.SelectedHanja);
+        Assert.NotEmpty(male.SelectedHanja);
+        // 화 음절: 여아엔 남성 한자 회피, 남아엔 여성 한자 회피
+        Assert.NotEqual(GenderPreference.Male, female.SelectedHanja[0]?.GenderPref);
+        Assert.NotEqual(GenderPreference.Female, male.SelectedHanja[0]?.GenderPref);
     }
 
     [Fact]
-    public async Task CalculateScoreAsync_GenderAffectsScore()
+    public async Task CalculateScoreWithBreakdown_MatchingGenderNotPenalized()
     {
-        // 花(화) = Female 선호 한자
+        // 성별에 맞는 한자를 고르므로 성별 보너스는 음수가 아니다.
+        // (옛 테스트의 "여아 총점 ≥ 남아 총점" 가정은 용신·원소 최적화로 더 이상 성립 안 함)
         var birthDate = new DateTime(1990, 3, 21);
-        int femaleScore = await _engine.CalculateScoreAsync("화성", "김", birthDate, "female");
-        int maleScore = await _engine.CalculateScoreAsync("화성", "김", birthDate, "male");
+        var female = await _engine.CalculateScoreWithBreakdownAsync("화성", "김", birthDate, "female");
+        var male = await _engine.CalculateScoreWithBreakdownAsync("화성", "김", birthDate, "male");
 
-        // female이 male보다 높아야 함 (花의 GenderPref=Female 때문)
-        Assert.True(femaleScore >= maleScore,
-            $"Female score ({femaleScore}) should be >= male score ({maleScore}) for 화(花=Female)");
+        Assert.True(female.GenderBonus >= 0, $"여아 요청 성별 보너스 {female.GenderBonus} < 0");
+        Assert.True(male.GenderBonus >= 0, $"남아 요청 성별 보너스 {male.GenderBonus} < 0");
     }
 
     // ===== NEW: 오행 정상화 테스트 =====

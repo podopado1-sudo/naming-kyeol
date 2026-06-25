@@ -1,4 +1,5 @@
 using NameForm.Application.Engines.Data;
+using static NameForm.Application.Engines.Data.HanjaData;
 
 namespace NameForm.Application.Engines;
 
@@ -14,7 +15,8 @@ public interface IExplanationEngine
     Task<List<string>> GenerateReasonsAsync(
         string name,
         int aestheticScore,
-        int harmonyScore);
+        int harmonyScore,
+        IReadOnlyList<HanjaInfo?>? selectedHanja = null);
 
     /// <summary>
     /// 구조화된 상세 추천 이유 생성

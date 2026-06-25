@@ -1,3 +1,5 @@
+using static NameForm.Application.Engines.Data.HanjaData;
+
 namespace NameForm.Application.Engines;
 
 /// <summary>
@@ -15,6 +17,12 @@ public class HarmonyBreakdown
     public int TotalScore { get; set; }
     public bool UsedFallback { get; set; }
     public List<string> Notes { get; set; } = new();
+
+    /// <summary>
+    /// 이 이름에 실제로 '배정된' 음절별 한자(용신-인지 선택). 점수·표시·저장이 모두
+    /// 이 한자를 쓰도록 단일 진실의 원천으로 노출. 음절에 한자가 없으면 해당 위치 null.
+    /// </summary>
+    public List<HanjaInfo?> SelectedHanja { get; set; } = new();
 }
 
 /// <summary>

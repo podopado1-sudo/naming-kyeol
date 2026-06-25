@@ -125,8 +125,9 @@ public class RecommendationService : IRecommendationService
             var score = await _scoringService.EvaluateAsync(
                 name, request.LastName, birthDate, request.Gender, request.Tone, birthTime);
 
+            // 점수(Harmony)가 실제 배정한 한자를 이유 표시에 그대로 사용 — 점수=표시 일관.
             var reasons = await _explanationEngine.GenerateReasonsAsync(
-                name, score.AestheticScore, score.HarmonyScore);
+                name, score.AestheticScore, score.HarmonyScore, score.Harmony?.SelectedHanja);
 
             // 부모 기반 후보인지 확인
             var (namingModel, nameType) = parentBasedCandidateInfo.TryGetValue(name, out var info)

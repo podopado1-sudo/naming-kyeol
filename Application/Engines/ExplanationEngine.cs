@@ -1,5 +1,6 @@
 using NameForm.Application.Engines.Data;
 using NameForm.Application.Engines.Utils;
+using static NameForm.Application.Engines.Data.HanjaData;
 
 namespace NameForm.Application.Engines;
 
@@ -16,7 +17,8 @@ public class ExplanationEngine : IExplanationEngine
     // ═══════════════════════════════════════════════════════════════
 
     public async Task<List<string>> GenerateReasonsAsync(
-        string name, int aestheticScore, int harmonyScore)
+        string name, int aestheticScore, int harmonyScore,
+        IReadOnlyList<HanjaInfo?>? selectedHanja = null)
     {
         var reasons = new List<string>();
         int overall = (int)Math.Round(aestheticScore * 0.7 + harmonyScore * 0.3);
@@ -32,9 +34,8 @@ public class ExplanationEngine : IExplanationEngine
         if (!string.IsNullOrEmpty(ohaeng))
             reasons.Add(ohaeng);
 
-        // 한자 뜻 — 오행 유무와 무관하게 항상 포함.
-        // (기존엔 오행이 있으면 뜻이 누락돼 정작 사용자가 궁금한 의미가 안 보였음)
-        var meaning = BuildMeaningEvidence(name);
+        // 한자 뜻 — 점수(Harmony)가 실제로 배정한 한자로 표시(일관). 없으면 정제 폴백.
+        var meaning = BuildMeaningEvidence(name, selectedHanja);
         if (!string.IsNullOrEmpty(meaning))
             reasons.Add($"한자 뜻 — {meaning}");
 
@@ -287,20 +288,41 @@ public class ExplanationEngine : IExplanationEngine
     // MeaningEvidence — 한자 정보 + 카테고리 조합
     // ═══════════════════════════════════════════════════════════════
 
-    private static string BuildMeaningEvidence(string name)
+    /// <summary>한자 Meaning의 다중 훈음('준걸 준, 순임금 순', '임금 주/주인 주') 중 첫 훈음만. (창의 2-a와 동일)</summary>
+    private static string CleanGloss(string meaning)
+    {
+        if (string.IsNullOrWhiteSpace(meaning)) return "";
+        return meaning.Split(',', '/', ';', '·')[0].Trim();
+    }
+
+    private static string BuildMeaningEvidence(string name, IReadOnlyList<HanjaInfo?>? preselected = null)
     {
         if (string.IsNullOrEmpty(name)) return string.Empty;
 
         var hanjaParts = new List<string>();
         var categories = new List<string>();
 
-        foreach (char c in name)
+        for (int i = 0; i < name.Length; i++)
         {
-            var hanjaList = HanjaData.FindByReading(c.ToString());
-            var rep = hanjaList.FirstOrDefault(h => !string.IsNullOrEmpty(h.Meaning));
+            HanjaInfo? rep;
+            // 점수(HarmonyEngine)가 실제로 배정한 한자가 있으면 그걸로 표시 — 점수=표시 일관.
+            if (preselected != null && i < preselected.Count
+                && preselected[i] is { } pre && !string.IsNullOrEmpty(pre.Meaning))
+            {
+                rep = pre;
+            }
+            else
+            {
+                // 폴백: 창의 2-a와 동일 정제(불용한자 배제 + 인명 빈출 우선).
+                var cands = HanjaData.FindByReading(name[i].ToString())
+                    .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning))
+                    .ToList();
+                var common = cands.Where(h => HanjaData.IsCommonNameHanja(h.Character)).ToList();
+                rep = (common.Count > 0 ? common : cands).FirstOrDefault();
+            }
             if (rep != null)
             {
-                hanjaParts.Add($"{rep.Character}({rep.Reading}, {rep.Meaning})");
+                hanjaParts.Add($"{rep.Character}({rep.Reading}, {CleanGloss(rep.Meaning)})");
                 if (!string.IsNullOrEmpty(rep.Category)) categories.Add(rep.Category);
             }
         }

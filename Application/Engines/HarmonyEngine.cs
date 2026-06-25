@@ -62,8 +62,23 @@ public class HarmonyEngine : IHarmonyEngine
     {
         var breakdown = new HarmonyBreakdown();
 
-        // 각 음절에서 최적 한자 선택
-        var selectedHanja = SelectHanjaForName(name, gender);
+        // 용신을 먼저 계산해 한자 '배정'에 반영(단일 진실의 원천: HanjaSelector).
+        // 같은 발음 이름도 사주에 따라 다른 한자 → 다른 자원오행/뜻. (이름 랭킹은 미학 우선 불변)
+        string? yPrimary = null, yHee = null, yGi = null;
+        try
+        {
+            var chart0 = _sajuCalculationService.CalculateChart(birthDate, birthTime);
+            if (_yongshinCalculationService != null)
+            {
+                var y0 = _yongshinCalculationService.Calculate(chart0);
+                yPrimary = y0.PrimaryYongshin; yHee = y0.Heeshin; yGi = y0.Gishin;
+            }
+        }
+        catch { /* 용신 계산 실패 → 용신 없이 인명 빈출/성별 기준으로만 선택 */ }
+
+        // 각 음절에서 한자 선택 — 점수·표시·저장이 공유할 단일 결과
+        var selectedHanja = HanjaSelector.Select(name, gender, yPrimary, yHee, yGi);
+        breakdown.SelectedHanja = selectedHanja;
         bool anyFallback = selectedHanja.Any(h => h == null);
 
         if (selectedHanja.All(h => h == null))
@@ -127,74 +142,14 @@ public class HarmonyEngine : IHarmonyEngine
         return Task.FromResult(breakdown);
     }
 
-    // ===== 한자 선택 =====
+    // ===== 한자 선택 → Utils/HanjaSelector.cs 로 이관 (용신-인지 단일 진실의 원천) =====
 
-    /// <summary>
-    /// 이름의 각 음절에 대해 최적의 한자를 선택한다.
-    /// GenderPref/TonePref가 일치하는 한자를 우선 선택.
-    /// </summary>
-    private List<HanjaInfo?> SelectHanjaForName(string name, string gender)
+    private static GenderPreference ParseGenderPref(string gender) => gender?.ToLowerInvariant() switch
     {
-        var result = new List<HanjaInfo?>();
-        var genderPref = ParseGenderPref(gender);
-
-        foreach (char c in name)
-        {
-            var hanjaList = HanjaData.FindByReading(c.ToString());
-            if (hanjaList.Count == 0)
-            {
-                result.Add(null);
-                continue;
-            }
-
-            result.Add(SelectBestHanja(hanjaList, genderPref));
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// 한자 목록에서 가장 적합한 한자를 선택한다.
-    /// 우선순위: 인명용 관련성 정렬 적용 후 GenderPref 일치 > FiveElement/YinYang 정보 보유 > 첫 번째
-    /// </summary>
-    private static HanjaInfo SelectBestHanja(List<HanjaInfo> candidates, GenderPreference genderPref)
-    {
-        // 먼저 인명용 관련성 기준으로 정렬 (CJK 기본 영역, 대법원 인명용 등 우선)
-        var sorted = HanjaData.SortByRelevance(candidates);
-
-        // 1순위: gender 일치 + 오행 정보 보유 (관련성 높은 것부터)
-        if (genderPref != GenderPreference.Neutral)
-        {
-            var genderMatch = sorted.FirstOrDefault(h =>
-                h.GenderPref == genderPref &&
-                !string.IsNullOrEmpty(h.FiveElement));
-            if (genderMatch != null) return genderMatch;
-        }
-
-        // 2순위: 오행+음양 정보 모두 보유 (관련성 높은 것부터)
-        var fullInfo = sorted.FirstOrDefault(h =>
-            !string.IsNullOrEmpty(h.FiveElement) &&
-            !string.IsNullOrEmpty(h.YinYang));
-        if (fullInfo != null) return fullInfo;
-
-        // 3순위: 오행 정보만이라도 보유 (관련성 높은 것부터)
-        var hasElement = sorted.FirstOrDefault(h =>
-            !string.IsNullOrEmpty(h.FiveElement));
-        if (hasElement != null) return hasElement;
-
-        // 4순위: 관련성 가장 높은 첫 번째
-        return sorted.First();
-    }
-
-    private static GenderPreference ParseGenderPref(string gender)
-    {
-        return gender?.ToLowerInvariant() switch
-        {
-            "male" => GenderPreference.Male,
-            "female" => GenderPreference.Female,
-            _ => GenderPreference.Neutral
-        };
-    }
+        "male" => GenderPreference.Male,
+        "female" => GenderPreference.Female,
+        _ => GenderPreference.Neutral
+    };
 
     // ===== 오행 점수 (40점 만점) =====
 
