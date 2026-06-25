@@ -3,6 +3,7 @@ using NameForm.Application.DTOs;
 using NameForm.Application.Engines;
 using NameForm.Domain.Models;
 using NameForm.Infrastructure.Repositories;
+using static NameForm.Application.Engines.Data.HanjaData;
 
 namespace NameForm.Application.Services;
 
@@ -126,8 +127,14 @@ public class RecommendationService : IRecommendationService
                 name, request.LastName, birthDate, request.Gender, request.Tone, birthTime);
 
             // 점수(Harmony)가 실제 배정한 한자를 이유 표시에 그대로 사용 — 점수=표시 일관.
+            var selectedHanja = score.Harmony?.SelectedHanja;
             var reasons = await _explanationEngine.GenerateReasonsAsync(
-                name, score.AestheticScore, score.HarmonyScore, score.Harmony?.SelectedHanja);
+                name, score.AestheticScore, score.HarmonyScore, selectedHanja);
+
+            // 카드 표시용 한자 + 뜻 한 줄 (배정된 그 한자에서 생성 → 상세와 일관)
+            var hanjaChars = selectedHanja == null ? null
+                : string.Concat(selectedHanja.Where(h => h != null).Select(h => h!.Character));
+            var meaningText = BuildCardMeaning(selectedHanja);
 
             // 부모 기반 후보인지 확인
             var (namingModel, nameType) = parentBasedCandidateInfo.TryGetValue(name, out var info)
@@ -149,7 +156,9 @@ public class RecommendationService : IRecommendationService
                 NameType = nameType,
                 RarityScore = score.RarityScore,
                 EnglishEquivalent = englishEquivalent,
-                HanjaMeaning = hanjaMeaning
+                HanjaMeaning = hanjaMeaning,
+                Hanja = hanjaChars,
+                MeaningText = meaningText
             });
         }
 
@@ -191,7 +200,9 @@ public class RecommendationService : IRecommendationService
                 NameType = c.NameType,
                 RarityScore = c.RarityScore,
                 EnglishEquivalent = c.EnglishEquivalent,
-                HanjaMeaning = c.HanjaMeaning
+                HanjaMeaning = c.HanjaMeaning,
+                Hanja = c.Hanja,
+                MeaningText = c.MeaningText
             }).ToList()
         };
     }
@@ -219,7 +230,9 @@ public class RecommendationService : IRecommendationService
                 NameType = c.NameType,
                 RarityScore = c.RarityScore,
                 EnglishEquivalent = c.EnglishEquivalent,
-                HanjaMeaning = c.HanjaMeaning
+                HanjaMeaning = c.HanjaMeaning,
+                Hanja = c.Hanja,
+                MeaningText = c.MeaningText
             }).ToList()
         };
     }
@@ -227,6 +240,18 @@ public class RecommendationService : IRecommendationService
     /// <summary>
     /// 이름 타입 결정 (의미중심 vs 음운중심)
     /// </summary>
+    /// <summary>배정된 한자에서 카드용 뜻 한 줄을 만든다("벗 우 · 맑을 정"). 다중 훈음은 첫 훈음만.</summary>
+    private static string? BuildCardMeaning(IReadOnlyList<HanjaInfo?>? hanja)
+    {
+        if (hanja == null) return null;
+        var parts = hanja
+            .Where(h => h != null && !string.IsNullOrWhiteSpace(h!.Meaning))
+            .Select(h => h!.Meaning.Split(',', '/', ';', '·')[0].Trim())
+            .Where(s => s.Length > 0)
+            .ToList();
+        return parts.Count > 0 ? string.Join(" · ", parts) : null;
+    }
+
     private string DetermineNameType(string name)
     {
         // 한자 의미가 강한 경우 "의미중심"

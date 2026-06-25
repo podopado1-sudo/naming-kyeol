@@ -45,6 +45,10 @@ public class SmartNameCandidateDto
     public string Name { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string Meaning { get; set; } = string.Empty;
+
+    /// <summary>배정된 음절별 한자 글자(예: "友晶"). 한자 카테고리 한정, 없으면 null.</summary>
+    public string? Hanja { get; set; }
+
     public double? Score { get; set; }
 
     /// <summary>미학 점수 (한자 카테고리 한정, 0~100). 없으면 null.</summary>

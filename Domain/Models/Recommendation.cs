@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace NameForm.Domain.Models;
 
 public class Recommendation
@@ -44,4 +46,17 @@ public class Candidate
     /// 한자 의미 조합 (이중 이름인 경우)
     /// </summary>
     public string? HanjaMeaning { get; set; }
+
+    /// <summary>
+    /// 이 이름에 배정된 음절별 한자 글자(예: "友晶"). HarmonyEngine이 용신-인지로 선택한 것.
+    /// 표시용 파생값 — DB 컬럼 미생성([NotMapped])으로 운영 스키마 영향 없음(fresh 응답에서만 사용).
+    /// </summary>
+    [NotMapped]
+    public string? Hanja { get; set; }
+
+    /// <summary>
+    /// 카드 표시용 한자 뜻 한 줄(예: "벗 우 · 맑을 정"). 배정된 한자에서 생성. [NotMapped].
+    /// </summary>
+    [NotMapped]
+    public string? MeaningText { get; set; }
 }

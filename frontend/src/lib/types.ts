@@ -70,6 +70,8 @@ export interface SmartNameCandidate {
   name: string;
   fullName: string;
   meaning: string;
+  /** 배정된 음절별 한자 글자(예: "友晶"). 한자 카테고리 한정, 없으면 undefined. */
+  hanja?: string;
   score?: number;
   /** 미학 점수 (한자 카테고리 한정, 0~100). 없으면 undefined. */
   aestheticScore?: number;

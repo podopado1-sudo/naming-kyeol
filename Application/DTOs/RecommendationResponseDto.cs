@@ -38,4 +38,10 @@ public class CandidateDto
     /// 한자 의미 조합 (이중 이름인 경우, 예: "붓 필 + 설 립")
     /// </summary>
     public string? HanjaMeaning { get; set; }
+
+    /// <summary>배정된 음절별 한자 글자(예: "友晶"). 용신-인지 선택.</summary>
+    public string? Hanja { get; set; }
+
+    /// <summary>카드용 한자 뜻 한 줄(예: "벗 우 · 맑을 정").</summary>
+    public string? MeaningText { get; set; }
 }

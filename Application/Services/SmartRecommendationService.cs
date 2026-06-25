@@ -92,7 +92,8 @@ public class SmartRecommendationService : ISmartRecommendationService
             {
                 Name = c.Name,
                 FullName = lastName + c.Name,
-                Meaning = "", // 이유는 Reasons 불릿으로 표시 (한 줄 뭉침 방지)
+                Meaning = c.MeaningText ?? "", // 배정 한자에서 만든 뜻 한 줄 (상세 불릿과 일관)
+                Hanja = c.Hanja,
                 Reasons = c.Reasons,
                 Score = c.FinalScore,
                 AestheticScore = c.AestheticScore,

@@ -61,8 +61,14 @@ interface UICategory {
 // ============================================================
 function mapCandidate(c: SmartNameCandidate): UICandidate {
   const score = c.score ?? 0;
-  // 한자 부분 추출 (백엔드 'name' 필드에 한자가 있을 경우 — 단순 휴리스틱)
-  const hanjaName = c.name && c.name !== "—" ? c.name : undefined;
+  // 배정된 실제 한자(예: "友晶") 우선 — 한자 이름 탭이 진짜 한자를 serif로 표시.
+  // 없으면(창의·순우리말 등) 기존 휴리스틱(한글 이름)으로 폴백.
+  const hanjaName =
+    c.hanja && c.hanja.length > 0
+      ? c.hanja
+      : c.name && c.name !== "—"
+        ? c.name
+        : undefined;
   return {
     fullName: c.fullName,
     name: c.name,
