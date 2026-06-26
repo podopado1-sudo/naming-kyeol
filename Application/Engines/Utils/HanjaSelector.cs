@@ -26,8 +26,84 @@ public static class HanjaSelector
     /// </summary>
     private static readonly HashSet<string> WeakGivenNameHanja = new()
     {
-        "友", "雨", "二", "米", "株", "注", "牛", "主"
+        "友", "雨", "二", "米", "株", "注", "牛", "主",
+        // 관련도(빈출)는 높지만 이름자로는 약한 글자 — 더 나은 동음 대안에 양보.
+        // (서→西 서녘보다 瑞 상서로울 / 호→虎 범보다 浩·昊 / 예→兒 아이보다 睿·藝 / 주→朱 성씨보다 周·珠)
+        "西", "虎", "兒", "朱", "序", "紙"
     };
+
+    /// <summary>
+    /// 이 글자가 '이름용으로 약한 빈출 한자'인지 — 동음의 더 나은 대안이 있으면 양보해야 하는 글자.
+    /// 뜻 글로스 생성(BuildMechanicalMeaning) 등 다른 한자 선택 지점도 같은 세트를 쓰도록 공개.
+    /// </summary>
+    public static bool IsWeakGivenNameHanja(string character) => WeakGivenNameHanja.Contains(character);
+
+    /// <summary>오행 상생: key가 생(生)하는 오행.</summary>
+    private static readonly Dictionary<string, string> ElementGenerates = new()
+    {
+        { "木", "火" }, { "火", "土" }, { "土", "金" }, { "金", "水" }, { "水", "木" }
+    };
+
+    /// <summary>
+    /// 표시용(/name 페이지): 한 발음 이름(2음절)에 흔히 쓰는 한자 '조합' 상위 k개를 오행 조화까지
+    /// 반영해 선별. 각 음절 대표 1개만 뽑는 <see cref="Select"/>와 달리, "智宇·志宇·智祐"처럼
+    /// 조합 다양성을 보이기 위한 별도 경로다. 결과 한자는 모두 뜻·획수를 가진 표시 가능 글자.
+    /// </summary>
+    public static List<(string First, string Second)> SelectCombos(string name, string gender, int k)
+    {
+        var result = new List<(string, string)>();
+        if (string.IsNullOrEmpty(name) || name.Length != 2) return result;
+
+        var g = ParseGender(gender);
+        var first = TopComboCandidates(name[0].ToString(), g, 6);
+        var second = TopComboCandidates(name[1].ToString(), g, 6);
+        if (first.Count == 0 || second.Count == 0) return result;
+
+        var scored = new List<(string a, string b, double s)>();
+        foreach (var a in first)
+            foreach (var b in second)
+                scored.Add((a.Character, b.Character,
+                    ComboBaseScore(a, g) + ComboBaseScore(b, g)
+                        + OhaengHarmony(a.FiveElement, b.FiveElement)));
+
+        return scored.OrderByDescending(x => x.s).Take(k).Select(x => (x.a, x.b)).ToList();
+    }
+
+    private static List<HanjaInfo> TopComboCandidates(string syllable, GenderPreference g, int n)
+    {
+        var cands = HanjaData.FindByReading(syllable)
+            .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character)
+                     && !string.IsNullOrEmpty(h.Meaning)
+                     && h.StrokeCount > 0)
+            .ToList();
+        var common = cands.Where(h => HanjaData.IsCommonNameHanja(h.Character)).ToList();
+        var pool = common.Count > 0 ? common : cands;
+        return pool.OrderByDescending(h => ComboBaseScore(h, g)).Take(n).ToList();
+    }
+
+    private static double ComboBaseScore(HanjaInfo h, GenderPreference g)
+    {
+        double s = HanjaData.CalculateRelevanceScore(h);
+        if (IsWeakGivenNameHanja(h.Character)) s -= 1000;           // 雨 비·友 벗 등 뒤로
+        if (g != GenderPreference.Neutral && h.GenderPref != GenderPreference.Neutral)
+            s += h.GenderPref == g ? 40 : -400;                     // 반대 성별 한자 강한 회피
+        return s;
+    }
+
+    /// <summary>
+    /// 두 오행 관계의 '약한' 우선 점수: 상생 +20 / 비화(같음) +8 / 상극 -12.
+    /// 의도적으로 작게 — 조합 선택은 한자 품질(관련도)이 지배하고, 오행은 품질이 비슷한
+    /// 조합들 사이의 미세 우선일 뿐이다(상생만 남기고 거르지 않음). 실제 오행 관계는
+    /// 프론트가 표시 정보로 다시 계산해 보여준다.
+    /// </summary>
+    private static double OhaengHarmony(string e1, string e2)
+    {
+        if (string.IsNullOrEmpty(e1) || string.IsNullOrEmpty(e2)) return 0;
+        if (ElementGenerates.GetValueOrDefault(e1) == e2 || ElementGenerates.GetValueOrDefault(e2) == e1)
+            return 20;
+        if (e1 == e2) return 8;
+        return -12; // 5행에서 상생·비화가 아니면 상극
+    }
 
     /// <summary>이름 각 음절에 한자 1개씩 선택. yongshin* 인자가 null이면 용신 가산 없이 동작.</summary>
     public static List<HanjaInfo?> Select(

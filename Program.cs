@@ -43,6 +43,93 @@ if (args.Length >= 1 && args[0] == "dump-creative-glosses")
     return;
 }
 
+// 1회성 CLI: /name SEO 페이지용 인기 이름의 기계적 글로스를 덤프(뜻 윤문 파이프라인 1단계).
+//   dotnet run -- dump-name-glosses [names-json] [outfile]
+// names-json(기본 frontend/src/data/name-seo.json)의 이름 전체를 dump-creative-glosses와
+// 동일한 BuildMechanicalMeaning으로 처리한다. 이미 뜻이 있는 이름은 배치 단계의 --resume이
+// 거르므로 여기선 전부 덤프해도 무방하다.
+if (args.Length >= 1 && args[0] == "dump-name-glosses")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+    NameForm.Application.Engines.Data.NameGenderData.LoadExternalData();
+
+    var namesPath = args.Length >= 2 ? args[1] : Path.Combine("frontend", "src", "data", "name-seo.json");
+    if (!File.Exists(namesPath))
+    {
+        Console.Error.WriteLine($"[dump-name-glosses] 입력 파일 없음: {namesPath}");
+        return;
+    }
+
+    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(namesPath));
+    var names = doc.RootElement.GetProperty("names").EnumerateObject().Select(p => p.Name);
+
+    var dump = new Dictionary<string, string>();
+    int skipped = 0;
+    foreach (var name in names)
+    {
+        if (name.Length != 2 || name[0] == name[1]) { skipped++; continue; } // 2음절·중첩 아님만
+        var gloss = NameForm.Application.Engines.CreativeNamingEngine.BuildMechanicalMeaning(name);
+        if (!string.IsNullOrEmpty(gloss)) dump[name] = gloss; else skipped++;
+    }
+
+    var outPath = args.Length >= 3 ? args[2] : "name-glosses.json";
+    var json = System.Text.Json.JsonSerializer.Serialize(dump, new System.Text.Json.JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    });
+    File.WriteAllText(outPath, json);
+    Console.WriteLine($"[dump-name-glosses] {dump.Count}개 글로스 → {outPath} (제외 {skipped})");
+    return;
+}
+
+// 1회성 CLI: /name 페이지용 이름별 한자 '조합' 상위 K개를 덤프(작명사이트급 조합 카드 1단계).
+//   dotnet run -- dump-name-combos [names-json] [outfile]
+// HanjaSelector.SelectCombos(엔진의 빈출·오행조화·성별 로직)로 표시용 조합을 고른다.
+// 출력 {이름:[["智","宇"],["志","宇"],...]} — 한자별 훈음/획수/오행/등급은 프론트가
+// hanja-seo.json에서 조인하므로 여기선 글자만 덤프한다(데이터 중복 회피).
+if (args.Length >= 1 && args[0] == "dump-name-combos")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+    NameForm.Application.Engines.Data.NameGenderData.LoadExternalData();
+
+    var namesPath = args.Length >= 2 ? args[1] : Path.Combine("frontend", "src", "data", "name-seo.json");
+    if (!File.Exists(namesPath))
+    {
+        Console.Error.WriteLine($"[dump-name-combos] 입력 파일 없음: {namesPath}");
+        return;
+    }
+
+    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(namesPath));
+    var dump = new Dictionary<string, List<string[]>>();
+    int skipped = 0;
+    foreach (var prop in doc.RootElement.GetProperty("names").EnumerateObject())
+    {
+        var name = prop.Name;
+        if (name.Length != 2 || name[0] == name[1]) { skipped++; continue; }
+
+        // 성별: 60/40 분기(프론트 genderSplit과 동일). 애매하면 none으로 과제약 회피.
+        int m = prop.Value.TryGetProperty("m", out var mv) ? mv.GetInt32() : 0;
+        int f = prop.Value.TryGetProperty("f", out var fv) ? fv.GetInt32() : 0;
+        int total = m + f;
+        string gender = total > 0 && m * 100 / total >= 60 ? "male"
+                      : total > 0 && f * 100 / total >= 60 ? "female" : "none";
+
+        var combos = NameForm.Application.Engines.Utils.HanjaSelector.SelectCombos(name, gender, 4);
+        if (combos.Count == 0) { skipped++; continue; }
+        dump[name] = combos.Select(c => new[] { c.First, c.Second }).ToList();
+    }
+
+    var outPath = args.Length >= 3 ? args[2] : "name-combos.json";
+    var json = System.Text.Json.JsonSerializer.Serialize(dump, new System.Text.Json.JsonSerializerOptions
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    });
+    File.WriteAllText(outPath, json);
+    Console.WriteLine($"[dump-name-combos] {dump.Count}개 이름 조합 → {outPath} (제외 {skipped})");
+    return;
+}
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: true)

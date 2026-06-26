@@ -647,7 +647,9 @@ public class CreativeNamingEngine : ICreativeNamingEngine
         return meaning.Split(',', '/', ';', '·')[0].Trim();
     }
 
-    /// <summary>음절의 대표 한자 뜻 — 인명 빈출 한자 우선(雨·塞·羅 등 비이름 글자 회피) + 첫 훈음.</summary>
+    /// <summary>음절의 대표 한자 뜻 — 인명 빈출 한자 우선(雨·塞·羅 등 비이름 글자 회피) + 첫 훈음.
+    /// 빈출 셋 안에서도 이름용으로 약한 글자(雨 비·友 벗 등, HanjaSelector와 동일 세트)는 뒤로
+    /// 밀어 더 나은 동음 대안(우→宇·祐)이 있으면 양보한다.</summary>
     private static string BestGloss(string syl)
     {
         var cands = HanjaData.FindByReading(syl)
@@ -655,7 +657,10 @@ public class CreativeNamingEngine : ICreativeNamingEngine
             .ToList();
         var common = cands.Where(x => HanjaData.IsCommonNameHanja(x.Character)).ToList();
         var pool = common.Count > 0 ? common : cands;
-        var h = pool.OrderByDescending(HanjaData.CalculateRelevanceScore).FirstOrDefault();
+        var h = pool
+            .OrderByDescending(x => HanjaData.CalculateRelevanceScore(x)
+                - (HanjaSelector.IsWeakGivenNameHanja(x.Character) ? 1000 : 0))
+            .FirstOrDefault();
         return CleanGloss(h?.Meaning ?? "");
     }
 
