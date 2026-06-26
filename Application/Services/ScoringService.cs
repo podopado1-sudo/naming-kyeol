@@ -24,7 +24,7 @@ public class ScoringService : IScoringService
     public async Task<CanonicalNameScore> EvaluateAsync(
         string firstName,
         string lastName,
-        DateTime birthDate,
+        DateTime? birthDate,
         string gender,
         string tone,
         TimeSpan? birthTime = null)
@@ -33,17 +33,36 @@ public class ScoringService : IScoringService
         var normalizedGender = NormalizeGender(gender);
         var normalizedTone = NormalizeTone(tone);
 
-        // birthDate.Year를 넘겨 세대 적합도 보정을 활성화 (신생아=출생연도 기준)
+        // birthDate.Year를 넘겨 세대 적합도 보정을 활성화 (신생아=출생연도 기준).
+        // 출생일이 없으면 birthYear=null → 세대 적합 자동 skip (미학 엔진이 이미 지원).
         var aesthetic = await _aestheticEngine.CalculateScoreWithBreakdownAsync(
-            firstName, lastName, normalizedTone, normalizedGender, birthDate.Year);
+            firstName, lastName, normalizedTone, normalizedGender, birthDate?.Year);
 
-        var harmony = await _harmonyEngine.CalculateScoreWithBreakdownAsync(
-            firstName, lastName, birthDate, normalizedGender, birthTime);
+        // 조화(사주/오행)는 출생일이 있어야 산정 가능. 없으면 미학 점수만 평가한다(UI 약속).
+        HarmonyBreakdown harmony;
+        if (birthDate.HasValue)
+        {
+            harmony = await _harmonyEngine.CalculateScoreWithBreakdownAsync(
+                firstName, lastName, birthDate.Value, normalizedGender, birthTime);
+        }
+        else
+        {
+            harmony = new HarmonyBreakdown
+            {
+                Notes = new List<string>
+                {
+                    "출생일을 입력하지 않아 사주 기반 조화는 산정하지 않았습니다. 미학 점수만 평가됩니다.",
+                },
+            };
+        }
 
         var rarity = await _rarityScoringEngine.CalculateRarityScoreAsync(firstName);
 
-        // FinalScore 단일 공식 — Math.Round 일관 (int cast 금지)
-        int finalScore = (int)Math.Round(aesthetic.TotalScore * 0.7 + harmony.TotalScore * 0.3);
+        // FinalScore 단일 공식 — Math.Round 일관 (int cast 금지).
+        // 출생일이 없으면 조화를 빼고 미학 점수만(0.7/0.3 가중 대신 미학 100%).
+        int finalScore = birthDate.HasValue
+            ? (int)Math.Round(aesthetic.TotalScore * 0.7 + harmony.TotalScore * 0.3)
+            : aesthetic.TotalScore;
         finalScore = Math.Clamp(finalScore, 0, 100);
 
         return new CanonicalNameScore

@@ -35,7 +35,7 @@ public interface IScoringService
     Task<CanonicalNameScore> EvaluateAsync(
         string firstName,
         string lastName,
-        DateTime birthDate,
+        DateTime? birthDate,
         string gender,
         string tone,
         TimeSpan? birthTime = null);

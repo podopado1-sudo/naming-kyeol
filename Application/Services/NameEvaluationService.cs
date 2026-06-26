@@ -22,7 +22,7 @@ public class NameEvaluationService : INameEvaluationService
     }
 
     public async Task<NameEvaluationResultDto> EvaluateNameAsync(
-        string name, string lastName, DateTime birthDate, string gender, string tone,
+        string name, string lastName, DateTime? birthDate, string gender, string tone,
         TimeSpan? birthTime = null)
     {
         // 단일 진실의 원천 — 모든 점수가 여기서 나옴
@@ -50,6 +50,7 @@ public class NameEvaluationService : INameEvaluationService
             HarmonyScore = score.HarmonyScore,
             RarityScore = score.RarityScore,
             FinalScore = score.FinalScore,
+            BirthDateProvided = birthDate.HasValue,
 
             Aesthetic = new AestheticBreakdownDto
             {

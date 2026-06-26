@@ -11,6 +11,6 @@ public interface INameEvaluationService
     /// 이름을 종합 평가하여 미학/조화/희귀도 breakdown + 한자 후보 + 설명을 반환
     /// </summary>
     Task<NameEvaluationResultDto> EvaluateNameAsync(
-        string name, string lastName, DateTime birthDate, string gender, string tone,
+        string name, string lastName, DateTime? birthDate, string gender, string tone,
         TimeSpan? birthTime = null);
 }

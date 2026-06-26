@@ -19,7 +19,7 @@ export type EvalSubmitPayload = {
   birth: string;
   /** 출생 시각 (HH:mm, 선택) — 사주 시주(時柱) 계산에 사용 */
   birthTime?: string;
-  gender: "남아" | "여아" | "중립" | "";
+  gender: "남" | "여" | "중립" | "";
   tone: "부드러운" | "중립" | "강한" | "";
 };
 
@@ -356,7 +356,7 @@ export function EvaluateInputPage({
 
           <Section title="성별">
             <Segmented
-              options={["남아", "여아", "중립"]}
+              options={["남", "여", "중립"]}
               value={gender}
               onChange={(v) =>
                 setGender(v as EvalSubmitPayload["gender"])
@@ -429,7 +429,11 @@ export function EvaluateInputPage({
                   transition: "all 180ms",
                 }}
               >
-                {canSubmit ? "이 이름 살펴보기" : "이름을 입력해주세요"}
+                {canSubmit
+                  ? "이 이름 살펴보기"
+                  : firstName.trim() !== "" && lastName.trim() === ""
+                    ? "성씨를 입력해주세요"
+                    : "이름을 입력해주세요"}
               </button>
               {canSubmit && (
                 <span className="sumi-stamp-name" aria-hidden>名</span>

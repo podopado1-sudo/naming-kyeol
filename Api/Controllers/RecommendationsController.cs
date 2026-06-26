@@ -1032,14 +1032,16 @@ public class RecommendationsController : ControllerBase
                 return BadRequest(new { error = "LastName은 필수입니다." });
             }
 
-            if (string.IsNullOrWhiteSpace(request.BirthDate))
+            // 출생일은 선택 사항 — 없으면 미학 점수만 평가한다(평가 서비스가 처리).
+            // 입력된 경우에만 형식을 검증한다.
+            DateTime? birthDate = null;
+            if (!string.IsNullOrWhiteSpace(request.BirthDate))
             {
-                return BadRequest(new { error = "BirthDate는 필수입니다." });
-            }
-
-            if (!DateTime.TryParse(request.BirthDate, out var birthDate))
-            {
-                return BadRequest(new { error = "BirthDate는 YYYY-MM-DD 형식이어야 합니다. (예: 2024-01-15)" });
+                if (!DateTime.TryParse(request.BirthDate, out var parsedBirth))
+                {
+                    return BadRequest(new { error = "BirthDate는 YYYY-MM-DD 형식이어야 합니다. (예: 2024-01-15)" });
+                }
+                birthDate = parsedBirth;
             }
 
             var validGenders = new[] { "male", "female", "none" };

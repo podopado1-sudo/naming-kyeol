@@ -43,8 +43,8 @@ function mapHanjaGroups(res: NameEvaluationResponse): HanjaGroup[] {
 }
 
 function genderLabel(g: EvalSubmitPayload["gender"]): string {
-  if (g === "남아") return "male";
-  if (g === "여아") return "female";
+  if (g === "남") return "male";
+  if (g === "여") return "female";
   return "none";
 }
 
@@ -52,6 +52,22 @@ function toneLabel(t: EvalSubmitPayload["tone"]): string {
   if (t === "부드러운") return "soft";
   if (t === "강한") return "strong";
   return "neutral";
+}
+
+// URL 파라미터(영문)를 폼 초기값(한글)으로 — genderLabel/toneLabel의 역.
+// 빈 값이면 "" 그대로 둬서 미선택 상태로 시작한다.
+function genderSeed(g: string): EvalSubmitPayload["gender"] {
+  if (g === "male") return "남";
+  if (g === "female") return "여";
+  if (g === "none") return "중립";
+  return "";
+}
+
+function toneSeed(t: string): EvalSubmitPayload["tone"] {
+  if (t === "soft") return "부드러운";
+  if (t === "strong") return "강한";
+  if (t === "neutral") return "중립";
+  return "";
 }
 
 // ============================================================
@@ -157,6 +173,10 @@ function EvaluateInner() {
         seed={{
           lastName: initialLast,
           firstName: initialFirst,
+          birth: initialBirthDate,
+          birthTime: initialBirthTime,
+          gender: genderSeed(initialGender),
+          tone: toneSeed(initialTone),
         }}
         onSubmit={handleSubmit}
       />
@@ -277,7 +297,9 @@ function EvaluateResultView({
             style={{
               marginTop: 32,
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: `repeat(${
+                data.birthDateProvided === false ? 3 : 4
+              }, 1fr)`,
               gap: 12,
             }}
           >
@@ -286,11 +308,14 @@ function EvaluateResultView({
               label="미학"
               variant="high"
             />
-            <ScoreTile
-              value={data.harmonyScore}
-              label="조화"
-              variant="mid"
-            />
+            {/* 조화는 출생일(사주)이 있어야 산정 — 없으면 타일 자체를 숨긴다 */}
+            {data.birthDateProvided !== false && (
+              <ScoreTile
+                value={data.harmonyScore}
+                label="조화"
+                variant="mid"
+              />
+            )}
             <ScoreTile
               value={data.rarityScore}
               label="유니크"
@@ -315,32 +340,52 @@ function EvaluateResultView({
           />
         </section>
 
-        {/* 조화 Breakdown */}
-        <section style={{ marginTop: 48 }}>
-          <BreakdownPanel
-            title="조화 점수"
-            total={data.harmonyScore}
-            rows={harmonyRows}
-            notes={data.harmony.notes}
-            footer={
-              data.harmony.usedFallback ? (
-                <div
-                  style={{
-                    marginTop: 14,
-                    padding: "10px 14px",
-                    background: "rgba(181,135,76,0.10)",
-                    border: "1px solid rgba(181,135,76,0.3)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: 12.5,
-                    color: "#7A5B22",
-                  }}
-                >
-                  ⚠ 한자 정보 부족으로 기본값을 사용했어요
-                </div>
-              ) : null
-            }
-          />
-        </section>
+        {/* 조화 Breakdown — 출생일이 있을 때만. 없으면 안내 카드로 대체 */}
+        {data.birthDateProvided === false ? (
+          <section style={{ marginTop: 48 }}>
+            <div
+              style={{
+                padding: "18px 20px",
+                background: "var(--color-surface-2)",
+                border: "1px solid var(--color-divider)",
+                borderRadius: "var(--radius-md)",
+                fontSize: 14,
+                lineHeight: 1.7,
+                color: "var(--color-text-2)",
+              }}
+            >
+              출생일을 입력하지 않아 <strong>사주 기반 오행 조화</strong>는
+              산정하지 않았어요. 종합 점수는 미학 점수만으로 계산됩니다.
+              출생일을 넣으면 사주 오행·자원오행·음양까지 함께 평가해 드려요.
+            </div>
+          </section>
+        ) : (
+          <section style={{ marginTop: 48 }}>
+            <BreakdownPanel
+              title="조화 점수"
+              total={data.harmonyScore}
+              rows={harmonyRows}
+              notes={data.harmony.notes}
+              footer={
+                data.harmony.usedFallback ? (
+                  <div
+                    style={{
+                      marginTop: 14,
+                      padding: "10px 14px",
+                      background: "rgba(181,135,76,0.10)",
+                      border: "1px solid rgba(181,135,76,0.3)",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: 12.5,
+                      color: "#7A5B22",
+                    }}
+                  >
+                    ⚠ 한자 정보 부족으로 기본값을 사용했어요
+                  </div>
+                ) : null
+              }
+            />
+          </section>
+        )}
 
         {/* 한자 후보 */}
         {hanjaGroups.length > 0 && (

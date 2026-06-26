@@ -276,4 +276,31 @@ public class ScoringServiceTests
             Assert.InRange(score.FinalScore, 0, 100);
         }
     }
+
+    // ===== 출생일 없는 평가 (미학-only) =====
+
+    [Fact]
+    public async Task EvaluateAsync_NoBirthDate_SkipsHarmonyAndFinalEqualsAesthetic()
+    {
+        // 출생일이 없으면 사주 조화는 산정하지 않고(0) 종합=미학 점수.
+        var score = await _scoring.EvaluateAsync("서윤", "김", null, "female", "soft");
+
+        Assert.True(score.AestheticScore > 0, "미학 점수는 출생일 없이도 산정되어야 한다");
+        Assert.Equal(0, score.HarmonyScore);
+        Assert.Equal(score.AestheticScore, score.FinalScore);
+        Assert.Contains(score.Harmony.Notes, n => n.Contains("출생일"));
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WithVsWithoutBirthDate_AestheticMatches_FinalDiffers()
+    {
+        // 같은 이름이면 미학 점수는 출생일 유무와 무관하게 동일,
+        // 종합은 조화 포함 여부로 달라진다.
+        var with = await _scoring.EvaluateAsync("서윤", "김", new DateTime(2024, 6, 15), "female", "soft");
+        var without = await _scoring.EvaluateAsync("서윤", "김", null, "female", "soft");
+
+        Assert.Equal(with.AestheticScore, without.AestheticScore);
+        Assert.Equal(without.AestheticScore, without.FinalScore);
+        Assert.InRange(without.FinalScore, 0, 100);
+    }
 }

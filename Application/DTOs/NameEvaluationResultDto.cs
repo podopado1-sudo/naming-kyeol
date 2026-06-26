@@ -18,6 +18,9 @@ public class NameEvaluationResultDto
     public int RarityScore { get; set; }
     public int FinalScore { get; set; }
 
+    /// <summary>출생일 입력 여부. false면 사주 조화 미산정 — 종합=미학 점수, 조화 섹션은 안내로 대체.</summary>
+    public bool BirthDateProvided { get; set; }
+
     // Breakdown
     public AestheticBreakdownDto Aesthetic { get; set; } = new();
     public HarmonyBreakdownDto Harmony { get; set; } = new();
