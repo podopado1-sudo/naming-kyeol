@@ -214,7 +214,7 @@ public static class NamingPrinciples
         bool isFemale = gender == "female";
         var gl = GenderLean(firstSyllable, secondSyllable, isFemale);
         if (gl == null || gl.Value.oppositeLean < LabelThreshold) return null;
-        return isFemale ? "주로 남아 이름" : "주로 여아 이름";
+        return isFemale ? "주로 남자 이름" : "주로 여자 이름";
     }
 
     /// <summary>이름 전체에 대한 성별 안내 라벨 (2음절 외에는 null).</summary>

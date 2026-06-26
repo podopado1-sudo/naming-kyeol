@@ -207,7 +207,7 @@ public class AestheticEngine : IAestheticEngine
         if (NamingPrinciples.EvalGenderSyllableFit(name, gender) < 0.7)
         {
             penaltyTotal += 3;
-            breakdown.Notes.Add(gender == "female" ? "남성형 어미 (여아 기준 참고)" : "여성형 어미 (남아 기준 참고)");
+            breakdown.Notes.Add(gender == "female" ? "남성형 어미 (여자 기준 참고)" : "여성형 어미 (남자 기준 참고)");
         }
 
         // 전체 이름(성+이름) 평가

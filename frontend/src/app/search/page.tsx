@@ -232,7 +232,7 @@ function BabyNamingInner() {
       lastName: result.lastName || lastName,
       date: birthDate || undefined,
       gender:
-        gender === "male" ? "남아" : gender === "female" ? "여아" : "성별 무관",
+        gender === "male" ? "남" : gender === "female" ? "여" : "성별 무관",
       tone:
         tone === "soft"
           ? "소프트 톤"

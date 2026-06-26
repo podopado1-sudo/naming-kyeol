@@ -388,8 +388,8 @@ public class NamingPrinciplesTests
 
     /// <summary>성별 안내 라벨 — 반대로 뚜렷이 기우면(0.70↑) 라벨, 아니면 null</summary>
     [Theory]
-    [InlineData("유", "주", "male", "주로 여아 이름")]
-    [InlineData("도", "윤", "female", "주로 남아 이름")]
+    [InlineData("유", "주", "male", "주로 여자 이름")]
+    [InlineData("도", "윤", "female", "주로 남자 이름")]
     [InlineData("영", "주", "male", null)]      // 혼용(0.61) — 라벨 없음
     [InlineData("유", "주", "female", null)]    // 같은 성별 — 라벨 없음
     [InlineData("유", "주", "none", null)]      // 성별 미지정

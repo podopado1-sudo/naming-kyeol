@@ -41,9 +41,9 @@ function DualSubHeader({
     `선호 ${ctx.preferredEnglishName}`,
     MODE_LABEL[ctx.mode],
     ctx.gender === "male"
-      ? "남아"
+      ? "남"
       : ctx.gender === "female"
-        ? "여아"
+        ? "여"
         : "미지정",
     ctx.tone === "neutral"
       ? "중립 톤"
