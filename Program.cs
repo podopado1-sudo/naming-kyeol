@@ -130,6 +130,56 @@ if (args.Length >= 1 && args[0] == "dump-name-combos")
     return;
 }
 
+// 한자 조합의 자연어 뜻 윤문(phase 3)용 — combos의 고유 한자쌍마다 기계 글로스를 덤프한다.
+// scripts/build_combo_meanings.py 가 이 파일을 Claude로 윤문해 data/combo-meanings.json 생성.
+// 단위는 '한자쌍'(智宇) — 이름 무관·거의 유일이라 한 번 만들면 영구 재사용(런타임 LLM 0).
+//   dotnet run -- dump-combo-glosses [names-json] [outfile]
+if (args.Length >= 1 && args[0] == "dump-combo-glosses")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+
+    var namesPath = args.Length >= 2 ? args[1] : Path.Combine("frontend", "src", "data", "name-seo.json");
+    if (!File.Exists(namesPath))
+    {
+        Console.Error.WriteLine($"[dump-combo-glosses] 입력 파일 없음: {namesPath}");
+        return;
+    }
+
+    // 첫 훈음만 (다중 훈음 "슬기로울 지/지혜 지" → "슬기로울 지"). 프론트 firstGloss·C# CleanGloss와 동일.
+    static string Clean(string m) =>
+        string.IsNullOrWhiteSpace(m) ? "" : m.Split(',', '/', ';', '·')[0].Trim();
+
+    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(namesPath));
+    var glosses = new Dictionary<string, string>();
+    int skipped = 0;
+    foreach (var prop in doc.RootElement.GetProperty("names").EnumerateObject())
+    {
+        if (!prop.Value.TryGetProperty("combos", out var combosEl)) continue;
+        foreach (var combo in combosEl.EnumerateArray())
+        {
+            if (combo.GetArrayLength() != 2) continue;
+            var c1 = combo[0].GetString() ?? "";
+            var c2 = combo[1].GetString() ?? "";
+            var key = c1 + c2;
+            if (key.Length != 2 || glosses.ContainsKey(key)) continue;
+
+            var g1 = Clean(NameForm.Application.Engines.Data.HanjaData.FindByCharacter(c1)?.Meaning ?? "");
+            var g2 = Clean(NameForm.Application.Engines.Data.HanjaData.FindByCharacter(c2)?.Meaning ?? "");
+            if (g1.Length == 0 || g2.Length == 0) { skipped++; continue; }
+            glosses[key] = $"{c1}({g1}) + {c2}({g2})";
+        }
+    }
+
+    var outPath = args.Length >= 3 ? args[2] : "combo-glosses.json";
+    var json = System.Text.Json.JsonSerializer.Serialize(glosses, new System.Text.Json.JsonSerializerOptions
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    });
+    File.WriteAllText(outPath, json);
+    Console.WriteLine($"[dump-combo-glosses] 고유 한자쌍 {glosses.Count}개 → {outPath} (제외 {skipped})");
+    return;
+}
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: true)

@@ -10,6 +10,7 @@ import {
   firstGloss,
   genderSplit,
   getAllNames,
+  getComboMeaning,
   getName,
   getSiblingNames,
   ohaengRelation,
@@ -134,6 +135,7 @@ function ComboCard({ combo, featured }: { combo: string[]; featured: boolean }) 
   const r2 = getHanja(c2);
   if (!r1 || !r2) return null;
   const rel = ohaengRelation(r1.e, r2.e);
+  const meaning = getComboMeaning(combo);
 
   return (
     <div
@@ -152,6 +154,11 @@ function ComboCard({ combo, featured }: { combo: string[]; featured: boolean }) 
           </span>
         )}
       </div>
+      {meaning && (
+        <p className="mb-3 text-[15px] font-medium leading-relaxed text-navy">
+          {meaning} 뜻
+        </p>
+      )}
       <div className="mb-3 grid grid-cols-2 gap-2">
         {[
           { ch: c1, r: r1 },

@@ -66,6 +66,15 @@ def main():
         else {}
     )
 
+    # 조합별 자연어 뜻 (data/combo-meanings.json, build_combo_meanings.py 산출물).
+    # 한자쌍("智宇") → 뜻("슬기롭고 큰"). 없으면 건너뜀(ComboCard가 훈음만 폴백 표시).
+    combo_meanings_path = os.path.join(DATA, "combo-meanings.json")
+    combo_meanings = (
+        json.load(open(combo_meanings_path, encoding="utf-8"))
+        if os.path.exists(combo_meanings_path)
+        else {}
+    )
+
     # 이름 합치기
     all_names = set(male) | set(female)
     records = {}
@@ -96,6 +105,7 @@ def main():
     # 자연어 뜻 + 한자 조합
     with_meaning = 0
     with_combos = 0
+    used_combo_means = {}  # 수록 이름의 조합에 실제로 등장하는 한자쌍만 (top-level 맵, 중복 저장 회피)
     for name, rec in records.items():
         mean = meanings.get(name)
         if mean:
@@ -105,6 +115,11 @@ def main():
         if combo:
             rec["combos"] = combo
             with_combos += 1
+            for pair in combo:
+                key = "".join(pair)
+                cm = combo_meanings.get(key)
+                if cm and key not in used_combo_means:
+                    used_combo_means[key] = cm
 
     # 음절 → 이름 인덱스 (비슷한 이름 내부링크용)
     first_syl = defaultdict(list)
@@ -121,6 +136,7 @@ def main():
             "count": len(records),
         },
         "names": records,
+        "comboMeans": dict(sorted(used_combo_means.items())),
     }
 
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
@@ -134,6 +150,7 @@ def main():
     print(f"수록 이름: {len(records)}")
     print(f"자연어 뜻 보유: {with_meaning} ({with_meaning*100//max(len(records),1)}%)")
     print(f"한자 조합 보유: {with_combos} ({with_combos*100//max(len(records),1)}%)")
+    print(f"조합 뜻(comboMeans) 등재: {len(used_combo_means)}쌍 (combo-meanings.json {len(combo_meanings)}쌍 중)")
     print(f"출력 크기: {size_mb:.2f} MB → {OUT_PATH}")
     print("--- 임계값별 이름 수(스코프 참고) ---")
     totals = sorted((male.get(n, 0) + female.get(n, 0)) for n in all_names if HANGUL_NAME.match(n))

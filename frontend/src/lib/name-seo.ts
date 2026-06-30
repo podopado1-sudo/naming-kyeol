@@ -51,9 +51,12 @@ export function firstGloss(meaning?: string): string {
 const RAW = rawData as unknown as {
   meta: { source: string; minTotal: number; count: number };
   names: Record<string, NameSeoRecord>;
+  /** 한자쌍("智宇") → 조합 단위 자연어 뜻("슬기롭고 큰"). build_combo_meanings.py 산출물. */
+  comboMeans?: Record<string, string>;
 };
 
 const DATA = RAW.names;
+const COMBO_MEANS = RAW.comboMeans ?? {};
 
 export type NameGender = "male" | "female" | "neutral";
 
@@ -97,6 +100,11 @@ const FIRST_SYLLABLE_INDEX: Map<string, string[]> = (() => {
 
 export function getName(name: string): NameSeoRecord | undefined {
   return DATA[name];
+}
+
+/** 한자 조합의 자연어 뜻 (예: ["智","宇"] → "슬기롭고 큰"). 없으면 undefined(훈음 폴백). */
+export function getComboMeaning(combo: string[]): string | undefined {
+  return COMBO_MEANS[combo.join("")];
 }
 
 export function getAllNames(): string[] {
