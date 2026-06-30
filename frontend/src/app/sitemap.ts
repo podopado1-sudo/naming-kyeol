@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAllReadings, getCuratedChars } from "@/lib/hanja-seo";
+import { getCuratedNames } from "@/lib/name-seo";
 
 /**
  * /sitemap.xml 자동 생성
@@ -79,5 +80,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  return [...staticRoutes, ...readingRoutes, ...charRoutes];
+  // 이름 뜻 페이지 — 단계적 공개 전략:
+  // 1차로 대법원 실명 빈도 상위 1,000개만 등재(전부 빈도 80+·자연어 뜻 보유).
+  // "○○ 이름 뜻" 검색 수요가 큰 핵심부터 색인 가속하고, 색인율 확인 후 확대한다.
+  // (미등재 이름 페이지도 생성은 되며 내부링크로 크롤된다)
+  const nameRoutes: MetadataRoute.Sitemap = getCuratedNames(1000).map(
+    (name) => ({
+      url: `${SITE_URL}/name/${encodeURIComponent(name)}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    }),
+  );
+
+  return [...staticRoutes, ...readingRoutes, ...charRoutes, ...nameRoutes];
 }
