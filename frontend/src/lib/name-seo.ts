@@ -1,5 +1,5 @@
 import rawData from "@/data/name-seo.json";
-import { ELEMENT_GENERATES } from "@/lib/hanja-seo";
+import { ELEMENT_GENERATES, initialConsonantOf } from "@/lib/hanja-seo";
 
 /**
  * 이름 뜻 SEO 페이지 (/name) 전용 데이터 모듈.
@@ -106,6 +106,21 @@ export function getAllNames(): string[] {
 /** 인기 상위 N개 — 1차 sitemap 등재 대상 (thin-content 회피) */
 export function getCuratedNames(limit: number): string[] {
   return RANKED.slice(0, limit);
+}
+
+/**
+ * 초성(ㄱ~ㅎ) → 이름 목록 (인기순). 인덱스 페이지(/name)용.
+ * sitemap 등재 범위와 맞춰 인기 상위 `limit`개만 그룹핑한다(내부링크 일치·페이지 경량화).
+ */
+export function getNameConsonantGroups(limit: number): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const name of RANKED.slice(0, limit)) {
+    const cho = initialConsonantOf(name);
+    if (!cho) continue;
+    if (!map.has(cho)) map.set(cho, []);
+    map.get(cho)!.push(name);
+  }
+  return map;
 }
 
 /** 같은 첫 음절의 다른 이름 (인기순, 자신 제외) */

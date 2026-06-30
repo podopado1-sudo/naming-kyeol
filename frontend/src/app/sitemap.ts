@@ -48,6 +48,9 @@ const ROUTES: Array<{
 
   // 한자 사전 인덱스
   { path: "hanja", priority: 0.8, changeFrequency: "monthly" },
+
+  // 이름 뜻 사전 인덱스
+  { path: "name", priority: 0.8, changeFrequency: "weekly" },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

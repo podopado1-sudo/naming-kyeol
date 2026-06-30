@@ -26,6 +26,7 @@ const GUIDE_LINKS: FooterLink[] = [
   { label: "작명 가이드", href: "/guide" },
   { label: "작명 원리", href: "/method" },
   { label: "인명용 한자 사전", href: "/hanja" },
+  { label: "이름 뜻 사전", href: "/name" },
 ];
 
 const COMPANY_LINKS: FooterLink[] = [
