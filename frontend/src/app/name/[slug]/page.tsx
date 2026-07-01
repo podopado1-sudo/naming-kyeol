@@ -156,7 +156,7 @@ function ComboCard({ combo, featured }: { combo: string[]; featured: boolean }) 
       </div>
       {meaning && (
         <p className="mb-3 text-[15px] font-medium leading-relaxed text-navy">
-          {meaning} 뜻
+          {meaning}
         </p>
       )}
       <div className="mb-3 grid grid-cols-2 gap-2">
