@@ -18,25 +18,11 @@ namespace NameForm.Application.Engines.Utils;
 public static class HanjaSelector
 {
     /// <summary>
-    /// 인명 빈출 셋에는 들어 있으나 '주어진 이름' 한자로는 약한 글자 — 관련도 점수는 높지만
-    /// 字義가 평범한 사물/어색한 명사라 더 나은 동음 대안이 있으면 양보해야 한다.
-    /// (예: 우 → 友(벗)·雨(비)보다 宇(집·우주)·祐(복)·佑(도울)이 이름다움)
-    /// "관련도 높음 ≠ 좋은 이름 한자" 보정. 감점일 뿐이라 대안이 없으면 여전히 선택됨.
-    /// 피드백으로 확장 가능.
+    /// 이 글자가 '이름용으로 약한 한자'인지 — 동음의 더 나은 대안이 있으면 양보해야 하는 글자.
+    /// 세트는 HanjaData.WeakGivenNameHanjaSet(359자, 2026-07-02 전수 스캔 확정)로 이관 —
+    /// 기존 호출부(CreativeNamingEngine 등) 호환을 위한 위임 심.
     /// </summary>
-    private static readonly HashSet<string> WeakGivenNameHanja = new()
-    {
-        "友", "雨", "二", "米", "株", "注", "牛", "主",
-        // 관련도(빈출)는 높지만 이름자로는 약한 글자 — 더 나은 동음 대안에 양보.
-        // (서→西 서녘보다 瑞 상서로울 / 호→虎 범보다 浩·昊 / 예→兒 아이보다 睿·藝 / 주→朱 성씨보다 周·珠)
-        "西", "虎", "兒", "朱", "序", "紙"
-    };
-
-    /// <summary>
-    /// 이 글자가 '이름용으로 약한 빈출 한자'인지 — 동음의 더 나은 대안이 있으면 양보해야 하는 글자.
-    /// 뜻 글로스 생성(BuildMechanicalMeaning) 등 다른 한자 선택 지점도 같은 세트를 쓰도록 공개.
-    /// </summary>
-    public static bool IsWeakGivenNameHanja(string character) => WeakGivenNameHanja.Contains(character);
+    public static bool IsWeakGivenNameHanja(string character) => HanjaData.IsWeakGivenNameHanja(character);
 
     /// <summary>오행 상생: key가 생(生)하는 오행.</summary>
     private static readonly Dictionary<string, string> ElementGenerates = new()
@@ -166,8 +152,8 @@ public static class HanjaSelector
             s += 4; // 오행 정보 보유 소가산 (정보 없는 한자보다 우선)
         }
 
-        // 이름용으로 약한 빈출 한자(友 벗·雨 비 등)는 감점 — 더 나은 동음 대안이 있으면 양보.
-        if (WeakGivenNameHanja.Contains(h.Character)) s -= 30;
+        // 이름용으로 약한 한자(友 벗·雨 비·菜 나물 등)는 감점 — 더 나은 동음 대안이 있으면 양보.
+        if (HanjaData.IsWeakGivenNameHanja(h.Character)) s -= 30;
 
         return s;
     }

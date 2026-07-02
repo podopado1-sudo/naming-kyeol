@@ -173,6 +173,10 @@ public class NamePoolEngine : INamePoolEngine
     {
         double score = HanjaData.CalculateRelevanceScore(h);
 
+        // 이름 뜻으로 약한 한자(평범한 사물·허사 훈)는 발음별 대표 선택에서 뒤로 —
+        // HanjaSelector.ScoreHanja와 동일 강도(-30). 대안이 없으면 여전히 선택됨.
+        if (HanjaData.IsWeakGivenNameHanja(h.Character)) score -= 30;
+
         if (!string.IsNullOrEmpty(h.FiveElement))
         {
             if (lackingElements.Contains(h.FiveElement)) score += 350;

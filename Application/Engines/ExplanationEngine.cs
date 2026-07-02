@@ -320,7 +320,10 @@ public class ExplanationEngine : IExplanationEngine
                     .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning))
                     .ToList();
                 var common = cands.Where(h => HanjaData.IsCommonNameHanja(h.Character)).ToList();
-                rep = (common.Count > 0 ? common : cands).FirstOrDefault();
+                // 약한 한자(菜 나물·雨 비 등)는 뒤로 — 안정 정렬이라 기존 관련도 순서는 보존.
+                rep = (common.Count > 0 ? common : cands)
+                    .OrderBy(h => HanjaData.IsWeakGivenNameHanja(h.Character) ? 1 : 0)
+                    .FirstOrDefault();
             }
             if (rep != null)
             {
