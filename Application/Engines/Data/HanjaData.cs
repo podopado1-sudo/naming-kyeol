@@ -1210,12 +1210,18 @@ public static class HanjaData
         "蠍","蝙","蝠","蝮","虺","蟇","鼀","蟾","蛞","蚪","蝌","鼢","鼴","鼹",
         // 2차: 재생성 조합 검수에서 확정 (責=채 독음 오선택·魯 노둔·膃 살질·膝 무릎) + LIVE 보류분 (隱·逸·畢)
         "責","魯","膃","膝","隱","逸","畢",
-        // 호환 한자 변형 (기존/신규 불용자의 CJK 호환 코드포인트: 落塚猪神禍剆苦菌)
-        "落","塚","猪","神","禍","剆","苦","菌"
     };
 
-    /// <summary>이름에 쓰지 않는 불용한자(부정적 의미)인지 판정.</summary>
-    public static bool IsForbiddenNameHanja(string character) => ForbiddenNameHanjaSet.Contains(character);
+    /// <summary>이름에 쓰지 않는 불용한자(부정적 의미)인지 판정.
+    /// CJK 호환 코드포인트(U+F900·U+2F800 영역의 落神禍 등)는 NFKC 정규형으로 조회 —
+    /// 세트에 정규형만 있으면 모든 호환 변형이 자동 차단된다.
+    /// (호환자를 리터럴로 세트에 넣는 방식은 편집기 NFC 정규화로 조용히 깨진 전력이 있음.)</summary>
+    public static bool IsForbiddenNameHanja(string character)
+    {
+        if (ForbiddenNameHanjaSet.Contains(character)) return true;
+        if (character.IsNormalized(System.Text.NormalizationForm.FormKC)) return false;
+        return ForbiddenNameHanjaSet.Contains(character.Normalize(System.Text.NormalizationForm.FormKC));
+    }
 
     /// <summary>실제 인명에 자주 쓰이는 대표 한자(인명 빈출 셋)인지 판정. 뜻 풀이 시 비(非)이름 한자 배제용.</summary>
     public static bool IsCommonNameHanja(string character) => CommonNameHanja.Contains(character);
