@@ -711,6 +711,9 @@ public static class HanjaData
 
         // ── Unicode 획수 (수리사격용 — kTotalStrokes 95.8% 커버) ──────────
         LoadStrokeData();
+
+        // ── 대표 훈 오버라이드 (모든 Meaning 기록자 이후 — LoadMeaningsFromJson이 덮어쓰므로) ──
+        ApplyGlossOverrides();
     }
 
     /// <summary>
@@ -1210,6 +1213,8 @@ public static class HanjaData
         "蠍","蝙","蝠","蝮","虺","蟇","鼀","蟾","蛞","蚪","蝌","鼢","鼴","鼹",
         // 2차: 재생성 조합 검수에서 확정 (責=채 독음 오선택·魯 노둔·膃 살질·膝 무릎) + LIVE 보류분 (隱·逸·畢)
         "責","魯","膃","膝","隱","逸","畢",
+        // 3차(2026-07-02 대표 훈 검수): 정확한 대표 훈이 부정(외로움 계열)으로 확인된 글자
+        "鰥", // 홀아비 환
     };
 
     /// <summary>이름에 쓰지 않는 불용한자(부정적 의미)인지 판정.
@@ -1586,6 +1591,72 @@ public static class HanjaData
         public string? radical { get; set; }
         public string? genderPref { get; set; }
         public string? tonePref { get; set; }
+    }
+
+    /// <summary>
+    /// 대표 훈 오버라이드(data/hanja-gloss-overrides.json) 적용.
+    /// 다중 훈 사전의 첫 훈이 통용 대표 훈이 아닌 글자(然 "불탈 연/그럴 연" 등)의
+    /// Meaning을 재배열해 대표 훈이 맨 앞에 오도록 한다 — 기존 훈은 전부 보존.
+    /// 소비처(CleanGloss/BuildCardMeaning/firstGloss 등)는 첫 훈만 취하므로 코드 수정 없이 전파.
+    /// LoadMeaningsFromJson이 Meaning을 무조건 덮어쓰므로 반드시 모든 기록자 이후에 호출.
+    /// </summary>
+    private static void ApplyGlossOverrides()
+    {
+        var dict = _loadedDictionary;
+        if (dict == null) return;
+
+        var execDir = AppContext.BaseDirectory;
+        var currentDir = Directory.GetCurrentDirectory();
+        var projectRoot = Path.GetFullPath(Path.Combine(execDir, "..", "..", "..", ".."));
+
+        foreach (var basePath in new[] { execDir, currentDir, projectRoot })
+        {
+            foreach (var path in new[]
+                     {
+                         Path.Combine(basePath, "data", "hanja-gloss-overrides.json"),
+                         Path.Combine(basePath, "hanja-gloss-overrides.json")
+                     })
+            {
+                if (!File.Exists(path)) continue;
+                try
+                {
+                    var overrides = JsonSerializer.Deserialize<Dictionary<string, string>>(
+                        File.ReadAllText(path));
+                    if (overrides == null) return;
+                    foreach (var (ch, preferred) in overrides)
+                    {
+                        if (dict.TryGetValue(ch, out var h))
+                            h.Meaning = ReorderGloss(h.Meaning, preferred);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"대표 훈 오버라이드 로드 실패: {ex.Message}");
+                }
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 다중 훈 문자열에서 preferred 훈이 맨 앞에 오도록 재배열 — 기존 훈 무손실, 멱등.
+    /// 구분자 집합은 첫 훈 소비처(Split ',','/',';','·')와 동일해야 한다(계약).
+    /// </summary>
+    public static string ReorderGloss(string meaning, string preferred)
+    {
+        preferred = preferred?.Trim() ?? "";
+        if (preferred.Length == 0) return meaning;
+        if (string.IsNullOrWhiteSpace(meaning)) return preferred;
+
+        var tokens = meaning.Split(',', '/', ';', '·')
+            .Select(t => t.Trim())
+            .Where(t => t.Length > 0)
+            .ToList();
+        if (tokens.Count > 0 && tokens[0] == preferred) return meaning;
+
+        tokens.Remove(preferred); // 목록에 있으면 이동, 없으면 신규 삽입
+        tokens.Insert(0, preferred);
+        return string.Join(", ", tokens);
     }
 
     /// <summary>

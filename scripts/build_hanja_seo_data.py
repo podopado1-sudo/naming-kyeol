@@ -43,6 +43,22 @@ def stroke_yinyang(strokes):
     return "陰" if last % 2 == 0 else "陽"
 
 
+def reorder_gloss(meaning, preferred):
+    """대표 훈이 맨 앞에 오도록 재배열 — HanjaData.ReorderGloss(C#)와 동일 로직/구분자."""
+    preferred = (preferred or "").strip()
+    if not preferred:
+        return meaning
+    if not meaning or not meaning.strip():
+        return preferred
+    tokens = [t.strip() for t in re.split(r"[,/;·]", meaning) if t.strip()]
+    if tokens and tokens[0] == preferred:
+        return meaning
+    if preferred in tokens:
+        tokens.remove(preferred)
+    tokens.insert(0, preferred)
+    return ", ".join(tokens)
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # Windows cp949 콘솔 대응
@@ -51,6 +67,10 @@ def main():
     radical_map = load("hanja_radical_element_map.json")
     core_list = load("hanja_core_v1.json")
     core_map = {e["hanja"]: e for e in core_list}
+    try:
+        gloss_overrides = load("hanja-gloss-overrides.json")  # 대표 훈 오버라이드 (백엔드와 공유)
+    except FileNotFoundError:
+        gloss_overrides = {}
 
     out = {}
     grade_counter = Counter()
@@ -71,6 +91,8 @@ def main():
             skipped_no_reading.append(char)
             continue
         meaning = entry.get("meaning_ko") or None
+        if meaning and char in gloss_overrides:
+            meaning = reorder_gloss(meaning, gloss_overrides[char])
         strokes = strokes_map.get(char)
         is_gov = "gov" in (entry.get("sources") or [])
 
