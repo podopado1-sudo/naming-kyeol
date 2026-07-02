@@ -128,6 +128,29 @@ public class ExplanationEngineTests
     }
 
     [Fact]
+    public async Task GenerateDetailedReasonsAsync_UsesSelectedHanjaInMeaningNote()
+    {
+        // 2026-07-02: evaluate 경로 배선 — 점수(Harmony)가 배정한 한자를 전달하면
+        // MeaningNote가 그 한자로 표시되어야 함 (추천 카드와 평가 페이지 일관)
+        var selected = new[]
+        {
+            NameForm.Application.Engines.Data.HanjaData.FindByCharacter("瑞"), // 상서 서
+            NameForm.Application.Engines.Data.HanjaData.FindByCharacter("硯"), // 벼루 연
+        };
+        Assert.All(selected, h => Assert.NotNull(h)); // 전제: 사전에 존재
+
+        var withSelected = await _engine.GenerateDetailedReasonsAsync(
+            "서연", "김", 85, 80, 60, "female", "soft", null, selected);
+        var without = await _engine.GenerateDetailedReasonsAsync(
+            "서연", "김", 85, 80, 60, "female", "soft", null);
+
+        Assert.Contains("瑞", withSelected.MeaningNote);
+        Assert.Contains("硯", withSelected.MeaningNote);
+        // 폴백(빈출 우선)은 벼루 연(硯)을 고르지 않음 — 배선이 실제로 표시를 바꾸는지 확인
+        Assert.DoesNotContain("硯", without.MeaningNote);
+    }
+
+    [Fact]
     public async Task GenerateDetailedReasonsAsync_StrengthsHaveAtLeastTwo()
     {
         var result = await _engine.GenerateDetailedReasonsAsync(

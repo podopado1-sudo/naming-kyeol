@@ -1,6 +1,7 @@
 using NameForm.Application.DTOs;
 using NameForm.Application.Engines;
 using NameForm.Application.Engines.Data;
+using NameForm.Application.Engines.Utils;
 
 namespace NameForm.Application.Services;
 
@@ -28,6 +29,13 @@ public class NameEvaluationService : INameEvaluationService
         // 단일 진실의 원천 — 모든 점수가 여기서 나옴
         var score = await _scoringService.EvaluateAsync(name, lastName, birthDate, gender, tone, birthTime);
 
+        // 점수(Harmony)가 실제 배정한 한자 — MeaningNote가 추천 카드와 같은 한자를 설명하게 한다.
+        // 출생일 미제공 시 조화 산정이 없어 비어 있으므로, 같은 선택기(HanjaSelector)를 용신 없이
+        // 호출해 표시용 한자를 정한다(/name 조합·추천 폴백과 동일 로직 = 표시 일관).
+        var selectedHanja = score.Harmony?.SelectedHanja;
+        if (selectedHanja == null || selectedHanja.Count == 0)
+            selectedHanja = HanjaSelector.Select(name, ScoringService.NormalizeGender(gender), null, null, null);
+
         // 설명 생성 (점수와 동일한 값으로)
         // 세대 적합도(GenerationFit)를 함께 넘겨 cautions에 세대 불일치 안내, strengths에 시대중립 노출
         var explanation = await _explanationEngine.GenerateDetailedReasonsAsync(
@@ -35,7 +43,8 @@ public class NameEvaluationService : INameEvaluationService
             score.RarityScore,
             ScoringService.NormalizeGender(gender),
             ScoringService.NormalizeTone(tone),
-            score.Aesthetic.GenerationFit);
+            score.Aesthetic.GenerationFit,
+            selectedHanja);
 
         var hanjaCandidates = BuildHanjaCandidates(name);
 

@@ -33,6 +33,8 @@ public interface IExplanationEngine
     /// <summary>
     /// 구조화된 상세 추천 이유 생성 (세대 적합도 포함)
     /// </summary>
+    /// <param name="selectedHanja">점수(Harmony)가 실제 배정한 한자 — 전달 시 MeaningNote가
+    /// 그 한자로 표시되어 추천 카드와 평가 페이지가 일관된다. 미전달 시 정제 폴백.</param>
     Task<ExplanationResult> GenerateDetailedReasonsAsync(
         string name,
         string? lastName,
@@ -41,7 +43,8 @@ public interface IExplanationEngine
         int rarityScore,
         string gender,
         string tone,
-        GenerationFitResult? generationFit);
+        GenerationFitResult? generationFit,
+        IReadOnlyList<HanjaInfo?>? selectedHanja = null);
 }
 
 /// <summary>

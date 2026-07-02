@@ -52,7 +52,8 @@ public class ExplanationEngine : IExplanationEngine
         string name, string? lastName,
         int aestheticScore, int harmonyScore, int rarityScore,
         string gender, string tone,
-        GenerationFitResult? generationFit)
+        GenerationFitResult? generationFit,
+        IReadOnlyList<HanjaInfo?>? selectedHanja = null)
     {
         int overall = (int)Math.Round(aestheticScore * 0.7 + harmonyScore * 0.3);
         var toneLabel = NormalizeTone(tone);
@@ -63,7 +64,8 @@ public class ExplanationEngine : IExplanationEngine
             Strengths = BuildStrengths(name, lastName, aestheticScore, harmonyScore, rarityScore, generationFit),
             Cautions = BuildCautions(name, lastName, aestheticScore, rarityScore, generationFit),
             PronunciationNote = BuildPronunciationNote(name, lastName, aestheticScore),
-            MeaningNote = BuildMeaningEvidence(name),
+            // 한자 뜻 — 점수(Harmony)가 실제 배정한 한자로 표시(추천 카드와 일관). 없으면 정제 폴백.
+            MeaningNote = BuildMeaningEvidence(name, selectedHanja),
             ToneReason = BuildToneReason(name, toneLabel)
         };
 

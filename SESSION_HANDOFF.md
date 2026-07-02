@@ -33,11 +33,20 @@
   불용 필터는 생성 경로(NamePool/HanjaSelector/Creative/Explanation)에만 적용.
 - 스캔 부정어 사전·검증 스크립트는 이 세션 대화(scratchpad `scan_forbidden_candidates.py`·`finalize_forbidden.py`) 참조.
 
+### 후속: evaluate 경로 선택 한자 배선 완료 (같은 세션, 2026-06-25 잔여 해소)
+- `GenerateDetailedReasonsAsync`에 `selectedHanja` 옵션 인자 추가 → `MeaningNote`가
+  점수(Harmony)가 배정한 한자로 표시 (추천 카드=평가 페이지 일관).
+- 출생일 미제공 시(조화 미산정, `SelectedHanja` 빈 리스트) `HanjaSelector.Select(name, gender, null,null,null)`로
+  동일 선택기 경유 — /name 조합·추천 폴백과 표시 일관.
+- 실측: 서연+생일 → 書然(용신 반영) / 서연 생일 없음 → 書蓮. 회귀 테스트 1건 추가(947/947).
+- 관찰(미조치): 然이 "불탈 연"으로 표시됨 — 사전 첫 훈이 원뜻(燃)이라 카드 인상이 약함.
+  다중 훈 대표 훈 선정(통용 훈 우선) 검토 여지.
+
 ### 다음 작업 후보
 1. (d) /name 미학/발음 점수 섹션, 공유 OG 카드 (후순위, 이전 세션 이월)
-2. evaluate 경로(`GenerateDetailedReasonsAsync`) 선택 한자 배선 (2026-06-25 세션 잔여)
-3. WeakGivenNameHanja 확장 검토 — 부정은 아니지만 이름에 약한 글자(菜 나물, 枷 도리깨 등)는
+2. WeakGivenNameHanja 확장 검토 — 부정은 아니지만 이름에 약한 글자(菜 나물, 枷 도리깨 등)는
    불용 대신 감점이 정합. 이번에 발견만 하고 손대지 않음.
+3. 다중 훈 대표 훈 선정 검토 — 然(불탈→그럴), 書 vs 瑞 등 표시 훈 품질 (위 관찰 항목)
 
 ---
 
