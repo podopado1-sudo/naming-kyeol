@@ -27,6 +27,9 @@ public class WeakGivenNameHanjaTests
     [InlineData("焉")] // 어찌 언 (허사)
     [InlineData("腸")] // 창자 장 (신체 범속)
     [InlineData("倉")] // 곳집 창
+    [InlineData("商")] // 장사 상 — 대표 훈 정정 후 후속 검토 (尙常相祥 대안)
+    [InlineData("貨")] // 재물 화 — 화 음절 점유 아티팩트 (平貨→平和)
+    [InlineData("暈")] // 무리 훈 — 훈/운 음절 점유 아티팩트 (在暈→才訓)
     public void ExpandedSet_IsWeak(string ch)
     {
         Assert.True(HanjaData.IsWeakGivenNameHanja(ch));
