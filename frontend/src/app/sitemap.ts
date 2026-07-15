@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getAllReadings, getCuratedChars } from "@/lib/hanja-seo";
+import { getAllDetailChars, getAllReadings } from "@/lib/hanja-seo";
 import { getCuratedNames } from "@/lib/name-seo";
 
 /**
@@ -76,7 +76,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }),
   );
 
-  const charRoutes: MetadataRoute.Sitemap = getCuratedChars().map((char) => ({
+  // 단계적 공개 2단계 (2026-07-15): S급 큐레이션 → 전체 상세 글자.
+  // 근거: 서치콘솔 색인 1,790/2,557(약 70%), 발견됨-미색인 0(크롤 예산 여유),
+  // 크롤링됨-미색인 115(4.5%)로 thin-content 경보 없음.
+  const charRoutes: MetadataRoute.Sitemap = getAllDetailChars().map((char) => ({
     url: `${SITE_URL}/hanja/${encodeURIComponent(char)}`,
     lastModified,
     changeFrequency: "monthly" as const,
