@@ -70,7 +70,9 @@ public static class HanjaSelector
     private static double ComboBaseScore(HanjaInfo h, GenderPreference g)
     {
         double s = HanjaData.CalculateRelevanceScore(h);
-        if (IsWeakGivenNameHanja(h.Character)) s -= 1000;           // 雨 비·友 벗 등 뒤로
+        // 약한 한자 감점은 Core_v1 가점(+2000)까지 지배해야 함 — 코어셋은 오행 '검수' 커버리지라
+        // 불용·약자도 포함되며, 그 신뢰도 점수가 조합 품질 경쟁을 이기면 안 됨 (革=가죽이 赫을 이기던 버그).
+        if (IsWeakGivenNameHanja(h.Character)) s -= 3000;
         if (g != GenderPreference.Neutral && h.GenderPref != GenderPreference.Neutral)
             s += h.GenderPref == g ? 40 : -400;                     // 반대 성별 한자 강한 회피
         return s;

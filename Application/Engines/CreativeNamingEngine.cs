@@ -659,7 +659,8 @@ public class CreativeNamingEngine : ICreativeNamingEngine
         var pool = common.Count > 0 ? common : cands;
         var h = pool
             .OrderByDescending(x => HanjaData.CalculateRelevanceScore(x)
-                - (HanjaSelector.IsWeakGivenNameHanja(x.Character) ? 1000 : 0))
+                // -3000: Core_v1 가점(+2000)까지 지배 — HanjaSelector.ComboBaseScore와 동일 근거
+                - (HanjaSelector.IsWeakGivenNameHanja(x.Character) ? 3000 : 0))
             .FirstOrDefault();
         return CleanGloss(h?.Meaning ?? "");
     }
