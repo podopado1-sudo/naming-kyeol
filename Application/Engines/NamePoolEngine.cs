@@ -173,9 +173,11 @@ public class NamePoolEngine : INamePoolEngine
     {
         double score = HanjaData.CalculateRelevanceScore(h);
 
-        // 이름 뜻으로 약한 한자(평범한 사물·허사 훈)는 발음별 대표 선택에서 뒤로 —
-        // HanjaSelector.ScoreHanja와 동일 강도(-30). 대안이 없으면 여전히 선택됨.
-        if (HanjaData.IsWeakGivenNameHanja(h.Character)) score -= 30;
+        // 이름 뜻으로 약한 한자(평범한 사물·허사 훈)는 발음별 대표 선택에서 뒤로.
+        // -3000: Core_v1 가점(+2000)까지 지배해야 함 — 대표는 이후 HanjaSelector가 실제
+        // 배정할(비약자) 한자와 근사해야 오행/성별 가산이 엉뚱한 글자 기준으로 계산되지 않는다
+        // (革=가죽이 대표면 점수는 革의 오행, 배정·표시는 爀 — 불일치). 대안 없으면 여전히 선택됨.
+        if (HanjaData.IsWeakGivenNameHanja(h.Character)) score -= 3000;
 
         if (!string.IsNullOrEmpty(h.FiveElement))
         {
