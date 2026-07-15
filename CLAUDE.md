@@ -22,7 +22,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 30일 보존)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (877 테스트 — 엔진별 단위 테스트 16/16 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (985 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -41,7 +41,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 877개)
+# 테스트 실행 (NameForm.slnx 경유 — 985개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -203,10 +203,24 @@ D:\MyDev\NameForm\
 - **hanja_dictionary_final.json**: 9,595자 (마스터 통합 사전)
 - **data-gov.csv / data-naver.csv**: 대법원/네이버 인명용 한자
 - **Unihan_*.txt**: Unicode 표준 발음/획수/부수 데이터
+- **data/hanja-gloss-overrides.json**: 대표 훈 오버라이드 95자 (然 불탈→그럴 연 등,
+  로드 시 Meaning 재배열 — 원 훈 보존·멱등, 소비처는 첫 훈만 취하므로 무수정 전파)
+- **data/combo-meanings.json**: 한자쌍 자연어 뜻 16,203쌍 (LLM 배치 윤문, 런타임 비용 0)
+
+### 글자 품질 세트 (HanjaData.cs 인라인, 2026-07-02 기준)
+- **ForbiddenNameHanjaSet 850자** — 명백 부정 훈 하드 배제 (생성 경로만, 평가/분석은 통과).
+  호환 코드포인트는 NFKC 정규형 조회로 자동 차단 (리터럴 등재 금지 — NFC 정규화 회귀 전력)
+- **WeakGivenNameHanjaSet 621자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
+  감점. 배제가 아니라 동음 대안 있을 때만 양보 → combos 소실 없음
+- **CommonNameHanja 320자** — 인명 빈출 가점(+300)
+- ⚠️ **감점 강도 계약**: 조합/글로스/풀 경로의 weak 감점은 **-3000** — Core_v1 검수 가점(+2000)을
+  지배해야 함 (코어셋은 오행 검수 커버리지라 약자도 포함, 신뢰도 점수가 품질 경쟁을 이기면 안 됨)
 
 ### 데이터 로딩
 - `HanjaData.cs`: static Dictionary + lock 기반 스레드 안전 싱글톤
 - `Program.cs`에서 `LoadExternalData()` 호출로 시작 시 로드
+- 대표 훈 오버라이드는 모든 Meaning 기록자 이후(`LoadStrokeData()` 직후) 적용 —
+  `hanja_meanings.json`이 Meaning을 무조건 덮어쓰기 때문
 
 ## 주요 유틸리티
 
@@ -214,6 +228,13 @@ D:\MyDev\NameForm\
 - **FortuneUtils**: 사주 오행 계산, 획수 기반 자원오행, 음양 판정
 - **MorphemeAnalyzer**: 형태소 분석
 - **NegativePatternLoader**: 부정적 발음 패턴 로딩 (JSON)
+- **HanjaSelector**: 이름 음절별 한자 배정의 단일 진실의 원천 (불용 배제·빈출 우선·용신 가산·weak 감점)
+
+### 품질 감사 스크립트 (scripts/)
+- `scan_weak_name_candidates.py` — 사전 훈 전수 스캔 (다중 훈 검수 + 약한 훈 후보)
+- `audit_syllable_occupancy.py` — combos 음절 점유 감사 (어색 훈 글자가 음절 상위 점유 탐지)
+- weak 추가 시 절차: 점유 감사 → 재생성 diff에서 '새로 승격된 글자' 검수(두더지 2~4라운드 수렴)
+  → 신규 쌍 윤문(소량 인라인 / 대량 `build_combo_meanings.py` Batch) → 커버리지 100% 확인
 
 ## 코드 규칙
 
@@ -296,7 +317,7 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 ### 백엔드
 - **API Key 인증**: 현재 단순 키 검증 — 본격 인증/인가 시스템 필요 (OAuth, JWT 등). 운영은 `Authentication__Enabled=false` 상태
 - **EF Core warning**: `Candidate.Reasons` 컬렉션에 ValueComparer 미설정 (동작엔 문제 없지만 경고 발생)
-- **xUnit1026 경고 1건**: `NamingPrinciplesTests.ApplyDueum_TransformsAsExpected`의 미사용 파라미터
+- ~~xUnit1026 경고~~ (2026-06-13 수정 완료)
 
 ### 프론트엔드
 - **/guide의 회사명/반려동물은 "준비 중" 안내**: 해당 라우트 미구현
