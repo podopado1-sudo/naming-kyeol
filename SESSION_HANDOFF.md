@@ -5,7 +5,41 @@
 
 ---
 
-## 마지막 세션 요약 (2026-07-02 — 🈶 표시·조합 품질 대수술: 대표 훈 95자 + Weak 621자 + 점수 아티팩트 3건 수정)
+## 마지막 세션 요약 (2026-07-21 — 📊 /name 미학 점수 섹션 + OG 공유 카드 3,305장)
+
+이월 과제 "(d) /name 미학/발음 점수 섹션, 공유 OG 카드" 완결. 커밋 4개 push·배포.
+
+### 커밋
+| 커밋 | 내용 |
+|------|------|
+| `9f3aa40` | **dump-name-scores CLI** — AestheticEngine breakdown 덤프(성씨 제외·tone=neutral·60/40 성별). 내부 노트 "male와"→"남자 이름과" 공개 치환 |
+| `9f30ddc` | **name-seo에 sc 병합** — 3,305개 100%, 1.10→1.51MB. `NameScoreBreakdown`+`toAestheticBreakdown` (toneBonus 항상 0 복원) |
+| `321d3cd` | **점수 섹션 UI** — 통계↔한자조합 사이, orphan이던 `ScoreBreakdownCard` 재활용. 감점·노트 전부 노출(사용자 확정) + 유행 배제 철학 문구 프레이밍 + /evaluate 퍼널 |
+| `17f3e3e` | **OG 카드 3,305장 정적 생성** — `build_og_font.py`(woff2→wght700 인스턴스→서브셋→base64 TS 614KB, OFL RFN 준수 KyeolOG) + `opengraph-image.tsx`(satori). 프리렌더 12,914→16,219 유닛, 19.3s→27.2s로 빌드 부담 무시 가능 |
+
+### 핵심 교훈
+- **Next 16.2: 세그먼트의 generateStaticParams가 메타데이터 라우트(opengraph-image)에 상속 안 됨** —
+  없으면 ƒ(온디맨드)로 강등. 파일에 직접 export해야 ● 정적 생성 (이 프로젝트는 온디맨드 ISR 500 전력상 전량 프리렌더 원칙).
+- satori 폰트는 TTF/OTF/WOFF만(woff2 불가) — 저장소의 PretendardVariable.woff2를 fonttools
+  `instancer`(wght=700 고정)+`subset`으로 오프라인 변환 가능. node:fs 대신 base64 TS import(번들 자립).
+- Python `euc_kr` 코덱은 UHC 확장까지 인코딩(11,172자 전부 통과) — KS X 1001 2,350자는
+  2바이트 리드 0xB0~0xC8 필터 필요.
+- Pretendard는 OFL **Reserved Font Name** — 서브셋(Modified Version)은 name 테이블 개명 필수(KyeolOG).
+- **PowerShell에서 `[slug]` 경로는 와일드카드로 해석** — `Move-Item`/`Test-Path`는 `-LiteralPath`,
+  git 스테이징은 `':(literal)...'` pathspec. 커밋 메시지에 큰따옴표 포함 시 `-m` 인자 깨짐 → `-F 파일`로.
+- 로컬 prod 빌드는 Turbopack 28워커로 0.9분(16,219유닛) — 빌드 실측 실험 비용이 낮으니 추측 대신 실측.
+- OG 라벨 문구 수정 시 `scripts/build_og_font.py`의 `OG_LABELS` 동기화(한글은 KS X 1001 마진으로 흡수).
+
+### 다음 작업 후보
+1. **배포 확인**: Vercel 배포 완료 후 카카오 공유 디버거(캐시 퍼지)·Facebook Sharing Debugger로
+   `/name/서연` 카드 확인 (전량 프리렌더 배포 ~20-30분 소요 유의)
+2. /hanja·/name 색인 추이 재확인 — sitemap 전체 공개(7/15) 2~3주 뒤 = **8월 초**.
+   D급 '크롤링됨-미색인' 대량 누적 여부 + /name 색인 진입 여부
+3. weak 추가 시 정기 절차화(이월) — 점유 감사 + 두더지 diff 검수 루틴
+
+---
+
+## 이전 세션 요약 (2026-07-02 — 🈶 표시·조합 품질 대수술: 대표 훈 95자 + Weak 621자 + 점수 아티팩트 3건 수정)
 
 핸드오프 후보 2·3(대표 훈 / Weak 확장)을 결합 진행하다 연쇄 발견으로 확장된 긴 세션.
 모두 push·배포·라이브 검증 완료. 총 **이름 1,500여 개의 한자 조합 개선**, combos 소실 0, comboMeans 100%(12,459쌍).
