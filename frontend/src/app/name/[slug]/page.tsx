@@ -5,6 +5,7 @@ import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { Badge } from "@/components/ui/badge";
 import { HanjaGradeBadge } from "@/components/hanja/HanjaBadges";
+import { ScoreBreakdownCard } from "@/components/results/ScoreBreakdownCard";
 import { ELEMENT_KO, getHanja, getReadingChars } from "@/lib/hanja-seo";
 import {
   firstGloss,
@@ -15,6 +16,7 @@ import {
   getSiblingNames,
   ohaengRelation,
   syllablesOf,
+  toAestheticBreakdown,
   type NameSeoRecord,
 } from "@/lib/name-seo";
 
@@ -64,8 +66,9 @@ export async function generateMetadata({
 
   const { gender } = genderSplit(rec);
   const meanPart = rec.mean ? ` ${name}은(는) '${rec.mean}' 뜻을 담습니다.` : "";
+  const scorePart = rec.sc ? ` 발음·미학 점수 ${rec.sc.t}점.` : "";
   const title = `${name} 이름 뜻 — 인기 순위·한자·의미`;
-  const description = `${name}: ${GENDER_LABEL[gender]}.${meanPart} 출생신고 통계 기준 인기 순위와 남녀 비율, 이름에 쓰는 한자를 확인하세요.`;
+  const description = `${name}: ${GENDER_LABEL[gender]}.${meanPart} 출생신고 통계 기준 인기 순위와 남녀 비율, 이름에 쓰는 한자를 확인하세요.${scorePart}`;
   const canonical = `/name/${encodeURIComponent(name)}`;
   return {
     title,
@@ -268,6 +271,35 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
             입니다.
           </p>
         </section>
+
+        {/* 발음·미학 점수 */}
+        {rec.sc && (
+          <section className="mb-10">
+            <h2 className="mb-2 text-base font-semibold text-navy">
+              발음·미학 점수
+            </h2>
+            <p className="mb-4 text-sm leading-relaxed text-text-2">
+              성씨를 뺀 이름만, 특정 세대에 치우치지 않는 관점으로 평가한
+              점수입니다. 이름의 결은 유행 이름보다 오래 편안한 이름을 높게
+              봅니다.
+            </p>
+            <ScoreBreakdownCard
+              aesthetic={toAestheticBreakdown(rec.sc)}
+              totalScore={rec.sc.t}
+            />
+            <p className="mt-3 text-sm text-text-2">
+              성씨와 사주 오행까지 반영한 점수는{" "}
+              {/* /evaluate는 클라이언트 네비 잔상 버그로 풀 페이지 이동(<a>) — 아래 CTA와 동일 패턴 */}
+              <a
+                href={`/evaluate?name=${encodeURIComponent(name)}`}
+                className="text-teal-700 hover:underline"
+              >
+                이름 평가
+              </a>
+              에서 확인하세요.
+            </p>
+          </section>
+        )}
 
         {/* 한자 조합 */}
         {rec.combos && rec.combos.length > 0 && (
