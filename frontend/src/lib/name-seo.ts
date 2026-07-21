@@ -1,5 +1,6 @@
 import rawData from "@/data/name-seo.json";
 import { ELEMENT_GENERATES, initialConsonantOf } from "@/lib/hanja-seo";
+import type { AestheticBreakdown } from "@/lib/types";
 
 /**
  * 이름 뜻 SEO 페이지 (/name) 전용 데이터 모듈.
@@ -26,6 +27,41 @@ export interface NameSeoRecord {
   mean?: string;
   /** 흔히 쓰는 한자 조합 상위 K개 [["智","宇"], ...] */
   combos?: string[][];
+  /** 미학 점수 breakdown (dump-name-scores 산출 — 성씨 제외·tone=neutral 기준) */
+  sc?: NameScoreBreakdown;
+}
+
+/**
+ * dump-name-scores CLI가 덤프한 미학 점수 (짧은 키).
+ * p 발음/30 · r 리듬/25 · s 음절/15 · n 세대중립/15 · m 의미/10 · t 총점,
+ * g 성별 보너스·pn 감점(0이면 생략)·no 노트(비면 생략).
+ */
+export interface NameScoreBreakdown {
+  p: number;
+  r: number;
+  s: number;
+  n: number;
+  m: number;
+  t: number;
+  g?: number;
+  pn?: number;
+  no?: string[];
+}
+
+/** ScoreBreakdownCard가 기대하는 camelCase 형태로 복원 (tone=neutral이라 toneBonus는 항상 0). */
+export function toAestheticBreakdown(sc: NameScoreBreakdown): AestheticBreakdown {
+  return {
+    pronunciation: sc.p,
+    rhythm: sc.r,
+    syllable: sc.s,
+    neutrality: sc.n,
+    meaning: sc.m,
+    genderBonus: sc.g ?? 0,
+    toneBonus: 0,
+    penalty: sc.pn ?? 0,
+    total: sc.t,
+    notes: sc.no ?? [],
+  };
 }
 
 export type OhaengKind = "생" | "비화" | "극" | "unknown";

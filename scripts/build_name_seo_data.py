@@ -75,6 +75,14 @@ def main():
         else {}
     )
 
+    # 미학 점수 breakdown (dotnet run -- dump-name-scores 산출물, 루트). 없으면 건너뜀.
+    scores_path = os.path.join(ROOT, "name-scores.json")
+    scores = (
+        json.load(open(scores_path, encoding="utf-8"))
+        if os.path.exists(scores_path)
+        else {}
+    )
+
     # 이름 합치기
     all_names = set(male) | set(female)
     records = {}
@@ -102,9 +110,10 @@ def main():
         for i, name in enumerate(granked, start=1):
             records[name][gender_key] = i
 
-    # 자연어 뜻 + 한자 조합
+    # 자연어 뜻 + 한자 조합 + 미학 점수
     with_meaning = 0
     with_combos = 0
+    with_scores = 0
     used_combo_means = {}  # 수록 이름의 조합에 실제로 등장하는 한자쌍만 (top-level 맵, 중복 저장 회피)
     for name, rec in records.items():
         mean = meanings.get(name)
@@ -120,6 +129,10 @@ def main():
                 cm = combo_meanings.get(key)
                 if cm and key not in used_combo_means:
                     used_combo_means[key] = cm
+        sc = scores.get(name)
+        if sc:
+            rec["sc"] = sc
+            with_scores += 1
 
     # 음절 → 이름 인덱스 (비슷한 이름 내부링크용)
     first_syl = defaultdict(list)
@@ -150,6 +163,7 @@ def main():
     print(f"수록 이름: {len(records)}")
     print(f"자연어 뜻 보유: {with_meaning} ({with_meaning*100//max(len(records),1)}%)")
     print(f"한자 조합 보유: {with_combos} ({with_combos*100//max(len(records),1)}%)")
+    print(f"미학 점수 보유: {with_scores} ({with_scores*100//max(len(records),1)}%)")
     print(f"조합 뜻(comboMeans) 등재: {len(used_combo_means)}쌍 (combo-meanings.json {len(combo_meanings)}쌍 중)")
     print(f"출력 크기: {size_mb:.2f} MB → {OUT_PATH}")
     print("--- 임계값별 이름 수(스코프 참고) ---")
