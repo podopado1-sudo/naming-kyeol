@@ -104,6 +104,9 @@ scripts/_audit_quality_report.txt
 scripts/_realgen.txt
 scripts/_realname_explore.txt
 
+# Python 바이트코드 캐시 (scripts/ 품질 감사 스크립트 실행 시 생성)
+__pycache__/
+
 # 이름/창의 뜻·조합 덤프 중간 산출물 (dotnet run -- dump-* 재생성, 최종은 frontend 데이터만 커밋)
 /creative-glosses.json
 /name-glosses.json
