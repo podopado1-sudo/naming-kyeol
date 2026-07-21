@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 자동 생성 폰트 base64 모듈 (scripts/build_og_font.py) — 500KB+ 단일 라인
+    "src/assets/og/pretendard-og.ts",
   ]),
 ]);
 
