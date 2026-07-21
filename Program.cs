@@ -180,6 +180,69 @@ if (args.Length >= 1 && args[0] == "dump-combo-glosses")
     return;
 }
 
+// 1회성 CLI: /name SEO 페이지용 이름별 미학 점수 breakdown 덤프.
+//   dotnet run -- dump-name-scores [names-json] [outfile]
+// AestheticEngine을 lastName=null·tone="neutral"(톤 보너스 0)·60/40 성별 분기로 호출한
+// "성씨 제외·세대 중립 관점" 점수. 유행 이름 감점은 브랜드 철학(유행 배제) 그대로 노출한다.
+// combos와 달리 3음절·중첩 이름도 전부 채점한다(엔진이 모두 처리 가능).
+if (args.Length >= 1 && args[0] == "dump-name-scores")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+    NameForm.Application.Engines.Data.NameGenderData.LoadExternalData();
+
+    var namesPath = args.Length >= 2 ? args[1] : Path.Combine("frontend", "src", "data", "name-seo.json");
+    if (!File.Exists(namesPath))
+    {
+        Console.Error.WriteLine($"[dump-name-scores] 입력 파일 없음: {namesPath}");
+        return;
+    }
+
+    // 엔진 노트는 내부용이라 "male와"처럼 영문이 섞임 — 공개 페이지용으로만 치환(/evaluate 경로 무변경).
+    // female가 male을 포함하므로 female 먼저 치환.
+    static string PublicNote(string note) => note
+        .Replace("female와", "여자 이름과")
+        .Replace("male와", "남자 이름과");
+
+    var engine = new AestheticEngine();
+    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(namesPath));
+    var dump = new Dictionary<string, Dictionary<string, object>>();
+    foreach (var prop in doc.RootElement.GetProperty("names").EnumerateObject())
+    {
+        var name = prop.Name;
+
+        // 성별: 60/40 분기(프론트 genderSplit·dump-name-combos와 동일).
+        int m = prop.Value.TryGetProperty("m", out var mv) ? mv.GetInt32() : 0;
+        int f = prop.Value.TryGetProperty("f", out var fv) ? fv.GetInt32() : 0;
+        int total = m + f;
+        string gender = total > 0 && m * 100 / total >= 60 ? "male"
+                      : total > 0 && f * 100 / total >= 60 ? "female" : "none";
+
+        var b = await engine.CalculateScoreWithBreakdownAsync(name, null, "neutral", gender);
+        var rec = new Dictionary<string, object>
+        {
+            ["p"] = b.PronunciationScore,
+            ["r"] = b.RhythmScore,
+            ["s"] = b.SyllableScore,
+            ["n"] = b.NeutralityScore,
+            ["m"] = b.MeaningScore,
+            ["t"] = b.TotalScore,
+        };
+        if (b.GenderBonus != 0) rec["g"] = b.GenderBonus;
+        if (b.PenaltyTotal != 0) rec["pn"] = b.PenaltyTotal;
+        if (b.Notes.Count > 0) rec["no"] = b.Notes.Select(PublicNote).ToList();
+        dump[name] = rec;
+    }
+
+    var outPath = args.Length >= 3 ? args[2] : "name-scores.json";
+    var json = System.Text.Json.JsonSerializer.Serialize(dump, new System.Text.Json.JsonSerializerOptions
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    });
+    File.WriteAllText(outPath, json);
+    Console.WriteLine($"[dump-name-scores] {dump.Count}개 이름 점수 → {outPath}");
+    return;
+}
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: true)
