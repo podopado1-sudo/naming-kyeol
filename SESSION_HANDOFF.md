@@ -17,6 +17,8 @@
 | `321d3cd` | **점수 섹션 UI** — 통계↔한자조합 사이, orphan이던 `ScoreBreakdownCard` 재활용. 감점·노트 전부 노출(사용자 확정) + 유행 배제 철학 문구 프레이밍 + /evaluate 퍼널 |
 | `17f3e3e` | **OG 카드 3,305장 정적 생성** — `build_og_font.py`(woff2→wght700 인스턴스→서브셋→base64 TS 614KB, OFL RFN 준수 KyeolOG) + `opengraph-image.tsx`(satori). 프리렌더 12,914→16,219 유닛, 19.3s→27.2s로 빌드 부담 무시 가능 |
 
+> 후속(같은 날, 별도 세션): `e5c231d` chore — .gitignore에 전역 `__pycache__/` 규칙 추가 (scripts/ 파이썬 감사 스크립트 실행 시 생기던 untracked 노이즈 제거)
+
 ### 핵심 교훈
 - **Next 16.2: 세그먼트의 generateStaticParams가 메타데이터 라우트(opengraph-image)에 상속 안 됨** —
   없으면 ƒ(온디맨드)로 강등. 파일에 직접 export해야 ● 정적 생성 (이 프로젝트는 온디맨드 ISR 500 전력상 전량 프리렌더 원칙).
