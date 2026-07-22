@@ -75,6 +75,9 @@ export async function generateMetadata({
     description,
     alternates: { canonical },
     openGraph: { title, description, url: `${SITE_URL}${canonical}` },
+    // 루트 layout의 twitter(공용 카드 title/images)를 통째로 대체(shallow merge) —
+    // images는 비워 세그먼트 twitter-image.tsx가 이름별 카드를 주입하게 한다.
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
