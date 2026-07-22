@@ -29,6 +29,7 @@
   python scripts/build_name_stories.py --input story-inputs.json --resume
 """
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -57,18 +58,47 @@ SYSTEM_PROMPT = (
     "- 은유는 한 문장에 하나까지만 쓰세요.\n"
     "- 특정 세대나 성별에 치우친 표현을 피하세요. 아이에게도 어른에게도 어울려야 합니다.\n"
     "- 한자 뜻과 수식어구의 의미를 살리되, 훈을 나열하지 말고 사람의 태도·기질·분위기로 옮기세요.\n"
+    "- '분위기' 힌트가 주어지면 그 결의 어휘를 적극 반영하세요('고요', '은은', '조용' 같은 "
+    "표현이 여러 이름에 반복되는 것을 막기 위한 장치입니다). 단, 한자 뜻과 어긋나면 한자 뜻을 "
+    "따르세요.\n"
     "- 부정적이거나 어색한 한자 뜻(그물, 비, 변방 등)은 무시해도 됩니다."
 )
 
-# 종결 로테이션 — 배치 요청 간 기억이 없어 "가끔 다르게" 지시는 무력하다.
-# 이름 해시 기반 결정적 선택(약 7:3)이라 --resume 재실행에도 같은 힌트가 재현된다.
+# 종결/분위기 로테이션 — 배치 요청 간 기억이 없어 "가끔 다르게" 지시는 무력하다.
+# 이름 해시(md5, 솔트로 축 분리) 기반 결정적 선택이라 --resume 재실행에도 같은 힌트가 재현된다.
+# ⚠ h*31+ord 류 곱셈 해시는 한글 코드포인트 구조(가≡0 mod 8 등)와 맞물려 동음 계열이
+# 같은 버킷에 뭉치는 사고가 있었음(가나=가빈 → 동일 문장) — md5로 교체.
 ENDING_PERSON = "'~ 사람'으로 끝맺으세요."
 ENDING_VARIED = ("'사람' 대신 이름과 어울리는 다른 명사(마음, 눈빛, 걸음, 기운, 목소리, "
                  "숨결 등)로 끝맺으세요.")
 
+# 분위기 팔레트 — 시험 30개에서 '고요/은은' 계열 편중 + 동일 문장 중복(가나=가빈)이
+# 관찰되어 추가. 이름마다 다른 결을 결정적으로 제시해 어휘를 흩뜨린다.
+# 라벨만으론 모델이 상투어로 회귀해 어휘 앵커를 함께 제시한다.
+MOODS = [
+    ("차분하고 고요한", "잔잔한·단정한·평온한"),
+    ("밝고 생기 있는", "환한·경쾌한·싱그러운"),
+    ("단단하고 굳건한", "묵직한·꿋꿋한·의연한"),
+    ("따뜻하고 다정한", "포근한·너그러운·살가운"),
+    ("맑고 산뜻한", "청량한·시원한·개운한"),
+    ("깊고 진중한", "그윽한·차분한·헤아리는"),
+    ("유연하고 자유로운", "부드러운·거침없는·트인"),
+    ("총명하고 슬기로운", "명민한·지혜로운·영리한"),
+]
+
+
+def _hash(name, salt):
+    """결정적 해시 (플랫폼/실행 무관). salt로 종결/분위기 축의 상관을 끊는다."""
+    return int.from_bytes(hashlib.md5((salt + name).encode("utf-8")).digest()[:4], "big")
+
 
 def ending_hint(name):
-    return ENDING_PERSON if sum(ord(ch) for ch in name) % 10 < 7 else ENDING_VARIED
+    return ENDING_PERSON if _hash(name, "end:") % 10 < 7 else ENDING_VARIED
+
+
+def mood_hint(name):
+    label, words = MOODS[_hash(name, "mood:") % len(MOODS)]
+    return f"{label} 결 (어휘 예: {words})"
 
 
 def user_message(name, item):
@@ -77,6 +107,7 @@ def user_message(name, item):
     lines = [f"이름: {name}", f"한자 뜻: {gloss}"]
     if mean:
         lines.append(f"수식어구: {mean}")
+    lines.append(f"분위기: {mood_hint(name)}")
     lines.append(f"종결: {ending_hint(name)}")
     return "\n".join(lines)
 
