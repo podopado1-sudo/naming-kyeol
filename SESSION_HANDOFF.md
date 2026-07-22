@@ -16,6 +16,7 @@
 | `9f30ddc` | **name-seo에 sc 병합** — 3,305개 100%, 1.10→1.51MB. `NameScoreBreakdown`+`toAestheticBreakdown` (toneBonus 항상 0 복원) |
 | `321d3cd` | **점수 섹션 UI** — 통계↔한자조합 사이, orphan이던 `ScoreBreakdownCard` 재활용. 감점·노트 전부 노출(사용자 확정) + 유행 배제 철학 문구 프레이밍 + /evaluate 퍼널 |
 | `17f3e3e` | **OG 카드 3,305장 정적 생성** — `build_og_font.py`(woff2→wght700 인스턴스→서브셋→base64 TS 614KB, OFL RFN 준수 KyeolOG) + `opengraph-image.tsx`(satori). 프리렌더 12,914→16,219 유닛, 19.3s→27.2s로 빌드 부담 무시 가능 |
+| `8d1d135` | **X(트위터) 카드도 이름별로** — `twitter-image.tsx`가 opengraph-image 재수출 + 페이지 twitter 오버라이드(shallow merge로 루트 공용 카드 대체). 19,524유닛. 라이브 검증 완료 |
 
 > 후속(같은 날, 별도 세션): `e5c231d` chore — .gitignore에 전역 `__pycache__/` 규칙 추가 (scripts/ 파이썬 감사 스크립트 실행 시 생기던 untracked 노이즈 제거)
 
