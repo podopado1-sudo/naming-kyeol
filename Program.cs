@@ -83,6 +83,62 @@ if (args.Length >= 1 && args[0] == "dump-name-glosses")
     return;
 }
 
+// 1회성 CLI: 사람 서사형 코이닝(story) 배치 입력을 덤프(서사 파이프라인 1단계).
+//   dotnet run -- dump-story-inputs [outfile]
+// 풀 = 창의 뜻 보유 이름(data/creative-name-meanings.json) ∪ /name 수록 2음절·비반복 이름.
+// 각 이름에 {gloss: 기계적 글로스, mean: 기존 윤문 뜻}을 묶어 LLM 입력 컨텍스트로 제공한다.
+// 다음 단계: python scripts/build_name_stories.py --input story-inputs.json
+if (args.Length >= 1 && args[0] == "dump-story-inputs")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+
+    var meaningsPath = Path.Combine("data", "creative-name-meanings.json");
+    var seoPath = Path.Combine("frontend", "src", "data", "name-seo.json");
+
+    var means = new Dictionary<string, string>();
+    if (File.Exists(meaningsPath))
+    {
+        using var mdoc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(meaningsPath));
+        foreach (var p in mdoc.RootElement.EnumerateObject())
+            if (p.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                means[p.Name] = p.Value.GetString() ?? "";
+    }
+    else Console.Error.WriteLine($"[dump-story-inputs] 경고: {meaningsPath} 없음 — mean 없이 진행");
+
+    var pool = new SortedSet<string>(means.Keys, StringComparer.Ordinal);
+    if (File.Exists(seoPath))
+    {
+        using var sdoc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(seoPath));
+        foreach (var p in sdoc.RootElement.GetProperty("names").EnumerateObject())
+            pool.Add(p.Name);
+    }
+    else Console.Error.WriteLine($"[dump-story-inputs] 경고: {seoPath} 없음 — 창의 풀만 덤프");
+
+    var dump = new Dictionary<string, Dictionary<string, string>>();
+    int skipped = 0;
+    foreach (var name in pool)
+    {
+        if (name.Length != 2 || name[0] == name[1]) { skipped++; continue; }
+        var gloss = NameForm.Application.Engines.CreativeNamingEngine.BuildMechanicalMeaning(name);
+        if (string.IsNullOrEmpty(gloss)) { skipped++; continue; } // 순우리말/외래명 — 한자 재료 없음
+        dump[name] = new Dictionary<string, string>
+        {
+            ["gloss"] = gloss,
+            ["mean"] = means.GetValueOrDefault(name, "")
+        };
+    }
+
+    var outPath = args.Length >= 2 ? args[1] : "story-inputs.json";
+    var json = System.Text.Json.JsonSerializer.Serialize(dump, new System.Text.Json.JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping // 한글 그대로
+    });
+    File.WriteAllText(outPath, json);
+    Console.WriteLine($"[dump-story-inputs] {dump.Count}개 입력 → {outPath} (제외 {skipped})");
+    return;
+}
+
 // 1회성 CLI: /name 페이지용 이름별 한자 '조합' 상위 K개를 덤프(작명사이트급 조합 카드 1단계).
 //   dotnet run -- dump-name-combos [names-json] [outfile]
 // HanjaSelector.SelectCombos(엔진의 빈출·오행조화·성별 로직)로 표시용 조합을 고른다.

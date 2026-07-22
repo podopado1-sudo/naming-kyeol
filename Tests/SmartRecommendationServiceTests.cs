@@ -75,6 +75,25 @@ public class SmartRecommendationServiceTests
     }
 
     // -------------------------------------------------------
+    // 1-b. 창의 카테고리 Story 규약 — null 또는 내용 있는 문장 (빈 문자열 금지)
+    // -------------------------------------------------------
+    [Fact]
+    public async Task GenerateSmartRecommendationsAsync_CreativeStory_NullWhenAbsentNeverEmpty()
+    {
+        // DTO 계약: 서사가 없으면 null(프론트 숨김), 있으면 공백 아닌 문장.
+        // 빈 문자열("")로 새면 프론트 falsy 체크에 걸리긴 하나 계약 위반이므로 고정.
+        var result = await _service.GenerateSmartRecommendationsAsync(CreateBasicRequest());
+
+        var creative = result.Categories.First(c => c.Type == "creative");
+        Assert.True(creative.Names.Count > 0);
+        Assert.All(creative.Names, n =>
+        {
+            if (n.Story != null)
+                Assert.False(string.IsNullOrWhiteSpace(n.Story), $"'{n.Name}'의 Story가 공백입니다.");
+        });
+    }
+
+    // -------------------------------------------------------
     // 2. IncludeThreeSyllable=true → three-syllable 카테고리 포함
     // -------------------------------------------------------
     [Fact]

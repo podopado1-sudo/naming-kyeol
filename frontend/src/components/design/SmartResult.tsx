@@ -37,6 +37,8 @@ interface UICandidate {
   name?: string;
   hanjaName?: string;
   meaning: string;
+  /** 사람 서사형 코이닝 한 문장 (창의 한정). 없으면 숨김. */
+  story?: string;
   aesthetics: number;
   harmony: number;
   finalScore: number;
@@ -74,6 +76,7 @@ function mapCandidate(c: SmartNameCandidate): UICandidate {
     name: c.name,
     hanjaName,
     meaning: c.meaning,
+    story: c.story || undefined,
     // 한자 카테고리는 실제 미학/조화 점수, 그 외는 score 기반 추정 (서브엔진들의 점수 의미가 달라 분리 불가)
     aesthetics: c.aestheticScore ?? Math.max(0, Math.min(100, Math.round(score * 0.95))),
     harmony: c.harmonyScore ?? Math.max(0, Math.min(100, Math.round(score * 0.92))),
@@ -748,6 +751,26 @@ function TopPickCard({
                 </span>
               )}
             </div>
+            {c.story && (
+              <p
+                style={{
+                  margin: "10px 0 0",
+                  fontSize: 15,
+                  lineHeight: 1.6,
+                  color: "var(--color-navy-500)",
+                }}
+              >
+                <span
+                  style={{ color: "var(--color-gold-600)", marginRight: 4 }}
+                >
+                  “
+                </span>
+                {c.story}
+                <span style={{ color: "var(--color-gold-600)", marginLeft: 2 }}>
+                  ”
+                </span>
+              </p>
+            )}
           </div>
           <div style={{ textAlign: "right" }}>
             <div
@@ -1207,6 +1230,24 @@ function CandidateCard({
               </div>
             )}
           </div>
+          {c.story && (
+            <p
+              style={{
+                margin: "8px 0 0",
+                fontSize: 13.5,
+                lineHeight: 1.6,
+                color: "var(--color-navy-500)",
+              }}
+            >
+              <span style={{ color: "var(--color-gold-600)", marginRight: 4 }}>
+                “
+              </span>
+              {c.story}
+              <span style={{ color: "var(--color-gold-600)", marginLeft: 2 }}>
+                ”
+              </span>
+            </p>
+          )}
           <div
             style={{
               display: "flex",

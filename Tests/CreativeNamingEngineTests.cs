@@ -177,6 +177,32 @@ public class CreativeNamingEngineTests
     }
 
     [Fact]
+    public void NameStoryData_AbsentName_FallsBackToNull()
+    {
+        // 서사 파일(data/name-stories.json)에 없는 이름은 null → 소비처가 숨김.
+        // 파일 자체가 없어도 동일하게 null이어야 한다.
+        Assert.Null(NameStoryData.Get("존재하지않는이름zzz"));
+    }
+
+    [Fact]
+    public async Task GenerateCandidatesAsync_StoryConsistentWithData()
+    {
+        // 서사(Story)는 선택적 강화 레이어 — 파일이 없으면 전부 빈 문자열(숨김),
+        // 있으면 NameStoryData와 정확히 일치해야 한다(Meaning과 달리 기계적 폴백 금지).
+        // 파일 유무 양쪽 환경에서 유효한 계약이라 배치 생성 이후에도 그대로 통과한다.
+        var candidates = await _engine.GenerateCandidatesAsync("김", "none", "neutral", 10);
+
+        Assert.All(candidates, c =>
+        {
+            Assert.NotNull(c.Story);
+            if (c.Name.Length == 2)
+                Assert.Equal(NameStoryData.Get(c.Name) ?? string.Empty, c.Story);
+            else
+                Assert.Equal(string.Empty, c.Story);
+        });
+    }
+
+    [Fact]
     public async Task GenerateCandidatesAsync_UnregisteredSurname_StillWorks()
     {
         // 사전에 없는 희귀 성씨도 동작해야 함

@@ -141,6 +141,7 @@ public class SmartRecommendationService : ISmartRecommendationService
                     Name = c.Name,
                     FullName = c.FullName,
                     Meaning = c.Meaning,
+                    Story = string.IsNullOrWhiteSpace(c.Story) ? null : c.Story,
                     Score = Math.Round(c.CreativityScore, 1),
                     Tags = new List<string> { c.Concept, c.SurnameConnection }
                 }).ToList();

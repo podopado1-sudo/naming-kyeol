@@ -70,6 +70,8 @@ export interface SmartNameCandidate {
   name: string;
   fullName: string;
   meaning: string;
+  /** 사람 서사형 코이닝 한 문장 (창의 카테고리 한정). 없으면 숨김. */
+  story?: string;
   /** 배정된 음절별 한자 글자(예: "友晶"). 한자 카테고리 한정, 없으면 undefined. */
   hanja?: string;
   score?: number;
@@ -126,6 +128,27 @@ export interface CreativeNamingRequest {
   gender?: string;
   tone?: string;
   count?: number;
+}
+
+/**
+ * /recommendations/creative 원본 응답 후보 — 백엔드 CreativeNameCandidate를
+ * DTO 변환 없이 배열로 그대로 반환한다 (parent-based·dual-name과 동일 계약).
+ */
+export interface CreativeCandidate {
+  name: string;
+  fullName: string;
+  /** 창작 컨셉 설명 */
+  concept: string;
+  /** 성씨와의 연결 고리 */
+  surnameConnection: string;
+  meaning: string;
+  /** 사람 서사형 코이닝 한 문장. 없으면 빈 문자열. */
+  story: string;
+  /** 창의성 점수 (0~100) */
+  creativityScore: number;
+  genderTag: string;
+  toneTag: string;
+  surnameTailored: boolean;
 }
 
 // ============================================================

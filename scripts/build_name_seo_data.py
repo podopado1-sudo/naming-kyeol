@@ -83,6 +83,15 @@ def main():
         else {}
     )
 
+    # 사람 서사형 코이닝 문장 (data/name-stories.json, build_name_stories.py 산출물).
+    # 없으면 건너뜀(페이지가 서사 블록 숨김 — 순수 additive 레이어).
+    stories_path = os.path.join(DATA, "name-stories.json")
+    stories = (
+        json.load(open(stories_path, encoding="utf-8"))
+        if os.path.exists(stories_path)
+        else {}
+    )
+
     # 이름 합치기
     all_names = set(male) | set(female)
     records = {}
@@ -110,8 +119,9 @@ def main():
         for i, name in enumerate(granked, start=1):
             records[name][gender_key] = i
 
-    # 자연어 뜻 + 한자 조합 + 미학 점수
+    # 자연어 뜻 + 서사 + 한자 조합 + 미학 점수
     with_meaning = 0
+    with_story = 0
     with_combos = 0
     with_scores = 0
     used_combo_means = {}  # 수록 이름의 조합에 실제로 등장하는 한자쌍만 (top-level 맵, 중복 저장 회피)
@@ -120,6 +130,10 @@ def main():
         if mean:
             rec["mean"] = mean
             with_meaning += 1
+        story = stories.get(name)
+        if story:
+            rec["story"] = story
+            with_story += 1
         combo = combos.get(name)
         if combo:
             rec["combos"] = combo
@@ -162,6 +176,7 @@ def main():
     print(f"min_total(빈도 하한): {min_total}")
     print(f"수록 이름: {len(records)}")
     print(f"자연어 뜻 보유: {with_meaning} ({with_meaning*100//max(len(records),1)}%)")
+    print(f"서사(story) 보유: {with_story} ({with_story*100//max(len(records),1)}%)")
     print(f"한자 조합 보유: {with_combos} ({with_combos*100//max(len(records),1)}%)")
     print(f"미학 점수 보유: {with_scores} ({with_scores*100//max(len(records),1)}%)")
     print(f"조합 뜻(comboMeans) 등재: {len(used_combo_means)}쌍 (combo-meanings.json {len(combo_meanings)}쌍 중)")

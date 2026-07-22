@@ -25,6 +25,8 @@ export interface NameSeoRecord {
   rf?: number;
   /** 자연어 뜻 풀이 (대표 한자 기준의 일반적 느낌) */
   mean?: string;
+  /** 사람 서사형 코이닝 한 문장 (build_name_stories.py 산출). 없으면 숨김. */
+  story?: string;
   /** 흔히 쓰는 한자 조합 상위 K개 [["智","宇"], ...] */
   combos?: string[][];
   /** 미학 점수 breakdown (dump-name-scores 산출 — 성씨 제외·tone=neutral 기준) */

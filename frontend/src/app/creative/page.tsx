@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/select";
 import { creative } from "@/lib/api";
 import type {
-  NameRecommendationResponse,
+  CreativeCandidate,
+  SmartNameCandidate,
   SmartRecommendationResponse,
 } from "@/lib/types";
 import {
@@ -35,11 +36,22 @@ import { Footer } from "@/components/design/Footer";
 // ============================================================
 // 어댑터
 // ============================================================
+// 백엔드는 CreativeNameCandidate 원본 배열을 반환한다 — smart 경로의
+// SmartRecommendationService 창의 매핑과 동일 규칙으로 변환해 표시 일관성을 맞춘다.
 function wrapAsSmartResponse(
-  res: NameRecommendationResponse,
+  res: CreativeCandidate[],
   lastName: string
 ): SmartRecommendationResponse {
-  const names = res.names ?? [];
+  const names: SmartNameCandidate[] = (res ?? []).map((c) => ({
+    name: c.name,
+    fullName: c.fullName,
+    meaning: c.meaning,
+    story: c.story || undefined,
+    score: Math.round(c.creativityScore * 10) / 10,
+    tags: [c.concept, c.surnameConnection].filter(Boolean),
+    reasons: [],
+    phonologyNotes: [],
+  }));
   return {
     lastName,
     isRareSurname: false,
@@ -51,7 +63,7 @@ function wrapAsSmartResponse(
         names,
       },
     ],
-    totalCount: res.totalCount ?? names.length,
+    totalCount: names.length,
     topPick: names.length
       ? {
           categoryType: "creative",

@@ -25,6 +25,8 @@ public class CreativeNameCandidate
     /// <summary>성씨와의 연결 고리</summary>
     public string SurnameConnection { get; set; } = string.Empty;
     public string Meaning { get; set; } = string.Empty;
+    /// <summary>사람 서사형 코이닝 한 문장(NameStoryData). 없으면 빈 문자열 — 프론트가 숨김.</summary>
+    public string Story { get; set; } = string.Empty;
     /// <summary>창의성 점수 (0~100)</summary>
     public double CreativityScore { get; set; }
     /// <summary>후보의 성별 태그 (male/female/neutral)</summary>

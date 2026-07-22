@@ -612,12 +612,17 @@ public class CreativeNamingEngine : ICreativeNamingEngine
     ///   1) LLM 폴리시(정적 파일 data/creative-name-meanings.json — "라영 → 빛나고 영명한")
     ///   2) 기계적 정제 글로스("맑을 윤 + 슬기 슬")  3) 최종 폴백.
     /// 파일이 없으면(미생성) 2)로 자연 폴백하므로 동작은 그대로 유지된다.
+    /// 서사(Story)는 Meaning과 독립으로 채운다 — 패턴 후보(뜻 보유)도 서사는 받을 수 있고,
+    /// 서사는 기계적 폴백을 두지 않는다(없으면 빈 문자열 → 프론트 숨김).
     /// </summary>
     private static void FillRealNameMeanings(IEnumerable<CreativeNameCandidate> finalists)
     {
         foreach (var c in finalists)
         {
-            if (!string.IsNullOrEmpty(c.Meaning) || c.Name.Length != 2) continue;
+            if (c.Name.Length != 2) continue;
+            if (string.IsNullOrEmpty(c.Story))
+                c.Story = NameStoryData.Get(c.Name) ?? string.Empty;
+            if (!string.IsNullOrEmpty(c.Meaning)) continue;
             var polished = CreativeMeaningData.Get(c.Name);
             if (!string.IsNullOrEmpty(polished)) { c.Meaning = polished; continue; }
             var mech = BuildMechanicalMeaning(c.Name);

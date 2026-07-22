@@ -46,6 +46,9 @@ public class SmartNameCandidateDto
     public string FullName { get; set; } = string.Empty;
     public string Meaning { get; set; } = string.Empty;
 
+    /// <summary>사람 서사형 코이닝 한 문장(창의 카테고리 한정). 없으면 null → 프론트 숨김.</summary>
+    public string? Story { get; set; }
+
     /// <summary>배정된 음절별 한자 글자(예: "友晶"). 한자 카테고리 한정, 없으면 null.</summary>
     public string? Hanja { get; set; }
 

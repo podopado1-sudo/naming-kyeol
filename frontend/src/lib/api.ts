@@ -3,6 +3,7 @@ import type {
   SmartRecommendationResponse,
   PureKoreanRequest,
   CreativeNamingRequest,
+  CreativeCandidate,
   ThreeSyllableRequest,
   RequiredCharRequest,
   ParentBasedRequest,
@@ -54,10 +55,10 @@ export function pureKorean(
   return request("/recommendations/pure-korean", req);
 }
 
-// 창의적 작명
+// 창의적 작명 — CreativeCandidate[] 직접 반환 (parent-based와 동일 계약)
 export function creative(
   req: CreativeNamingRequest
-): Promise<NameRecommendationResponse> {
+): Promise<CreativeCandidate[]> {
   return request("/recommendations/creative", req);
 }
 
