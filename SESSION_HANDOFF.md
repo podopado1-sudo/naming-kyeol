@@ -5,7 +5,47 @@
 
 ---
 
-## 마지막 세션 요약 (2026-07-22 — 🧰 weak 추가 QA 루틴화: 원커맨드 회귀 감사)
+## 마지막 세션 요약 (2026-07-22 — ✒️ 의미 코이닝 Phase A: 사람 서사형 story 레이어 + /creative 버그)
+
+창의 후속 #3(2026-06-24 이월) 착수. 이름이 그리는 사람상 한 문장을 mean과 별개 story 레이어로
+추가 — 창의 카드·TopPick·/name Hero 인용 블록에 노출. **Phase A(코드) 완료·커밋, Phase B(배치
+생성·병합·배포)는 사용자 결정 대기.** 커밋 `b701ce9` (push 보류 — Phase B와 함께 배포 판단).
+
+### 사용자 확정
+스타일=사람 서사형 / 노출=창의+/name 둘 다 / 탐색 중 발견한 /creative 개별 페이지 버그 동시 수정.
+
+### Phase A 내용 (커밋 b701ce9)
+- `NameStoryData` 로더(CreativeMeaningData 패턴) + `CreativeNameCandidate.Story` +
+  `FillRealNameMeanings` 독립 채움(**기계적 폴백 없음** — 없으면 숨김, Meaning과 다른 계약)
+- `SmartNameCandidateDto.Story`(nullable, 빈값→null) — TopPick 자동 전파. EF 무접촉
+  (CreativeNameCandidate는 Application 전용 — BonusNicknames류 사고 아님, 조사로 확정)
+- `dump-story-inputs` CLI: 창의 뜻 보유 ∪ /name 수록 = **3,289개** {gloss, mean} 덤프
+- `build_name_stories.py`: 사람 서사형 프롬프트 + **종결 힌트 해시 로테이션 7:3**('~사람' vs
+  마음/눈빛/걸음 등 — 배치 요청 간 기억 없어 프롬프트 지시만으론 단조로움 회피 불가)
+- `build_name_seo_data.py`: name-stories.json optional 병합(rec.story). **title/meta/JSON-LD/OG
+  전부 불변** — 8월 초 색인 관찰 교란 없음, OG 폰트 재생성 불필요
+- **/creative 개별 페이지 버그 수정**: 백엔드는 원본 배열 반환인데 어댑터가 {names,totalCount}
+  기대 → 결과 항상 빈 화면이었음(smart 경로는 정상). 어댑터를 smart 매핑과 동일하게 재작성
+- 테스트 985→**988**. 서사 테스트는 **파일 유무 양쪽에서 유효한 계약**으로 작성
+  (테스트 bin ResolvePath가 상향 탐색으로 repo data/를 찾으므로 "전부 빈값" 단언은 Phase B 후 깨짐)
+
+### 검증 (전부 실측)
+- dotnet test 988/988, tsc·lint 클린, dump CLI 3,289개(mean 100%) 확인
+- 임시 name-stories.json 4개 + name-seo 재생성으로 로컬 실렌더: /creative 결과 정상 표시(버그
+  수정), 창의 카드·TopPick 서사 줄, /name/서연 인용 블록, story 없는 이름 숨김 — 확인 후 원복
+- 프롬프트 품질 시험 30개(sonnet --sync, ~$0.05) 성공: 톤·15~30자·종결 로테이션 양호.
+  ⚠️ 검토 포인트 2건 — ① '고요/은은' 계열 어휘 편중 ② 완전 동일 문장 중복(가나=가빈).
+  전량 배치 전 해시 기반 '분위기 힌트' 로테이션 추가 여부 사용자와 결정할 것
+
+### Phase B 절차 (대기 중 — 비용 승인 필요, sonnet 배치 ~$4-5)
+1. (프롬프트 조정 확정 후) `python scripts/build_name_stories.py --input story-inputs.json --resume`
+   (키는 setx 사용자 환경변수 → 레지스트리에서 읽어 셸 주입, 채팅 금지)
+2. `python scripts/build_name_seo_data.py` 재실행(서사 보유율 리포트 확인)
+3. data/name-stories.json + frontend/src/data/name-seo.json 커밋 → push(전량 프리렌더 ~25-30분)
+
+---
+
+## 이전 세션 요약 (2026-07-22 — 🧰 weak 추가 QA 루틴화: 원커맨드 회귀 감사)
 
 핸드오프 후보 3(마지막 잔여 항목) 완결 — 2026-07-02 대수술 때 수작업이던 검증을 스크립트화.
 

@@ -22,7 +22,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 30일 보존)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (985 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (988 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -41,7 +41,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 985개)
+# 테스트 실행 (NameForm.slnx 경유 — 988개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -243,10 +243,16 @@ D:\MyDev\NameForm\
 
 ### /name 데이터 재생성 순서
 `dotnet run -- dump-name-combos` → `dotnet run -- dump-name-scores` →
-`python scripts/build_name_seo_data.py`(combos·scores 병합) → `dotnet run -- dump-combo-glosses`
+`python scripts/build_name_seo_data.py`(combos·scores·stories 병합) → `dotnet run -- dump-combo-glosses`
 (글로스가 name-seo.json을 읽음 — 중간 누락 시 stale). 수록 이름 목록 자체가 변하면 build 2회.
 이름/뜻/OG 카피 변경 시 `python scripts/build_og_font.py`로 OG 폰트 서브셋 재생성
 (satori는 woff2 불가 → base64 TS 모듈, OG_LABELS 동기화 주의).
+
+### 서사(story) 파이프라인 — 의미 코이닝 (2026-07-22 Phase A)
+사람 서사형 한 문장("어디에 있어도 은은하게 제 빛을 내는 사람")을 mean과 별개 레이어로 제공.
+`dotnet run -- dump-story-inputs` → `python scripts/build_name_stories.py`(Batch, 사람 서사형
+프롬프트+종결 힌트 로테이션) → `data/name-stories.json` → 창의 엔진(NameStoryData→Story)과
+`build_name_seo_data.py`(rec.story) 양쪽이 소비. 파일 부재 시 서사 전면 숨김(순수 additive).
 
 ## 코드 규칙
 
