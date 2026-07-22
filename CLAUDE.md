@@ -233,8 +233,20 @@ D:\MyDev\NameForm\
 ### 품질 감사 스크립트 (scripts/)
 - `scan_weak_name_candidates.py` — 사전 훈 전수 스캔 (다중 훈 검수 + 약한 훈 후보)
 - `audit_syllable_occupancy.py` — combos 음절 점유 감사 (어색 훈 글자가 음절 상위 점유 탐지)
-- weak 추가 시 절차: 점유 감사 → 재생성 diff에서 '새로 승격된 글자' 검수(두더지 2~4라운드 수렴)
-  → 신규 쌍 윤문(소량 인라인 / 대량 `build_combo_meanings.py` Batch) → 커버리지 100% 확인
+- `audit_combo_regressions.py` — **재생성 후 원커맨드 회귀 감사** (`--base REF`, 기본 HEAD):
+  A combos 소실 / B 불용 잔존 / C comboMeans 커버리지(코드포인트 단위) /
+  D 빈출셋 유일-약자 붕괴(HanjaSelector 풀 게이팅 재현) → FAIL 시 exit 1,
+  E 신규 승격 글자 목록(두더지 검수 대상, 훈·weak 표시·샘플 포함)
+- weak 추가 시 절차: 재생성 → `audit_combo_regressions.py`로 A~D 통과 확인 →
+  E 목록 두더지 검수(2~4라운드 수렴, 필요시 점유 감사 TSV 병행) →
+  신규 쌍 윤문(소량 인라인 / 대량 `build_combo_meanings.py` Batch) → 재실행으로 C 100% 확인
+
+### /name 데이터 재생성 순서
+`dotnet run -- dump-name-combos` → `dotnet run -- dump-name-scores` →
+`python scripts/build_name_seo_data.py`(combos·scores 병합) → `dotnet run -- dump-combo-glosses`
+(글로스가 name-seo.json을 읽음 — 중간 누락 시 stale). 수록 이름 목록 자체가 변하면 build 2회.
+이름/뜻/OG 카피 변경 시 `python scripts/build_og_font.py`로 OG 폰트 서브셋 재생성
+(satori는 woff2 불가 → base64 TS 모듈, OG_LABELS 동기화 주의).
 
 ## 코드 규칙
 
@@ -287,10 +299,13 @@ D:\MyDev\NameForm\
 Twin Result / Dual Result / Specialty Input 4종 / Evaluate Input / Coming Soon / 시스템 상태 4종 /
 Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 
-## 라우트 (22개 정적 생성, 2026-06-13 기준)
+## 라우트 (정적 19,524유닛, 2026-07-22 기준)
 
 ```
 /                  홈 (Hero + Categories + ProPaths + WhyKyeol)
+/hanja/[독음|글자]  인명용 한자 사전 SEO (9,595자, sitemap 전체 공개)
+/name/[이름]       이름 뜻 SEO (3,305개 — 통계·미학 점수·한자 조합
+                   + 이름별 OG/트위터 공유 카드 각 3,305장 정적 생성)
 /search            이름 추천 (구 /baby — 301 리다이렉트 구성됨)
 /evaluate          이름 평가
 /analysis          이름 분석
