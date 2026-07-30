@@ -32,6 +32,10 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+    <!-- GHSA-2m69-gcr7-jv3q (SQLite < 3.50.2 메모리 손상) 해소:
+         EF Core Sqlite의 전이 의존성 SQLitePCLRaw.lib.e_sqlite3 2.1.11(취약)을
+         bundle 2.1.12(→ lib 3.53.3, SQLite 3.53.3 동봉)로 끌어올림 -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>

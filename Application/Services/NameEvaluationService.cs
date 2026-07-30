@@ -32,7 +32,7 @@ public class NameEvaluationService : INameEvaluationService
         // 점수(Harmony)가 실제 배정한 한자 — MeaningNote가 추천 카드와 같은 한자를 설명하게 한다.
         // 출생일 미제공 시 조화 산정이 없어 비어 있으므로, 같은 선택기(HanjaSelector)를 용신 없이
         // 호출해 표시용 한자를 정한다(/name 조합·추천 폴백과 동일 로직 = 표시 일관).
-        var selectedHanja = score.Harmony?.SelectedHanja;
+        var selectedHanja = score.Harmony.SelectedHanja;
         if (selectedHanja == null || selectedHanja.Count == 0)
             selectedHanja = HanjaSelector.Select(name, ScoringService.NormalizeGender(gender), null, null, null);
 
