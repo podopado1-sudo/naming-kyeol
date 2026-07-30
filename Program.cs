@@ -585,6 +585,44 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// ── RLS(Row Level Security) 자동 활성화 (PostgreSQL/Supabase 전용) ──
+// Supabase는 PostgREST Data API가 기본 활성이라 RLS 없는 public 테이블은
+// anon key만 알면 외부에서 읽기/쓰기 가능 (Security Advisor: rls_disabled_in_public).
+// 백엔드는 테이블 소유자 role로 직접 접속하므로 RLS를 켜도 서비스 무영향.
+// 위의 테이블 생성 단계들 이후에 실행 — 새 테이블도 다음 부팅 때 자동 적용되는 멱등 로직.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var initLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var isNpgsql = dbContext.Database.ProviderName?.Contains("Npgsql") == true;
+    if (isNpgsql)
+    {
+        try
+        {
+            dbContext.Database.ExecuteSqlRaw("""
+                DO $$
+                DECLARE r RECORD;
+                BEGIN
+                    FOR r IN SELECT tablename FROM pg_tables
+                             WHERE schemaname = 'public' AND NOT rowsecurity
+                    LOOP
+                        BEGIN
+                            EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', r.tablename);
+                        EXCEPTION WHEN insufficient_privilege THEN
+                            NULL; -- 확장(extension) 등 다른 role 소유 테이블은 건너뜀
+                        END;
+                    END LOOP;
+                END $$;
+                """);
+            initLogger.LogInformation("RLS 활성화 확인 완료 (public 스키마 전 테이블)");
+        }
+        catch (Exception ex)
+        {
+            initLogger.LogWarning("RLS 활성화 실패 — Supabase Security Advisor 경고 재발 가능: {Error}", ex.Message);
+        }
+    }
+}
+
 // 한자 데이터 초기화 (통합 JSON 파일 로드)
 NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
 
