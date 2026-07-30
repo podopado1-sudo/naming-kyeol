@@ -19,7 +19,7 @@
   - 개발: SQLite (`nameform.db`)
   - 프로덕션: PostgreSQL (Connection string에 따라 자동 분기)
 - **한자 사전:** JSON/CSV 9,595자
-- **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 30일 보존)
+- **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
 - **테스트:** xUnit (988 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
@@ -86,7 +86,7 @@ D:\MyDev\NameForm\
 ├── Application/
 │   ├── DTOs/                           ← 요청/응답 DTO (Smart, Twin, Dual, Eval, Saju 등)
 │   ├── Services/                       ← 오케스트레이터 서비스 다수
-│   └── Engines/                        ← 추천 엔진 16+개 (인터페이스+구현)
+│   └── Engines/                        ← 추천 엔진 15개 (인터페이스+구현)
 │       ├── Data/                       ← HanjaData, HanjaCsvLoader, CategoryKeywordsLoader
 │       └── Utils/                      ← KoreanUtils, FortuneUtils, MorphemeAnalyzer 등
 ├── Domain/
@@ -112,7 +112,7 @@ D:\MyDev\NameForm\
 
 ## 아키텍처
 
-### 추천 엔진 파이프라인 (16+ 엔진)
+### 추천 엔진 파이프라인 (15 엔진)
 
 ```
 요청 → SmartRecommendationService (메인 오케스트레이터)
@@ -189,6 +189,12 @@ D:\MyDev\NameForm\
 | POST | `/api/v1/recommendations/feedback` | 사용자 피드백 제출 |
 | GET | `/api/v1/recommendations/{id}/feedback` | 피드백 목록 조회 |
 | GET | `/api/v1/recommendations/{id}/feedback/summary` | 피드백 집계/요약 조회 |
+
+### 사용량
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/api/v1/usage/event` | 프론트 탭 클릭 이벤트 수신 (`tab_view`만 허용, sendBeacon 대상) |
+| GET | `/api/v1/usage/summary` | 기간별 사용량 집계 조회 (`days` 기본 30, 최대 365) |
 
 ## 한자 데이터 구조
 
@@ -309,7 +315,9 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 
 ```
 /                  홈 (Hero + Categories + ProPaths + WhyKyeol)
+/hanja             인명용 한자 사전 인덱스 (독음 767개, 초성 ㄱ~ㅎ 탐색)
 /hanja/[독음|글자]  인명용 한자 사전 SEO (9,595자, sitemap 전체 공개)
+/name              이름 뜻 사전 인덱스 (인기 이름 상위 1,000개 노출 — sitemap 등재 범위와 일치)
 /name/[이름]       이름 뜻 SEO (3,305개 — 통계·미학 점수·한자 조합
                    + 이름별 OG/트위터 공유 카드 각 3,305장 정적 생성)
 /search            이름 추천 (구 /baby — 301 리다이렉트 구성됨)
@@ -338,7 +346,7 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 ### 백엔드
 - **API Key 인증**: 현재 단순 키 검증 — 본격 인증/인가 시스템 필요 (OAuth, JWT 등). 운영은 `Authentication__Enabled=false` 상태
 - **EF Core warning**: `Candidate.Reasons` 컬렉션에 ValueComparer 미설정 (동작엔 문제 없지만 경고 발생)
-- ~~xUnit1026 경고~~ (2026-06-13 수정 완료)
+- ~~xUnit1026 경고~~ (2026-06-13 1건 + 잔여 1건 2026-07-30 수정 완료)
 
 ### 프론트엔드
 - **/guide의 회사명/반려동물은 "준비 중" 안내**: 해당 라우트 미구현
