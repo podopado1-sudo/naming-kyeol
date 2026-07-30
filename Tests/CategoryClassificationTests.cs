@@ -21,8 +21,8 @@ public class CategoryClassificationTests
     }
 
     // 기대값은 scripts/category_keywords.json의 legacy_category_keywords 기준
-    // (검사 순서: 자연 → 덕목 → 개념, 부분 문자열 매칭).
-    // "지혜"는 덕목 키워드 '지'가, "용기"는 자연 키워드 '용'이 먼저 매칭된다.
+    // (가장 긴 매칭 키워드 우선 — 완전 일치가 자연히 최우선, 동률 시 자연 → 덕목 → 개념).
+    // "지혜"·"용기"는 개념 키워드에 완전 일치하므로 덕목 '지'/자연 '용'보다 우선한다.
     [Theory]
     [InlineData("물", "자연")]
     [InlineData("강", "자연")]
@@ -34,8 +34,8 @@ public class CategoryClassificationTests
     [InlineData("효", "덕목")]
     [InlineData("인", "덕목")]
     [InlineData("빛", "개념")]
-    [InlineData("지혜", "덕목")]
-    [InlineData("용기", "자연")]
+    [InlineData("지혜", "개념")]
+    [InlineData("용기", "개념")]
     public void ClassifyCategoryByMeaning_ValidKeywords_ReturnsCorrectCategory(string meaning, string expectedCategory)
     {
         // Act

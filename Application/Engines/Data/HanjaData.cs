@@ -385,6 +385,7 @@ public static class HanjaData
 
     /// <summary>
     /// 의미 기반 자동 카테고리 분류 (JSON 설정 파일 기반)
+    /// 가장 긴 매칭 키워드가 이기고(완전 일치가 자연히 최우선), 동률이면 자연→덕목→개념 순
     /// </summary>
     private static string ClassifyCategoryByMeaning(string meaning)
     {
@@ -393,48 +394,50 @@ public static class HanjaData
 
         var meaningLower = meaning.ToLower();
         var legacyKeywords = CategoryKeywordsLoader.LegacyCategoryKeywords;
+        var categoryOrder = new[] { "자연", "덕목", "개념" };
 
-        // JSON 설정 파일에서 키워드 로드 (하위 호환성)
+        List<(string Category, IReadOnlyList<string> Keywords)> sources;
         if (legacyKeywords != null && legacyKeywords.Count > 0)
         {
-            // 자연 관련 키워드
-            if (legacyKeywords.TryGetValue("자연", out var natureKeywords) && 
-                natureKeywords.Any(kw => meaningLower.Contains(kw.ToLower())))
-                return "자연";
-
-            // 덕목 관련 키워드
-            if (legacyKeywords.TryGetValue("덕목", out var virtueKeywords) && 
-                virtueKeywords.Any(kw => meaningLower.Contains(kw.ToLower())))
-                return "덕목";
-
-            // 개념 관련 키워드
-            if (legacyKeywords.TryGetValue("개념", out var conceptKeywords) && 
-                conceptKeywords.Any(kw => meaningLower.Contains(kw.ToLower())))
-                return "개념";
+            // JSON 설정 파일에서 키워드 로드 (하위 호환성)
+            sources = categoryOrder
+                .Where(legacyKeywords.ContainsKey)
+                .Select(c => (c, (IReadOnlyList<string>)legacyKeywords[c]))
+                .ToList();
         }
         else
         {
             // 기본값 (하위 호환성 - JSON 파일이 없을 때)
-            var defaultNatureKeywords = new[] { 
-                "봄", "여름", "가을", "겨울", "하늘", "바다", "산", "강", "물", "불", "구름", "별", "달", "해", "꽃", "나무", "숲", "바람", "비", "눈", "새", "동물"
+            sources = new List<(string, IReadOnlyList<string>)>
+            {
+                ("자연", new[] {
+                    "봄", "여름", "가을", "겨울", "하늘", "바다", "산", "강", "물", "불", "구름", "별", "달", "해", "꽃", "나무", "숲", "바람", "비", "눈", "새", "동물"
+                }),
+                ("덕목", new[] {
+                    "덕", "선", "효", "충", "신", "의", "예", "지", "인", "정", "화", "화목", "바름", "고름", "은혜", "정성", "믿음"
+                }),
+                ("개념", new[] {
+                    "빛", "지혜", "용기", "길이", "항상", "흐름", "현재", "미래", "과거", "영원", "강함", "부", "명예", "성공"
+                })
             };
-            if (defaultNatureKeywords.Any(kw => meaningLower.Contains(kw)))
-                return "자연";
-
-            var defaultVirtueKeywords = new[] { 
-                "덕", "선", "효", "충", "신", "의", "예", "지", "인", "정", "화", "화목", "바름", "고름", "은혜", "정성", "믿음"
-            };
-            if (defaultVirtueKeywords.Any(kw => meaningLower.Contains(kw)))
-                return "덕목";
-
-            var defaultConceptKeywords = new[] { 
-                "빛", "지혜", "용기", "길이", "항상", "흐름", "현재", "미래", "과거", "영원", "강함", "부", "명예", "성공"
-            };
-            if (defaultConceptKeywords.Any(kw => meaningLower.Contains(kw)))
-                return "개념";
         }
 
-        return "기타";
+        // 짧은 키워드 선점 오분류 방지 ('용기'가 자연 '용'에, '지혜'가 덕목 '지'에 걸리던 문제)
+        var bestCategory = "기타";
+        var bestLength = 0;
+        foreach (var (category, keywords) in sources)
+        {
+            foreach (var kw in keywords)
+            {
+                if (kw.Length > bestLength && meaningLower.Contains(kw.ToLower()))
+                {
+                    bestCategory = category;
+                    bestLength = kw.Length;
+                }
+            }
+        }
+
+        return bestCategory;
     }
 
     /// <summary>
