@@ -5,7 +5,48 @@
 
 ---
 
-## 마지막 세션 요약 (2026-07-30 — 🏥 전체 중간 점검 → Vercel 402 사건 → Pro 전환 → 📈 네이버 주채널 발견 → 블로그 가동)
+## 마지막 세션 요약 (2026-07-30 2차 — 🔒 Supabase RLS 전면 활성화 + 부팅 자동화)
+
+Supabase Security Advisor 경고 메일(`rls_disabled_in_public`, 6/22 기준)로 시작한 보안 조치 세션.
+커밋 1개 push (`cee3582`).
+
+### 발단·리스크
+- public 스키마 4개 테이블(UserFeedbacks·Recommendations·Candidates·UsageEvents) 전부 RLS 미설정.
+  Supabase는 PostgREST Data API가 기본 활성 → **프로젝트 URL+anon key만 알면 외부에서 읽기/쓰기/삭제
+  가능한 상태였음** (단, anon key는 어디에도 배포된 적 없음 — 프론트는 Supabase 직접 접근 없이 Render API만 사용).
+- MyDev 전수 검색(gitignore 무시 이중 확인 포함): Supabase 사용처는 NameForm 유일 — ExamCal·cert-poc 무관.
+
+### 조치
+1. **기존 테이블 즉시 잠금** (SQL Editor에서 사용자 실행): DO 블록으로 public 전 테이블 RLS 활성화.
+   정책 0개 = Data API 전면 차단. 백엔드는 테이블 소유자 role 직접 접속(Session Pooler)이라
+   **RLS 미적용 — 서비스 무영향**.
+2. **재발 방지 자동화** (`cee3582`): Program.cs 부팅 시퀀스 마지막(모든 테이블 생성 단계 이후)에
+   멱등 RLS 블록 추가 — Npgsql 전용 분기, `NOT rowsecurity` 필터(이미 켜진 테이블에 불필요한
+   ACCESS EXCLUSIVE 락 안 잡음), `insufficient_privilege` 개별 스킵(확장 테이블 대비), 실패 시
+   경고 로그만 남기고 부팅 지속. 이 프로젝트는 EF 마이그레이션 미사용(EnsureCreated+부팅 멱등
+   패치 패턴)이라 마이그레이션 훅 대신 같은 패턴으로 구현 — 새 테이블은 다음 부팅 때 자동 적용.
+
+### 검증 (전부 실측)
+- `pg_tables.rowsecurity` 4/4 true + Security Advisor **오류 0·경고 0**
+- RLS 활성화 직후 라이브 실기능: smart 추천 45개 정상 생성 (성=김 + 생년월일)
+- 빌드 clean + 로컬 부팅(SQLite 경로 스킵 확인) + 적대적 리뷰 7항목(문법·Npgsql DO 블록·
+  rowsecurity 컬럼·테스트 안전·owner 우회·배치 위치 등) 전부 통과
+- Render 배포 로그(dep-d9lgee5bedkc7391tj10) 실측: 05:12:40
+  `RLS 활성화 확인 완료 (public 스키마 전 테이블)` → 05:12:50 live. 배포 후 트래픽 정상 처리 확인
+
+### ⚠️ 다음에 헤맬 함정
+- **Render 부팅 초기화 로그(DB 초기화·RLS)는 앱 Logs 스트림에 안 나옴** — live 판정 이전 stdout은
+  Events → 해당 Deploy 상세의 "All logs"에 있음
+- Render 대시보드를 임베디드 브라우저로 열 땐 Google OAuth가 차단됨 — 이메일/비번 로그인 사용
+
+### 남은 선택지 (급하지 않음)
+- Supabase Settings → API → **Data API 자체 비활성화** — 앱이 전혀 안 쓰는 기능이라 부작용 없이
+  한 겹 더 잠글 수 있음
+- 폼 검증 UX: /search에서 생년월일 누락 시 400 에러 문구가 하단 소형 텍스트라 놓치기 쉬움 (백엔드는 정상)
+
+---
+
+## 이전 세션 요약 (2026-07-30 — 🏥 전체 중간 점검 → Vercel 402 사건 → Pro 전환 → 📈 네이버 주채널 발견 → 블로그 가동)
 
 전체 중간 점검(6영역 병렬 감사 워크플로)에서 **라이브 전면 다운**을 발견하며 시작된 긴 세션.
 커밋 6개 push (`9287a2a` `3478ad3` `8ca3282` `b8180e1` `5d85507`* `bda95e1`, *는 칩 별도 세션).
@@ -656,7 +697,7 @@ SEO 2순위 전략 착수. 사용자 확정: 기존 계정+새 블로그 / **만
 | **DNS** | Cloudflare DNS | ✅ A/CNAME/MX 등 자동 + 수동 | 무료 |
 | **프론트엔드** | Vercel Hobby | ✅ naming-kyeol.vercel.app + namingkyeol.com | 무료 |
 | **백엔드** | Render Free | ✅ naming-kyeol-api.onrender.com | 무료 (15분 idle sleep) |
-| **DB** | Supabase PostgreSQL | ✅ ap-northeast-2 (Seoul) | 무료 (500MB) |
+| **DB** | Supabase PostgreSQL | ✅ ap-northeast-2 (Seoul) · RLS 전 테이블 활성 (2026-07-30, 부팅 자동화) | 무료 (500MB) |
 | **SSL** | Let's Encrypt (Vercel 자동) | ✅ valid + trusted, TLS 1.3 | 무료 |
 | **저장소** | GitHub | ✅ podopado1-sudo/naming-kyeol | 무료 |
 
