@@ -100,6 +100,7 @@ function BabyNamingInner() {
   const [lastName, setLastName] = useState(searchParams.get("lastName") ?? "");
   const [gender, setGender] = useState(initialGender);
   const [birthDate, setBirthDate] = useState(searchParams.get("birthDate") ?? "");
+  const [birthDateError, setBirthDateError] = useState(false);
   const [birthTime, setBirthTime] = useState(searchParams.get("birthTime") ?? "");
   const [tone, setTone] = useState(initialTone);
 
@@ -144,6 +145,13 @@ function BabyNamingInner() {
   async function runRecommend() {
     if (!lastName.trim()) {
       toast.error("성씨를 입력해주세요.");
+      return;
+    }
+
+    if (!birthDate) {
+      setBirthDateError(true);
+      toast.error("생년월일을 입력해주세요.");
+      document.getElementById("birthDate")?.focus();
       return;
     }
 
@@ -335,15 +343,28 @@ function BabyNamingInner() {
               </Select>
             </div>
 
-            {/* 생년월일 */}
+            {/* 생년월일 — 백엔드 필수(사주 조화 산정), 누락 시 400이라 제출 전 검증 */}
             <div className="space-y-1.5">
-              <Label htmlFor="birthDate">생년월일</Label>
+              <Label htmlFor="birthDate">
+                생년월일 <span className="text-muted-foreground text-xs">(필수 · 조화 점수 반영)</span>
+              </Label>
               <Input
                 id="birthDate"
                 type="date"
                 value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
+                onChange={(e) => {
+                  setBirthDate(e.target.value);
+                  if (e.target.value) setBirthDateError(false);
+                }}
+                required
+                aria-invalid={birthDateError || undefined}
+                className={cn(birthDateError && "border-destructive focus-visible:ring-destructive")}
               />
+              {birthDateError && (
+                <p className="text-xs text-destructive" role="alert">
+                  생년월일을 입력해주세요. 조화 점수 계산에 필요해요.
+                </p>
+              )}
             </div>
 
             {/* 출생 시각 */}
