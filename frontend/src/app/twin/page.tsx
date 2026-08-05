@@ -120,7 +120,7 @@ export default function TwinPage() {
 
     try {
       const data = await twinNames({
-        lastName: lastName.trim(),
+        lastName: lastName.trim().slice(0, 2),
         birthDate: birthDate || undefined,
         birthTime: birthTime || undefined,
         gender:
@@ -237,7 +237,8 @@ export default function TwinPage() {
             <FormInput
               placeholder="예: 김"
               value={lastName}
-              onChange={(v) => setLastName(v.slice(0, 2))}
+              // IME 조합 중 slice로 자르면 한글 입력이 끊기므로 제출 시에만 2자 제한
+              onChange={setLastName}
               required
             />
           </FormField>

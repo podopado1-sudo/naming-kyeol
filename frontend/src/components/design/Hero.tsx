@@ -101,6 +101,9 @@ export function Hero({
   // 필수 입력 누락 시 shake 안내용
   // birth input은 recommend/evaluate 모드 모두 동일 ref 공유 (한 번에 한 모드만 렌더됨)
   const lastNameRef = useRef<HTMLInputElement | null>(null);
+  // 한글 IME 조합 중 slice로 값을 자르면 조합이 끊겨 글자가 지워지므로,
+  // 조합 중에는 원본을 유지하고 조합 종료 시점에만 2자 제한을 적용한다.
+  const lastNameComposingRef = useRef(false);
   const evalQueryRef = useRef<HTMLInputElement | null>(null);
   const birthRef = useRef<HTMLInputElement | null>(null);
   const [shakeKey, setShakeKey] = useState(0); // 재트리거용 key
@@ -327,9 +330,19 @@ export function Hero({
                       ref={lastNameRef}
                       key={`lastName-${shakeKey}`}
                       value={lastName}
-                      onChange={(e) =>
-                        setLastName(e.target.value.slice(0, 2))
-                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setLastName(
+                          lastNameComposingRef.current ? v : v.slice(0, 2)
+                        );
+                      }}
+                      onCompositionStart={() => {
+                        lastNameComposingRef.current = true;
+                      }}
+                      onCompositionEnd={(e) => {
+                        lastNameComposingRef.current = false;
+                        setLastName(e.currentTarget.value.slice(0, 2));
+                      }}
                       placeholder="예: 김"
                       className={
                         !lastName.trim() && shakeKey > 0

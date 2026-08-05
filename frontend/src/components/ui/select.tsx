@@ -6,7 +6,46 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+// Base UI Select는 Root에 items(값→라벨 맵)가 없으면 SelectValue가
+// 라벨 대신 원시 value 문자열("female" 등)을 표시한다.
+// 호출부마다 items를 넘기는 대신 SelectItem 자식에서 자동 추출한다.
+function collectItems(
+  children: React.ReactNode,
+  map: Record<string, React.ReactNode>
+) {
+  React.Children.forEach(children, (child) => {
+    if (!React.isValidElement(child)) return
+    const props = child.props as {
+      value?: unknown
+      children?: React.ReactNode
+    }
+    if (child.type === SelectItem && props.value !== undefined) {
+      map[String(props.value)] = props.children
+    } else if (props.children) {
+      collectItems(props.children, map)
+    }
+  })
+}
+
+function Select<Value, Multiple extends boolean | undefined = false>({
+  items,
+  children,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const derivedItems = React.useMemo(() => {
+    if (items) return items
+    const map: Record<string, React.ReactNode> = {}
+    collectItems(children, map)
+    return Object.keys(map).length > 0
+      ? (map as SelectPrimitive.Root.Props<Value, Multiple>["items"])
+      : undefined
+  }, [items, children])
+  return (
+    <SelectPrimitive.Root items={derivedItems} {...props}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

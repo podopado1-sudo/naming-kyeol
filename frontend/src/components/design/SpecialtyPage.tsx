@@ -5,7 +5,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Mark } from "./Mark";
 import { Button } from "./Primitives";
 import { SPField, SPInput, SPSection, SPSelect, SPSlider } from "./SpecialtyPrimitives";
@@ -232,6 +232,9 @@ function BasicBlock({
   basic: BasicState;
   set: (patch: Partial<BasicState>) => void;
 }) {
+  // 한글 IME 조합 중 slice로 값을 자르면 조합이 끊겨 글자가 지워지므로,
+  // 조합 중에는 원본을 유지하고 조합 종료 시점에만 2자 제한을 적용한다.
+  const composingRef = useRef(false);
   return (
     <SPSection title="기본 정보">
       <div
@@ -248,9 +251,17 @@ function BasicBlock({
           <SPInput
             value={basic.lastName}
             disabled={mode === "rare"}
-            onChange={(e) =>
-              set({ lastName: e.target.value.slice(0, 2) })
-            }
+            onChange={(e) => {
+              const v = e.target.value;
+              set({ lastName: composingRef.current ? v : v.slice(0, 2) });
+            }}
+            onCompositionStart={() => {
+              composingRef.current = true;
+            }}
+            onCompositionEnd={(e) => {
+              composingRef.current = false;
+              set({ lastName: e.currentTarget.value.slice(0, 2) });
+            }}
             placeholder={mode === "rare" ? "아래 복성 입력" : "예: 김"}
             style={
               mode === "rare" ? { opacity: 0.6, cursor: "not-allowed" } : {}
