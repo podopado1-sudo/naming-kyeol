@@ -32,6 +32,7 @@ const GUIDE_LINKS: FooterLink[] = [
 const COMPANY_LINKS: FooterLink[] = [
   { label: "소개", href: "/about" },
   { label: "문의", href: "/contact" },
+  { label: "개인정보처리방침", href: "/privacy" },
 ];
 
 function FootLink({ link }: { link: FooterLink }) {

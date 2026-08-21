@@ -45,6 +45,7 @@ const ROUTES: Array<{
   // 운영 페이지
   { path: "about", priority: 0.4, changeFrequency: "yearly" },
   { path: "contact", priority: 0.4, changeFrequency: "yearly" },
+  { path: "privacy", priority: 0.3, changeFrequency: "yearly" },
 
   // 한자 사전 인덱스
   { path: "hanja", priority: 0.8, changeFrequency: "monthly" },
