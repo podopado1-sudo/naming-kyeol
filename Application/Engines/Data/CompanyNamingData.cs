@@ -471,7 +471,7 @@ public static class CompanyNamingData
         ["bakery"] = new()
         {
             Key = "bakery", Label = "베이커리 · 제과",
-            AxisKeys = new() { "HARVEST", "CRAFT", "WARMTH", "START" },
+            AxisKeys = new() { "HARVEST", "START", "WARMTH", "LIGHT" },
             Suffixes = new() { "베이커리", "제과", "빵집" },
             GenericWords = new() { "베이커리", "제과", "브레드", "케이크", "오븐", "파티세리" },
         },
@@ -499,7 +499,7 @@ public static class CompanyNamingData
         ["edu"] = new()
         {
             Key = "edu", Label = "교육 · 학원",
-            AxisKeys = new() { "WISDOM", "WOOD", "START", "TIME" },
+            AxisKeys = new() { "WOOD", "WISDOM", "WARMTH", "TIME" },
             Suffixes = new() { "학원", "교육", "아카데미" },
             GenericWords = new() { "학원", "교육", "아카데미", "스쿨", "러닝", "에듀" },
         },
@@ -527,14 +527,14 @@ public static class CompanyNamingData
         ["interior"] = new()
         {
             Key = "interior", Label = "인테리어 · 건축",
-            AxisKeys = new() { "EARTH", "CRAFT", "CALM", "WOOD" },
+            AxisKeys = new() { "EARTH", "CRAFT", "WOOD", "TIME" },
             Suffixes = new() { "디자인", "건축", "공간" },
             GenericWords = new() { "인테리어", "디자인", "건축", "공간", "하우스", "홈" },
         },
         ["consulting"] = new()
         {
             Key = "consulting", Label = "컨설팅 · 전문서비스",
-            AxisKeys = new() { "WISDOM", "LINK", "TIME", "EARTH" },
+            AxisKeys = new() { "WISDOM", "TIME", "EARTH", "CRAFT" },
             Suffixes = new() { "파트너스", "컨설팅", "주식회사" },
             GenericWords = new() { "컨설팅", "파트너스", "어드바이저", "매니지먼트", "그룹" },
         },
@@ -555,7 +555,7 @@ public static class CompanyNamingData
         ["travel"] = new()
         {
             Key = "travel", Label = "여행 · 숙박",
-            AxisKeys = new() { "WATER", "CALM", "EARTH", "START" },
+            AxisKeys = new() { "WATER", "START", "EARTH", "CALM" },
             Suffixes = new() { "스테이", "게스트하우스", "여행" },
             GenericWords = new() { "여행", "투어", "스테이", "호텔", "펜션", "트래블" },
         },
@@ -569,14 +569,14 @@ public static class CompanyNamingData
         ["finance"] = new()
         {
             Key = "finance", Label = "금융 · 투자",
-            AxisKeys = new() { "TIME", "EARTH", "HARVEST", "WISDOM" },
+            AxisKeys = new() { "HARVEST", "TIME", "EARTH", "LINK" },
             Suffixes = new() { "자산운용", "인베스트", "주식회사" },
             GenericWords = new() { "금융", "자산", "인베스트", "캐피탈", "펀드", "파이낸스" },
         },
         ["law"] = new()
         {
             Key = "law", Label = "법률 · 세무",
-            AxisKeys = new() { "TIME", "EARTH", "WISDOM", "LINK" },
+            AxisKeys = new() { "EARTH", "TIME", "WISDOM", "CALM" },
             Suffixes = new() { "법률사무소", "세무회계", "노무법인" },
             GenericWords = new() { "법률", "세무", "회계", "법무", "로펌" },
         },
@@ -585,6 +585,18 @@ public static class CompanyNamingData
     // ============================================================
     // 톤 프로필 — 축 가중치와 생성 스타일 선호
     // ============================================================
+    /// <summary>
+    /// 톤의 소리 취향. '품질'이 아니라 '취향'만 담는다 —
+    /// 자음충돌·모음단조·연속경음 같은 품질 판정은 여기 없고 발음 점수가 계속 맡는다.
+    /// Final/Bright/Plosive는 -1~+1 방향 벡터: +면 그 성질이 많을수록 가점, 0이면 무관심.
+    /// </summary>
+    public record ToneShape(
+        int IdealLength,      // 선호 음절 수
+        double Final,         // 받침이 '적을수록' 좋으면 +
+        double Bright,        // 양성모음(ㅏㅑㅗㅛㅐㅘㅚ)이 많을수록 좋으면 +
+        double Plosive,       // 파열·파찰 초성이 많을수록 좋으면 +
+        double Alliteration); // 두 초성이 같을 때의 점수 0~1
+
     public class ToneProfile
     {
         public string Key { get; init; } = string.Empty;
@@ -595,7 +607,30 @@ public static class CompanyNamingData
 
         /// <summary>이 톤이 선호하는 생성 축 (가점)</summary>
         public HashSet<string> FavoredStyles { get; init; } = new();
+
+        /// <summary>
+        /// 톤이 재료 풀에 직접 밀어넣는 축. 앞에서부터 훑어 '업종이 안 고른 첫 번째'를 주입한다.
+        ///
+        /// 이게 이 설계의 핵심이다. 가점만으로는 톤이 업종의 4개 축 안에 갇혀,
+        /// 두 톤의 교집합이 같으면 점수 함수가 완전히 같아진다
+        /// (실측: 카페·음식점 등 6개 업종에서 modern과 playful이 12개 결과 100% 동일).
+        ///
+        /// ⚠️ 이 순서는 18개 업종 전수 확인 결과 5톤의 주입 축이 모두 서로 다르도록 맞춘 것이다.
+        /// warm 3순위가 WOOD가 아니라 LIGHT인 이유는 food·bakery에서 playful의 WOOD와
+        /// 부딪히기 때문. 순서를 바꾸려면 18업종 전수 재확인이 필요하다
+        /// (ToneSignatureAxes_DistinctPerIndustry 테스트가 이를 지킨다).
+        /// </summary>
+        public List<string> SignatureAxes { get; init; } = new();
+
+        /// <summary>결과 칸의 생성축 상한 비율 — StyleOrder 순서, 합 1.0</summary>
+        public double[] StyleQuota { get; init; } = { 0.34, 0.33, 0.33 };
+
+        /// <summary>소리 취향</summary>
+        public ToneShape Shape { get; init; } = new(3, 0, 0, 0, 0.5);
     }
+
+    /// <summary>StyleQuota 배열의 인덱스 순서 — 엔진과 데이터가 공유하는 계약</summary>
+    public static readonly string[] StyleOrder = { "hanja", "pure-korean", "english" };
 
     public static readonly Dictionary<string, ToneProfile> Tones = new()
     {
@@ -604,30 +639,45 @@ public static class CompanyNamingData
             Key = "modern", Label = "모던",
             FavoredAxes = new() { "START", "LINK", "WISDOM", "LIGHT" },
             FavoredStyles = new() { "english", "pure-korean" },
+            SignatureAxes = new() { "START", "LINK", "WISDOM" },
+            StyleQuota = new[] { 0.15, 0.35, 0.50 },
+            Shape = new(2, +0.9, 0.0, -0.4, 0.25),
         },
         ["classic"] = new()
         {
             Key = "classic", Label = "클래식",
             FavoredAxes = new() { "TIME", "EARTH", "CRAFT", "WOOD" },
             FavoredStyles = new() { "hanja" },
+            SignatureAxes = new() { "TIME", "CRAFT", "EARTH" },
+            StyleQuota = new[] { 0.55, 0.35, 0.10 },
+            Shape = new(3, -0.5, -0.3, 0.0, 0.10),
         },
         ["warm"] = new()
         {
             Key = "warm", Label = "따뜻함",
             FavoredAxes = new() { "WARMTH", "WOOD", "HARVEST" },
             FavoredStyles = new() { "pure-korean" },
+            SignatureAxes = new() { "WARMTH", "HARVEST", "LIGHT" },
+            StyleQuota = new[] { 0.15, 0.65, 0.20 },
+            Shape = new(3, +0.2, +0.9, -0.6, 0.35),
         },
         ["premium"] = new()
         {
             Key = "premium", Label = "프리미엄",
             FavoredAxes = new() { "CALM", "CRAFT", "TIME", "LIGHT" },
             FavoredStyles = new() { "hanja", "english" },
+            SignatureAxes = new() { "CALM", "WATER", "LIGHT" },
+            StyleQuota = new[] { 0.40, 0.15, 0.45 },
+            Shape = new(2, +0.6, -0.7, -0.3, 0.00),
         },
         ["playful"] = new()
         {
             Key = "playful", Label = "경쾌함",
             FavoredAxes = new() { "START", "LIGHT", "WOOD", "LINK" },
             FavoredStyles = new() { "pure-korean", "english" },
+            SignatureAxes = new() { "WOOD", "LIGHT", "START" },
+            StyleQuota = new[] { 0.05, 0.50, 0.45 },
+            Shape = new(3, +0.8, +1.0, +0.7, 0.75),
         },
     };
 

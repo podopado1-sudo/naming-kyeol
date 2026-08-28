@@ -66,8 +66,8 @@ public class CompanyNameController : ControllerBase
             if (request.Keywords.Count > 3)
                 return BadRequest(new { error = "Keywords는 최대 3개까지 넣을 수 있습니다." });
 
-            if (request.Keywords.Any(k => k?.Length > 10))
-                return BadRequest(new { error = "Keywords의 각 항목은 10자 이내여야 합니다." });
+            if (request.Keywords.Any(k => k?.Length > 20))
+                return BadRequest(new { error = "Keywords의 각 항목은 20자 이내여야 합니다." });
 
             _logger.LogInformation("상호 작명 요청: 업종={Industry}, 톤={Tone}, 축={Style}, 음절={Syllables}, 개수={Count}",
                 request.Industry, request.Tone, request.Style, request.Syllables, request.Count);

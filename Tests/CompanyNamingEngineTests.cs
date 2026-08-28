@@ -219,6 +219,52 @@ public class CompanyNamingEngineTests
         Assert.Empty(result.KeywordNotices);
     }
 
+    [Theory]
+    [InlineData("정성스러운", "정성")]
+    [InlineData("따뜻함", "따뜻")]
+    [InlineData("새로움", "새로")]
+    [InlineData("다정한", "다정")]
+    public async Task Generate_InflectedKeyword_LeavesRootInName(string keyword, string root)
+    {
+        // 예전에는 1~2음절만 재료가 돼서 "정성스러운"은 이름에 흔적도 안 남았다
+        var result = await _engine.GenerateAsync("culture", new[] { keyword }, "warm", "pure-korean", 0, 40);
+
+        Assert.Contains(result.Candidates, c => c.Name.Contains(root, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Generate_InflectedKeyword_ExplainsClipping()
+    {
+        var result = await _engine.GenerateAsync("culture", new[] { "정성스러운" }, "warm", "all", 0, 12);
+
+        Assert.Single(result.KeywordNotices);
+        Assert.Contains("정성", result.KeywordNotices[0], StringComparison.Ordinal);
+
+        // 안내에서 '정성'을 썼다고 말했으면 목록에 실제로 있어야 한다.
+        // 말만 하고 결과에 없으면 아무 말 안 한 것보다 나쁘다.
+        Assert.Contains(result.Candidates, c => c.Name.Contains("정성", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Generate_HanjaKeyword_PullsMatchingPairs()
+    {
+        // '지혜' → {지, 혜} → 智·慧·惠 가 든 검수쌍이 위로 와야 한다.
+        // 조합을 만드는 게 아니라 126쌍 안에서 고르는 것이라 동음 사고 위험이 없다.
+        var result = await _engine.GenerateAsync("edu", new[] { "지혜" }, "classic", "hanja", 0, 12);
+
+        Assert.Contains(result.Candidates,
+            c => c.Hanja != null && (c.Hanja.Contains('智') || c.Hanja.Contains('慧') || c.Hanja.Contains('惠')));
+    }
+
+    [Fact]
+    public async Task Generate_UnusableKeyword_SaysSo()
+    {
+        // 영문 키워드는 이름 재료가 못 된다 — 무시당했다고 느끼지 않게 말해준다
+        var result = await _engine.GenerateAsync("it", new[] { "cloud" }, "modern", "all", 0, 12);
+
+        Assert.Single(result.KeywordNotices);
+    }
+
     [Fact]
     public async Task Generate_KeywordShiftsResults()
     {
@@ -286,6 +332,86 @@ public class CompanyNamingEngineTests
             Assert.False(NamingPrinciples.RequiresDueum(first.Reading),
                 $"{c.Name}: 첫 글자 '{first.Reading}'에 두음법칙이 적용되지 않음");
             Assert.Equal(first.Reading + c.Parts[1].Reading, c.Name);
+        }
+    }
+
+    // ============================================================
+    // 톤 — 조건이 결과를 바꾸는지
+    // ============================================================
+
+    /// <summary>
+    /// 어느 업종에서든 5개 톤이 서로 다른 축을 주입해야 한다.
+    ///
+    /// 톤이 밀어넣는 축이 겹치면 그 두 톤은 같은 재료 풀을 보게 되고, 결과가 다시
+    /// 붙어버린다(실측: 고치기 전 6개 업종에서 modern과 playful이 12개 결과 100% 동일).
+    /// SignatureAxes 순서를 바꾸면 이 성질이 조용히 깨지므로 여기서 막는다.
+    /// </summary>
+    [Fact]
+    public void ToneSignatureAxes_DistinctPerIndustry()
+    {
+        var collisions = new List<string>();
+
+        foreach (var industry in CompanyNamingData.Industries.Values)
+        {
+            var seen = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            foreach (var tone in CompanyNamingData.Tones.Values)
+            {
+                // 엔진과 같은 규칙: 업종이 안 고른 첫 번째 서명 축
+                var injected = tone.SignatureAxes.FirstOrDefault(a => !industry.AxisKeys.Contains(a));
+                if (injected == null) continue;
+
+                if (seen.TryGetValue(injected, out var other))
+                    collisions.Add($"{industry.Key}: {other}와 {tone.Key}가 모두 {injected} 주입");
+                else
+                    seen[injected] = tone.Key;
+            }
+        }
+
+        Assert.True(collisions.Count == 0, string.Join(" / ", collisions));
+    }
+
+    /// <summary>같은 업종에서 톤을 바꾸면 결과가 실제로 달라져야 한다</summary>
+    [Theory]
+    [InlineData("cafe", "modern", "playful")]
+    [InlineData("food", "modern", "playful")]
+    [InlineData("bakery", "modern", "playful")]
+    [InlineData("wellness", "modern", "playful")]
+    [InlineData("retail", "modern", "playful")]
+    [InlineData("agri", "modern", "playful")]
+    [InlineData("law", "classic", "premium")]
+    [InlineData("interior", "warm", "playful")]
+    [InlineData("it", "modern", "warm")]
+    public async Task Generate_TonesProduceDifferentResults(string industry, string toneA, string toneB)
+    {
+        var a = await _engine.GenerateAsync(industry, NoKeywords, toneA, "all", 0, 12);
+        var b = await _engine.GenerateAsync(industry, NoKeywords, toneB, "all", 0, 12);
+
+        var setA = a.Candidates.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+        var setB = b.Candidates.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+
+        var overlap = (double)setA.Intersect(setB, StringComparer.Ordinal).Count()
+                    / setA.Union(setB, StringComparer.Ordinal).Count();
+
+        Assert.True(overlap <= 0.58,
+            $"{industry}: {toneA} vs {toneB} 겹침 {overlap:P0} — 톤이 결과를 못 바꾸고 있다");
+    }
+
+    /// <summary>같은 입력은 같은 결과를 내야 한다 (축 정렬 결정성)</summary>
+    [Fact]
+    public async Task Generate_IsDeterministic()
+    {
+        foreach (var industry in new[] { "cafe", "law", "it" })
+        foreach (var tone in new[] { "modern", "classic", "premium" })
+        {
+            var first = await _engine.GenerateAsync(industry, NoKeywords, tone, "all", 0, 12);
+            for (int i = 0; i < 3; i++)
+            {
+                var again = await _engine.GenerateAsync(industry, NoKeywords, tone, "all", 0, 12);
+                Assert.Equal(
+                    first.Candidates.Select(c => c.Name),
+                    again.Candidates.Select(c => c.Name));
+            }
         }
     }
 

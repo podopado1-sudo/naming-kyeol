@@ -100,7 +100,7 @@ export default function CompanyPage() {
       setKeywordDraft("");
       return;
     }
-    setKeywords([...keywords, k.slice(0, 10)]);
+    setKeywords([...keywords, k.slice(0, 20)]);
     setKeywordDraft("");
   }
 
@@ -242,7 +242,7 @@ export default function CompanyPage() {
                 <Label htmlFor="keyword">
                   담고 싶은 말{" "}
                   <span className="font-normal text-muted-foreground">
-                    (선택, 최대 3개)
+                    (선택, 최대 3개 · 1~2음절 우리말이 이름에 가장 잘 남아요)
                   </span>
                 </Label>
                 <div className="flex gap-2">
@@ -250,7 +250,7 @@ export default function CompanyPage() {
                     id="keyword"
                     placeholder="예: 정성, 고요, 물"
                     value={keywordDraft}
-                    maxLength={10}
+                    maxLength={20}
                     disabled={keywords.length >= 3}
                     onChange={(e) => setKeywordDraft(e.target.value)}
                     onKeyDown={(e) => {

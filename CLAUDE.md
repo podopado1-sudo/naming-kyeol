@@ -22,7 +22,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,018 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,041 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -41,7 +41,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,018개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,041개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -171,6 +171,24 @@ D:\MyDev\NameForm\
 - 후보별 `Cautions`는 실사용에서 뜨지 않는다(감점이 커서 상위 진입 불가). 대신
   응답의 `KeywordNotices`가 "넣은 업종어를 왜 안 썼는지"를 결과 위에서 알려준다
 
+**톤이 결과를 바꾸는 방식 (2026-08-28 개편)** — 원래 톤은 업종이 고른 4개 축 안에서만
+가점해서, 두 톤의 교집합이 같으면 점수 함수가 완전히 같아졌다
+(실측: 6개 업종에서 modern과 playful이 12개 결과 100% 동일). 자유도 3개를 줬다:
+1. **서명 축 주입** (`ToneProfile.SignatureAxes`) — 업종이 안 고른 축을 0.55 가중치로
+   재료 풀에 들여온다. ⚠️ 18업종에서 5톤의 주입 축이 모두 달라야 하며
+   `ToneSignatureAxes_DistinctPerIndustry` 테스트가 이를 지킨다
+2. **결 쿼터** (`ToneProfile.StyleQuota`) — 12칸의 한자/우리말/영문 구성비를 톤이 정한다
+   (클래식 7/4/1, 따뜻함 2/8/2 등)
+3. **소리결** (`ToneProfile.Shape`) — 같은 재료에서 다른 표기를 고르게 한다.
+   Memorability 30 중 6점. 연속 경음 감점(6)·식별력 감점(12)을 못 이기도록 일부러 작다
+- ⚠️ `axisWeights` 정렬에 `ThenBy(Ordinal)` 필수 — 주입값(0.55)과 업종 4순위(0.6)가
+  근접해 Dictionary 열거 순서에 노출된다. 빼면 같은 입력에 다른 결과가 나온다
+
+**키워드 3갈래** — 1~2음절 한글만 재료가 되던 것을 넓혔다.
+어미 절단(정성스러운→정성) / 한자 음절 매칭(지혜→智·慧·惠 든 검수쌍 가점) /
+반영 못 하면 안내. **안내한 어근은 `SelectDiverse`가 한 자리를 예약해 반드시 목록에 남긴다**
+— "'정성'을 썼다"고 말해놓고 결과에 없으면 아무 말 안 한 것보다 나쁘다
+
 ### 최종 점수 공식
 `FinalScore = AestheticScore * 0.7 + HarmonyScore * 0.3`
 
@@ -273,6 +291,9 @@ D:\MyDev\NameForm\
 ### 품질 감사 스크립트 (scripts/)
 - `scan_weak_name_candidates.py` — 사전 훈 전수 스캔 (다중 훈 검수 + 약한 훈 후보)
 - `audit_syllable_occupancy.py` — combos 음절 점유 감사 (어색 훈 글자가 음절 상위 점유 탐지)
+- `audit_company_variation.py` — **상호 조건 변별력 감사**: 90조합(업종 18 × 톤 5)을 돌려
+  톤 쌍 겹침 / 이름 편중 / 업종 겹침 / 개수·중복을 재고 FAIL 시 exit 1.
+  ⚠️ 백엔드 리미터가 IP당 분당 60회라 `REQUEST_INTERVAL=1.1`로 페이스를 맞춰 뒀다
 - `audit_combo_regressions.py` — **재생성 후 원커맨드 회귀 감사** (`--base REF`, 기본 HEAD):
   A combos 소실 / B 불용 잔존 / C comboMeans 커버리지(코드포인트 단위) /
   D 빈출셋 유일-약자 붕괴(HanjaSelector 풀 게이팅 재현) → FAIL 시 exit 1,
@@ -386,6 +407,9 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 ### 프론트엔드
 - **반려동물 작명 미구현**: `/guide` 7장과 Home Categories의 `pet` 카드는 ComingSoonModal 안내.
   (회사명은 2026-08-28 `/company`로 출시 — `ComingSoonMode` 타입은 `"pet"`만 남음)
+- **업종 쌍 결과 겹침 최대 71%**: 의미 축 12개로 업종 18개를 표현하면 한 축을 평균 6개
+  업종이 공유한다. `food/agri`·`fashion/culture`처럼 인접 업종은 축 재배치만으로 더
+  갈라지지 않는다. 근본 해결은 축을 늘리거나 업종별 고유 어휘를 두는 것
 - **상호 v1은 외부 조회 없음**: 도메인 가용성·상표 간이 확인(KIPRIS)·상호 등기 중복은 미구현.
   결과 화면 하단에 확정 전 별도 확인 안내를 노출 중
 
