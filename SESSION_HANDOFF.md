@@ -56,7 +56,7 @@ warm `포근담 열매온 이삭온` / playful `루콘 카론 돌카 노을담`
 — 이 게이트의 목적은 이상적 목표치가 아니라 "오늘보다 나빠지는 것"을 잡는 회귀 방지다.
 
 ### 검증
-`dotnet test` **1,041/1,041** · 프론트 tsc·lint·build 클린 ·
+`dotnet test` **1,036/1,036** · 프론트 tsc·lint·build 클린 ·
 `python scripts/audit_company_variation.py` PASS · 브라우저 실동작 확인
 
 ---
