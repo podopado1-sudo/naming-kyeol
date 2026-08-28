@@ -14,6 +14,20 @@ public static class HanjaData
     private static readonly object _lockObject = new object();
 
     /// <summary>
+    /// 외부 데이터 병합까지 끝났는지. 공개 시점이 _loadedDictionary와 다르다 —
+    /// LoadFromFinalJson()은 로더 내부 조회를 위해 사전을 먼저 필드에 꽂아두고
+    /// 그 뒤에 외부 데이터를 병합하므로, 사전이 null이 아니라는 것만으로는
+    /// 로드 완료를 뜻하지 않는다. 독자는 이 플래그를 봐야 한다.
+    /// </summary>
+    private static volatile bool _fullyLoaded;
+
+    /// <summary>
+    /// 지금 이 스레드가 로딩 중인지. 로더가 중간에 HanjaDictionary를 다시 조회하므로
+    /// (LoadCategoryMapping 등) 로딩 스레드만은 부분 로드 상태를 그대로 보게 둔다.
+    /// </summary>
+    [ThreadStatic] private static bool _loadingOnThisThread;
+
+    /// <summary>
     /// 인명에 자주 쓰이는 한자 목록 (빈도 가점용)
     /// 각 읽기별 상위 인명용 한자를 수집하여 +300 가점 부여
     /// </summary>
@@ -290,14 +304,28 @@ public static class HanjaData
     {
         get
         {
-            if (_loadedDictionary == null)
+            // _loadedDictionary != null 을 완료 신호로 쓰면 안 된다.
+            // LoadFromFinalJson()이 외부 데이터를 병합하기 전에 사전을 필드에 꽂기 때문에,
+            // 그 사이에 들어온 다른 스레드가 Core_v1·인명빈도가 빠진 사전을 그대로 들고 나간다.
+            if (_fullyLoaded) return _loadedDictionary!;
+
+            // 로딩 중인 스레드 자신의 재진입 — 여기서 lock을 다시 잡으면 재귀 로드가 된다
+            if (_loadingOnThisThread) return _loadedDictionary!;
+
+            lock (_lockObject)
             {
-                lock (_lockObject)
+                if (!_fullyLoaded)
                 {
-                    if (_loadedDictionary == null)
+                    _loadingOnThisThread = true;
+                    try
                     {
-                        LoadFromFinalJson();
+                        if (_loadedDictionary == null) LoadFromFinalJson();
                     }
+                    finally
+                    {
+                        _loadingOnThisThread = false;
+                    }
+                    _fullyLoaded = true; // 병합까지 끝난 뒤에야 독자에게 공개
                 }
             }
             return _loadedDictionary!; // LoadFromFinalJson()이 항상 초기화하므로 null이 아님
@@ -702,7 +730,8 @@ public static class HanjaData
         _loadedDictionary = dict;
 
         // Load external data as part of initialization (meanings, unihan, categories, gender/tone)
-        // This runs inside _lockObject so no reader can see partially loaded data
+        // 여기서 _loadedDictionary는 이미 채워져 있지만 아직 완성이 아니다.
+        // 독자는 _fullyLoaded로 막혀 있고, 로더 자신만 _loadingOnThisThread로 통과한다.
         LoadExternalDataCore();
 
         // ── Tier 3: Auto_Radical (의미 기반 오행 추정, grade=C) ──────────
@@ -1412,6 +1441,7 @@ public static class HanjaData
     {
         lock (_lockObject)
         {
+            _fullyLoaded = false; // 사전보다 먼저 내려 독자가 빈 상태를 완료로 오인하지 않게 한다
             _loadedDictionary = null;
         }
     }
