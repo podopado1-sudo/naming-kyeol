@@ -1,5 +1,7 @@
 /**
- * ComingSoonModal — 회사명 & 반려동물 공용 모달 (mode prop 분기)
+ * ComingSoonModal — 반려동물 준비 중 모달
+ *
+ * 회사명은 /company 로 출시되어 이 모달에서 빠졌다 (mode는 "pet"만 남음).
  * Source: NameForm_design/src/ComingSoonModal.jsx (Claude Design 산출물)
  *
  * Props:
@@ -24,7 +26,7 @@ import {
   type ReactNode,
 } from "react";
 
-export type ComingSoonMode = "company" | "pet";
+export type ComingSoonMode = "pet";
 
 // ============================================================
 // Icons
@@ -40,23 +42,6 @@ function CloseIcon() {
       strokeWidth="1.5"
     >
       <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CompanyIcon({ size = 48 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 48 48"
-      fill="none"
-      stroke="var(--color-teal)"
-      strokeWidth="1.5"
-    >
-      <rect x="8" y="12" width="32" height="30" rx="3" />
-      <path d="M16 22h4M28 22h4M16 30h4M28 30h4M16 38h4M28 38h4" />
-      <path d="M22 12V8a2 2 0 012-2h0a2 2 0 012 2v4" />
     </svg>
   );
 }
@@ -83,16 +68,10 @@ function PetIcon({ size = 48 }: { size?: number }) {
 // ============================================================
 // Content
 // ============================================================
-type FeatureKind =
-  | "industry"
-  | "domain"
-  | "trademark"
-  | "species"
-  | "rhythm"
-  | "call";
+type FeatureKind = "species" | "rhythm" | "call";
 
 interface ContentDef {
-  icon: typeof CompanyIcon;
+  icon: typeof PetIcon;
   title: string;
   subtitle: string;
   features: { icon: FeatureKind; text: string }[];
@@ -100,21 +79,6 @@ interface ContentDef {
 }
 
 const COMING_SOON_CONTENT: Record<ComingSoonMode, ContentDef> = {
-  company: {
-    icon: CompanyIcon,
-    title: "회사 이름, 조금만 기다려주세요",
-    subtitle:
-      "상호명·브랜드명·스타트업 네이밍을 위한 별도 규칙을 준비 중이에요. 업종과 포지셔닝을 반영한 추천을 목표로 하고 있어요.",
-    features: [
-      { icon: "industry", text: "업종별 네이밍 규칙 (IT · F&B · 교육 등)" },
-      { icon: "domain", text: "도메인 사용 가능성 체크" },
-      { icon: "trademark", text: "상표 충돌 간이 확인" },
-    ],
-    alternatives: [
-      { label: "이름 추천", href: "/search" },
-      { label: "부모 이름 기반", href: "/parent-based" },
-    ],
-  },
   pet: {
     icon: PetIcon,
     title: "반려동물 이름, 곧 만나요",
@@ -127,31 +91,13 @@ const COMING_SOON_CONTENT: Record<ComingSoonMode, ContentDef> = {
     ],
     alternatives: [
       { label: "이름 추천", href: "/search" },
-      { label: "쌍둥이 이름", href: "/twin" },
+      { label: "회사·가게 이름", href: "/company" },
     ],
   },
 };
 
 function FeatureIcon({ kind }: { kind: FeatureKind }) {
   const path: Record<FeatureKind, ReactNode> = {
-    industry: (
-      <>
-        <rect x="3" y="8" width="10" height="8" rx="1" />
-        <path d="M5 8V5h6v3" />
-      </>
-    ),
-    domain: (
-      <>
-        <circle cx="8" cy="8" r="6" />
-        <path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12" />
-      </>
-    ),
-    trademark: (
-      <>
-        <circle cx="8" cy="8" r="6" />
-        <path d="M5 6h6M8 6v5" />
-      </>
-    ),
     species: (
       <>
         <circle cx="8" cy="10" r="4" />

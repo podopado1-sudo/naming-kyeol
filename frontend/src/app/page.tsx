@@ -23,7 +23,7 @@ import {
 const CATEGORY_ROUTES: Record<CategoryKey, string | null> = {
   baby: "/search",
   rename: "/search?mode=rename", // TODO: /rename 라우트 신설 시 변경
-  company: null, // Coming Soon
+  company: "/company",
   pet: null, // Coming Soon
 };
 
@@ -85,7 +85,7 @@ export default function HomePage() {
   }
 
   function handleCategoryNotify(item: CategoryItem) {
-    if (item.key === "company" || item.key === "pet") {
+    if (item.key === "pet") {
       setComingSoonMode(item.key);
     }
   }

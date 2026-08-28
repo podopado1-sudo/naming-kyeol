@@ -502,3 +502,85 @@ export interface NameEvaluationResponse {
   generationFit?: GenerationFit | null;
   usedFallbackHanja: boolean;
 }
+
+// ============================================================
+// Company Naming (상호 — 회사명 · 가게명 · 브랜드명)
+//
+// 인명 추천과 계약이 다르다: 성씨·생년월일이 없고, 점수도
+// 미학/조화가 아니라 기억성·발음·식별력·업종적합 4축이다.
+// ============================================================
+export interface CompanyNamingRequest {
+  /** 업종 코드 (예: "cafe", "it") — 필수 */
+  industry: string;
+  /** 담고 싶은 키워드 0~3개 */
+  keywords?: string[];
+  /** "modern" | "classic" | "warm" | "premium" | "playful" */
+  tone?: string;
+  /** "all" | "hanja" | "pure-korean" | "english" */
+  style?: string;
+  /** 선호 음절 수 (0 = 무관, 2~4) */
+  syllables?: number;
+  /** 추천 개수 (1~50) */
+  count?: number;
+}
+
+/** 상호 구성 요소 (한자 1자 / 순우리말 어근 / 라틴 어근) */
+export interface CompanyNamePart {
+  symbol: string;
+  reading: string;
+  meaning: string;
+}
+
+export interface CompanyNameCandidate {
+  /** 상호 (한글 표기) */
+  name: string;
+  /** "hanja" | "pure-korean" | "english" */
+  style: string;
+  /** 생성 축 한글 라벨 */
+  styleLabel: string;
+  /** 한자 표기 — 한자형만, 그 외 null */
+  hanja: string | null;
+  parts: CompanyNamePart[];
+  /** 뜻 한 줄 */
+  meaning: string;
+  /** 로마자/영문 표기 */
+  romanization: string;
+  /** 상호 사용 예시 (예: "온담 카페") */
+  usageExamples: string[];
+  /** 총점 0~100 */
+  totalScore: number;
+  /** 기억성 0~30 */
+  memorability: number;
+  /** 발음 0~25 */
+  pronunciation: number;
+  /** 식별력 0~25 — 상표 등록 가능성·검색 노출의 기반 */
+  distinctiveness: number;
+  /** 업종 적합 0~20 */
+  industryFit: number;
+  reasons: string[];
+  /** 주의사항 — 없으면 빈 배열 */
+  cautions: string[];
+}
+
+export interface CompanyNamingResponse {
+  industry: string;
+  industryLabel: string;
+  /** 상호 뒤에 붙는 말 (사용 예시에 쓰인 것) */
+  industrySuffixes: string[];
+  /** 입력한 키워드에 대한 안내 — 업종 일반어·클리셰를 넣었을 때 이유를 알려준다 */
+  keywordNotices: string[];
+  candidates: CompanyNameCandidate[];
+  totalCount: number;
+}
+
+/** 코드 + 라벨 쌍 */
+export interface CompanyOption {
+  key: string;
+  label: string;
+}
+
+export interface CompanyNamingOptions {
+  industries: CompanyOption[];
+  tones: CompanyOption[];
+  styles: CompanyOption[];
+}

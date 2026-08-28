@@ -19,6 +19,9 @@ import type {
   NameRecommendationResponse,
   NameEvaluationRequest,
   NameEvaluationResponse,
+  CompanyNamingRequest,
+  CompanyNamingResponse,
+  CompanyNamingOptions,
 } from "./types";
 
 const API_BASE =
@@ -36,6 +39,17 @@ async function request<T>(endpoint: string, body: unknown): Promise<T> {
     throw new Error(
       `API 오류 (${res.status}): ${text || res.statusText}`
     );
+  }
+
+  return res.json() as Promise<T>;
+}
+
+async function get<T>(endpoint: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${endpoint}`);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`API 오류 (${res.status}): ${text || res.statusText}`);
   }
 
   return res.json() as Promise<T>;
@@ -116,6 +130,18 @@ export function evaluate(
   req: NameEvaluationRequest
 ): Promise<NameEvaluationResponse> {
   return request("/recommendations/evaluate", req);
+}
+
+// 상호 작명 (회사명 · 가게명 · 브랜드명)
+export function companyNames(
+  req: CompanyNamingRequest
+): Promise<CompanyNamingResponse> {
+  return request("/company-names", req);
+}
+
+// 상호 작명 입력 옵션 — 업종·톤 목록을 백엔드 데이터와 한 곳에서 맞춘다
+export function companyOptions(): Promise<CompanyNamingOptions> {
+  return get("/company-names/options");
 }
 
 // 탭 클릭 이벤트 (fire-and-forget, 실패 무시)

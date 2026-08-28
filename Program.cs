@@ -451,6 +451,7 @@ builder.Services.AddScoped<IPureKoreanNameEngine, PureKoreanNameEngine>();
 builder.Services.AddScoped<IRareSurnameEngine, RareSurnameEngine>();
 builder.Services.AddScoped<IThreeSyllableEngine, ThreeSyllableEngine>();
 builder.Services.AddScoped<ICreativeNamingEngine, CreativeNamingEngine>();
+builder.Services.AddScoped<ICompanyNamingEngine, CompanyNamingEngine>();
 builder.Services.AddScoped<ISmartRecommendationService, SmartRecommendationService>();
 builder.Services.AddScoped<INameEvaluationService, NameEvaluationService>();
 builder.Services.AddScoped<IScoringService, ScoringService>();

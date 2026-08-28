@@ -42,6 +42,9 @@ const ROUTES: Array<{
   { path: "dual-name", priority: 0.6, changeFrequency: "monthly" },
   { path: "rare-surname", priority: 0.6, changeFrequency: "monthly" },
 
+  // 상호 작명 (인명과 별도 벌티컬)
+  { path: "company", priority: 0.7, changeFrequency: "monthly" },
+
   // 운영 페이지
   { path: "about", priority: 0.4, changeFrequency: "yearly" },
   { path: "contact", priority: 0.4, changeFrequency: "yearly" },

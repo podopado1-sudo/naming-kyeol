@@ -22,7 +22,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (988 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,018 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -41,7 +41,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 988개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,018개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -86,7 +86,7 @@ D:\MyDev\NameForm\
 ├── Application/
 │   ├── DTOs/                           ← 요청/응답 DTO (Smart, Twin, Dual, Eval, Saju 등)
 │   ├── Services/                       ← 오케스트레이터 서비스 다수
-│   └── Engines/                        ← 추천 엔진 15개 (인터페이스+구현)
+│   └── Engines/                        ← 추천 엔진 16개 (인터페이스+구현)
 │       ├── Data/                       ← HanjaData, HanjaCsvLoader, CategoryKeywordsLoader
 │       └── Utils/                      ← KoreanUtils, FortuneUtils, MorphemeAnalyzer 등
 ├── Domain/
@@ -112,7 +112,7 @@ D:\MyDev\NameForm\
 
 ## 아키텍처
 
-### 추천 엔진 파이프라인 (15 엔진)
+### 추천 엔진 파이프라인 (16 엔진)
 
 ```
 요청 → SmartRecommendationService (메인 오케스트레이터)
@@ -136,12 +136,40 @@ D:\MyDev\NameForm\
           │     CreativeNamingEngine    → 창작/창의 작명
           │     NameReversalEngine      → 뒤집기/변형 이름
           │
+          │  ※ 상호 엔진은 이 파이프라인에 들어오지 않는다 (아래 별도 항목)
+          │
           └── 분석/평가 서비스
                 NameAnalysisService     → 이름 평가 (한자/사주/음령오행)
                 NameEvaluationService   → 상세 평가 (Aesthetic·Harmony Breakdown)
                 SajuCalculationService  → 사주 4기둥 계산
                 YongshinCalculationService → 용신 분석 (억부법 + 조후법)
 ```
+
+### 상호 작명 엔진 (2026-08-28 추가) — 인명과 분리된 벌티컬
+
+```
+요청 → CompanyNamingEngine (단독, SmartRecommendationService를 거치지 않음)
+          ├── 한자 조합    검수된 한자쌍 126개에서 선택 (조합 생성 안 함)
+          ├── 순우리말     축 어근(앞) + 검수 어미 15개(뒤) 합성
+          └── 영문 조어    라틴 어근 + 접미 → RomanizationUtils로 한글 음차
+```
+
+**인명 엔진을 재사용하지 않는 이유** — 성씨가 없어 `AestheticEngine`의 성+이름 연음
+평가(30점)가 성립하지 않고, 글자 풀에 인명용 한자 제약이 없으며, 평가축이 다르다.
+
+- **점수 100 = 기억성 30 + 발음 25 + 식별력 25 + 업종적합 20**
+  식별력이 상호만의 축이다 (상표법상 기술적 표장 회피 + 검색 매몰 회피)
+- **의미 축 12개 × 업종 18개 × 톤 5개** — 업종은 축을 고르기만 하므로 업종 추가 시 새 어휘 불필요
+- ⚠️ **한자 축은 큐레이션이 계약이다.** 자유 순열은 기존 한자어와 동음 충돌을 피할 수 없다
+  (실측: 도달 가능 1,797개에 久續=구속·工匠=공장·安靜=안정 혼입). 쌍을 추가할 때는
+  한글 표기가 기존 한국어 단어·유명 고유명사와 겹치지 않는지 반드시 확인할 것
+- ⚠️ **받침 + ㄹ초성 금지** — 유음화·비음화로 표기와 발음이 갈라진다
+  (溫林"온림"→[올림], 旭林"욱림"→[웅님]). 상호는 듣고 받아적는 이름이라 치명적이다.
+  `CompanyNamingEngineTests.HanjaPairs_NoLiquidNasalShift`가 기계적으로 막는다
+- ⚠️ **`WeakGivenNameHanjaSet`을 적용하지 않는다** (`ForbiddenNameHanjaSet`만 적용).
+  그 세트는 인명 기준이라 味·香·器 같은 상호 적격 글자를 잘못 배제한다
+- 후보별 `Cautions`는 실사용에서 뜨지 않는다(감점이 커서 상위 진입 불가). 대신
+  응답의 `KeywordNotices`가 "넣은 업종어를 왜 안 썼는지"를 결과 위에서 알려준다
 
 ### 최종 점수 공식
 `FinalScore = AestheticScore * 0.7 + HarmonyScore * 0.3`
@@ -182,6 +210,12 @@ D:\MyDev\NameForm\
 |--------|------|------|
 | GET | `/api/v1/recommendations/{id}` | 추천 결과 조회 |
 | GET | `/api/v1/recommendations/hanja-stats` | 한자 데이터 통계 |
+
+### 상호 (회사명 · 가게명 · 브랜드명)
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/api/v1/company-names` | 상호 후보 생성 (업종·톤·생성축·음절·키워드) |
+| GET | `/api/v1/company-names/options` | 입력 옵션 목록 (업종 18 · 톤 5 · 생성축 4) |
 
 ### 피드백
 | 메서드 | 경로 | 설명 |
@@ -330,6 +364,7 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 /required-char     필수 글자 포함
 /pure-korean       순우리말
 /creative          창의적 작명
+/company           회사·가게 이름 (상호 작명)
 /three-syllable    3글자
 /guide             작명 가이드 (7 챕터, 사용자 교육)
 /method            작명 원리 (알고리즘 설명, "리포트 방식" 포함)
@@ -349,8 +384,10 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 - ~~xUnit1026 경고~~ (2026-06-13 1건 + 잔여 1건 2026-07-30 수정 완료)
 
 ### 프론트엔드
-- **/guide의 회사명/반려동물은 "준비 중" 안내**: 해당 라우트 미구현
-- **Home Categories의 `company`/`pet` 카드**: 클릭 시 ComingSoonModal만 표시
+- **반려동물 작명 미구현**: `/guide` 7장과 Home Categories의 `pet` 카드는 ComingSoonModal 안내.
+  (회사명은 2026-08-28 `/company`로 출시 — `ComingSoonMode` 타입은 `"pet"`만 남음)
+- **상호 v1은 외부 조회 없음**: 도메인 가용성·상표 간이 확인(KIPRIS)·상호 등기 중복은 미구현.
+  결과 화면 하단에 확정 전 별도 확인 안내를 노출 중
 
 ### 인프라/운영
 - **Render Free cold start**: 15분 idle 후 첫 요청 30초+ — `.github/workflows/keepalive.yml`이 10분 간격 ping으로 회피 (실측: GitHub cron 스로틀링으로 약 1시간 간격까지 밀림 — cold start 완전 회피는 못 함). 같은 워크플로가 프론트(namingkyeol.com)도 확인해 3회 연속 비200이면 run 실패 → GitHub 실패 알림 메일이 다운 감지 채널 (2026-07-30 Vercel 정지 402 사후 대책). 저장소 60일 무커밋 시 GitHub이 스케줄 자동 비활성화하므로 알림 메일 주의

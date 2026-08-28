@@ -38,9 +38,9 @@ const ITEMS: CategoryItem[] = [
   },
   {
     key: "company",
-    title: "회사명",
+    title: "회사·가게 이름",
     copy: "오래 불릴 이름의 결",
-    status: "coming",
+    status: "live",
     hanja: "商",
     reading: "상호",
   },

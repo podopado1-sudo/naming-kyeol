@@ -353,7 +353,7 @@ export default function GuidePage() {
           >
             <MiniCard
               title="회사명"
-              body="‘오래 불릴 이름’ + ‘상표 등록 가능’ + ‘도메인 확보’ 세 가지가 동시에 충족돼야 합니다. 발음 명료성과 한·영 동시 통용 여부도 봅니다."
+              body="아기 이름과 가장 크게 갈리는 지점은 ‘식별력’입니다. 업종을 그대로 쓴 이름(맛있는김밥)은 상표 등록이 어렵고 검색에서도 같은 업종 상호에 묻힙니다. 발음 명료성과 한·영 동시 통용 여부도 함께 봅니다."
             />
             <MiniCard
               title="반려동물"
@@ -361,7 +361,11 @@ export default function GuidePage() {
             />
           </div>
           <Aside icon={Sparkles}>
-            회사명·반려동물 이름 추천은 현재 준비 중입니다. 곧 만나보실 수 있어요.
+            회사·가게 이름은{" "}
+            <a href="/company" style={{ color: "var(--color-teal)" }}>
+              상호 작명
+            </a>
+            에서 바로 지어보실 수 있어요. 반려동물 이름 추천은 준비 중입니다.
           </Aside>
         </Chapter>
 
