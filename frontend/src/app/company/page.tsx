@@ -240,15 +240,15 @@ export default function CompanyPage() {
 
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="keyword">
-                  담고 싶은 말{" "}
+                  이름에 넣고 싶은 글자{" "}
                   <span className="font-normal text-muted-foreground">
-                    (선택, 최대 3개 · 1~2음절 우리말이 이름에 가장 잘 남아요)
+                    (선택, 최대 3개 · 1~2음절 우리말이 가장 잘 어울려요)
                   </span>
                 </Label>
                 <div className="flex gap-2">
                   <Input
                     id="keyword"
-                    placeholder="예: 정성, 고요, 물"
+                    placeholder="예: 결, 정성, 바다"
                     value={keywordDraft}
                     maxLength={20}
                     disabled={keywords.length >= 3}

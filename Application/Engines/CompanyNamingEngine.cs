@@ -397,10 +397,10 @@ public class CompanyNamingEngine : ICompanyNamingEngine
 
             if (root == null)
             {
-                bool axisHit = CompanyNamingData.Axes.Values.Any(a => AxisMatchesKeyword(a, kw));
-                notices.Add(axisHit
-                    ? $"'{kw}'{KoreanUtils.EunNeun(kw)} 이름에 글자로 넣기 어려워 뜻으로만 반영했어요."
-                    : $"'{kw}'{KoreanUtils.EunNeun(kw)} 이름 재료로 쓰기 어려웠어요. 1~2음절 우리말이 가장 잘 남습니다.");
+                // 한글이 아니거나 조각이 부적격 — 못 넣었다는 사실만 정직하게 말한다.
+                // "뜻으로 반영했다" 같은 말은 실제로 보장할 수 없으면 하지 않는다.
+                notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} 이름에 글자로 넣지 못했어요. " +
+                            "1~2음절 우리말이 가장 잘 들어갑니다.");
             }
         }
 
