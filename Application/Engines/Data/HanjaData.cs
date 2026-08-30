@@ -307,7 +307,11 @@ public static class HanjaData
             // _loadedDictionary != null 을 완료 신호로 쓰면 안 된다.
             // LoadFromFinalJson()이 외부 데이터를 병합하기 전에 사전을 필드에 꽂기 때문에,
             // 그 사이에 들어온 다른 스레드가 Core_v1·인명빈도가 빠진 사전을 그대로 들고 나간다.
-            if (_fullyLoaded) return _loadedDictionary!;
+            //
+            // 두 필드를 지역 변수로 한 번씩만 읽는다 — _fullyLoaded 확인과 _loadedDictionary
+            // 반환 사이에 다른 스레드가 Reload()로 필드를 내리면 null을 !로 억지 반환하게 된다.
+            var snapshot = _loadedDictionary;
+            if (_fullyLoaded && snapshot != null) return snapshot;
 
             // 로딩 중인 스레드 자신의 재진입 — 여기서 lock을 다시 잡으면 재귀 로드가 된다
             if (_loadingOnThisThread) return _loadedDictionary!;
@@ -321,14 +325,22 @@ public static class HanjaData
                     {
                         if (_loadedDictionary == null) LoadFromFinalJson();
                     }
+                    catch
+                    {
+                        // 로드 도중 예외가 전파되면 부분 병합 사전이 필드에 남는다.
+                        // 그대로 두면 다음 호출자가 null 가드를 통과해 재로드를 건너뛰고
+                        // 그 부분 사전을 완료로 승격시킨다 — 이 수정이 막으려던 증상 그대로.
+                        _loadedDictionary = null;
+                        throw;
+                    }
                     finally
                     {
                         _loadingOnThisThread = false;
                     }
                     _fullyLoaded = true; // 병합까지 끝난 뒤에야 독자에게 공개
                 }
+                return _loadedDictionary!; // lock 안에서 반환 — Reload()와의 경합 창 제거
             }
-            return _loadedDictionary!; // LoadFromFinalJson()이 항상 초기화하므로 null이 아님
         }
     }
 
