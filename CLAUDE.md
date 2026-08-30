@@ -22,7 +22,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,036 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,039 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -41,7 +41,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,036개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,039개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -186,8 +186,11 @@ D:\MyDev\NameForm\
 
 **키워드 3갈래** — 1~2음절 한글만 재료가 되던 것을 넓혔다.
 어미 절단(정성스러운→정성) / 한자 음절 매칭(지혜→智·慧·惠 든 검수쌍 가점) /
-반영 못 하면 안내. **안내한 어근은 `SelectDiverse`가 한 자리를 예약해 반드시 목록에 남긴다**
-— "'정성'을 썼다"고 말해놓고 결과에 없으면 아무 말 안 한 것보다 나쁘다
+반영 못 하면 안내. `SelectDiverse`가 키워드 적중 후보에 한 자리를 예약한다.
+- ⚠️ **키워드 안내(`BuildKeywordNotices`)는 반드시 최종 목록을 보고 발화한다** —
+  결=한자·글자 수=2에서는 어근이 들어갈 경로가 없어, 선택 결과를 안 보고 안내하면
+  "'정성'만 따서 썼어요"라고 말하고 목록에 0개인 거짓 약속이 된다(2026-08-30 점검에서
+  실재 재현→수정). 들어갔으면 절단 안내 / 한자로 담겼으면 그 사실 / 조건 탓이면 푸는 법 안내
 
 ### 최종 점수 공식
 `FinalScore = AestheticScore * 0.7 + HarmonyScore * 0.3`
