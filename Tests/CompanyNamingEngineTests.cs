@@ -256,6 +256,40 @@ public class CompanyNamingEngineTests
             c => c.Hanja != null && (c.Hanja.Contains('智') || c.Hanja.Contains('慧') || c.Hanja.Contains('惠')));
     }
 
+    [Theory]
+    [InlineData("hanja", 0)]   // 어근 리터럴 경로(GenerateKorean)가 아예 안 도는 조건
+    [InlineData("all", 2)]     // 어근(2음절)+어미(1음절+)는 항상 3음절이라 전부 걸러지는 조건
+    public async Task Generate_ConstrainedKeyword_DoesNotMakeFalsePromise(string style, int syllables)
+    {
+        // 회귀: 절단 안내가 선택 결과를 안 보고 나가서, "'정성'만 따서 썼어요"라고
+        // 말해놓고 목록에 정성이 0개인 조합이 운영 UI에서 재현됐다.
+        var result = await _engine.GenerateAsync(
+            "culture", new[] { "정성스러운" }, "warm", style, syllables, 12);
+
+        bool included = result.Candidates.Any(
+            c => c.Name.Contains("정성", StringComparison.Ordinal));
+
+        foreach (var notice in result.KeywordNotices)
+        {
+            if (notice.Contains("따서 썼어요", StringComparison.Ordinal))
+                Assert.True(included, $"목록에 없는데 썼다고 안내함: {notice}");
+        }
+
+        // 이 두 조건에서는 실제로 못 들어가므로, 조건을 푸는 법을 알려주는 안내여야 한다
+        Assert.Contains(result.KeywordNotices,
+            n => n.Contains("넣지 못했", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Generate_HanjaOnlyKeyword_ExplainsHanjaReflection()
+    {
+        // 결=한자면 '지혜'가 글자로는 못 남지만 智·慧·惠로는 담긴다 — 그 사실을 말해줘야 한다
+        var result = await _engine.GenerateAsync("edu", new[] { "지혜" }, "classic", "hanja", 0, 12);
+
+        Assert.Contains(result.KeywordNotices,
+            n => n.Contains("한자로 담았", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Generate_UnusableKeyword_SaysSo()
     {

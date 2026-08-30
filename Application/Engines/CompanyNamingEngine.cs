@@ -73,7 +73,7 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             .Where(x => x.Root != null && x.Root != x.Original)
             .Select(x => x.Root!)
             .ToHashSet(StringComparer.Ordinal);
-        // ThenBy(Ordinal) 필수 — 서명 축 주입값(0.62)과 업종 4순위(0.6)가 근접해
+        // ThenBy(Ordinal) 필수 — 서명 축 주입값(0.55)과 키워드 감쇠 후 값들이 근접해
         // 비교가 Dictionary 열거 순서에 노출된다. 축 귀속이 흔들리면 설명 문장까지 달라진다.
         var axisKeys = axisWeights
             .OrderByDescending(kv => kv.Value)
@@ -117,7 +117,7 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             Industry = industryKey,
             IndustryLabel = profile.Label,
             IndustrySuffixes = profile.Suffixes.ToList(),
-            KeywordNotices = BuildKeywordNotices(profile, cleanKeywords),
+            KeywordNotices = BuildKeywordNotices(profile, cleanKeywords, top, styleKey, syllables),
             Candidates = top,
             TotalCount = top.Count,
         });
@@ -361,9 +361,20 @@ public class CompanyNamingEngine : ICompanyNamingEngine
     /// 엔진은 그런 후보를 감점으로 이미 밀어냈지만, 밀어냈다는 사실 자체를
     /// 말해주지 않으면 사용자는 자기 입력이 무시됐다고 느낀다.
     /// </summary>
+    /// <summary>
+    /// 키워드 안내는 반드시 **최종 목록을 보고 나서** 말한다.
+    ///
+    /// 원래는 절단 안내("'정성'만 따서 썼어요")를 선택 결과와 무관하게 냈는데,
+    /// 결=한자·글자 수=2 같은 조건에서는 어근이 들어갈 경로가 아예 없어서
+    /// 말과 결과가 어긋났다 — 목록에 정성이 0개인데 썼다고 말하는 상태.
+    /// 약속은 확인한 것만 한다.
+    /// </summary>
     private static List<string> BuildKeywordNotices(
         CompanyNamingData.IndustryProfile profile,
-        List<string> keywords)
+        List<string> keywords,
+        List<CompanyNameCandidate> top,
+        string styleKey,
+        int syllables)
     {
         var notices = new List<string>();
 
@@ -387,21 +398,40 @@ public class CompanyNamingEngine : ICompanyNamingEngine
                 continue;
             }
 
-            // 어떻게 반영했는지 말해주지 않으면 반영을 안 한 것과 똑같이 느껴진다
             var root = ClipKeywordRoot(kw);
-            if (root != null && root != kw)
-            {
-                notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} 그대로 넣기엔 길어 '{root}'만 따서 썼어요.");
-                continue;
-            }
-
             if (root == null)
             {
                 // 한글이 아니거나 조각이 부적격 — 못 넣었다는 사실만 정직하게 말한다.
-                // "뜻으로 반영했다" 같은 말은 실제로 보장할 수 없으면 하지 않는다.
                 notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} 이름에 글자로 넣지 못했어요. " +
                             "1~2음절 우리말이 가장 잘 들어갑니다.");
+                continue;
             }
+
+            // 글자가 실제로 목록에 남았는가
+            bool literal = top.Any(c => c.Name.Contains(root, StringComparison.Ordinal));
+            if (literal)
+            {
+                if (root != kw)
+                    notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} 그대로 넣기엔 길어 '{root}'만 따서 썼어요.");
+                continue; // 원형 그대로 들어갔으면 말할 게 없다
+            }
+
+            // 글자로는 못 남았지만 같은 뜻의 한자로 담겼는가 ('지혜' → 智·慧·惠)
+            var kwHanja = KeywordHanjaChars(new List<string> { kw });
+            bool viaHanja = kwHanja.Count > 0 && top.Any(c => c.Hanja != null
+                && c.Hanja.Any(ch => kwHanja.Contains(ch.ToString())));
+            if (viaHanja)
+            {
+                notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} 같은 뜻의 한자로 담았어요.");
+                continue;
+            }
+
+            // 진짜로 못 넣었다 — 조건을 좁혀서 못 넣은 거면 푸는 법을 알려준다
+            bool constrained = styleKey != "all" || syllables != 0;
+            notices.Add(constrained
+                ? $"'{kw}'{KoreanUtils.EunNeun(kw)} 지금 고른 결·글자 수에서는 이름에 넣지 못했어요. " +
+                  "결을 '전체', 글자 수를 '무관'으로 바꾸면 들어갈 수 있어요."
+                : $"'{kw}'{KoreanUtils.EunNeun(kw)} 이번 결과에는 넣지 못했어요.");
         }
 
         return notices;
