@@ -63,12 +63,20 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             .Take(3)
             .ToList();
 
-        var axisWeights = ResolveAxisWeights(profile, toneProfile, cleanKeywords);
-        var keywordHanja = KeywordHanjaChars(cleanKeywords);
+        // 업종 일반어·클리셰·일반명사 키워드는 안내 대상일 뿐 재료가 아니다.
+        // 안내문이 "이름에는 쓰지 않았어요"라고 말하는 이상, 어근 삽입·한자 매칭·
+        // 축 가중치·예약 슬롯 어느 경로로도 정말로 쓰이면 안 된다 — 실측에서
+        // '카페' 키워드에 예약 슬롯이 '카페담'을 앉혀 안내와 정면 모순이 났었다.
+        var materialKeywords = cleanKeywords
+            .Where(k => !IsRefusedKeyword(k, profile))
+            .ToList();
+
+        var axisWeights = ResolveAxisWeights(profile, toneProfile, materialKeywords);
+        var keywordHanja = KeywordHanjaChars(materialKeywords);
 
         // 활용형에서 잘라낸 어근. 안내에 "'정성'만 따서 썼어요"라고 말하면서 결과에
         // 정성이 든 이름이 하나도 없으면 아무 말 안 한 것보다 나쁘다 — 약속을 지킨다.
-        var clippedRoots = cleanKeywords
+        var clippedRoots = materialKeywords
             .Select(k => new { Original = k, Root = ClipKeywordRoot(k) })
             .Where(x => x.Root != null && x.Root != x.Original)
             .Select(x => x.Root!)
@@ -83,11 +91,12 @@ public class CompanyNamingEngine : ICompanyNamingEngine
 
         var raw = new List<CompanyNameCandidate>();
         var meta = new Dictionary<CompanyNameCandidate, (string axisA, string axisB)>();
+        var keywordHeadOf = new Dictionary<CompanyNameCandidate, string>();
 
         if (styleKey is "all" or "hanja")
             GenerateHanja(axisKeys, raw, meta);
         if (styleKey is "all" or "pure-korean")
-            GenerateKorean(axisKeys, cleanKeywords, raw, meta);
+            GenerateKorean(axisKeys, materialKeywords, raw, meta, keywordHeadOf);
         if (styleKey is "all" or "english")
             GenerateEnglish(axisKeys, raw, meta);
 
@@ -102,14 +111,14 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             if (!seen.Add(c.Name)) continue;
 
             var (axisA, axisB) = meta[c];
-            Score(c, profile, toneProfile, axisWeights, cleanKeywords, clippedRoots, keywordHanja, axisA, axisB);
-            BuildNarrative(c, profile, axisA, axisB);
+            Score(c, profile, toneProfile, axisWeights, materialKeywords, clippedRoots, keywordHanja, axisA, axisB);
+            BuildNarrative(c, profile, axisA, axisB, keywordHeadOf.GetValueOrDefault(c));
             scored.Add(c);
         }
 
         // 키워드를 반영했다고 안내할 거라면 목록에 실제로 있어야 한다.
         // 점수만 올려서는 상위 12칸 경쟁에 밀릴 수 있으므로 한 자리를 미리 잡아둔다.
-        var keywordMarks = cleanKeywords.Concat(clippedRoots).Distinct(StringComparer.Ordinal).ToList();
+        var keywordMarks = materialKeywords.Concat(clippedRoots).Distinct(StringComparer.Ordinal).ToList();
         var top = SelectDiverse(scored, toneProfile, count, keywordMarks);
 
         return Task.FromResult(new CompanyNamingResult
@@ -236,6 +245,21 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             .ThenBy(c => c.Name.Length)
             .ThenBy(c => c.Name, StringComparer.Ordinal)
             .ToList();
+    }
+
+    /// <summary>
+    /// 이름 재료로 받지 않는 키워드 — BuildKeywordNotices의 거절 분기와 같은 기준.
+    /// 여기서 걸리는 키워드는 안내문이 "이름에는 쓰지 않았어요"라고 말하므로,
+    /// 생성·가점·예약 어느 경로에도 들어가면 안 된다.
+    /// </summary>
+    private static bool IsRefusedKeyword(string keyword, CompanyNamingData.IndustryProfile profile)
+    {
+        if (profile.GenericWords.Any(w => keyword.Contains(w, StringComparison.Ordinal)
+                                       || w.Contains(keyword, StringComparison.Ordinal)))
+            return true;
+        if (CompanyNamingData.ClicheParts.Any(w => keyword.Contains(w, StringComparison.Ordinal)))
+            return true;
+        return false;
     }
 
     /// <summary>활용 어미 — 사용자는 "정성스러운"처럼 꾸미는 말로 넣는다</summary>
@@ -385,7 +409,7 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             if (generic != null)
             {
                 notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} {profile.Label} 일반어예요. 상호에 그대로 넣으면 상표 등록이 어렵고 " +
-                            "검색에서도 같은 업종 상호에 묻히기 때문에, 뜻은 살리되 표기는 다르게 풀었어요.");
+                            "검색에서도 같은 업종 상호에 묻히기 때문에 이름에는 쓰지 않았어요.");
                 continue;
             }
 
@@ -393,16 +417,26 @@ public class CompanyNamingEngine : ICompanyNamingEngine
                 w => kw.Contains(w, StringComparison.Ordinal));
             if (cliche != null)
             {
-                notices.Add($"'{kw}'에 든 '{cliche}'{KoreanUtils.EunNeun(cliche)} 상호에 매우 흔히 쓰이는 말이라 기억에 남기 어려워요. " +
-                            "다른 후보를 우선해 보여드렸어요.");
+                notices.Add($"'{kw}'에 든 '{cliche}'{KoreanUtils.EunNeun(cliche)} 상호에 매우 흔히 쓰이는 말이라 " +
+                            "기억에 남기 어려워 이름에는 쓰지 않았어요.");
                 continue;
             }
 
             var root = ClipKeywordRoot(kw);
             if (root == null)
             {
-                // 한글이 아니거나 조각이 부적격 — 못 넣었다는 사실만 정직하게 말한다.
-                notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} 이름에 글자로 넣지 못했어요. " +
+                // 비한글 키워드도 말하기 전에 최종 목록을 본다 — '淸'을 치면 한자 표기
+                // 淸智가 목록에 실재하는데 "넣지 못했다"고 부정한 실측 사례가 있다.
+                bool present = top.Any(c =>
+                    c.Name.Contains(kw, StringComparison.Ordinal)
+                    || (c.Hanja != null && c.Hanja.Contains(kw, StringComparison.Ordinal)));
+                if (present) continue; // 그대로 들어갔으면 침묵 — 한글 리터럴과 같은 규칙
+
+                // 조사는 한자면 독음 기준으로 고른다 ('淸는' 방지)
+                var particleBase = kw.Length == 1
+                    && CompanyNamingData.HanjaIndex.TryGetValue(kw, out var hi)
+                        ? hi.Seed.Reading : kw;
+                notices.Add($"'{kw}'{KoreanUtils.EunNeun(particleBase)} 이름에 글자로 넣지 못했어요. " +
                             "1~2음절 우리말이 가장 잘 들어갑니다.");
                 continue;
             }
@@ -503,22 +537,12 @@ public class CompanyNamingEngine : ICompanyNamingEngine
         List<string> axisKeys,
         List<string> keywords,
         List<CompanyNameCandidate> sink,
-        Dictionary<CompanyNameCandidate, (string, string)> meta)
+        Dictionary<CompanyNameCandidate, (string, string)> meta,
+        Dictionary<CompanyNameCandidate, string> keywordHeadOf)
     {
-        // 사용자가 넣은 한글 키워드는 그대로 앞자리 어근이 된다 —
-        // 요청한 말이 상호에 실제로 남는 편이 설득력이 있다.
-        var keywordRoots = keywords
-            .Select(k => ClipKeywordRoot(k))
-            .Where(k => k != null)
-            .Select(k => k!)
-            .Select(k => new CompanyNamingData.KoreanRoot(k, k))
-            .ToList();
-
         foreach (var keyA in axisKeys)
         {
-            var headRoots = CompanyNamingData.Axes[keyA].Korean.Concat(keywordRoots);
-
-            foreach (var a in headRoots)
+            foreach (var a in CompanyNamingData.Axes[keyA].Korean)
             foreach (var (b, keyB) in CompanyNamingData.KoreanTailRoots)
             {
                 if (a.Text == b.Text) continue;
@@ -541,6 +565,44 @@ public class CompanyNamingEngine : ICompanyNamingEngine
                 };
                 sink.Add(candidate);
                 meta[candidate] = (keyA, keyB);
+            }
+        }
+
+        // 사용자 키워드 어근은 축 루프 밖에서 따로 만든다 — 요청한 말이 상호에
+        // 실제로 남는 편이 설득력이 있다. 다만 어근을 축 루프 안에서 만들면
+        // 그 축의 뜻 문장·서사가 어근에 임의 귀속된다(실측: '정성채'가
+        // "고요히 뿌리내린 곳"을 주장 — '정성'은 고요 축과 무관). 어근 후보의
+        // 축 귀속과 뜻은 확인 가능한 뒷자리 어미의 축으로만 말한다.
+        var seenKeywordNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var kw in keywords)
+        {
+            var root = ClipKeywordRoot(kw);
+            if (root == null) continue;
+
+            foreach (var (b, keyB) in CompanyNamingData.KoreanTailRoots)
+            {
+                if (root == b.Text) continue;
+
+                var name = root + b.Text;
+                if (name.Length is < 2 or > 4) continue;
+                if (!seenKeywordNames.Add(name)) continue;
+
+                var candidate = new CompanyNameCandidate
+                {
+                    Name = name,
+                    Style = "pure-korean",
+                    StyleLabel = "순우리말",
+                    Parts = new()
+                    {
+                        new CompanyNamePart { Symbol = root, Reading = root, Meaning = "담고 싶은 말" },
+                        new CompanyNamePart { Symbol = b.Text, Reading = b.Text, Meaning = b.Meaning },
+                    },
+                    Meaning = $"'{root}'{KoreanUtils.IGa(root)} {CompanyNamingData.AxisTailPhrase.GetValueOrDefault(keyB, "머무는 곳")}",
+                    Romanization = RomanizationUtils.ToRoman(name),
+                };
+                sink.Add(candidate);
+                meta[candidate] = (keyB, keyB);
+                keywordHeadOf[candidate] = root;
             }
         }
     }
@@ -823,10 +885,13 @@ public class CompanyNamingEngine : ICompanyNamingEngine
         CompanyNameCandidate c,
         CompanyNamingData.IndustryProfile profile,
         string axisA,
-        string axisB)
+        string axisB,
+        string? keywordRoot)
     {
         // --- 추천 이유 ---
-        var composition = c.Style switch
+        var composition = keywordRoot != null
+            ? $"담고 싶은 말 '{keywordRoot}'{KoreanUtils.EulReul(keywordRoot)} 앞에 그대로 두고 {c.Parts[1].Symbol}({c.Parts[1].Meaning}){KoreanUtils.EulReul(c.Parts[1].Symbol)} 이었어요."
+            : c.Style switch
         {
             "hanja" => $"{c.Parts[0].Symbol}({c.Parts[0].Meaning}) + {c.Parts[1].Symbol}({c.Parts[1].Meaning})를 붙여 만든 상호예요.",
             "pure-korean" => $"{c.Parts[0].Symbol}({c.Parts[0].Meaning}) + {c.Parts[1].Symbol}({c.Parts[1].Meaning})을 이은 순우리말 합성어예요.",
@@ -847,9 +912,16 @@ public class CompanyNamingEngine : ICompanyNamingEngine
 
         var axisLabelA = CompanyNamingData.Axes[axisA].Label;
         var axisLabelB = CompanyNamingData.Axes[axisB].Label;
-        c.Reasons.Add(axisA == axisB
-            ? $"{profile.Label} 업종에서 '{axisLabelA}' 결을 곧게 밀고 나가는 이름이에요."
-            : $"{profile.Label} 업종의 '{axisLabelA}'와 '{axisLabelB}' 결을 함께 담았어요.");
+        // "업종의"(소유격)라고 쓰면 안 된다 — 축은 톤이 주입했거나 한자쌍 파트너로
+        // 편승한 것일 수 있어, 그 결이 업종의 것이라는 단언이 된다(실측: IT/classic의
+        // 구봉이 "IT 업종의 '오램'·'터' 결"을 주장 — 둘 다 IT 축이 아님).
+        // 이름이 그 결을 담았다는 것만 말한다. 처소격 "업종에서"는 선택 맥락이라 참.
+        if (keywordRoot != null)
+            c.Reasons.Add($"'{axisLabelB}' 결로 마무리해 {profile.Label} 업종에 어울리게 골랐어요.");
+        else
+            c.Reasons.Add(axisA == axisB
+                ? $"{profile.Label} 업종에서 '{axisLabelA}' 결을 곧게 밀고 나가는 이름이에요."
+                : $"'{axisLabelA}'{KoreanUtils.GwaWa(axisLabelA)} '{axisLabelB}' 결을 함께 담은 이름이에요.");
 
         // --- 주의사항 ---
         var generic = profile.GenericWords.FirstOrDefault(w => c.Name.Contains(w, StringComparison.Ordinal));

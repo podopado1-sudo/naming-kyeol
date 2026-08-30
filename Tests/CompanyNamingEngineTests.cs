@@ -257,6 +257,83 @@ public class CompanyNamingEngineTests
     }
 
     [Theory]
+    [InlineData("cafe", "카페", "warm")]
+    [InlineData("cafe", "커피", "warm")]
+    [InlineData("retail", "마트", "modern")]
+    [InlineData("retail", "플러스", "modern")]
+    public async Task Generate_RefusedKeyword_NeverAppearsInResults(
+        string industry, string keyword, string tone)
+    {
+        // 회귀: 안내는 "이름에는 쓰지 않았어요"라고 말하는데 예약 슬롯이
+        // '카페담'을 앉혀 정면 모순이 났다. 거절한 키워드는 어느 경로로도
+        // 결과에 나타나면 안 된다 — 말과 동작이 같아야 한다.
+        var result = await _engine.GenerateAsync(
+            industry, new[] { keyword }, tone, "all", 0, 12);
+
+        Assert.Single(result.KeywordNotices);
+        Assert.DoesNotContain(result.Candidates,
+            c => c.Name.Contains(keyword, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Generate_HanjaCharKeyword_NotDeniedWhenPresent()
+    {
+        // 회귀: '淸'을 치면 청지(淸智)가 목록에 실재하는데 안내가 "넣지 못했어요"라고
+        // 부정했다. 비한글 키워드도 최종 목록(이름·한자 표기)을 보고 말해야 한다.
+        var result = await _engine.GenerateAsync("cafe", new[] { "淸" }, "modern", "hanja", 0, 12);
+
+        bool present = result.Candidates.Any(c =>
+            c.Name.Contains("淸", StringComparison.Ordinal)
+            || (c.Hanja != null && c.Hanja.Contains("淸", StringComparison.Ordinal)));
+
+        if (present)
+            Assert.DoesNotContain(result.KeywordNotices,
+                n => n.Contains("넣지 못했", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Generate_KeywordRootCandidate_TellsHonestStory()
+    {
+        // 회귀: 키워드 어근 후보(정성채)가 생성 루프의 축("고요 · 여백")을 제 것처럼
+        // 서사했다. 어근 후보의 뜻·서사는 확인 가능한 것(어근 자체 + 뒷자리 어미)만 말한다.
+        var result = await _engine.GenerateAsync(
+            "cafe", new[] { "정성스러운" }, "warm", "all", 0, 12);
+
+        var kwCandidate = result.Candidates.FirstOrDefault(
+            c => c.Name.StartsWith("정성", StringComparison.Ordinal));
+        Assert.NotNull(kwCandidate);
+
+        Assert.Contains("담고 싶은 말", kwCandidate!.Reasons[0], StringComparison.Ordinal);
+        Assert.StartsWith("'정성'", kwCandidate.Meaning, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Generate_Reasons_NeverClaimIndustryOwnsAxis()
+    {
+        // 회귀: "IT 업종의 '오램' 결"처럼 톤 주입·편승 축을 업종 소유로 단언했다.
+        // 소유격 "업종의 '" 패턴이 서사에 되살아나지 않도록 고정한다.
+        foreach (var (industry, tone) in new[] { ("it", "classic"), ("cafe", "warm"), ("law", "premium") })
+        {
+            var result = await _engine.GenerateAsync(industry, NoKeywords, tone, "all", 0, 12);
+            foreach (var c in result.Candidates)
+                Assert.All(c.Reasons, r =>
+                    Assert.DoesNotContain("업종의 '", r, StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
+    public async Task Generate_KeywordNotices_NeverClaimUnverifiedReflection()
+    {
+        // "뜻은 살리되" 같은 확인 안 된 반영 주장이 안내문에 되살아나지 않도록 고정
+        foreach (var (industry, kw) in new[] { ("cafe", "커피"), ("retail", "플러스"), ("it", "cloud") })
+        {
+            var result = await _engine.GenerateAsync(industry, new[] { kw }, "modern", "all", 0, 12);
+            Assert.All(result.KeywordNotices, n =>
+                Assert.DoesNotContain("뜻은 살리", n, StringComparison.Ordinal));
+        }
+    }
+
+    [Theory]
     [InlineData("hanja", 0)]   // 어근 리터럴 경로(GenerateKorean)가 아예 안 도는 조건
     [InlineData("all", 2)]     // 어근(2음절)+어미(1음절+)는 항상 3음절이라 전부 걸러지는 조건
     public async Task Generate_ConstrainedKeyword_DoesNotMakeFalsePromise(string style, int syllables)

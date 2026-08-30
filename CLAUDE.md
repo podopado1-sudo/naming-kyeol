@@ -22,7 +22,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,039 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,047 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -41,7 +41,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,039개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,047개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
