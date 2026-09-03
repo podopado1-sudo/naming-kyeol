@@ -5,7 +5,40 @@
 
 ---
 
-## 마지막 세션 요약 (2026-08-30 — 🩺 전체 점검 + 점검이 잡아낸 결함 3건 수정)
+## 마지막 세션 요약 (2026-09-03 — /name 주간 드립 확장 파이프라인, 2/2 커밋 대기)
+
+**목표**: 수록 컷 80→30명 완화로 5,340 이름(신규 2,035)을 생성해 두고, publishAt(pa)
+코호트로 **주 70개씩 자동 공개** (첫 코호트 2026-09-06, 마지막 2027-03-28).
+
+### 완료 (커밋 a8dc29e = 1/2, 빌드 생략 안전)
+- WeakGivenNameHanjaSet +45자 (E-리스트 1R 검수) · dotnet test 1,047 통과
+- combo-meanings.json 16,203→23,171쌍 (Batch 윤문)
+- build_name_seo_data.py `--baseline/--drip-start/--drip-per-week` + 정렬 결정화
+
+### 검증 완료·커밋 대기 (작업 트리, 2/2 커밋 예정 — 건드리지 말 것)
+- frontend/src/data/name-seo.json (2.59MB, 5,340명·pa 2,035) — 게이트 시뮬레이션
+  3시점(09-03=3,305 / 09-06=3,375 / 27-03-28=5,340) 전부 일치
+- frontend/src/lib/name-seo.ts (pa 단일 게이트) — **npm run build 성공, OG 3,305경로만
+  생성**으로 실빌드 검증됨
+- pretendard-og.ts (OG 폰트 서브셋 2,550글리프) · weekly-drip.yml(일 05시 KST 스탬프
+  커밋→빌드 유발) · drip-stamp.txt
+- baseline-name-seo.json = 임시 기준선(커밋 금지, pass-4 재빌드에 필요하니 삭제도 금지)
+
+### ⛔ 차단: Anthropic API 크레딧 소진 (400)
+- 감사 C: comboMeans 19,434/19,698 — **264쌍 잔여** (배치 스냅샷 이후 글로스 증분)
+- 서사 배치 실패 — 신규 이름 ~1,960건 서사 없음 (additive라 치명적이진 않음)
+- **재개 절차**: 크레딧 충전 → `build_combo_meanings.py --resume` + `build_name_stories.py
+  --resume` → pass-4 빌드(`python scripts/build_name_seo_data.py 30 --baseline
+  baseline-name-seo.json --drip-start 2026-09-06`) → 감사 C 100% 확인 → 2/2 커밋
+  (frontend 데이터+게이트+OG폰트+weekly-drip.yml+drip-stamp, baseline 제외) → 배포
+
+### 블로그
+- 발행 버퍼 2편 커밋(dc3732e): 11편 '온'(한자4탄)+data07 표, 12편 '하엘'(이름뜻3호)+mean03 표
+- 10편 '우'는 발행 대기, 08편은 발행 금지 가드 유지
+
+---
+
+## 이전 세션 요약 (2026-08-30 — 🩺 전체 점검 + 점검이 잡아낸 결함 3건 수정)
 
 7영역 점검(백엔드 테스트 / 상호 변별력 / 데이터 정합성 / 저장소 위생 / 프론트 / 라이브 / 세션 커밋 코드리뷰 — 뒤 5개는 병렬 감사 워크플로). **큰 그림: 전부 건강. 프로덕션은 origin/main과 정확히 일치하며 미푸시 커밋만 쌓여 있는 상태.**
 
