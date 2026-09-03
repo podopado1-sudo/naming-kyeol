@@ -11,8 +11,11 @@
   - 단계적 공개(상위 N개부터, thin-content·빌드용량 회피)
   - 음절 단위로 /hanja/[독음] 및 다른 /name/[이름]로 내부링크
 
-사용법:  python scripts/build_name_seo_data.py [min_total]
+사용법:  python scripts/build_name_seo_data.py [min_total] [--baseline 경로] [--drip-start YYYY-MM-DD] [--drip-per-week N]
          min_total: 출생신고 합산 빈도 하한 (기본 80)
+         --baseline: 기존 name-seo.json — 여기 없는 신규 이름에만 publishAt(pa) 코호트 부여
+         --drip-start/--drip-per-week: 주간 개방 시작일(기본 다음 일요일)·주당 개수(기본 70)
+         pa가 있는 이름은 프론트가 빌드 시각 기준으로 pa 도래 전이면 페이지를 만들지 않는다(주간 드립).
 출력:    frontend/src/data/name-seo.json + 검증 리포트(stdout)
 """
 
@@ -50,7 +53,18 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
-    min_total = int(sys.argv[1]) if len(sys.argv) > 1 else 80
+    args = sys.argv[1:]
+    pos = [a for a in args if not a.startswith("--")]
+    min_total = int(pos[0]) if pos else 80
+    def _opt(flag, default=None):
+        return args[args.index(flag) + 1] if flag in args else default
+    baseline_path = _opt("--baseline")
+    drip_start = _opt("--drip-start")
+    drip_per_week = int(_opt("--drip-per-week", "70"))
+    baseline_names = set()
+    if baseline_path and os.path.exists(baseline_path):
+        baseline_names = set(json.load(open(baseline_path, encoding="utf-8"))["names"].keys())
+        print(f"[drip] 기준선 {len(baseline_names)}개 — 신규 이름에만 publishAt 부여")
 
     male = load_csv_weights(os.path.join(RAW, "m.csv"))
     female = load_csv_weights(os.path.join(RAW, "f.csv"))
@@ -106,15 +120,29 @@ def main():
         records[name] = {"m": m, "f": f, "t": total}
 
     # 인기 순위(전체 합산 기준) 부여
-    ranked = sorted(records.items(), key=lambda kv: -kv[1]["t"])
+    ranked = sorted(records.items(), key=lambda kv: (-kv[1]["t"], kv[0]))  # 동률은 가나다 — 결정적 빌드
     for i, (name, rec) in enumerate(ranked, start=1):
         rec["rank"] = i
+
+    # 주간 드립: 기준선에 없는 신규 이름에 publishAt(pa) 코호트 부여 (누적 많은 순으로 먼저 개방)
+    if baseline_names:
+        from datetime import date, timedelta
+        if drip_start:
+            start = date.fromisoformat(drip_start)
+        else:
+            today = date.today()
+            start = today + timedelta(days=(6 - today.weekday()) % 7 or 7)  # 다음 일요일
+        new_names = [n for n, _ in ranked if n not in baseline_names]
+        for i, n in enumerate(new_names):
+            records[n]["pa"] = (start + timedelta(weeks=i // drip_per_week)).isoformat()
+        last = start + timedelta(weeks=(len(new_names) - 1) // drip_per_week) if new_names else start
+        print(f"[drip] 신규 {len(new_names)}개 → {start}부터 주 {drip_per_week}개, 마지막 코호트 {last}")
 
     # 성별 분리 순위
     for gender_key, src in (("rm", male), ("rf", female)):
         granked = sorted(
             (n for n in records if records[n][gender_key[1]] > 0),
-            key=lambda n: -records[n][gender_key[1]],
+            key=lambda n: (-records[n][gender_key[1]], n),
         )
         for i, name in enumerate(granked, start=1):
             records[name][gender_key] = i
