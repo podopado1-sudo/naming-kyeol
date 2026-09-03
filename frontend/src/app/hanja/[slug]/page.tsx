@@ -82,7 +82,7 @@ export async function generateMetadata({
 
   if (resolved.kind === "reading") {
     const { reading, chars } = resolved;
-    const title = `이름에 쓰는 '${reading}' 한자 ${chars.length}자 — 뜻·획수·오행`;
+    const title = `이름에 쓰는 '${reading}' 한자 ${chars.length}자 — 종류·뜻·획수·오행`;
     const description = `'${reading}'(으)로 읽는 인명용 한자 ${chars.length}자의 뜻, 획수, 오행을 한눈에 비교하세요. 검수 등급과 함께 이름에 어울리는 글자를 찾아드립니다.`;
     const canonical = `/hanja/${encodeURIComponent(reading)}`;
     return {
