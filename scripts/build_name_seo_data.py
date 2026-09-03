@@ -12,10 +12,18 @@
   - 음절 단위로 /hanja/[독음] 및 다른 /name/[이름]로 내부링크
 
 사용법:  python scripts/build_name_seo_data.py [min_total] [--baseline 경로] [--drip-start YYYY-MM-DD] [--drip-per-week N]
-         min_total: 출생신고 합산 빈도 하한 (기본 80)
-         --baseline: 기존 name-seo.json — 여기 없는 신규 이름에만 publishAt(pa) 코호트 부여
-         --drip-start/--drip-per-week: 주간 개방 시작일(기본 다음 일요일)·주당 개수(기본 70)
+         min_total: 출생신고 합산 빈도 하한 (기본: 기존 출력의 meta.minTotal, 최초엔 80)
+         --baseline: 최초 드립 부트스트랩용 — 여기 없는 신규 이름에만 publishAt(pa) 부여 (평시 불필요)
+         --drip-start/--drip-per-week: 주간 개방 시작일·주당 개수(기본 70)
          pa가 있는 이름은 프론트가 빌드 시각 기준으로 pa 도래 전이면 페이지를 만들지 않는다(주간 드립).
+
+⚠️ 드립 안전 계약 (2026-09-03 리뷰 후속):
+  - 기존 출력(frontend/src/data/name-seo.json)의 pa는 재실행 시 **자동 이월**된다 —
+    평시 재생성(weak 검수 라운드 등)에 --baseline·--drip-start를 다시 줄 필요가 없고,
+    실수로 빠뜨려도 pa가 소실되지 않는다.
+  - 기존 출력에 없던 완전 신규 이름은 이월된 마지막 코호트 뒤에 이어붙는다.
+  - 기존 출력에 pa가 있는데 새 출력에서 pa가 전멸하면 하드 에러로 중단한다.
+  - min_total 기본값도 기존 출력의 meta.minTotal을 따른다(무인자 재실행 = 현상 유지).
 출력:    frontend/src/data/name-seo.json + 검증 리포트(stdout)
 """
 
@@ -55,14 +63,31 @@ def main():
 
     args = sys.argv[1:]
     pos = [a for a in args if not a.startswith("--")]
-    min_total = int(pos[0]) if pos else 80
     def _opt(flag, default=None):
         return args[args.index(flag) + 1] if flag in args else default
     baseline_path = _opt("--baseline")
     drip_start = _opt("--drip-start")
     drip_per_week = int(_opt("--drip-per-week", "70"))
+
+    # 기존 출력 로드 — pa 이월(carry-forward)과 min_total 기본값의 원천.
+    prev_pa = {}
+    prev_names = set()
+    prev_min_total = None
+    if os.path.exists(OUT_PATH):
+        prev = json.load(open(OUT_PATH, encoding="utf-8"))
+        prev_names = set(prev.get("names", {}).keys())
+        prev_pa = {n: r["pa"] for n, r in prev.get("names", {}).items() if r.get("pa")}
+        prev_min_total = prev.get("meta", {}).get("minTotal")
+        if prev_pa:
+            print(f"[drip] 기존 출력 pa {len(prev_pa)}개 이월 (수록 {len(prev_names)}개)")
+
+    min_total = int(pos[0]) if pos else (prev_min_total or 80)
+
     baseline_names = set()
-    if baseline_path and os.path.exists(baseline_path):
+    if baseline_path:
+        if not os.path.exists(baseline_path):
+            print(f"[오류] --baseline 경로가 없습니다: {baseline_path}", file=sys.stderr)
+            return 1
         baseline_names = set(json.load(open(baseline_path, encoding="utf-8"))["names"].keys())
         print(f"[drip] 기준선 {len(baseline_names)}개 — 신규 이름에만 publishAt 부여")
 
@@ -124,9 +149,34 @@ def main():
     for i, (name, rec) in enumerate(ranked, start=1):
         rec["rank"] = i
 
-    # 주간 드립: 기준선에 없는 신규 이름에 publishAt(pa) 코호트 부여 (누적 많은 순으로 먼저 개방)
-    if baseline_names:
-        from datetime import date, timedelta
+    # 주간 드립 pa 부여 — 3단계:
+    #   1) 이월: 기존 출력에 pa가 있던 이름은 그 pa를 그대로 유지 (재생성 안전)
+    #   2) 이월 뒤 신규: 기존 출력에도 없던 이름은 마지막 코호트 이어서 배정
+    #   3) 부트스트랩: 이월할 pa가 없고 --baseline이 주어지면 기준선 밖 이름에 최초 배정
+    from datetime import date, timedelta
+
+    carried = 0
+    for n in records:
+        if n in prev_pa:
+            records[n]["pa"] = prev_pa[n]
+            carried += 1
+
+    if carried:
+        # 이월된 코호트의 꼬리를 찾아 신규 이름을 이어붙인다 (마지막 주가 덜 찼으면 채움)
+        cohort_count = defaultdict(int)
+        for n in records:
+            if "pa" in records[n]:
+                cohort_count[records[n]["pa"]] += 1
+        tail = max(cohort_count)
+        tail_date = date.fromisoformat(tail)
+        new_names = [n for n, _ in ranked if n not in prev_names]
+        for n in new_names:
+            if cohort_count[tail_date.isoformat()] >= drip_per_week:
+                tail_date += timedelta(weeks=1)
+            records[n]["pa"] = tail_date.isoformat()
+            cohort_count[tail_date.isoformat()] += 1
+        print(f"[drip] pa 이월 {carried}개 + 신규 {len(new_names)}개 이어붙임 (마지막 코호트 {tail_date if new_names else tail})")
+    elif baseline_names:
         if drip_start:
             start = date.fromisoformat(drip_start)
         else:
@@ -137,6 +187,17 @@ def main():
             records[n]["pa"] = (start + timedelta(weeks=i // drip_per_week)).isoformat()
         last = start + timedelta(weeks=(len(new_names) - 1) // drip_per_week) if new_names else start
         print(f"[drip] 신규 {len(new_names)}개 → {start}부터 주 {drip_per_week}개, 마지막 코호트 {last}")
+
+    # 하드 가드: 이월할 pa가 있었는데 새 출력에서 전멸하면 드립 사고 — 중단
+    out_pa_count = sum(1 for r in records.values() if "pa" in r)
+    if prev_pa and out_pa_count == 0:
+        print("[오류] 기존 출력에 publishAt이 있는데 새 출력에서 전부 사라졌습니다 — 드립 파괴 방지 중단", file=sys.stderr)
+        return 1
+    lost = prev_names - set(records)
+    if prev_names and len(lost) > 0:
+        print(f"[오류] 기존 수록 이름 {len(lost)}개가 새 출력에서 탈락했습니다 (min_total 상향?) — 색인된 페이지 404 방지 중단", file=sys.stderr)
+        print(f"       예: {sorted(lost)[:8]} · 의도된 축소라면 기존 출력을 지우고 재실행", file=sys.stderr)
+        return 1
 
     # 성별 분리 순위
     for gender_key, src in (("rm", male), ("rf", female)):
@@ -153,8 +214,17 @@ def main():
     with_combos = 0
     with_scores = 0
     used_combo_means = {}  # 수록 이름의 조합에 실제로 등장하는 한자쌍만 (top-level 맵, 중복 저장 회피)
+    mean_from_combo = 0
     for name, rec in records.items():
         mean = meanings.get(name)
+        if not mean:
+            # 폴백: 1순위 한자 조합의 자연어 뜻을 이름 뜻으로 (NameSeoRecord.mean 정의
+            # "대표 한자 기준의 일반적 느낌"과 일치 — 드립 신규 이름의 뜻 공백 방지)
+            combo = combos.get(name)
+            if combo:
+                mean = combo_meanings.get("".join(combo[0]))
+                if mean:
+                    mean_from_combo += 1
         if mean:
             rec["mean"] = mean
             with_meaning += 1
@@ -203,7 +273,12 @@ def main():
     print("=== name-seo.json 빌드 리포트 ===")
     print(f"min_total(빈도 하한): {min_total}")
     print(f"수록 이름: {len(records)}")
-    print(f"자연어 뜻 보유: {with_meaning} ({with_meaning*100//max(len(records),1)}%)")
+    pa_dates = sorted(r["pa"] for r in records.values() if "pa" in r)
+    if pa_dates:
+        print(f"publishAt 보유: {len(pa_dates)} (코호트 {pa_dates[0]} ~ {pa_dates[-1]})")
+    else:
+        print("publishAt 보유: 0 (드립 비활성)")
+    print(f"자연어 뜻 보유: {with_meaning} ({with_meaning*100//max(len(records),1)}%, 조합 폴백 {mean_from_combo})")
     print(f"서사(story) 보유: {with_story} ({with_story*100//max(len(records),1)}%)")
     print(f"한자 조합 보유: {with_combos} ({with_combos*100//max(len(records),1)}%)")
     print(f"미학 점수 보유: {with_scores} ({with_scores*100//max(len(records),1)}%)")

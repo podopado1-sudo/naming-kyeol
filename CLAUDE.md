@@ -312,6 +312,13 @@ D:\MyDev\NameForm\
 이름/뜻/OG 카피 변경 시 `python scripts/build_og_font.py`로 OG 폰트 서브셋 재생성
 (satori는 woff2 불가 → base64 TS 모듈, OG_LABELS 동기화 주의).
 
+⚠️ **주간 드립(pa) 안전 규칙 (2026-09-03~)**: name-seo.json의 publishAt(pa)은
+build_name_seo_data.py가 **기존 출력에서 자동 이월**한다 — 무인자 재실행이 안전하고
+(min_total도 기존 meta에서 승계), --baseline은 최초 부트스트랩에만 쓴 옵션이니 다시 주지
+말 것. 스크립트가 pa 전멸·수록 소실 시 하드 에러로 중단하며, `audit_combo_regressions.py`의
+F 검사도 같은 회귀를 잡는다. 코호트 개방은 `.github/workflows/weekly-drip.yml`(일 05:23 KST
+스탬프 커밋 → Vercel 재빌드)이 담당 — 마지막 pa 경과 후엔 자동 스킵.
+
 ### 서사(story) 파이프라인 — 의미 코이닝 (2026-07-22 Phase A)
 사람 서사형 한 문장("어디에 있어도 은은하게 제 빛을 내는 사람")을 mean과 별개 레이어로 제공.
 `dotnet run -- dump-story-inputs` → `python scripts/build_name_stories.py`(Batch, 사람 서사형

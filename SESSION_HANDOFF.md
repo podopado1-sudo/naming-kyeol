@@ -5,32 +5,46 @@
 
 ---
 
-## 마지막 세션 요약 (2026-09-03 — /name 주간 드립 확장 파이프라인, 2/2 커밋 대기)
+## 마지막 세션 요약 (2026-09-03 — /name 주간 드립 확장 파이프라인 완성·배포)
 
 **목표**: 수록 컷 80→30명 완화로 5,340 이름(신규 2,035)을 생성해 두고, publishAt(pa)
-코호트로 **주 70개씩 자동 공개** (첫 코호트 2026-09-06, 마지막 2027-03-28).
+코호트로 **주 70개씩 자동 공개** (첫 코호트 2026-09-06 일, 마지막 2027-03-28).
+weekly-drip.yml(일 05:23 KST 스탬프 커밋)이 매주 빌드를 유발해 코호트가 열린다.
 
-### 완료 (커밋 a8dc29e = 1/2, 빌드 생략 안전)
-- WeakGivenNameHanjaSet +45자 (E-리스트 1R 검수) · dotnet test 1,047 통과
-- combo-meanings.json 16,203→23,171쌍 (Batch 윤문)
-- build_name_seo_data.py `--baseline/--drip-start/--drip-per-week` + 정렬 결정화
+### 최종 데이터 (감사 A~F 전부 ✅, C 100%)
+- name-seo.json 2.82MB: 5,340명 · pa 2,035 · 뜻 97%(조합 폴백 1,903) · 서사 98%(5,253)
+  · combos 95% · 점수 100% · comboMeans 19,698쌍(100%)
+- combo-meanings.json 23,435쌍 (윤문 배치 완주 + 글로스 덤프가 영구 스킵하는
+  羅𧗿·羅𩇣 2쌍은 인라인 보충 — 𧗿·𩇣은 백엔드 사전에 훈이 없어 덤프가 건너뜀)
+- name-stories.json 5,253건 (서사 배치 완주)
+- WeakGivenNameHanjaSet +45자 (커밋 a8dc29e) · dotnet test 1,047 통과
 
-### 검증 완료·커밋 대기 (작업 트리, 2/2 커밋 예정 — 건드리지 말 것)
-- frontend/src/data/name-seo.json (2.59MB, 5,340명·pa 2,035) — 게이트 시뮬레이션
-  3시점(09-03=3,305 / 09-06=3,375 / 27-03-28=5,340) 전부 일치
-- frontend/src/lib/name-seo.ts (pa 단일 게이트) — **npm run build 성공, OG 3,305경로만
-  생성**으로 실빌드 검증됨
-- pretendard-og.ts (OG 폰트 서브셋 2,550글리프) · weekly-drip.yml(일 05시 KST 스탬프
-  커밋→빌드 유발) · drip-stamp.txt
-- baseline-name-seo.json = 임시 기준선(커밋 금지, pass-4 재빌드에 필요하니 삭제도 금지)
+### 배포 전 적대 리뷰(워크플로 36 에이전트)가 잡은 14건 → 전부 수정
+1. **[high] --baseline 누락/오타 시 pa 전멸 footgun** → build_name_seo_data.py를
+   **pa 자동 이월(carry-forward)**로 재설계: 무인자 재실행이 안전(기존 출력에서 pa·
+   min_total 승계, 신규 이름은 마지막 코호트 뒤에 이어붙음), pa 전멸·수록 소실은
+   파일 쓰기 전 하드 에러. --baseline 경로 부재도 하드 에러. 감사에 F(pa 보존) 추가.
+   **baseline-name-seo.json 임시 파일은 불필요해져 삭제** — 이월 원천은 커밋된 출력 자체.
+2. **[med] 드립 코호트 78% 오펀 페이지** → sitemap에 공개 드립 이름 전량 등재(lastmod=
+   개방일 pa) + /name 인덱스 '새로 실린 이름'(최신 코호트) 섹션. 드립 이름은 전부 rank
+   3,306+라 상위 1,000 표면에 못 들기 때문 — 사이트맵이 유일한 크롤 발견 경로였음.
+3. **[med] 신규 이름 mean 부재 + 무조건 문단** → 1순위 조합 뜻을 이름 뜻으로 폴백
+   (61→97%), mean 없는 146명은 안내 문단 조건부 렌더(combos 유무별 문구).
+4. OG/트위터 이미지 라우트 `dynamicParams=false` 명시(미공개 slug 온디맨드 렌더 차단 —
+   메타데이터 라우트는 페이지의 것을 상속 안 함).
+5. 게이트 기준일 `NEXT_BUILD_DATE_KST`를 next.config env로 1회 주입(워커별 재평가로
+   KST 자정 걸친 빌드에서 라우트 간 갈라짐 방지). name-seo.ts는 env 우선+폴백.
+6. weekly-drip: 크론 05:23 KST 오프셋(정각 드롭 회피) + 마지막 pa 경과 후 자동 스킵
+   (무의미한 영구 주간 전량 재빌드 차단). 스케줄 통드롭 주는 무신호지만 다음 주 빌드가
+   소급 개방(pa<=빌드일)이라 최대 7일 지연 자가 치유 — 잔여 리스크로 수용.
+7. sitemap lastModified를 고정 날짜(2026-09-03, 실변경 시 수동 갱신)로 — 매 빌드
+   new Date() 재도장은 구글이 lastmod를 도메인 단위로 무시하게 만듦.
 
-### ⛔ 차단: Anthropic API 크레딧 소진 (400)
-- 감사 C: comboMeans 19,434/19,698 — **264쌍 잔여** (배치 스냅샷 이후 글로스 증분)
-- 서사 배치 실패 — 신규 이름 ~1,960건 서사 없음 (additive라 치명적이진 않음)
-- **재개 절차**: 크레딧 충전 → `build_combo_meanings.py --resume` + `build_name_stories.py
-  --resume` → pass-4 빌드(`python scripts/build_name_seo_data.py 30 --baseline
-  baseline-name-seo.json --drip-start 2026-09-06`) → 감사 C 100% 확인 → 2/2 커밋
-  (frontend 데이터+게이트+OG폰트+weekly-drip.yml+drip-stamp, baseline 제외) → 배포
+### 남은 운영 카드
+- E-리스트 184자(weak 9자)는 1라운드 검수에서 의도적으로 중단 — 다음 검수 라운드 후보
+- mean 없는 146명(combos도 없는 132명 포함)은 문단 숨김으로 처리 — 콘텐츠 보강은 선택
+- 드립 이름 내부링크는 여전히 얇음(사이트맵+데뷔 주 인덱스가 전부) — 색인율 보고 확대 판단
+- 코호트 소진 2027-03-28 후 weekly-drip은 자동 스킵되지만 워크플로 제거는 수동
 
 ### 블로그
 - 발행 버퍼 2편 커밋(dc3732e): 11편 '온'(한자4탄)+data07 표, 12편 '하엘'(이름뜻3호)+mean03 표

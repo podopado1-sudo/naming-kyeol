@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAllDetailChars, getAllReadings } from "@/lib/hanja-seo";
-import { getCuratedNames } from "@/lib/name-seo";
+import { getCuratedNames, getPublishedDripNames } from "@/lib/name-seo";
 
 /**
  * /sitemap.xml 자동 생성
@@ -58,7 +58,10 @@ const ROUTES: Array<{
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
+  // 실제 콘텐츠가 바뀐 날짜로 수동 갱신 — new Date()로 매 빌드 전 URL을 재도장하면
+  // 주간 드립 빌드마다 무변경 URL 수천 개의 lastmod가 갱신돼 구글이 lastmod 신호를
+  // 도메인 단위로 무시하게 된다. 드립 이름은 아래에서 자기 개방일(pa)을 쓴다.
+  const lastModified = new Date("2026-09-03");
 
   const staticRoutes: MetadataRoute.Sitemap = ROUTES.map((r) => ({
     url: r.path ? `${SITE_URL}/${r.path}` : SITE_URL,
@@ -93,7 +96,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // 이름 뜻 페이지 — 단계적 공개 전략:
   // 1차로 대법원 실명 빈도 상위 1,000개만 등재(전부 빈도 80+·자연어 뜻 보유).
   // "○○ 이름 뜻" 검색 수요가 큰 핵심부터 색인 가속하고, 색인율 확인 후 확대한다.
-  // (미등재 이름 페이지도 생성은 되며 내부링크로 크롤된다)
+  // (1,001~3,305위 미등재 이름 페이지는 생성은 되며 내부링크로 크롤된다)
   const nameRoutes: MetadataRoute.Sitemap = getCuratedNames(1000).map(
     (name) => ({
       url: `${SITE_URL}/name/${encodeURIComponent(name)}`,
@@ -103,5 +106,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }),
   );
 
-  return [...staticRoutes, ...readingRoutes, ...charRoutes, ...nameRoutes];
+  // 주간 드립 코호트 — 공개된 이름은 전부 등재한다 (개방일 = lastmod).
+  // 드립 이름은 전부 rank 3,306 이하라 위 상위 1,000과 겹치지 않고, 인기 최하위
+  // 꼬리라 내부링크(첫 음절 형제 top-12)에도 대부분 못 실린다 — 사이트맵이
+  // 유일한 크롤 발견 경로다 (미등재 시 코호트 78%가 오펀 페이지, 2026-09-03 리뷰).
+  const dripRoutes: MetadataRoute.Sitemap = getPublishedDripNames().map(
+    ({ name, publishedAt }) => ({
+      url: `${SITE_URL}/name/${encodeURIComponent(name)}`,
+      lastModified: new Date(publishedAt),
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    }),
+  );
+
+  return [
+    ...staticRoutes,
+    ...readingRoutes,
+    ...charRoutes,
+    ...nameRoutes,
+    ...dripRoutes,
+  ];
 }

@@ -13,3 +13,7 @@ export {
   contentType,
   generateStaticParams,
 } from "./opengraph-image";
+
+// 세그먼트 설정은 정적 파싱 대상이라 재수출 불가(빌드 에러) — 파일마다 직접 선언.
+// 없으면 미생성 slug(드립 미공개 이름·임의 문자열)가 404 대신 온디맨드 렌더된다.
+export const dynamicParams = false;

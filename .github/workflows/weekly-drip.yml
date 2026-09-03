@@ -1,0 +1,46 @@
+# 주간 드립 개방: 일요일 새벽 KST에 스탬프 커밋 → Vercel 재빌드 → pa 도래 이름 코호트 공개.
+# ignoreCommand(frontend 외 변경 빌드 생략)와 충돌하지 않도록 frontend/ 안의 스탬프를 갱신한다.
+# 운영 노트 (2026-09-03 배포 전 리뷰):
+#   - 분(minute)은 정각을 피한다 — GitHub cron은 정각 혼잡 시 지연·드롭됨 (keepalive.yml과 동일 전략).
+#   - 스케줄이 통째로 드롭된 주는 run이 없어 실패 메일도 없다. 게이트가 pa <= 빌드일이라
+#     다음 주 빌드가 밀린 코호트까지 소급 공개하므로 피해는 최대 7일 지연 (자가 치유).
+#     수동 보정은 Actions 탭에서 workflow_dispatch 실행.
+#   - 모든 코호트가 개방된 뒤(마지막 pa 경과)에는 커밋을 생략해 무의미한 전량 재빌드를 막는다.
+name: Weekly name drip
+
+on:
+  schedule:
+    - cron: "23 20 * * 6"  # 토 20:23 UTC = 일 05:23 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  stamp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Skip when all cohorts are released
+        id: gate
+        run: |
+          MAX_PA=$(python3 -c "import json; d = json.load(open('frontend/src/data/name-seo.json', encoding='utf-8')); print(max((r.get('pa', '') for r in d['names'].values()), default=''))")
+          TODAY_KST=$(TZ=Asia/Seoul date +%F)
+          echo "max_pa=$MAX_PA today_kst=$TODAY_KST"
+          if [ -n "$MAX_PA" ] && [ "$TODAY_KST" \> "$MAX_PA" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "마지막 코호트($MAX_PA)까지 개방 완료 — 스탬프 생략"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Update drip stamp
+        if: steps.gate.outputs.skip != 'true'
+        run: date -u +"%Y-%m-%dT%H:%M:%SZ" > frontend/drip-stamp.txt
+      - name: Commit & push
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          git config user.name "drip-bot"
+          git config user.email "actions@github.com"
+          git add frontend/drip-stamp.txt
+          git commit -m "chore(drip): weekly cohort release stamp" || exit 0
+          git push

@@ -234,9 +234,14 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
               {rec.mean} 이름
             </p>
           )}
-          <p className="mt-2 text-sm text-text-2">
-            발음이 주는 느낌이며, 정확한 뜻은 아래 한자 조합에 따라 달라집니다.
-          </p>
+          {rec.mean && (
+            <p className="mt-2 text-sm text-text-2">
+              발음이 주는 느낌이며, 정확한 뜻은{" "}
+              {rec.combos?.length
+                ? "아래 한자 조합에 따라 달라집니다."
+                : "쓰는 한자에 따라 달라집니다."}
+            </p>
+          )}
           {rec.story && (
             <p className="mt-3 border-l-2 border-gold pl-3 text-[15px] leading-relaxed text-navy">
               “{rec.story}”

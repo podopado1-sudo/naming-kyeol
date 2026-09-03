@@ -7,6 +7,7 @@ import {
   getCuratedNames,
   getName,
   getNameConsonantGroups,
+  getPublishedDripNames,
 } from "@/lib/name-seo";
 
 /**
@@ -41,6 +42,12 @@ export default function NameIndexPage() {
   const groups = getNameConsonantGroups(INDEX_LIMIT);
   const popular = getCuratedNames(16);
   const totalNames = getAllNames().length;
+  // 주간 드립 최신 코호트 — 드립 이름(인기 최하위 꼬리)의 데뷔 주 내부링크 표면.
+  // 사이트맵(전 코호트 등재)과 함께 오펀 페이지 방지 (2026-09-03 리뷰).
+  const drip = getPublishedDripNames();
+  const latestCohort = drip.length
+    ? drip.filter((d) => d.publishedAt === drip[drip.length - 1].publishedAt)
+    : [];
 
   return (
     <>
@@ -78,6 +85,30 @@ export default function NameIndexPage() {
             ))}
           </div>
         </section>
+
+        {/* 이번 주 새로 실린 이름 (주간 드립 최신 코호트) */}
+        {latestCohort.length > 0 && (
+          <section className="mb-12">
+            <h2 className="mb-1 text-base font-semibold text-navy">
+              새로 실린 이름
+            </h2>
+            <p className="mb-4 text-xs text-text-2">
+              사전에 새로 추가된 이름 {latestCohort.length}개 — 매주 일요일
+              갱신됩니다.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {latestCohort.map(({ name }) => (
+                <Link
+                  key={name}
+                  href={`/name/${encodeURIComponent(name)}`}
+                  className="rounded-md border border-paper-line bg-paper-card px-2.5 py-1 text-sm text-navy no-underline transition hover:border-teal"
+                >
+                  {name}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 초성별 인기 이름 */}
         <section>

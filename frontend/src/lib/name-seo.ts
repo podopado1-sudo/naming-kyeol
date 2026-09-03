@@ -31,6 +31,8 @@ export interface NameSeoRecord {
   combos?: string[][];
   /** 미학 점수 breakdown (dump-name-scores 산출 — 성씨 제외·tone=neutral 기준) */
   sc?: NameScoreBreakdown;
+  /** 주간 드립 개방일(ISO, KST 기준) — 없으면 상시 공개. 빌드 시각에 도래 전이면 미공개 (build_name_seo_data.py --baseline) */
+  pa?: string;
 }
 
 /**
@@ -117,7 +119,18 @@ export function genderSplit(rec: NameSeoRecord): {
 // ---------------------------------------------------------------
 
 /** 인기 순위 오름차순 정렬된 전체 이름 */
-const RANKED: string[] = Object.keys(DATA).sort(
+// 주간 드립 게이트: 빌드 시각(KST) 기준 pa 미도래 이름은 전 경로에서 제외
+// (generateStaticParams·sitemap·인덱스·내부링크가 모두 RANKED를 소비하므로 여기 한 곳이 단일 게이트)
+// 기준일은 next.config.ts가 빌드 시작 시 1회 계산해 env로 주입 — 워커 프로세스별 재평가로
+// KST 자정을 걸친 빌드에서 라우트 간 게이트가 갈라지는 것을 막는다. env 부재(테스트 등)시 폴백.
+const BUILD_TODAY_KST =
+  process.env.NEXT_BUILD_DATE_KST ||
+  new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const isPublished = (name: string): boolean => {
+  const pa = DATA[name]?.pa;
+  return !pa || pa <= BUILD_TODAY_KST;
+};
+const RANKED: string[] = Object.keys(DATA).filter(isPublished).sort(
   (a, b) => DATA[a].rank - DATA[b].rank,
 );
 
@@ -137,6 +150,7 @@ const FIRST_SYLLABLE_INDEX: Map<string, string[]> = (() => {
 // ---------------------------------------------------------------
 
 export function getName(name: string): NameSeoRecord | undefined {
+  if (!isPublished(name)) return undefined;
   return DATA[name];
 }
 
@@ -152,6 +166,18 @@ export function getAllNames(): string[] {
 /** 인기 상위 N개 — 1차 sitemap 등재 대상 (thin-content 회피) */
 export function getCuratedNames(limit: number): string[] {
   return RANKED.slice(0, limit);
+}
+
+/**
+ * 공개된 드립 이름 (pa 보유·도래분) — 개방일 오름차순, 같은 날은 인기순.
+ * sitemap 등재·/name '최근 공개' 표면용. 드립 이름은 전부 rank 3,306 이하라
+ * 상위 1,000 큐레이션과 겹치지 않는다 — 이 함수가 없으면 코호트 대다수(78%)는
+ * 사이트 내 유입 링크 0인 오펀 페이지가 된다 (2026-09-03 배포 전 리뷰).
+ */
+export function getPublishedDripNames(): { name: string; publishedAt: string }[] {
+  return RANKED.filter((n) => DATA[n].pa)
+    .map((n) => ({ name: n, publishedAt: DATA[n].pa! }))
+    .sort((a, b) => a.publishedAt.localeCompare(b.publishedAt));
 }
 
 /**

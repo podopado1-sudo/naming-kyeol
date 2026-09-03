@@ -25,6 +25,11 @@ export function generateStaticParams() {
   return getAllNames().map((name) => ({ slug: name }));
 }
 
+// dynamicParams도 상속되지 않는다 — 없으면 미생성 slug(드립 미공개 이름·임의 문자열)가
+// 404 대신 온디맨드 렌더로 200 PNG를 반환한다 (프리렌더 매니페스트 fallback:null 실측,
+// 2026-09-03 리뷰). 페이지와 동일하게 하드 404로 고정.
+export const dynamicParams = false;
+
 const PAPER = "#FAF7F2";
 const CHARCOAL = "#2B2B2B";
 const TEAL = "#2E7D7A";

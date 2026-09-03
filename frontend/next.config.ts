@@ -59,6 +59,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // 드립 게이트 기준일 — 빌드 시작 시 1회 계산해 전 워커에 동일 값 주입.
+  // (name-seo.ts가 소비. 워커별 재평가 시 KST 자정을 걸친 빌드에서 라우트 간 불일치)
+  env: {
+    NEXT_BUILD_DATE_KST: new Date(Date.now() + 9 * 3600 * 1000)
+      .toISOString()
+      .slice(0, 10),
+  },
   async redirects() {
     return [
       {

@@ -105,6 +105,23 @@ def main() -> int:
         if removed:
             print(f"    ℹ 수록 자체가 빠진 이름 {len(removed)}건 (빈도 하한 변경 등): {' '.join(removed[:10])}")
 
+    # F. 드립 pa 보존 — 재생성 실수(--baseline 누락 등)로 pa가 전멸/수록이 축소되면
+    #    라이브 코호트 일괄 공개 또는 색인 페이지 404 사고가 된다 (2026-09-03 리뷰).
+    if base is not None:
+        base_pa = {n for n, r in base.get("names", {}).items() if r.get("pa")}
+        cur_pa = {n for n, r in ns["names"].items() if r.get("pa")}
+        f_fails = []
+        if base_pa and not cur_pa:
+            f_fails.append(f"pa 전멸 (base {len(base_pa)}개 → 0개)")
+        removed_names = [n for n in base.get("names", {}) if n not in ns["names"]]
+        if removed_names:
+            f_fails.append(f"수록 소실 {len(removed_names)}건 — 색인 페이지 404 위험: {' '.join(removed_names[:8])}")
+        ok = not f_fails
+        print(f"[{'✅' if ok else '❌'}] F 드립 pa 보존: base {len(base_pa)} → 현재 {len(cur_pa)}"
+              + (f" — {' / '.join(f_fails)}" if f_fails else ""))
+        if not ok:
+            fails.append("F")
+
     # B. 불용 글자 잔존
     bad = sorted(ch for ch in cur["count"] if ch in forbidden)
     ok = not bad
