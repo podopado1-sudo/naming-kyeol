@@ -286,6 +286,23 @@ public class RareSurnameEngineTests
         Assert.Equal(20, firstSyllables);
     }
 
+    [Theory]
+    [InlineData("봉")]
+    [InlineData("탁")]
+    [InlineData("정")]
+    [InlineData("이")]
+    [InlineData("김")]
+    public async Task AnalyzeAndRecommend_SecondSyllableIsCapped_WithoutLosingFirstSyllableDiversity(string surname)
+    {
+        // 채점이 순수 음운이라 받침 성씨에서는 첫음절 그룹마다 1위가 'X수'였다(20개 중 9~12개, 캡 도입 전 실측).
+        var result = await _engine.AnalyzeAndRecommendAsync(surname, new DateTime(2024, 1, 1), "none", "neutral", 20);
+
+        Assert.Equal(20, result.Candidates.Count);
+        var maxPerSecond = result.Candidates.GroupBy(c => c.Name[1]).Max(g => g.Count());
+        Assert.True(maxPerSecond <= 3, $"둘째 음절 쏠림({maxPerSecond}): {string.Join(" ", result.Candidates.Select(c => c.Name))}");
+        Assert.Equal(20, result.Candidates.Select(c => c.Name[0]).Distinct().Count());
+    }
+
     [Fact]
     public async Task AnalyzeAndRecommend_ExcludesNegativeHomophoneNames()
     {
@@ -293,7 +310,7 @@ public class RareSurnameEngineTests
 
         Assert.All(result.Candidates, c =>
             Assert.False(ForbiddenWordData.IsNegativeHomophoneName(c.Name), $"부정 동음 이름 노출: {c.Name}"));
-        Assert.DoesNotContain(result.Candidates, c => c.Name is "원수" or "예수");
+        Assert.DoesNotContain(result.Candidates, c => c.Name is "원수" or "예수" or "원정" or "예정");
     }
 
     // ═══════════════════════════════════════════════════════════════

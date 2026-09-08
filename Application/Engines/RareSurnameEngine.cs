@@ -57,6 +57,13 @@ public class RareSurnameEngine : IRareSurnameEngine
     /// <summary>음절당 표시할 한자 옵션 수</summary>
     private const int HanjaOptionsPerSyllable = 3;
 
+    /// <summary>
+    /// 결과 안에서 같은 둘째 음절의 최대 개수 — NamePoolEngine의 둘째글자당 3개 캡과 동일.
+    /// 채점이 순수 음운이라 받침 성씨(봉·탁)에서는 첫음절 그룹마다 1위가 전부 'X수'였다
+    /// (20개 중 9~12개, 2026-09-08 실측). 라운드-로빈은 첫음절만 분산하므로 둘째 음절은 따로 캡을 둔다.
+    /// </summary>
+    private const int MaxPerSecondSyllable = 3;
+
     public async Task<RareSurnameAnalysis> AnalyzeAndRecommendAsync(
         string lastName,
         DateTime birthDate,
@@ -84,7 +91,9 @@ public class RareSurnameEngine : IRareSurnameEngine
             .ToList();
 
         // 다양성 보정: 같은 첫 글자가 결과를 도배하지 않도록 라운드-로빈으로 추출
-        // 첫 글자별 그룹 → 점수순 정렬 → 라운드-로빈으로 count개 채우기
+        // 첫 글자별 그룹 → 점수순 정렬 → 라운드-로빈으로 count개 채우기.
+        // 둘째 글자는 <see cref="MaxPerSecondSyllable"/> 캡 — 캡에 걸린 후보는 버리고 그 그룹의
+        // 다음 후보로 넘어가므로 첫음절 다양성(그룹당 1개씩)은 그대로다.
         var byFirstChar = scored
             .GroupBy(c => c.Name.Length > 0 ? c.Name[0].ToString() : "")
             .Select(g => g.OrderByDescending(c => c.HarmonyScore).ToList())
@@ -93,16 +102,21 @@ public class RareSurnameEngine : IRareSurnameEngine
 
         var scoredCandidates = new List<RareSurnameCandidate>();
         var indices = new int[byFirstChar.Count];
+        var secondSyllableCounts = new Dictionary<char, int>();
         while (scoredCandidates.Count < count)
         {
             bool added = false;
             for (int g = 0; g < byFirstChar.Count && scoredCandidates.Count < count; g++)
             {
-                if (indices[g] < byFirstChar[g].Count)
+                while (indices[g] < byFirstChar[g].Count)
                 {
-                    scoredCandidates.Add(byFirstChar[g][indices[g]]);
-                    indices[g]++;
+                    var cand = byFirstChar[g][indices[g]++];
+                    var second = cand.Name.Length > 1 ? cand.Name[1] : '\0';
+                    if (secondSyllableCounts.GetValueOrDefault(second) >= MaxPerSecondSyllable) continue;
+                    secondSyllableCounts[second] = secondSyllableCounts.GetValueOrDefault(second) + 1;
+                    scoredCandidates.Add(cand);
                     added = true;
+                    break;
                 }
             }
             if (!added) break;
