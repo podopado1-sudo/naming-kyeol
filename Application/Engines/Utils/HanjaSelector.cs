@@ -55,6 +55,30 @@ public static class HanjaSelector
         return scored.OrderByDescending(x => x.s).Take(k).Select(x => (x.a, x.b)).ToList();
     }
 
+    /// <summary>
+    /// 표시용: 한 음절에 "어떤 한자를 보여 줄까" 상위 n개 (<see cref="OrderForDisplay"/> 순서).
+    /// RareSurnameEngine의 HanjaOptions처럼 성별·용신 없이 대표 한자 몇 개를 나열하는 곳의 단일 경로 —
+    /// 사전을 삽입 순서대로 Take(n)하면 확장 A 영역 글자(㵟·䋛)가 美보다 앞서 나오던 문제의 대체.
+    /// </summary>
+    public static List<HanjaInfo> TopForDisplay(string syllable, int n)
+        => OrderForDisplay(HanjaData.FindByReading(syllable)).Take(n).ToList();
+
+    /// <summary>
+    /// 표시 후보 정렬 — 사전 삽입 순서와 무관하게 결정적.
+    /// 불용한자·뜻 없는 글자 제외 →
+    ///   1) 인명 빈출 셋(약자 제외) 우선 → 2) CJK 기본 영역 우선(확장 영역은 폰트가 못 그리는 일이 잦다)
+    ///   → 3) 관련도(약자 −3000) ↓ → 4) Character Ordinal.
+    /// <see cref="TopComboCandidates"/>처럼 빈출 글자만 남기지 않고 '앞세우기'만 한다 —
+    /// 빈출이 1개뿐인 음절도 n개를 채우기 위해.
+    /// </summary>
+    public static IEnumerable<HanjaInfo> OrderForDisplay(IEnumerable<HanjaInfo> candidates)
+        => candidates
+            .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning))
+            .OrderByDescending(h => HanjaData.IsCommonNameHanja(h.Character) && !IsWeakGivenNameHanja(h.Character))
+            .ThenByDescending(h => HanjaData.IsInCjkBasicRange(h.Character))
+            .ThenByDescending(h => ComboBaseScore(h, GenderPreference.Neutral))
+            .ThenBy(h => h.Character, StringComparer.Ordinal);
+
     private static List<HanjaInfo> TopComboCandidates(string syllable, GenderPreference g, int n)
     {
         var cands = HanjaData.FindByReading(syllable)

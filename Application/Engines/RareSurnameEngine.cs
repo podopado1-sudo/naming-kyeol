@@ -46,6 +46,17 @@ public class RareSurnameEngine : IRareSurnameEngine
         "ㄱ", "ㄲ", "ㄷ", "ㄸ", "ㅂ", "ㅃ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ"
     };
 
+    /// <summary>
+    /// 발음 풀 크기 — 첫/둘째 음절 각각 <see cref="SelectReadingPool"/> 상위 N개 발음.
+    /// N×N 전수 조합이 후보가 되므로, 옛 구현(150개 풀 + 후보 500개 상한)처럼 풀 앞쪽 3~4개
+    /// 발음만 첫음절이 되는 절단이 없다. 64 = 인명 빈출 한자를 가진 발음 81개(2026-09-08 실측) 중
+    /// 상위 — 서·우·윤·진은 물론 은·예·린까지 들어오는 크기.
+    /// </summary>
+    public const int ReadingPoolSize = 64;
+
+    /// <summary>음절당 표시할 한자 옵션 수</summary>
+    private const int HanjaOptionsPerSyllable = 3;
+
     public async Task<RareSurnameAnalysis> AnalyzeAndRecommendAsync(
         string lastName,
         DateTime birthDate,
@@ -63,12 +74,12 @@ public class RareSurnameEngine : IRareSurnameEngine
         var isRare = rarityLevel >= 3;
         var phoneticAnalysis = AnalyzePhonetics(lastName);
 
-        // 한자 기반 이름 후보 생성
+        // 한자 기반 이름 후보 생성 (품질순 발음 풀 — 순서가 결정적이라 아래 안정 정렬의 동점 순서도 결정적)
         var rawCandidates = GenerateNameCandidates(lastName, gender, tone);
 
-        // 발음 조화 점수 계산 및 정렬
+        // 발음 조화 점수 계산 및 정렬 — 한자 옵션은 최종 선발분에만 붙인다 (후보 수천 개 × 사전 조회 회피)
         var scored = rawCandidates
-            .Select(name => ScoreCandidate(lastName, name))
+            .Select(name => ScoreCandidateCore(lastName, name))
             .OrderByDescending(c => c.HarmonyScore)
             .ToList();
 
@@ -100,6 +111,10 @@ public class RareSurnameEngine : IRareSurnameEngine
         scoredCandidates = scoredCandidates
             .OrderByDescending(c => c.HarmonyScore)
             .ToList();
+
+        var optionsBySyllable = new Dictionary<string, List<string>>();
+        foreach (var candidate in scoredCandidates)
+            candidate.HanjaOptions = FindHanjaOptions(candidate.Name, optionsBySyllable);
 
         return await Task.FromResult(new RareSurnameAnalysis
         {
@@ -161,17 +176,20 @@ public class RareSurnameEngine : IRareSurnameEngine
     }
 
     /// <summary>
-    /// 한자 기반 이름 후보 생성
+    /// 한자 기반 이름 후보 생성 — 품질순 발음 풀(<see cref="SelectReadingPool"/>) N×N 전수 조합.
+    /// 순서가 결정적이므로(풀 순서 → 첫음절 순 → 둘째음절 순) 호출부의 안정 정렬 동점 순서도 결정적이다.
     /// </summary>
-    private List<string> GenerateNameCandidates(string lastName, string gender, string tone)
+    private static List<string> GenerateNameCandidates(string lastName, string gender, string tone)
     {
-        var candidates = new HashSet<string>();
-        var hanjaList = HanjaData.HanjaDictionary.Values.ToList();
+        // 1음절 발음 + 불용한자 배제 (생성 경로 공통 규칙 — NamePoolEngine과 동일)
+        var hanjaList = HanjaData.HanjaDictionary.Values
+            .Where(h => !string.IsNullOrEmpty(h.Reading) && h.Reading.Length == 1)
+            .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character))
+            .ToList();
 
         // 성별 필터링
         var filtered = hanjaList.Where(h =>
         {
-            if (string.IsNullOrEmpty(h.Reading)) return false;
             if (gender == "male" && h.GenderPref == HanjaData.GenderPreference.Female) return false;
             if (gender == "female" && h.GenderPref == HanjaData.GenderPreference.Male) return false;
             return true;
@@ -188,45 +206,88 @@ public class RareSurnameEngine : IRareSurnameEngine
 
         // 의미 있는 한자 우선
         var meaningfulHanja = toneMatched
-            .Where(h => !string.IsNullOrEmpty(h.Meaning) && !string.IsNullOrEmpty(h.Reading))
+            .Where(h => !string.IsNullOrEmpty(h.Meaning))
             .ToList();
+        var pool = meaningfulHanja.Count >= 20 ? meaningfulHanja : toneMatched;
 
-        // 2음절 이름 생성 (두 한자 조합)
-        // 다양성 확보: reading 단위로 distinct하여 같은 발음 한자(剛/康/强 등)가 풀을 점령하지 않게 함
-        var pool = meaningfulHanja.Count >= 20
-            ? meaningfulHanja
-            : toneMatched.Where(h => !string.IsNullOrEmpty(h.Reading)).ToList();
+        // 발음 단위 풀 — 같은 발음 한자(剛/康/强 등)가 풀을 점령하지 않게 발음당 대표 1개
+        var readings = SelectReadingPool(pool, ReadingPoolSize);
 
-        var distinctByReading = pool
-            .GroupBy(h => h.Reading)
-            .Select(g => g.First())
-            .ToList();
+        // 두음법칙 위반 음절(룡/림/량 등)은 이름 첫음절로 쓸 수 없다 (같은 한자의 두음 적용 발음이 사전에 별도 존재)
+        var firstChars = readings.Where(h => !NamingPrinciples.RequiresDueum(h.Reading)).ToList();
 
-        var firstChars = distinctByReading.Take(150).ToList();
-        var secondChars = distinctByReading.Take(150).ToList();
-
+        var candidates = new List<string>(firstChars.Count * readings.Count);
         foreach (var first in firstChars)
         {
-            foreach (var second in secondChars)
+            foreach (var second in readings)
             {
                 if (first.Reading == second.Reading) continue;
                 var name = first.Reading + second.Reading;
-                if (name.Length == 2 && !KoreanUtils.HasSameConsonantRepetition(lastName + name))
-                {
-                    candidates.Add(name);
-                }
-                if (candidates.Count >= 500) break;
+
+                if (KoreanUtils.HasSameConsonantRepetition(lastName + name)) continue;
+                // 이름 유효성 공통 필터 (NamePoolEngine과 동일) — 유행 이름·금칙어·일반명사 충돌·부정 동음·이름다움
+                if (NamingPrinciples.IsTrendyName(name)) continue;
+                if (ForbiddenWordData.ContainsForbiddenWord(name)) continue;
+                if (ForbiddenWordData.IsCollisionWithCommonWord(name)) continue;
+                if (ForbiddenWordData.IsNegativeHomophoneName(name)) continue;
+                if (NamingPrinciples.EvalNameLikeness(first.Reading, second.Reading) < 0.5) continue;
+
+                candidates.Add(name);
             }
-            if (candidates.Count >= 500) break;
         }
 
-        return candidates.ToList();
+        return candidates;
     }
 
     /// <summary>
-    /// 이름 후보에 대한 발음 조화 점수 계산
+    /// 발음 단위 풀 선별 — 사전 삽입 순서와 무관하게 결정적.
+    /// 각 발음의 대표 한자 = 관련도(약자 −3000) 최고, 동점은 Character Ordinal
+    /// (ThreeSyllableEngine.SortByQuality와 같은 규칙).
+    /// 발음의 순서 = 1) 인명 빈출 한자(약자 제외) 수 ↓ → 2) 대표 관련도 ↓ → 3) 발음 Ordinal.
+    /// 빈출 수를 앞세우는 이유: 대표 관련도만으로 자르면 성별·톤 선호 유무의 ±5점 잡음이
+    /// 서·우·민·진(빈출 5~6자) 같은 핵심 발음을 60위 밖으로 밀어낸다(2026-09-08 실측).
+    /// </summary>
+    public static List<HanjaData.HanjaInfo> SelectReadingPool(IEnumerable<HanjaData.HanjaInfo> hanja, int take)
+    {
+        return hanja
+            .Where(h => !string.IsNullOrEmpty(h.Reading))
+            .GroupBy(h => h.Reading)
+            .Select(g => new
+            {
+                Representative = g
+                    .OrderByDescending(QualityScore)
+                    .ThenBy(h => h.Character, StringComparer.Ordinal)
+                    .First(),
+                CommonCount = g.Count(h =>
+                    HanjaData.IsCommonNameHanja(h.Character) && !HanjaData.IsWeakGivenNameHanja(h.Character)),
+            })
+            .OrderByDescending(x => x.CommonCount)
+            .ThenByDescending(x => QualityScore(x.Representative))
+            .ThenBy(x => x.Representative.Reading, StringComparer.Ordinal)
+            .Take(take)
+            .Select(x => x.Representative)
+            .ToList();
+    }
+
+    /// <summary>
+    /// 한자 품질 점수 — 관련도에 약자 감점 −3000 (Core_v1 가점 +2000을 지배해야 하는 계약,
+    /// HanjaSelector.ComboBaseScore·NamePoolEngine.CalcPersonalizedScore와 동일 강도).
+    /// </summary>
+    private static int QualityScore(HanjaData.HanjaInfo h)
+        => HanjaData.CalculateRelevanceScore(h) - (HanjaData.IsWeakGivenNameHanja(h.Character) ? 3000 : 0);
+
+    /// <summary>
+    /// 이름 후보에 대한 발음 조화 점수 계산 (+ 표시용 한자 옵션)
     /// </summary>
     public RareSurnameCandidate ScoreCandidate(string lastName, string name)
+    {
+        var candidate = ScoreCandidateCore(lastName, name);
+        candidate.HanjaOptions = FindHanjaOptions(name);
+        return candidate;
+    }
+
+    /// <summary>발음 조화 점수만 계산 — 한자 옵션은 비워 둔다 (전체 후보 채점용)</summary>
+    private static RareSurnameCandidate ScoreCandidateCore(string lastName, string name)
     {
         var fullName = lastName + name;
         int score = 50; // 기준점
@@ -307,38 +368,35 @@ public class RareSurnameEngine : IRareSurnameEngine
         // 점수 범위 보정
         score = Math.Max(0, Math.Min(100, score));
 
-        // 한자 옵션 찾기
-        var hanjaOptions = FindHanjaOptions(name);
-
         return new RareSurnameCandidate
         {
             Name = name,
             HarmonyScore = score,
-            HarmonyReason = string.Join("; ", reasons),
-            HanjaOptions = hanjaOptions
+            HarmonyReason = string.Join("; ", reasons)
         };
     }
 
     /// <summary>
-    /// 이름에 대한 한자 옵션 찾기
+    /// 이름 각 음절의 표시용 한자 상위 3개 — <see cref="HanjaSelector.TopForDisplay"/>
+    /// (불용 배제 · 빈출 우선 · CJK 기본 영역 우선 · 약자 감점 · Ordinal 동점 처리).
+    /// 사전을 삽입 순서대로 Take(3)하던 옛 구현은 美 뒤에 확장 A 글자(㵟·䋛)를 내보냈다.
     /// </summary>
-    private List<string> FindHanjaOptions(string name)
+    /// <param name="cache">음절 → 옵션 문자열 메모 (한 요청 안에서 같은 음절을 여러 후보가 공유)</param>
+    private static List<string> FindHanjaOptions(string name, Dictionary<string, List<string>>? cache = null)
     {
         var options = new List<string>();
 
         foreach (var ch in name)
         {
-            var reading = ch.ToString();
-            var matchingHanja = HanjaData.HanjaDictionary.Values
-                .Where(h => h.Reading == reading && !string.IsNullOrEmpty(h.Meaning))
-                .Take(3)
-                .Select(h => $"{h.Character}({h.Meaning})")
-                .ToList();
-
-            if (matchingHanja.Count > 0)
+            var syllable = ch.ToString();
+            if (cache == null || !cache.TryGetValue(syllable, out var forSyllable))
             {
-                options.AddRange(matchingHanja);
+                forSyllable = HanjaSelector.TopForDisplay(syllable, HanjaOptionsPerSyllable)
+                    .Select(h => $"{h.Character}({h.Meaning})")
+                    .ToList();
+                if (cache != null) cache[syllable] = forSyllable;
             }
+            options.AddRange(forSyllable);
         }
 
         return options;
