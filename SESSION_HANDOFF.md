@@ -5,7 +5,25 @@
 
 ---
 
-## 마지막 세션 요약 (2026-09-08 — 희귀 성씨 엔진 발음 풀·한자 옵션 품질순 전환)
+## 마지막 세션 요약 (2026-09-08 — 병행 세션 통합·배포 점검)
+
+같은 날 세션 4개(이름의 결 3 + 시험달력 1)가 흩어놓은 상태를 실측 점검하고 main으로 통합했다.
+- **반영 확인**: 5b1ef98(한자 405자 제외)은 프론트·백엔드 모두 라이브 실측 — `/hanja/온` 25자·
+  비한자 글리프 0, Render hanja-stats `withUnicode` 9,190. 주간 드립 첫 코호트(9/6) `/name` 노출 확인.
+- **2f8a61c** seo(frontend): 시험달력 SEO 세션이 이름의 결을 먼저 감사하다 스테이징만 하고 넘어간
+  about·contact 메타데이터 + privacy 타이틀 중복 제거를 커밋·푸시. 라이브 결함이었음 — privacy
+  타이틀 "… | 이름의 결 | 이름의 결", about·contact는 홈 타이틀·설명 상속 + canonical=홈. 프론트 전량 빌드 1회.
+- **5fde666** ← `claude/nifty-germain-dee694`(a4a066f, 한글 음절 키 10건 제거) 병합.
+- `claude/priceless-austin-318ba2`(68b275a, 아래 희귀 성씨 요약) 병합. 두 병합 모두 충돌 없음.
+  병합 후 **dotnet test 1,075/1,075** 재실측. 백엔드·문서만이라 Vercel 빌드 생략, Render 자동 배포.
+- **남은 것**: `claude/quizzical-mclean-77c5dd`(worktree loving-feistel, 8/21 docs/trademark-filing.md
+  332줄 커밋 2개)는 main 미병합·origin 미푸시 — 병합 여부는 사용자 판단. `claude/wizardly-diffie-9850e3`는
+  원격이 삭제된 빈 로컬 브랜치. 희귀 성씨 세션이 남긴 판단 2건(원정·예정·우수·인수 부정 동음 편입 /
+  받침 성씨 둘째음절 분산)은 미결.
+
+---
+
+## 이전 세션 요약 (2026-09-08 — 희귀 성씨 엔진 발음 풀·한자 옵션 품질순 전환)
 
 **발단**: 직전 세션의 작업 칩 — `RareSurnameEngine`이 `HanjaDictionary.Values`를 **사전 삽입 순서**로
 소비했다. (1) 발음 풀 `GroupBy(Reading).First()` + `Take(150)` → 하드코딩 35행이 JSON보다 먼저 들어가는
@@ -16,7 +34,7 @@
 풀 앞쪽 **3~4개 발음만 첫음절**이 됐다 — 모든 성씨·성별·톤에서 춘/추/천/해 X 만 나오던 이유.
 또 품질순 상위 150에 두음법칙 대상 음절 9개(련 룡 리 림 례 륜 량 령 류)가 들어온다.
 
-**수정** (커밋·푸시 미실행)
+**수정** (커밋 68b275a → main 병합, 2026-09-08)
 - `RareSurnameEngine.SelectReadingPool(IEnumerable, take)` 신설(public static, 테스트용 순수 함수):
   발음당 대표 = 관련도(약자 −3000) 최고 → Character Ordinal(ThreeSyllable `SortByQuality`와 동일 규칙).
   발음 순서 = **빈출 한자(약자 제외) 수 ↓ → 대표 관련도 ↓ → 발음 Ordinal**. 빈출 수를 앞세운 이유:
@@ -51,7 +69,7 @@ U+A0xxx 377자 + 사용자 영역 U+F0xxx 28자 = **405자**(출처 `gov` 단독
 독음 페이지 203개에 섞여 있었고 제목 글자 수도 부풀렸음. 상세 페이지·sitemap·JSON-LD·name-seo·
 combo-meanings는 `hasDetailPage` 필터 덕에 무영향. 가짜 글자만으로 생긴 독음 페이지 없음.
 
-**수정** (커밋·푸시 미실행 — 프론트 재빌드 필요)
+**수정** (커밋 5b1ef98 — 푸시·Vercel·Render 배포 완료, 라이브 실측 확인)
 - `HanjaData.IsHanCodePoint` 신설(기본·확장A~H·호환 영역표) + JSON 로더가 비적격 키 스킵
 - `build_hanja_seo_data.py`에 같은 영역표 `is_han_codepoint` 필터 + 제외 리포트 줄
 - `hanja-seo.json` 재생성: 9,595 → **9,190자** (독음 489·상세 9,096 불변, 인명용 9,055)
