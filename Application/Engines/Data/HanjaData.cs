@@ -284,17 +284,11 @@ public static class HanjaData
         { "恩", new HanjaInfo { Character = "恩", Reading = "은", Meaning = "은혜", FiveElement = "土", YinYang = "陰", StrokeCount = 10, Category = "덕목", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
         { "惠", new HanjaInfo { Character = "惠", Reading = "혜", Meaning = "은혜", FiveElement = "水", YinYang = "陰", StrokeCount = 12, Category = "덕목", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
 
-        // 중립/인기
-        { "우", new HanjaInfo { Character = "우", Reading = "우", Meaning = "나", FiveElement = "土", YinYang = "陽", StrokeCount = 4, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "진", new HanjaInfo { Character = "진", Reading = "진", Meaning = "참", FiveElement = "火", YinYang = "陽", StrokeCount = 10, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "서", new HanjaInfo { Character = "서", Reading = "서", Meaning = "서쪽", FiveElement = "金", YinYang = "陰", StrokeCount = 6, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "하", new HanjaInfo { Character = "하", Reading = "하", Meaning = "아래", FiveElement = "水", YinYang = "陰", StrokeCount = 3, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "윤", new HanjaInfo { Character = "윤", Reading = "윤", Meaning = "윤리", FiveElement = "土", YinYang = "陽", StrokeCount = 4, Category = "덕목", TonePref = TonePreference.Neutral } },
-        { "민", new HanjaInfo { Character = "민", Reading = "민", Meaning = "백성", FiveElement = "水", YinYang = "陽", StrokeCount = 5, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "지", new HanjaInfo { Character = "지", Reading = "지", Meaning = "땅", FiveElement = "土", YinYang = "陽", StrokeCount = 6, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "현", new HanjaInfo { Character = "현", Reading = "현", Meaning = "현재", FiveElement = "水", YinYang = "陽", StrokeCount = 8, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "연", new HanjaInfo { Character = "연", Reading = "연", Meaning = "연결", FiveElement = "火", YinYang = "陽", StrokeCount = 11, Category = "개념", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
-        { "채", new HanjaInfo { Character = "채", Reading = "채", Meaning = "채소", FiveElement = "木", YinYang = "陽", StrokeCount = 11, Category = "자연", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
+        // ⚠️ 키는 반드시 한자 1글자. 초기 커밋의 "중립/인기" 블록은 우·진·서·하·윤·민·지·현·연·채
+        // 한글 음절을 키로 쓴 가짜 항목 10건이었고(뜻도 "하=아래"·"채=채소"처럼 틀림), 사전 삽입 순서를
+        // 그대로 쓰는 소비처(RareSurnameEngine.FindHanjaOptions)에 "우(나)"로 새어 나가 2026-09-08 제거.
+        // 해당 음절의 실제 인명 한자(佑·宇·珍·眞·瑞·河·潤·敏·志·賢·娟·彩 등)는 JSON + Core_v1이 이미 공급한다.
+        // HanjaDataTests.GetAllHanja_ContainsNoNonHanCodePoints가 비한자 키를 기계적으로 막는다.
     };
 
     /// <summary>
