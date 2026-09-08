@@ -260,7 +260,9 @@ D:\MyDev\NameForm\
 - 선호: GenderPref (Neutral/Male/Female), TonePref (Neutral/Soft/Strong)
 
 ### 데이터 소스
-- **하드코딩 상세 데이터**: 45자 (오행/음양/획수 완비)
+- **하드코딩 상세 데이터**: 35자 (오행/음양/획수 완비). ⚠️ 키는 한자만 — 초기 커밋의 한글 음절 키
+  10건(우·진·서·하·윤·민·지·현·연·채, 뜻 "하=아래" 등 오류)은 2026-09-08 제거, 가드 테스트
+  `GetAllHanja_ContainsNoNonHanCodePoints`가 비한자 키를 막는다
 - **hanja_dictionary_final.json**: 9,595자 (마스터 통합 사전). ⚠️ 이 중 405자는 대법원 목록의
   유니코드 미등재 글자가 법원 자체 코드(a01b1 등)로 변환된 가짜 코드포인트(U+A0xxx·U+F0xxx) —
   백엔드 로더(`HanjaData.IsHanCodePoint`)와 `build_hanja_seo_data.py`가 같은 영역 규칙으로 걸러낸다

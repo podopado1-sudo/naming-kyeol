@@ -110,7 +110,7 @@ public class HanjaDataEnhancementTests
             .Where(h => h.StrokeCount > 0 && !string.IsNullOrEmpty(h.YinYang))
             .ToList();
 
-        // 하드코딩 45자는 수동 설정이므로 제외할 수 없지만,
+        // 하드코딩 35자는 수동 설정이므로 제외할 수 없지만,
         // 자동 계산된 대다수는 규칙을 따라야 함
         var conforming = allHanja.Count(h =>
             (h.StrokeCount % 2 == 0 && h.YinYang == "陽") ||

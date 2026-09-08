@@ -58,15 +58,13 @@ public class HanjaDataTests
         // hanja_dictionary_final.json에는 대법원 목록의 유니코드 미등재 글자 405자가
         // 미할당 평면(U+A0xxx)·사용자 영역(U+F0xxx) 코드포인트로 섞여 있다.
         // 로더가 걸러내지 않으면 /hanja 독음 페이지에 빈 네모 카드로 노출된다.
-        // HanjaData의 하드코딩 상세 사전에는 키가 한글 음절인 항목 10건(우·진·서…)이 따로 있어
-        // 그 키는 이 테스트의 대상이 아니다 — 한자도 한글도 아닌 코드포인트만 잡는다.
-        static bool IsHangulSyllable(string s) =>
-            s.Length == 1 && s[0] >= 0xAC00 && s[0] <= 0xD7A3;
+        // 하드코딩 상세 사전에 있던 한글 음절 키 항목 10건(우·진·서…, 뜻 "하=아래" 등)도 2026-09-08
+        // 제거했으므로 예외 없음 — 사전의 모든 키는 유니코드 한자 코드포인트여야 한다.
         var bogus = HanjaData.GetAllHanja()
-            .Where(h => !HanjaData.IsHanCodePoint(h.Character) && !IsHangulSyllable(h.Character))
-            .Select(h => $"U+{char.ConvertToUtf32(h.Character, 0):X5}")
+            .Where(h => !HanjaData.IsHanCodePoint(h.Character))
+            .Select(h => $"{h.Character}(U+{char.ConvertToUtf32(h.Character, 0):X5})")
             .ToList();
-        Assert.True(bogus.Count == 0, $"유니코드 미등재 코드포인트 {bogus.Count}건 잔존: {string.Join(" ", bogus.Take(10))}");
+        Assert.True(bogus.Count == 0, $"비한자 키 {bogus.Count}건 잔존: {string.Join(" ", bogus.Take(10))}");
     }
 
     [Fact]
