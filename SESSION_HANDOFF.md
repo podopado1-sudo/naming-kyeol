@@ -5,7 +5,43 @@
 
 ---
 
-## 마지막 세션 요약 (2026-09-08 — /hanja 독음 페이지 빈 네모 카드 405자 제거)
+## 마지막 세션 요약 (2026-09-08 — 희귀 성씨 엔진 발음 풀·한자 옵션 품질순 전환)
+
+**발단**: 직전 세션의 작업 칩 — `RareSurnameEngine`이 `HanjaDictionary.Values`를 **사전 삽입 순서**로
+소비했다. (1) 발음 풀 `GroupBy(Reading).First()` + `Take(150)` → 하드코딩 35행이 JSON보다 먼저 들어가는
+순서가 풀을 결정(한글 키 자리표시 행 10건 정리만으로 서·우·윤·진이 빠지고 45조합 중 41개 결과 변동).
+(2) `FindHanjaOptions`의 `Take(3)` → 美 뒤에 확장 A 글자 㵟·䋛, 민에 한글 자리표시 "민(백성)"·䃉·䪸 노출.
+
+**실측으로 드러난 추가 문제**: 후보 500개 상한이 `foreach first × foreach second` 안에서 끊겨
+풀 앞쪽 **3~4개 발음만 첫음절**이 됐다 — 모든 성씨·성별·톤에서 춘/추/천/해 X 만 나오던 이유.
+또 품질순 상위 150에 두음법칙 대상 음절 9개(련 룡 리 림 례 륜 량 령 류)가 들어온다.
+
+**수정** (커밋·푸시 미실행)
+- `RareSurnameEngine.SelectReadingPool(IEnumerable, take)` 신설(public static, 테스트용 순수 함수):
+  발음당 대표 = 관련도(약자 −3000) 최고 → Character Ordinal(ThreeSyllable `SortByQuality`와 동일 규칙).
+  발음 순서 = **빈출 한자(약자 제외) 수 ↓ → 대표 관련도 ↓ → 발음 Ordinal**. 빈출 수를 앞세운 이유:
+  관련도만 쓰면 성별·톤 선호 ±5점 잡음으로 서·우·민·진이 60위 밖(실측 4010 vs 4020점 tier).
+- 풀 150 + 500 상한 → **`ReadingPoolSize=64` × 64 전수 조합**(≈4,000쌍). 첫음절은 `RequiresDueum` 제외.
+  NamePoolEngine과 같은 유효성 필터 추가(유행어·금칙어·일반명사 충돌·부정 동음·`EvalNameLikeness<0.5`).
+  불용한자는 풀에서 배제(생성 경로 공통 규칙). 다양성 라운드-로빈은 그대로 — 이제 실제로 20개 결과에
+  첫음절 20종이 나온다.
+- 채점 분리: `ScoreCandidateCore`(점수만) → 최종 선발분에만 `FindHanjaOptions`(음절 메모).
+  호출 1회 ≈ 13ms(count 5·50 동일, 워밍업 후 20회 평균) — SmartRecommendationService가 매 요청 호출하므로 중요.
+- `HanjaSelector.TopForDisplay(syllable, n)` / `OrderForDisplay(IEnumerable)` 신설 — 불용 배제·뜻 보유,
+  **빈출(약자 제외) 우선 → CJK 기본 영역 우선 → 관련도(약자 −3000) → Ordinal**. 기존
+  `TopComboCandidates`(/name 조합 경로)는 건드리지 않음(데이터 재생성 결과 불변).
+- `ForbiddenWordData.NegativeHomophoneNames` += 원수·예수 (품질순 풀에서 봉원수·봉예수가 1위로 떴음).
+- 테스트 +18 → **dotnet test 1,075/1,075**: 풀 삽입 순서 무관(역순·시드 셔플), 대표 한자 규칙, 핵심 발음
+  포함, 두음법칙 첫음절 0, 라운드-로빈 다양성, 부정 동음 배제, 옵션 기본 영역·빈출 우선·확장 A 제한,
+  옵션 = TopForDisplay 일치, `OrderForDisplay` 입력 순서 무관.
+
+**남은 관찰(미수정)**: ScoreCandidate가 순수 음운 점수라 받침 성씨(봉·탁)에서는 ㅇ초성 첫음절 +
+둘째음절 '수'가 상위를 도배한다(원수·영수·유수·연수…). 라운드-로빈이 첫음절만 분산하기 때문 —
+둘째음절 분산(NamePoolEngine의 `GroupBy(name[1]).Take(3)`식)은 별도 판단 사항.
+
+---
+
+## 이전 세션 요약 (2026-09-08 — /hanja 독음 페이지 빈 네모 카드 405자 제거)
 
 **발견**: 블로그 data07 유입 페이지 `/hanja/온` 하단에 글자 없는 카드 2장(뜻 자리에 독음 '온', 뱃지 없음).
 

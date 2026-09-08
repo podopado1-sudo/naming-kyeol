@@ -45,4 +45,30 @@ public class HanjaSelectorTests
         Assert.Equal(2, sel.Count);
         Assert.All(sel, h => Assert.NotNull(h));
     }
+
+    [Theory]
+    [InlineData("미")]
+    [InlineData("민")]
+    [InlineData("서")]
+    [InlineData("율")]
+    public void OrderForDisplay_IsIndependentOfInputOrder_AndFrontsCommonBasicHanja(string syllable)
+    {
+        var candidates = HanjaData.FindByReading(syllable);
+        var forward = HanjaSelector.OrderForDisplay(candidates).Select(h => h.Character).ToList();
+        var backward = HanjaSelector.OrderForDisplay(Enumerable.Reverse(candidates)).Select(h => h.Character).ToList();
+
+        Assert.NotEmpty(forward);
+        Assert.Equal(forward, backward);
+
+        // 앞쪽 3개 = 표시 옵션: 불용자 없음, 뜻 있음, 빈출 한자가 있으면 빈출 한자가 앞
+        var top = HanjaSelector.TopForDisplay(syllable, 3);
+        Assert.All(top, h => Assert.False(HanjaData.IsForbiddenNameHanja(h.Character)));
+        Assert.All(top, h => Assert.False(string.IsNullOrEmpty(h.Meaning)));
+        if (candidates.Any(h => HanjaData.IsCommonNameHanja(h.Character) && !HanjaData.IsWeakGivenNameHanja(h.Character)))
+            Assert.True(HanjaData.IsCommonNameHanja(top[0].Character), $"'{syllable}' 첫 옵션 {top[0].Character}가 빈출자가 아님");
+        // 확장 A 등 기본 영역 밖 글자는 기본 영역 후보가 남아 있는 동안 나오지 않는다
+        var firstNonBasic = forward.FindIndex(c => !HanjaData.IsInCjkBasicRange(c));
+        if (firstNonBasic >= 0)
+            Assert.DoesNotContain(forward.Skip(firstNonBasic), HanjaData.IsInCjkBasicRange);
+    }
 }
