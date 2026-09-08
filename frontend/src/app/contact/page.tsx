@@ -1,6 +1,19 @@
+import type { Metadata } from "next";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { Mail, MessageSquare, Bug, Lightbulb } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "문의하기",
+  description:
+    "이름의 결 문의 페이지. 점수·한자 의미 오류 신고, 기능 제안, 서비스 이용 방법 등 궁금한 점을 이메일로 보내주세요.",
+  alternates: { canonical: "/contact" },
+  openGraph: {
+    title: "문의하기 — 이름의 결",
+    description: "버그 신고·기능 제안·일반 문의는 이메일로 보내주세요.",
+    url: "/contact",
+  },
+};
 
 const TOPICS = [
   {

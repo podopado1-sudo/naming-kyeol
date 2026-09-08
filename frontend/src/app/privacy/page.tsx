@@ -3,7 +3,7 @@ import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 
 export const metadata: Metadata = {
-  title: "개인정보처리방침 | 이름의 결",
+  title: "개인정보처리방침",
   description: "이름의 결(namingkyeol.com)의 개인정보처리방침입니다.",
   alternates: { canonical: "/privacy" },
 };
