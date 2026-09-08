@@ -21,6 +21,26 @@ from collections import Counter, defaultdict
 
 HANGUL_SYLLABLE = re.compile(r"^[가-힣]$")
 
+# 유니코드에 실제 등재된 한자 영역 (기본·확장A~H·호환). HanjaData.IsHanCodePoint(C#)와 동일.
+# 대법원 인명용 한자표의 유니코드 미등재 글자 405자는 법원 자체 코드(a01b1 등)가 그대로
+# 코드포인트로 변환돼 미할당 평면(U+A0xxx)·사용자 영역(U+F0xxx)에 실려 있다 — 폰트가
+# 그리지 못하고 뜻·획수도 없어 카드가 빈 네모로 뜨므로 수록하지 않는다.
+HAN_RANGES = (
+    (0x3400, 0x4DBF),    # 확장 A
+    (0x4E00, 0x9FFF),    # 기본
+    (0xF900, 0xFAFF),    # 호환
+    (0x20000, 0x2EBEF),  # 확장 B~F
+    (0x2F800, 0x2FA1F),  # 호환 보충
+    (0x30000, 0x323AF),  # 확장 G~H
+)
+
+
+def is_han_codepoint(char):
+    if len(char) != 1:
+        return False
+    cp = ord(char)
+    return any(lo <= cp <= hi for lo, hi in HAN_RANGES)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 OUT_PATH = os.path.join(ROOT, "frontend", "src", "data", "hanja-seo.json")
@@ -77,8 +97,12 @@ def main():
     readings_index = defaultdict(list)
     skipped_thin = []
     skipped_no_reading = []
+    skipped_non_han = []
 
     for char, entry in dictionary.items():
+        if not is_han_codepoint(char):
+            skipped_non_han.append(char)
+            continue
         # 원본에 "온,은"처럼 쉼표로 묶인 항목(863자)과 "nan" 오염값(𥡴)이 있어
         # 분리 후 한글 1음절만 독음으로 인정
         readings = []
@@ -152,6 +176,9 @@ def main():
     print(f"목록 전용 (뜻/획수 미비 → 페이지 미생성): {len(skipped_thin)}")
     if skipped_no_reading:
         print(f"제외 (유효 독음 없음): {len(skipped_no_reading)}자 — {''.join(skipped_no_reading[:10])}")
+    if skipped_non_han:
+        codes = " ".join(f"U+{ord(c):05X}" for c in skipped_non_han[:5])
+        print(f"제외 (유니코드 미등재 코드포인트): {len(skipped_non_han)}자 — {codes} ...")
     print(f"인명용(gov): {sum(1 for v in out.values() if v.get('gov'))}")
 
     core_missing = [c for c in core_map if c not in dictionary]

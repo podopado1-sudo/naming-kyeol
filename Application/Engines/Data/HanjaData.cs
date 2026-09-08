@@ -545,6 +545,11 @@ public static class HanjaData
                 var hanja = kvp.Key;
                 var entry = kvp.Value;
 
+                // 대법원 인명용 한자표의 유니코드 미등재 글자 405자는 법원 자체 코드(a01b1 등)가
+                // 그대로 코드포인트로 변환돼 미할당 평면(U+A0xxx)·사용자 영역(U+F0xxx)에 실려 있다.
+                // 어떤 폰트도 그리지 못하고 뜻·획수도 없으므로 사전에 올리지 않는다.
+                if (!IsHanCodePoint(hanja)) continue;
+
                 if (!dict.ContainsKey(hanja))
                 {
                     // 기존 상세 데이터가 없으면 JSON 데이터로 기본 정보 생성
@@ -1104,6 +1109,25 @@ public static class HanjaData
         public string? yinYang { get; set; } // yinYang 필드명도 지원
         public string? rs_unicode { get; set; } // 부수 정보
         public string? radical { get; set; } // radical 필드명도 지원
+    }
+
+    /// <summary>
+    /// 문자열이 유니코드에 실제 등재된 한자 1글자인지 확인 (기본·확장A~H·호환 영역).
+    /// 미할당 평면(U+A0xxx)이나 사용자 정의 영역(U+F0xxx~)의 코드포인트는 false —
+    /// 대법원 목록의 유니코드 미등재 글자가 자체 코드로 섞여 들어온 경우를 걸러낸다.
+    /// </summary>
+    public static bool IsHanCodePoint(string character)
+    {
+        if (string.IsNullOrEmpty(character)) return false;
+        if (!System.Text.Rune.TryGetRuneAt(character, 0, out var rune)) return false; // 홀로 남은 서로게이트
+        if (rune.Utf16SequenceLength != character.Length) return false;              // 한 글자만 허용
+        int codePoint = rune.Value;
+        return (codePoint >= 0x3400 && codePoint <= 0x4DBF)     // 확장 A
+            || (codePoint >= 0x4E00 && codePoint <= 0x9FFF)     // 기본
+            || (codePoint >= 0xF900 && codePoint <= 0xFAFF)     // 호환
+            || (codePoint >= 0x20000 && codePoint <= 0x2EBEF)   // 확장 B~F
+            || (codePoint >= 0x2F800 && codePoint <= 0x2FA1F)   // 호환 보충
+            || (codePoint >= 0x30000 && codePoint <= 0x323AF);  // 확장 G~H
     }
 
     /// <summary>

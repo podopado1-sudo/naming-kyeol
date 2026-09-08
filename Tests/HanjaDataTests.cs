@@ -36,6 +36,39 @@ public class HanjaDataTests
         Assert.True(HanjaData.IsForbiddenNameHanja(compat));
     }
 
+    [Theory]
+    [InlineData(0x6EAB, true)]   // 溫 기본 영역
+    [InlineData(0x3400, true)]   // 확장 A 첫 글자
+    [InlineData(0xF918, true)]   // 落 호환자
+    [InlineData(0x20000, true)]  // 확장 B 첫 글자
+    [InlineData(0x2F996, true)]  // 苦 호환 보충
+    [InlineData(0xA01B1, false)] // 대법원 자체 코드 → 미할당 평면 (독음 '온'으로 실려 있던 가짜 글자)
+    [InlineData(0xA0001, false)]
+    [InlineData(0xF0000, false)] // 사용자 정의 영역
+    [InlineData(0xC628, false)]  // 한글 '온'
+    public void IsHanCodePoint_ClassifiesByUnicodeBlock(int codepoint, bool expected)
+    {
+        var s = char.ConvertFromUtf32(codepoint);
+        Assert.Equal(expected, HanjaData.IsHanCodePoint(s));
+    }
+
+    [Fact]
+    public void GetAllHanja_ContainsNoNonHanCodePoints()
+    {
+        // hanja_dictionary_final.json에는 대법원 목록의 유니코드 미등재 글자 405자가
+        // 미할당 평면(U+A0xxx)·사용자 영역(U+F0xxx) 코드포인트로 섞여 있다.
+        // 로더가 걸러내지 않으면 /hanja 독음 페이지에 빈 네모 카드로 노출된다.
+        // HanjaData의 하드코딩 상세 사전에는 키가 한글 음절인 항목 10건(우·진·서…)이 따로 있어
+        // 그 키는 이 테스트의 대상이 아니다 — 한자도 한글도 아닌 코드포인트만 잡는다.
+        static bool IsHangulSyllable(string s) =>
+            s.Length == 1 && s[0] >= 0xAC00 && s[0] <= 0xD7A3;
+        var bogus = HanjaData.GetAllHanja()
+            .Where(h => !HanjaData.IsHanCodePoint(h.Character) && !IsHangulSyllable(h.Character))
+            .Select(h => $"U+{char.ConvertToUtf32(h.Character, 0):X5}")
+            .ToList();
+        Assert.True(bogus.Count == 0, $"유니코드 미등재 코드포인트 {bogus.Count}건 잔존: {string.Join(" ", bogus.Take(10))}");
+    }
+
     [Fact]
     public void IsForbiddenNameHanja_NormalPositiveHanja_NotBlocked()
     {

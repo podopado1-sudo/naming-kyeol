@@ -18,7 +18,7 @@
 - **데이터베이스:** EF Core 10.0
   - 개발: SQLite (`nameform.db`)
   - 프로덕션: PostgreSQL (Connection string에 따라 자동 분기)
-- **한자 사전:** JSON/CSV 9,595자
+- **한자 사전:** JSON/CSV 9,595자 수록, 이 중 9,190자를 로드 (유니코드 미등재 코드포인트 405자는 `HanjaData.IsHanCodePoint`가 제외)
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
@@ -261,7 +261,9 @@ D:\MyDev\NameForm\
 
 ### 데이터 소스
 - **하드코딩 상세 데이터**: 45자 (오행/음양/획수 완비)
-- **hanja_dictionary_final.json**: 9,595자 (마스터 통합 사전)
+- **hanja_dictionary_final.json**: 9,595자 (마스터 통합 사전). ⚠️ 이 중 405자는 대법원 목록의
+  유니코드 미등재 글자가 법원 자체 코드(a01b1 등)로 변환된 가짜 코드포인트(U+A0xxx·U+F0xxx) —
+  백엔드 로더(`HanjaData.IsHanCodePoint`)와 `build_hanja_seo_data.py`가 같은 영역 규칙으로 걸러낸다
 - **data-gov.csv / data-naver.csv**: 대법원/네이버 인명용 한자
 - **Unihan_*.txt**: Unicode 표준 발음/획수/부수 데이터
 - **data/hanja-gloss-overrides.json**: 대표 훈 오버라이드 95자 (然 불탈→그럴 연 등,
@@ -381,7 +383,7 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 ```
 /                  홈 (Hero + Categories + ProPaths + WhyKyeol)
 /hanja             인명용 한자 사전 인덱스 (독음 767개, 초성 ㄱ~ㅎ 탐색)
-/hanja/[독음|글자]  인명용 한자 사전 SEO (9,595자, sitemap 전체 공개)
+/hanja/[독음|글자]  인명용 한자 사전 SEO (9,190자 수록·상세 9,096자, sitemap 전체 공개)
 /name              이름 뜻 사전 인덱스 (인기 이름 상위 1,000개 노출 — sitemap 등재 범위와 일치)
 /name/[이름]       이름 뜻 SEO (3,305개 — 통계·미학 점수·한자 조합
                    + 이름별 OG/트위터 공유 카드 각 3,305장 정적 생성)
