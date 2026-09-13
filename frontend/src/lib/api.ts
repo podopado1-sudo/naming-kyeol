@@ -145,13 +145,15 @@ export function companyOptions(): Promise<CompanyNamingOptions> {
 }
 
 // 탭 클릭 이벤트 (fire-and-forget, 실패 무시)
+// ⚠️ sendBeacon 금지: 크로스 오리진 + application/json Blob 조합은 Chrome이
+// true를 반환하고도 전송을 조용히 버린다 (2026-09-14 실측: 365일 적재 0행,
+// beacon은 preflight조차 안 나감 — fetch keepalive는 204 + DB 적재 확인)
 export function trackTabView(key: string): void {
-  const url = `${API_BASE}/usage/event`;
-  const body = JSON.stringify({ eventType: "tab_view", key });
-  const blob = new Blob([body], { type: "application/json" });
-  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-    navigator.sendBeacon(url, blob);
-  } else {
-    fetch(url, { method: "POST", body, headers: { "Content-Type": "application/json" }, keepalive: true }).catch(() => {});
-  }
+  if (typeof window === "undefined") return;
+  fetch(`${API_BASE}/usage/event`, {
+    method: "POST",
+    body: JSON.stringify({ eventType: "tab_view", key }),
+    headers: { "Content-Type": "application/json" },
+    keepalive: true,
+  }).catch(() => {});
 }
