@@ -5,7 +5,24 @@
 
 ---
 
-## 마지막 세션 요약 (2026-09-08 — 병행 세션 통합·배포 점검)
+## 마지막 세션 요약 (2026-09-14 — tab_view 365일 유실 원인 확정·수정)
+
+**발단**: `POST /usage/event`(tab_view)가 365일 적재 0행 — endpoint 이벤트는 만 단위인데
+클라이언트→서버 구간만 100% 유실. 브라우저 페인으로 라이브(namingkyeol.com)에서 실측 진단.
+
+- **원인 확정**: `trackTabView`의 `sendBeacon(url, Blob{type:'application/json'})` — 크로스 오리진
+  (namingkyeol.com → onrender.com)에서 Chrome이 **true를 반환하고도 요청을 조용히 버린다**
+  (실측: preflight OPTIONS조차 네트워크 미발생, DB 0행). `navigator.sendBeacon`이 항상 존재해
+  fetch 폴백도 영원히 미도달. 페이로드 스키마·CORS·서버 검증은 모두 정상이었음.
+- **수정** (커밋 f3ca1bc): `frontend/src/lib/api.ts` trackTabView를 fetch keepalive 단일 경로로
+  교체(분기 제거). 배포 후 라이브 E2E 실측 — 스마트 추천 실행 시 `/usage/event → 204`(초기 탭
+  standard), 탭 전환(pure-korean)도 204, summary API에 `tab_view/standard`·`pure-korean` 적재 확인.
+- **교훈**: 크로스 오리진 계측 비콘에 non-safelisted Content-Type Blob + sendBeacon 조합 금지.
+  fire-and-forget은 `fetch(…, {keepalive:true})`가 정답 (api.ts 주석에 기록).
+
+---
+
+## 이전 세션 요약 (2026-09-08 — 병행 세션 통합·배포 점검)
 
 같은 날 세션 4개(이름의 결 3 + 시험달력 1)가 흩어놓은 상태를 실측 점검하고 main으로 통합했다.
 - **반영 확인**: 5b1ef98(한자 405자 제외)은 프론트·백엔드 모두 라이브 실측 — `/hanja/온` 25자·
