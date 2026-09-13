@@ -161,7 +161,7 @@ export default function MethodPage() {
             <AxisCard
               icon={BarChart3}
               title="데이터 기반"
-              body="검수 완료 2,060자 Core Dataset과 대법원·네이버 인명용 한자, Unihan 표준까지 총 9,595자 사전 위에서 모든 후보가 만들어집니다."
+              body="검수 완료 2,060자 Core Dataset과 대법원·네이버 인명용 한자, Unihan 표준까지 총 9,190자 사전 위에서 모든 후보가 만들어집니다."
             />
             <AxisCard
               icon={Compass}

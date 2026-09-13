@@ -29,6 +29,9 @@ const inter = Inter({
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://namingkyeol.com";
 const SITE_NAME = "이름의 결";
+// 붙여 쓴 "이름의결"은 네이버가 이름+의결(議決)로 형태소 분리해 국회·회의 문서에 묻힌다
+// (띄어 쓴 "이름의 결"은 1위 — 2026-09-14 실측). 검색엔진에 같은 사이트의 다른 표기임을 알린다.
+const SITE_ALTERNATE_NAMES = ["이름의결", "Naming.kyeol", "namingkyeol"];
 const SITE_DESCRIPTION =
   "미학 70% + 사주 조화 30%로 한국어 이름을 추천합니다. 발음·리듬·세대중립·오행·자원오행·수리사격을 수치 기반 리포트로 분석.";
 
@@ -50,6 +53,8 @@ export const metadata: Metadata = {
     "오행 이름",
     "이름 평가",
     "이름의 결",
+    "이름의결",
+    "namingkyeol",
   ],
   authors: [{ name: "이름의 결" }],
   creator: "이름의 결",
@@ -151,7 +156,7 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "Organization",
                 name: SITE_NAME,
-                alternateName: "Naming.kyeol",
+                alternateName: SITE_ALTERNATE_NAMES,
                 url: SITE_URL,
                 description: SITE_DESCRIPTION,
               },
@@ -159,6 +164,7 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "WebSite",
                 name: SITE_NAME,
+                alternateName: SITE_ALTERNATE_NAMES,
                 url: SITE_URL,
                 inLanguage: "ko-KR",
                 description: SITE_DESCRIPTION,

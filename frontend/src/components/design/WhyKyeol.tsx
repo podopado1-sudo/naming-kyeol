@@ -18,7 +18,7 @@ const ITEMS: WhyItem[] = [
   {
     key: "data",
     title: "데이터 기반",
-    copy: "9,595자 한자 사전과 세대별 빈도 데이터로\n이름의 쓰임을 수치화해 살펴봅니다.",
+    copy: "9,190자 한자 사전과 세대별 빈도 데이터로\n이름의 쓰임을 수치화해 살펴봅니다.",
     icon: <BarChart3 {...ICON_PROPS} />,
   },
   {
