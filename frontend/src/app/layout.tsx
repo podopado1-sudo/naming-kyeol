@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR, Inter } from "next/font/google";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -28,6 +29,11 @@ const inter = Inter({
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://namingkyeol.com";
+// 애드센스 게시자 ID (예: ca-pub-1234...). Vercel 환경변수로 주입 — 미설정이면 스크립트 자체를
+// 렌더하지 않으므로 심사 전·로컬에서 무해. 설정 후 재배포 필요(빌드 타임 주입). 시험달력과 같은 배선.
+// 배치 방침(docs/naver-blog/strategy.md): 광고 유닛은 콘텐츠 페이지(/name·/hanja)만, 도구 페이지 제외 —
+// 여기서는 심사용 로더 스크립트만 싣는다.
+const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 const SITE_NAME = "이름의 결";
 // 붙여 쓴 "이름의결"은 네이버가 이름+의결(議決)로 형태소 분리해 국회·회의 문서에 묻힌다
 // (띄어 쓴 "이름의 결"은 1위 — 2026-09-14 실측). 검색엔진에 같은 사이트의 다른 표기임을 알린다.
@@ -181,6 +187,14 @@ export default function RootLayout({
       <body className="min-h-full">
         {children}
         <Toaster position="top-right" />
+        {ADSENSE_CLIENT && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );
