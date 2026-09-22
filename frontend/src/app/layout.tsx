@@ -92,6 +92,9 @@ export const metadata: Metadata = {
     ],
   },
   manifest: "/site.webmanifest",
+  // 애드센스 사이트 연결용 메타태그 — 정적 HTML <head>에 들어가므로 JS를 실행하지 않는
+  // 구글 검증 크롤러도 인식한다(next/script afterInteractive는 하이드레이션 후 주입이라 소스에 없음).
+  ...(ADSENSE_CLIENT ? { other: { "google-adsense-account": ADSENSE_CLIENT } } : {}),
   // 검색엔진 사이트 소유 확인 (Google/Naver/Daum)
   verification: {
     // Naver Search Advisor — searchadvisor.naver.com에 사이트 등록 후 받은 값
