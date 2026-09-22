@@ -5,7 +5,26 @@
 
 ---
 
-## 마지막 세션 요약 (2026-09-14 — tab_view 365일 유실 원인 확정·수정)
+## 마지막 세션 요약 (2026-09-22 — 애드센스 신청 착수)
+
+**발단**: 수익화 세션에서 이름의결이 트래픽 최대(8/20 기준 네이버 30일 클릭 2.1만)인데 광고가 없어 사용자가 신청 결정.
+"신청 보류" 상태였던 docs/naver-blog/strategy.md §채널 성과의 애드센스 항목은 이 기록으로 대체(그 파일은 다른 세션이 편집 중이라 미수정).
+
+- **게시자 ID** `ca-pub-7649148803508002` (공개값). Vercel Production env `NEXT_PUBLIC_ADSENSE_CLIENT`로 주입(CLI `vercel env add`, `env pull`로 값 확인).
+- **배선 (커밋 2329101→78fd6ed→d47b14d, main)**: `layout.tsx`가 env가 있을 때만 `<head>`에 **정적** `<script async>` 로더와
+  `google-adsense-account` 메타태그(metadata.other)를 렌더. 처음 next/script afterInteractive로 넣었다가 정적으로 교체 —
+  하이드레이션 후 주입은 페이지 소스에 없어 JS를 안 돌리는 검증 크롤러가 "코드 확인"에 실패할 수 있음. `public/ads.txt` 동봉
+  (`google.com, pub-7649148803508002, DIRECT, f08c47fec0942fa0`). env 없으면 셋 다 렌더 안 됨(로컬·심사 전 무해).
+- **검증**: tsc·eslint 통과. 같은 드라이브 임시 worktree(`.claude/worktrees/nf-adsense`, 삭제됨) + node_modules 정션 + `next dev --webpack`으로
+  /privacy SSR 실측 — head에 메타·스크립트, /ads.txt 200. (Turbopack은 정션을 거부하고, C: 드라이브 worktree는 webpack도 경로가 깨짐.)
+- **배포**: 사용자가 `git push origin adsense-slot:main` 실행(자동 모드가 프로덕션 push를 차단) → Vercel 빌드. 라이브 실측 후 사용자가 애드센스 "확인"→검토 요청.
+- **승인 후 할 일**: 자동 광고 켜되 도구 페이지(/evaluate·/search·/creative·/twin·/dual-name·/three-syllable·/parent-based·/required-char·
+  /rare-surname·/pure-korean·/favorites·/analysis) 제외, 콘텐츠(/name·/hanja)와 안내 페이지만. 잔액 $10 PIN 우편·세금 정보·지급 계좌(사용자).
+- 심사 중 사이트 구조 대수술 금지. 거절 시 사유 대부분 "콘텐츠 불충분" — thin 페이지(noindex 대상) 점검 후 2주 뒤 재신청.
+
+---
+
+## 이전 세션 요약 (2026-09-14 — tab_view 365일 유실 원인 확정·수정)
 
 **발단**: `POST /usage/event`(tab_view)가 365일 적재 0행 — endpoint 이벤트는 만 단위인데
 클라이언트→서버 구간만 100% 유실. 브라우저 페인으로 라이브(namingkyeol.com)에서 실측 진단.
