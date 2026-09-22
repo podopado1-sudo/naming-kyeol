@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR, Inter } from "next/font/google";
 import localFont from "next/font/local";
-import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -29,10 +28,12 @@ const inter = Inter({
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://namingkyeol.com";
-// 애드센스 게시자 ID (예: ca-pub-1234...). Vercel 환경변수로 주입 — 미설정이면 스크립트 자체를
-// 렌더하지 않으므로 심사 전·로컬에서 무해. 설정 후 재배포 필요(빌드 타임 주입). 시험달력과 같은 배선.
-// 배치 방침(docs/naver-blog/strategy.md): 광고 유닛은 콘텐츠 페이지(/name·/hanja)만, 도구 페이지 제외 —
-// 여기서는 심사용 로더 스크립트만 싣는다.
+// 애드센스 게시자 ID (예: ca-pub-1234...). Vercel 환경변수로 주입 — 미설정이면 스크립트·메타태그를
+// 렌더하지 않으므로 심사 전·로컬에서 무해. 설정 후 재배포 필요(빌드 타임 주입).
+// 로더는 next/script가 아니라 <head>의 정적 <script async>로 싣는다 — 애드센스 안내("각 페이지의 <head>")와
+// 같고, JS를 실행하지 않는 검증 크롤러도 페이지 소스에서 스니펫을 찾을 수 있다(React 19가 async 스크립트를
+// head로 호이스팅·중복 제거). 배치 방침(docs/naver-blog/strategy.md): 광고 유닛은 콘텐츠 페이지(/name·/hanja)만,
+// 도구 페이지 제외 — 여기서는 로더만 싣는다.
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 const SITE_NAME = "이름의 결";
 // 붙여 쓴 "이름의결"은 네이버가 이름+의결(議決)로 형태소 분리해 국회·회의 문서에 묻힌다
@@ -186,18 +187,17 @@ export default function RootLayout({
             ]),
           }}
         />
+        {ADSENSE_CLIENT && (
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+            crossOrigin="anonymous"
+          />
+        )}
       </head>
       <body className="min-h-full">
         {children}
         <Toaster position="top-right" />
-        {ADSENSE_CLIENT && (
-          <Script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-            crossOrigin="anonymous"
-            strategy="afterInteractive"
-          />
-        )}
       </body>
     </html>
   );
