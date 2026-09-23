@@ -23,9 +23,19 @@ const apiOrigin = (() => {
 // dev 모드는 React Fast Refresh / Turbopack 디버거가 eval()을 사용 →
 // 'unsafe-eval'을 dev에서만 허용. production은 그대로 엄격 유지.
 const isDev = process.env.NODE_ENV === "development";
+// 애드센스(2026-09-24 점검): 광고 스크립트·iframe·계측 도메인. 9/22 소유권 확인은 head의
+// 태그 존재만 보므로 통과했지만, 브라우저는 CSP로 스크립트 실행·광고 iframe을 막아 승인돼도
+// 광고가 한 장도 안 뜨는 상태였다. img-src는 이미 https: 전체 허용.
+const adsenseScript =
+  "https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com https://www.googletagservices.com https://adservice.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google";
+const adsenseFrame =
+  "https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google";
+const adsenseConnect =
+  "https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://fundingchoicesmessages.google.com https://*.adtrafficquality.google https://csi.gstatic.com";
+
 const scriptSrc = isDev
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self' 'unsafe-inline'";
+  ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${adsenseScript}`
+  : `script-src 'self' 'unsafe-inline' ${adsenseScript}`;
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -33,7 +43,8 @@ const ContentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: https:",
   "font-src 'self' https://fonts.gstatic.com data:",
-  `connect-src 'self' ${apiOrigin}`.trim(),
+  `connect-src 'self' ${apiOrigin} ${adsenseConnect}`.replace(/\s+/g, " "),
+  `frame-src ${adsenseFrame}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
