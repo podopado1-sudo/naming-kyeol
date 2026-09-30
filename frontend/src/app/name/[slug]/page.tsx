@@ -305,6 +305,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
               {/* /evaluate는 클라이언트 네비 잔상 버그로 풀 페이지 이동(<a>) — 아래 CTA와 동일 패턴 */}
               <a
                 href={`/evaluate?name=${encodeURIComponent(name)}`}
+                rel="nofollow"
                 className="text-teal-700 hover:underline"
               >
                 이름 평가
@@ -370,6 +371,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
                간다(코드베이스 표준 패턴 — page.tsx/search의 window.location와 동일 취지). */}
             <a
               href={`/evaluate?name=${encodeURIComponent(name)}`}
+              rel="nofollow"
               className="inline-block rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-navy-600"
             >
               성씨 넣어 {name} 평가받기 →

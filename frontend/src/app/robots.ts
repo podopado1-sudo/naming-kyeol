@@ -41,6 +41,13 @@ const BLOCKED_AI_BOTS = [
   "YouBot",
 ];
 
+// 도구 페이지의 쿼리 변형(/required-char?char=熙, /evaluate?name=지우 …)은 수집 금지.
+// 한자·이름 페이지의 CTA 링크를 타고 네이버가 /required-char?char= 118개를 따로 수집해
+// "동일 제목/설명 다수"로 진단(2026-09-26 사이트진단) — canonical(/required-char)만으로는
+// 네이버가 중복 집계를 멈추지 않았다. 접두 일치라 /required-char 자체는 허용된다.
+// /search?는 JSON-LD SearchAction 대상이라 막지 않는다.
+const TOOL_QUERY_VARIANTS = ["/required-char?", "/evaluate?", "/analysis?"];
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -48,7 +55,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: ["Googlebot", "Bingbot", "Naverbot", "Yeti", "Daumoa"],
         allow: "/",
-        disallow: ["/favorites", "/api/"],
+        disallow: ["/favorites", "/api/", ...TOOL_QUERY_VARIANTS],
       },
       // 2. AI 학습/스크래퍼 봇 — 전체 차단
       {
@@ -59,7 +66,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/favorites", "/api/"],
+        disallow: ["/favorites", "/api/", ...TOOL_QUERY_VARIANTS],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

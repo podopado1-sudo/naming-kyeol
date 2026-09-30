@@ -140,6 +140,7 @@ function CtaBanner({ char, label }: { char: string; label: string }) {
       <p className="mb-4 text-sm text-text-2">{label}</p>
       <Link
         href={`/required-char?char=${encodeURIComponent(char)}`}
+        rel="nofollow"
         className="inline-block rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-navy-600"
       >
         &lsquo;{char}&rsquo; 글자를 넣어 이름 추천받기 →
