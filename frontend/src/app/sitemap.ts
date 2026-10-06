@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getAllDetailChars, getAllReadings } from "@/lib/hanja-seo";
+import { getAllReadings } from "@/lib/hanja-seo";
 import { getCuratedNames, getPublishedDripNames } from "@/lib/name-seo";
 
 /**
@@ -70,10 +70,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: r.priority,
   }));
 
-  // 한자 사전 — 단계적 공개 전략:
-  // 1차로 독음 페이지(767) + 검수 완료(S급) 글자만 등재해 thin-content 판정을 피한다.
-  // 색인율 확인 후 scripts/build_hanja_seo_data.py 기준 나머지 글자를 추가 예정.
-  // (sitemap 미등재 글자 페이지도 생성은 되며 내부링크로 크롤된다)
+  // 한자 사전 — 독음 페이지만 등재한다(글자 상세는 아래 참조).
   const readingRoutes: MetadataRoute.Sitemap = getAllReadings().map(
     (reading) => ({
       url: `${SITE_URL}/hanja/${encodeURIComponent(reading)}`,
@@ -83,15 +80,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }),
   );
 
-  // 단계적 공개 2단계 (2026-07-15): S급 큐레이션 → 전체 상세 글자.
-  // 근거: 서치콘솔 색인 1,790/2,557(약 70%), 발견됨-미색인 0(크롤 예산 여유),
-  // 크롤링됨-미색인 115(4.5%)로 thin-content 경보 없음.
-  const charRoutes: MetadataRoute.Sitemap = getAllDetailChars().map((char) => ({
-    url: `${SITE_URL}/hanja/${encodeURIComponent(char)}`,
-    lastModified,
-    changeFrequency: "monthly" as const,
-    priority: 0.5,
-  }));
+  // 글자 상세 페이지는 사이트맵에서 뺀다 (2026-10-06).
+  // 이력: 2026-07-15 2단계로 전체 상세 글자 9,096쪽을 등재했으나(당시 색인 70%·thin 경보 없음),
+  // 나흘 뒤 구글 유입 급락 + 2026-10-06 애드센스 "가치가 별로 없는 콘텐츠" 거절. 페이지는
+  // 그대로 두고(hanja/[slug] generateMetadata에서 noindex,follow) 검색 축인 독음·이름 페이지만 등재한다.
 
   // 이름 뜻 페이지 — 단계적 공개 전략:
   // 1차로 대법원 실명 빈도 상위 1,000개만 등재(전부 빈도 80+·자연어 뜻 보유).
@@ -119,11 +111,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }),
   );
 
-  return [
-    ...staticRoutes,
-    ...readingRoutes,
-    ...charRoutes,
-    ...nameRoutes,
-    ...dripRoutes,
-  ];
+  return [...staticRoutes, ...readingRoutes, ...nameRoutes, ...dripRoutes];
 }

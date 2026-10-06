@@ -108,6 +108,12 @@ export async function generateMetadata({
     description,
     alternates: { canonical },
     openGraph: { title, description, url: `${SITE_URL}${canonical}` },
+    // 글자 상세 9,096쪽은 색인 제외(2026-10-06). 애드센스가 "가치가 별로 없는 콘텐츠"로
+    // 거절한 몸통이 이 구간이다 — 전체 URL의 83%가 450~750자짜리 같은 틀(D등급 5,652자는
+    // "획수 기반 자동 판정"뿐). 2026-07-15 전량 사이트맵 등재 나흘 뒤 구글 유입이 급락한
+    // 정황도 같다. 페이지·내부링크는 유지하고(follow) 검색 노출만 끈다. 검색 축은
+    // 독음 페이지(/hanja/희)와 이름 페이지(/name/예성)다. 승인 후 S급만 되살릴지 재검토.
+    robots: { index: false, follow: true },
   };
 }
 
