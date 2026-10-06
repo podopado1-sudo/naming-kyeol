@@ -17,6 +17,7 @@ import {
 
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
+import { getAllInsights } from "@/lib/insights";
 
 // ============================================================
 // 챕터 데이터
@@ -39,6 +40,7 @@ const CHAPTERS: Chapter[] = [
 ];
 
 export default function GuidePage() {
+  const INSIGHTS = getAllInsights();
   return (
     <>
       <Header current="guide" />
@@ -79,6 +81,49 @@ export default function GuidePage() {
             한국 작명의 기본기와 흔한 오해를 정리했어요.
           </p>
         </section>
+
+        {/* ── 데이터 리포트 ───────────────────────────────────── */}
+        {INSIGHTS.length > 0 && (
+          <section style={{ marginBottom: 56 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.18em",
+                color: "var(--color-text-3)",
+                textTransform: "uppercase",
+                marginBottom: 14,
+              }}
+            >
+              데이터로 읽는 이름
+            </div>
+            <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "var(--color-text-2)", margin: "0 0 14px" }}>
+              대법원 출생신고 통계 2008~2019(약 497만 건)와 인명용 한자 사전을 직접 집계해 쓴 리포트입니다.
+            </p>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
+              {INSIGHTS.map((a) => (
+                <li key={a.slug}>
+                  <Link
+                    href={`/guide/${a.slug}`}
+                    style={{
+                      display: "block",
+                      padding: "14px 18px",
+                      borderRadius: "var(--radius-lg)",
+                      background: "var(--color-surface-2)",
+                      textDecoration: "none",
+                      color: "var(--color-text)",
+                    }}
+                  >
+                    <span style={{ display: "block", fontSize: 15, fontWeight: 600 }}>{a.title}</span>
+                    <span style={{ display: "block", marginTop: 4, fontSize: 13, lineHeight: 1.6, color: "var(--color-text-2)" }}>
+                      {a.description}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* ── 목차 ──────────────────────────────────────────── */}
         <section

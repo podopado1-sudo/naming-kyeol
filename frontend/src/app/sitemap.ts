@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAllReadings } from "@/lib/hanja-seo";
 import { getCuratedNames, getPublishedDripNames } from "@/lib/name-seo";
+import { getAllInsights } from "@/lib/insights";
 
 /**
  * /sitemap.xml 자동 생성
@@ -111,5 +112,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }),
   );
 
-  return [...staticRoutes, ...readingRoutes, ...nameRoutes, ...dripRoutes];
+  // 데이터 리포트(/guide/[slug]) — 갱신일을 lastmod로.
+  const insightRoutes: MetadataRoute.Sitemap = getAllInsights().map((a) => ({
+    url: `${SITE_URL}/guide/${a.slug}`,
+    lastModified: new Date(a.updated),
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
+
+  return [...staticRoutes, ...insightRoutes, ...readingRoutes, ...nameRoutes, ...dripRoutes];
 }
