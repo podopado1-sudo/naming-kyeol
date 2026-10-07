@@ -88,6 +88,23 @@ export function firstGloss(meaning?: string): string {
   return meaning.split(/[,/;·]/)[0].trim();
 }
 
+/**
+ * 이름 음절(reading)로 읽히는 훈음 — 다중 독음 글자는 첫 훈이 다른 소리일 수 있다
+ * (乻 "땅 이름 얼, …, 음차 늘"을 하늘의 '늘' 자리에, 葉 "잎 엽, 땅 이름 섭"을 경섭의 '섭' 자리에).
+ * "연꽃 련(연)"처럼 괄호 속 두음 독음도 인정. 맞는 조각이 없으면 첫 훈음.
+ */
+export function glossForReading(meaning: string | undefined, reading: string): string {
+  if (!meaning) return "";
+  const hit = meaning
+    .split(/[,/;·]/)
+    .map((s) => s.trim())
+    .find((s) => {
+      const m = s.match(/\s([^\s(]+)(?:\(([^)]+)\))?$/);
+      return !!m && (m[1] === reading || m[2] === reading);
+    });
+  return hit ?? firstGloss(meaning);
+}
+
 const RAW = rawData as unknown as {
   meta: { source: string; minTotal: number; count: number };
   names: Record<string, NameSeoRecord>;

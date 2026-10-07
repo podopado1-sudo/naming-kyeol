@@ -24,6 +24,10 @@
   - 기존 출력에 없던 완전 신규 이름은 이월된 마지막 코호트 뒤에 이어붙는다.
   - 기존 출력에 pa가 있는데 새 출력에서 pa가 전멸하면 하드 에러로 중단한다.
   - min_total 기본값도 기존 출력의 meta.minTotal을 따른다(무인자 재실행 = 현상 유지).
+대표 뜻(mean) 계약 (2026-10-07):
+  - creative-name-meanings의 뜻이 표시 combos와 모순이면(mean_combo_check: 페이지 어느 조합에도 없는
+    한자의 구체 명사 훈 — 연꽃·비·별·으뜸) 1순위 조합 뜻(combo-meanings)으로 교체한다.
+    weak 추가 등으로 combos가 바뀌어도 재생성만 하면 뜻이 따라온다. 감사: audit_mean_combo_mismatch.py
 출력:    frontend/src/data/name-seo.json + 검증 리포트(stdout)
 """
 
@@ -33,6 +37,9 @@ import os
 import re
 import sys
 from collections import defaultdict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from mean_combo_check import HanjaIndex, stale_keywords  # noqa: E402
 
 HANGUL_NAME = re.compile(r"^[가-힣]{2,3}$")
 
@@ -208,6 +215,10 @@ def main():
         for i, name in enumerate(granked, start=1):
             records[name][gender_key] = i
 
+    # 모순 판정용 한자 독음 색인 (build_hanja_seo_data.py 산출물)
+    hanja_idx = HanjaIndex(json.load(open(
+        os.path.join(ROOT, "frontend", "src", "data", "hanja-seo.json"), encoding="utf-8")))
+
     # 자연어 뜻 + 서사 + 한자 조합 + 미학 점수
     with_meaning = 0
     with_story = 0
@@ -215,8 +226,17 @@ def main():
     with_scores = 0
     used_combo_means = {}  # 수록 이름의 조합에 실제로 등장하는 한자쌍만 (top-level 맵, 중복 저장 회피)
     mean_from_combo = 0
+    mean_stale = []  # 창의 뜻이 표시 조합과 모순(mean_combo_check noun·strict)이라 조합 뜻으로 바꾼 이름
     for name, rec in records.items():
         mean = meanings.get(name)
+        combo = combos.get(name)
+        if mean and combo and stale_keywords(name, mean, combo, hanja_idx):
+            # 6월 윤문 당시 대표 한자(蓮 연꽃·雨 비 등)의 뜻이 지금 combos 어디에도 없다 →
+            # 페이지가 스스로 모순되므로 1순위 조합 뜻으로 교체 (연우 "연꽃처럼…" 아래 然佑 등).
+            fallback = combo_meanings.get("".join(combo[0]))
+            if fallback:
+                mean_stale.append(name)
+                mean = None
         if not mean:
             # 폴백: 1순위 한자 조합의 자연어 뜻을 이름 뜻으로 (NameSeoRecord.mean 정의
             # "대표 한자 기준의 일반적 느낌"과 일치 — 드립 신규 이름의 뜻 공백 방지)
@@ -232,7 +252,6 @@ def main():
         if story:
             rec["story"] = story
             with_story += 1
-        combo = combos.get(name)
         if combo:
             rec["combos"] = combo
             with_combos += 1
@@ -279,6 +298,7 @@ def main():
     else:
         print("publishAt 보유: 0 (드립 비활성)")
     print(f"자연어 뜻 보유: {with_meaning} ({with_meaning*100//max(len(records),1)}%, 조합 폴백 {mean_from_combo})")
+    print(f"  └ 그중 창의 뜻↔조합 모순으로 교체: {len(mean_stale)} (예: {' '.join(mean_stale[:8])})")
     print(f"서사(story) 보유: {with_story} ({with_story*100//max(len(records),1)}%)")
     print(f"한자 조합 보유: {with_combos} ({with_combos*100//max(len(records),1)}%)")
     print(f"미학 점수 보유: {with_scores} ({with_scores*100//max(len(records),1)}%)")

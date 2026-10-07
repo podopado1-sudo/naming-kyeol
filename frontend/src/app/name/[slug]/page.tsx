@@ -8,7 +8,7 @@ import { HanjaGradeBadge } from "@/components/hanja/HanjaBadges";
 import { ScoreBreakdownCard } from "@/components/results/ScoreBreakdownCard";
 import { ELEMENT_KO, getHanja, getReadingChars } from "@/lib/hanja-seo";
 import {
-  firstGloss,
+  glossForReading,
   genderSplit,
   getAllNames,
   getComboMeaning,
@@ -134,9 +134,19 @@ const OHAENG_CHIP: Record<string, string> = {
   unknown: "",
 };
 
-/** 한자 조합 카드 — 글자별 훈음/획수/오행/신뢰등급 + 오행 조화. */
-function ComboCard({ combo, featured }: { combo: string[]; featured: boolean }) {
+/** 한자 조합 카드 — 글자별 훈음/획수/오행/신뢰등급 + 오행 조화.
+ * 훈음은 이름 음절의 독음에 맞춘다(乻은 하늘의 '늘' 자리에서 "음차 늘", "땅 이름 얼"이 아니라). */
+function ComboCard({
+  combo,
+  name,
+  featured,
+}: {
+  combo: string[];
+  name: string;
+  featured: boolean;
+}) {
   const [c1, c2] = combo;
+  const [s1, s2] = [...name];
   const r1 = getHanja(c1);
   const r2 = getHanja(c2);
   if (!r1 || !r2) return null;
@@ -167,13 +177,13 @@ function ComboCard({ combo, featured }: { combo: string[]; featured: boolean }) 
       )}
       <div className="mb-3 grid grid-cols-2 gap-2">
         {[
-          { ch: c1, r: r1 },
-          { ch: c2, r: r2 },
-        ].map(({ ch, r }) => (
+          { ch: c1, r: r1, syl: s1 },
+          { ch: c2, r: r2, syl: s2 },
+        ].map(({ ch, r, syl }) => (
           <div key={ch} className="rounded-lg bg-paper-tint px-3 py-2.5">
             <div className="mb-1 flex items-baseline gap-1.5">
               <span className="font-hanja text-xl text-navy">{ch}</span>
-              <span className="text-sm text-text-2">{firstGloss(r.m)}</span>
+              <span className="text-sm text-text-2">{glossForReading(r.m, syl)}</span>
             </div>
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-2">
               <span className="font-tabular">{r.s}획</span>
@@ -327,7 +337,12 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
             </p>
             <div className="grid gap-3">
               {rec.combos.map((combo, i) => (
-                <ComboCard key={combo.join("")} combo={combo} featured={i === 0} />
+                <ComboCard
+                  key={combo.join("")}
+                  combo={combo}
+                  name={name}
+                  featured={i === 0}
+                />
               ))}
             </div>
           </section>

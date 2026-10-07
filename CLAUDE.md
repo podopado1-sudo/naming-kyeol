@@ -270,13 +270,19 @@ D:\MyDev\NameForm\
 - **Unihan_*.txt**: Unicode 표준 발음/획수/부수 데이터
 - **data/hanja-gloss-overrides.json**: 대표 훈 오버라이드 95자 (然 불탈→그럴 연 등,
   로드 시 Meaning 재배열 — 원 훈 보존·멱등, 소비처는 첫 훈만 취하므로 무수정 전파)
-- **data/combo-meanings.json**: 한자쌍 자연어 뜻 16,203쌍 (LLM 배치 윤문, 런타임 비용 0)
+- **data/combo-meanings.json**: 한자쌍 자연어 뜻 23,552쌍 (LLM 배치 윤문 + 소량 인라인, 런타임 비용 0)
 
 ### 글자 품질 세트 (HanjaData.cs 인라인, 2026-07-02 기준)
 - **ForbiddenNameHanjaSet 850자** — 명백 부정 훈 하드 배제 (생성 경로만, 평가/분석은 통과).
   호환 코드포인트는 NFKC 정규형 조회로 자동 차단 (리터럴 등재 금지 — NFC 정규화 회귀 전력)
-- **WeakGivenNameHanjaSet 621자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
-  감점. 배제가 아니라 동음 대안 있을 때만 양보 → combos 소실 없음
+- **WeakGivenNameHanjaSet 667자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
+  감점. 배제가 아니라 동음 대안 있을 때만 양보 → combos 소실 없음.
+  `SelectCombos`(/name 조합)는 약자 없는 조합이 하나라도 있으면 약자 쌍을 **빈칸 채우기로도 쓰지 않는다**
+  — 4칸을 채우려 李眼·胎輝·鰓羅가 97명에 노출되던 것(2026-10-07). 전원 약자일 때만 약자 쌍 유지
+- ⚠️ **weak·불용은 글자 단위인데 훈은 독음마다 다르다** — 烋는 휴 자리 '아름다울'이지만 효 자리
+  '거들먹거릴', 乻는 얼 자리 '땅 이름'이지만 늘 자리 '음차'. 다중 독음 글자를 검수할 땐 그 글자가
+  실제로 쓰이는 독음의 훈으로 판단할 것. /name 조합 카드(`glossForReading`)와 `dump-combo-glosses`는
+  이름 음절의 독음에 맞는 훈을 고른다(첫 훈 고정 시 하늘=乻 "땅 이름 얼" 노출)
 - **CommonNameHanja 320자** — 인명 빈출 가점(+300)
 - ⚠️ **감점 강도 계약**: 조합/글로스/풀 경로의 weak 감점은 **-3000** — Core_v1 검수 가점(+2000)을
   지배해야 함 (코어셋은 오행 검수 커버리지라 약자도 포함, 신뢰도 점수가 품질 경쟁을 이기면 안 됨)
@@ -305,6 +311,9 @@ D:\MyDev\NameForm\
   A combos 소실 / B 불용 잔존 / C comboMeans 커버리지(코드포인트 단위) /
   D 빈출셋 유일-약자 붕괴(HanjaSelector 풀 게이팅 재현) → FAIL 시 exit 1,
   E 신규 승격 글자 목록(두더지 검수 대상, 훈·weak 표시·샘플 포함)
+- `audit_mean_combo_mismatch.py` — **대표 뜻·서사 ↔ 조합 모순 감사** (판정은 `mean_combo_check.py`,
+  빌드와 공용): 문장에 나온 구체 명사 훈(연꽃·비·별·으뜸·아이)이 페이지 어느 조합에도 없는 한자의 것이면
+  모순. `--fail`은 mean 모순 1건 이상이면 exit 1. 형용사(맑·밝·빛나)는 동음 한자가 공유해 참고 수치만
 - weak 추가 시 절차: 재생성 → `audit_combo_regressions.py`로 A~D 통과 확인 →
   E 목록 두더지 검수(2~4라운드 수렴, 필요시 점유 감사 TSV 병행) →
   신규 쌍 윤문(소량 인라인 / 대량 `build_combo_meanings.py` Batch) → 재실행으로 C 100% 확인
@@ -313,6 +322,12 @@ D:\MyDev\NameForm\
 `dotnet run -- dump-name-combos` → `dotnet run -- dump-name-scores` →
 `python scripts/build_name_seo_data.py`(combos·scores·stories 병합) → `dotnet run -- dump-combo-glosses`
 (글로스가 name-seo.json을 읽음 — 중간 누락 시 stale). 수록 이름 목록 자체가 변하면 build 2회.
+감사: `audit_combo_regressions.py`(A~F) + `audit_mean_combo_mismatch.py --fail`.
+⚠️ **대표 뜻(mean) 계약 (2026-10-07~)**: creative-name-meanings는 6월 윤문 당시 첫 훈 기준이라
+combos가 바뀌면 낡는다(연우 "연꽃처럼…" 아래 然佑, 우정 "비 온 뒤…" 아래 佑晶, 예서 "아이처럼"=兒의
+'아' 소리 훈). build가 모순 뜻을 **1순위 조합 뜻으로 자동 교체**하므로 weak 추가 뒤 재생성만 하면
+따라온다(2026-10-07 기준 187명). 교체된 이름의 서사가 같은 모순 키워드를 되풀이하면
+`data/name-stories.json`을 직접 고칠 것(서사는 자동 교체 경로 없음).
 이름/뜻/OG 카피 변경 시 `python scripts/build_og_font.py`로 OG 폰트 서브셋 재생성
 (satori는 woff2 불가 → base64 TS 모듈, OG_LABELS 동기화 주의).
 
