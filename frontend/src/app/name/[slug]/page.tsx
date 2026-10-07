@@ -164,9 +164,11 @@ function ComboCard({
           {c1}
           {c2}
         </span>
+        {/* 출생신고 한자 통계가 아니라 HanjaSelector.SelectCombos 1순위(빈출 한자 우선·오행·성별) —
+            '가장 많이 쓰는'은 사실과 달라 정정(2026-10-07: 준혁 1순위 俊侐 등) */}
         {featured && (
           <span className="rounded-md bg-teal-50 px-2.5 py-1 text-xs text-teal-700">
-            가장 많이 쓰는 조합
+            추천 1순위
           </span>
         )}
       </div>
@@ -332,8 +334,9 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
               {name}에 쓰는 한자 조합
             </h2>
             <p className="mb-4 text-sm leading-relaxed text-text-2">
-              발음은 같아도 한자에 따라 뜻이 달라집니다. 흔히 쓰는 조합을 오행
-              조화와 함께 정리했습니다.
+              발음은 같아도 한자에 따라 뜻이 달라집니다. 이름에 자주 쓰는 한자를
+              우선해 오행 조화까지 따져 고른 추천 순서이며, 출생신고에 실제로 쓰인
+              한자 통계는 아닙니다.
             </p>
             <div className="grid gap-3">
               {rec.combos.map((combo, i) => (

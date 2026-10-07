@@ -27,7 +27,7 @@ export interface NameSeoRecord {
   mean?: string;
   /** 사람 서사형 코이닝 한 문장 (build_name_stories.py 산출). 없으면 숨김. */
   story?: string;
-  /** 흔히 쓰는 한자 조합 상위 K개 [["智","宇"], ...] */
+  /** 추천 한자 조합 상위 K개 [["智","宇"], ...] — HanjaSelector.SelectCombos 순서(출생신고 한자 통계 아님) */
   combos?: string[][];
   /** 미학 점수 breakdown (dump-name-scores 산출 — 성씨 제외·tone=neutral 기준) */
   sc?: NameScoreBreakdown;
