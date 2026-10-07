@@ -201,16 +201,32 @@ if (args.Length >= 1 && args[0] == "dump-combo-glosses")
         return;
     }
 
-    // 첫 훈음만 (다중 훈음 "슬기로울 지/지혜 지" → "슬기로울 지"). 프론트 firstGloss·C# CleanGloss와 동일.
-    static string Clean(string m) =>
-        string.IsNullOrWhiteSpace(m) ? "" : m.Split(',', '/', ';', '·')[0].Trim();
+    // 이름 음절의 독음으로 읽히는 훈음 하나 — 프론트 glossForReading과 동일 규칙.
+    // 다중 독음 글자는 첫 훈이 다른 소리일 수 있어(乻 "땅 이름 얼, …, 음차 늘"의 '늘' 자리) 첫 훈만
+    // 쓰면 윤문이 엉뚱한 뜻("대지 위에…")을 짓는다. "연꽃 련(연)"의 괄호 두음도 인정, 없으면 첫 훈음.
+    static string GlossFor(string m, string reading)
+    {
+        if (string.IsNullOrWhiteSpace(m)) return "";
+        var segs = m.Split(',', '/', ';', '·').Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
+        foreach (var seg in segs)
+        {
+            var sp = seg.LastIndexOf(' ');
+            if (sp < 0) continue;
+            var last = seg[(sp + 1)..];
+            var open = last.IndexOf('(');
+            var main = open >= 0 ? last[..open] : last;
+            var alt = open >= 0 ? last[(open + 1)..].TrimEnd(')') : null;
+            if (main == reading || alt == reading) return seg;
+        }
+        return segs.Count > 0 ? segs[0] : "";
+    }
 
     using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(namesPath));
     var glosses = new Dictionary<string, string>();
     int skipped = 0;
     foreach (var prop in doc.RootElement.GetProperty("names").EnumerateObject())
     {
-        if (!prop.Value.TryGetProperty("combos", out var combosEl)) continue;
+        if (!prop.Value.TryGetProperty("combos", out var combosEl) || prop.Name.Length != 2) continue;
         foreach (var combo in combosEl.EnumerateArray())
         {
             if (combo.GetArrayLength() != 2) continue;
@@ -219,8 +235,8 @@ if (args.Length >= 1 && args[0] == "dump-combo-glosses")
             var key = c1 + c2;
             if (key.Length != 2 || glosses.ContainsKey(key)) continue;
 
-            var g1 = Clean(NameForm.Application.Engines.Data.HanjaData.FindByCharacter(c1)?.Meaning ?? "");
-            var g2 = Clean(NameForm.Application.Engines.Data.HanjaData.FindByCharacter(c2)?.Meaning ?? "");
+            var g1 = GlossFor(NameForm.Application.Engines.Data.HanjaData.FindByCharacter(c1)?.Meaning ?? "", prop.Name[..1]);
+            var g2 = GlossFor(NameForm.Application.Engines.Data.HanjaData.FindByCharacter(c2)?.Meaning ?? "", prop.Name[1..2]);
             if (g1.Length == 0 || g2.Length == 0) { skipped++; continue; }
             glosses[key] = $"{c1}({g1}) + {c2}({g2})";
         }

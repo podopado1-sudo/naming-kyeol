@@ -52,7 +52,12 @@ public static class HanjaSelector
                     ComboBaseScore(a, g) + ComboBaseScore(b, g)
                         + OhaengHarmony(a.FiveElement, b.FiveElement)));
 
-        return scored.OrderByDescending(x => x.s).Take(k).Select(x => (x.a, x.b)).ToList();
+        // 약자 쌍은 빈칸 채우기로 쓰지 않는다 — 약자 없는 조합이 하나라도 있으면 그것만 보인다.
+        // (2026-10-07 실측: k칸을 채우려 이안=李眼·태휘=胎輝·새라=鰓羅처럼 대안 있는 음절의 약자가 97명에 노출)
+        // 약자 없는 조합이 0개일 때만 약자 쌍을 허용하므로 combos 소실은 없다 — weak는 배제가 아니라 양보.
+        var ranked = scored.OrderByDescending(x => x.s).ToList();
+        var clean = ranked.Where(x => !IsWeakGivenNameHanja(x.a) && !IsWeakGivenNameHanja(x.b)).ToList();
+        return (clean.Count > 0 ? clean : ranked).Take(k).Select(x => (x.a, x.b)).ToList();
     }
 
     /// <summary>

@@ -36,6 +36,42 @@ public class WeakGivenNameHanjaTests
     }
 
     [Theory]
+    [InlineData("咳")] // 기침 해 — 7/02 대표 훈 교정 뒤 해웅=咳雄으로 노출 (2026-10-07 라이브 실측)
+    [InlineData("煂")] // 불태울 혁 — 준혁=俊煂 등 12쌍
+    [InlineData("烋")] // 효 자리 훈 '거들먹거릴'(대법원 효·휴 겸용) — 효리=烋李가 1순위였음
+    [InlineData("降")] // 항 자리 훈 '항복할'
+    public void LiveAudit20261007_IsWeak(string ch)
+    {
+        Assert.True(HanjaData.IsWeakGivenNameHanja(ch));
+        Assert.False(HanjaData.IsForbiddenNameHanja(ch));
+    }
+
+    [Theory]
+    [InlineData("이안", "male")]   // 李眼(눈 안)이 4칸 채우기로 노출되던 이름
+    [InlineData("태휘", "none")]   // 胎輝(아이 밸 태)
+    [InlineData("새라", "female")] // 鰓羅(아가미 새)·愢羅(마음 맞지 않을 새)
+    [InlineData("해웅", "male")]   // 咳雄
+    [InlineData("준혁", "male")]   // 俊煂
+    [InlineData("효리", "female")] // 烋李
+    public void SelectCombos_DropsWeakPairs_WhenCleanPairExists(string name, string gender)
+    {
+        var combos = HanjaSelector.SelectCombos(name, gender, 4);
+        Assert.NotEmpty(combos);
+        Assert.All(combos, c => Assert.False(
+            HanjaData.IsWeakGivenNameHanja(c.First) || HanjaData.IsWeakGivenNameHanja(c.Second),
+            $"{name}: 약자 조합 {c.First}{c.Second} — 약자 없는 조합이 있으면 빈칸 채우기로 쓰지 않는다"));
+    }
+
+    [Fact]
+    public void SelectCombos_KeepsWeakPairs_WhenSyllableHasNoAlternative()
+    {
+        // '녀'는 후보가 女(weak)뿐 — 약자 쌍만 남아도 combos를 비우지 않는다(weak는 배제가 아니라 양보).
+        var combos = HanjaSelector.SelectCombos("가녀", "none", 4);
+        Assert.NotEmpty(combos);
+        Assert.All(combos, c => Assert.Equal("女", c.Second));
+    }
+
+    [Theory]
     [InlineData("禾")] // 벼 화 — 결실·풍요 (경계 24자: 의도적 미포함)
     [InlineData("錐")] // 송곳 추 — 낭중지추
     [InlineData("鯉")] // 잉어 리 — 등용문
