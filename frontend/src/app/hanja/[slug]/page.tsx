@@ -113,7 +113,11 @@ export async function generateMetadata({
     // "획수 기반 자동 판정"뿐). 2026-07-15 전량 사이트맵 등재 나흘 뒤 구글 유입이 급락한
     // 정황도 같다. 페이지·내부링크는 유지하고(follow) 검색 노출만 끈다. 검색 축은
     // 독음 페이지(/hanja/희)와 이름 페이지(/name/예성)다. 승인 후 S급만 되살릴지 재검토.
-    robots: { index: false, follow: true },
+    // ⚠️ 구글에만 끈다(2026-10-14). 처음엔 일반 robots noindex를 걸었는데 네이버 Yeti도 그걸
+    // 따라 네이버 노출이 10/7부터 하루 6.5~7만 → 4만으로 빠졌다(서치어드바이저). 애드센스는
+    // 구글 심사라 googlebot만 막으면 되고, 네이버는 이 글자 페이지들이 유입원이다.
+    // 네이버 재수집용 사이트맵은 /sitemap-hanja.xml (robots.txt 미등재, 서치어드바이저에만 제출).
+    robots: { index: true, follow: true, googleBot: { index: false, follow: true } },
   };
 }
 
