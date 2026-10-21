@@ -22,13 +22,18 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,080 테스트 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,339 테스트, 2026-10-21 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
 - **스타일:** Tailwind CSS 4 + shadcn 4 + Base UI (Headless)
 - **상태/UX:** sonner (토스트) / next-themes / lucide-react (아이콘)
 - **위치:** `frontend/` 디렉토리
+- ⚠️ **metadata.openGraph는 얕은 병합** — 하위 페이지·레이아웃이 `openGraph`를 쓰면 루트 값(이미지·siteName·locale)이 통째로 사라진다.
+  `lib/og.ts`의 `...BASE_OPEN_GRAPH`를 펼친 뒤 title·description·url을 덮고, 세그먼트에 `opengraph-image.tsx`가 있는 곳(`/name/[이름]`)은
+  이미지 키 없는 `...OG_SITE`만 펼친다. 아예 안 쓰면 og:url·og:title이 홈 값으로 상속된다(`"use client"` 페이지는 옆 `layout.tsx`에 metadata)
+- **조사는 `lib/josa.ts`(`withJosa`·`josa`·`hasBatchim`)로 고른다** — 이름·독음 같은 변수 뒤 조사를 템플릿에 '은(는)'·'(으)로'·'이(가)'로
+  박지 말 것(검색 설명문에 "지우은(는)"이 노출됐던 AS-5). 괄호형은 헬퍼가 비한글로 끝나는 말에만 폴백으로 쓴다
 
 ## 빌드 명령어
 
@@ -41,7 +46,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,080개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,339개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -64,6 +69,8 @@ npm run build
 
 # 린트
 npm run lint
+
+npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다)
 ```
 
 ### 환경 변수
@@ -120,7 +127,7 @@ D:\MyDev\NameForm\
           ├── 핵심 엔진
           │     NamePoolEngine          → 한자 기반 이름 후보 100개 생성
           │     AestheticEngine         → 미학 점수 0~100 (발음 30 + 리듬 25 + 음절 15 + 세대중립 15 + 의미 10 - 감점)
-          │     HarmonyEngine           → 조화 점수 0~100 (오행 40 + 자원오행 30 + 음양 20 + 성조화 10)
+          │     HarmonyEngine           → 조화 점수 0~100 (오행 30 + 자원오행 20 + 음양 10 + 발음오행 25 + 전통 81수리 15 — 성조화 필드는 폐기, 항상 0)
           │     RankerEngine            → 최종 점수 = aesthetic * 0.7 + harmony * 0.3
           │     ExplanationEngine       → 추천 이유 3줄 생성
           │     RarityScoringEngine     → 희귀도/독창성 점수
@@ -149,7 +156,7 @@ D:\MyDev\NameForm\
 
 ```
 요청 → CompanyNamingEngine (단독, SmartRecommendationService를 거치지 않음)
-          ├── 한자 조합    검수된 한자쌍 126개에서 선택 (조합 생성 안 함)
+          ├── 한자 조합    검수된 한자쌍 120개에서 선택 (조합 생성 안 함)
           ├── 순우리말     축 어근(앞) + 검수 어미 15개(뒤) 합성
           └── 영문 조어    라틴 어근 + 접미 → RomanizationUtils로 한글 음차
 ```
@@ -166,10 +173,31 @@ D:\MyDev\NameForm\
 - ⚠️ **받침 + ㄹ초성 금지** — 유음화·비음화로 표기와 발음이 갈라진다
   (溫林"온림"→[올림], 旭林"욱림"→[웅님]). 상호는 듣고 받아적는 이름이라 치명적이다.
   `CompanyNamingEngineTests.HanjaPairs_NoLiquidNasalShift`가 기계적으로 막는다
+  **순우리말 결합도 같은 규칙(2026-10-21)** — 어근+어미 경계의 비음화(볕누리→[변누리])·유음화(결누리→[결루리])·
+  겹받침(앎채→[암채])·대표음 연음(ㅅㅆㅈㅊㅋㅌㅍㅎㄲ+ㅇ, 볕우리→[벼두리])·ㄴ첨가(받침+이·야·여·요·유)를
+  `ShiftsAtRootTailJoin`이 거른다(어근+어미 경계 전용 — 이름 전체를 훑는 `HasSoundShift`에 넣으면 맺음[매즘] 같은
+  어근 안 연음까지 오탐). 기대값은 조항별 사례표 `SoundChangeCases`(독립 기준), `KoreanCompounds_NoNasalLiquidShift`가 전수 검사
+- ⚠️ **한자쌍 제외 이력** — 2026-10-21 서림(책방)·서각(공예)·청실·승원(사찰)·서흥(상장사)·각원(各員)을 사전어·기존 상호
+  동음으로 제외(126→120). 제외 쌍은 `HanjaPairs_RemovedPairsStayRemoved`에 등록해 되살아나지 않게 한다
+- **완전일치 차단 목록 `CompanyNamingData.BlockedNames`** — 상장사·대형 브랜드(노타·프리마·서흥)와 업종에 정면으로
+  어긋나는 연상(카론=저승 뱃사공·준타=군사정권·카렌·리비아·새우리), 한국어 활용형·사전어로 읽히는 영문 음차
+  (온다·온도·마라·솔로·멘토·메시아·메세나·리본)와 테라. 하나를 막으면 같은 부류 다음 순번이 올라오니(두더지) 덤프로 부류째 본다.
+  생성 가능한 후보 전체는
+  `dotnet test --filter Dump_AllCoinagesForReview`로 뽑아 사람이 검수해 채운다(자동 판정 아님)
 - ⚠️ **`WeakGivenNameHanjaSet`을 적용하지 않는다** (`ForbiddenNameHanjaSet`만 적용).
   그 세트는 인명 기준이라 味·香·器 같은 상호 적격 글자를 잘못 배제한다
 - 후보별 `Cautions`는 실사용에서 뜨지 않는다(감점이 커서 상위 진입 불가). 대신
   응답의 `KeywordNotices`가 "넣은 업종어를 왜 안 썼는지"를 결과 위에서 알려준다
+- 키워드가 공용 금칙어(한 음절 '화·피·개' 포함, 부분일치)에 걸리면 **생성 전에 거절하고 이유를 안내**한다
+  (`ForbiddenPartOf` — 공용 `ForbiddenWordData`는 읽기만, 인명 엔진과 공유라 수정 금지). 한자 키워드(淸·林)는 **그 글자
+  자체로만** 축과 검수쌍에 맞춘다 — 독음은 거절 판정과 조사에만 쓰고 순우리말 재료로 넣지 않는다(林→두음 '임'이 稔 동음으로
+  HARVEST 축을 끌어오고 '임'이 순우리말로 표시되던 것). 라틴 뜻풀이는 **완전일치**만 본다(부분일치였을 때 mente '마음'이 WISDOM
+  축을 뒤집었고, 통째로 끄면 꽃·바다가 축을 못 움직였다 — mente 뜻풀이는 '생각하는 힘').
+  키워드는 cleanKeywords 단계에서 NFC 정규화 한 번(IME가 만든 호환 한자 林 U+F9F4 대응). 축 씨앗(HanjaIndex) 한자(和·開)는
+  독음 금칙어(화·개) 판정을 건너뛴다. 한자·한글이 섞인 키워드('淸빛')는 조각으로 나눠 각각 처리한다. '푸는 법' 안내는
+  실제로 막은 조건(결·글자 수)만 말한다
+- `/company` 화면의 정적 안내(`frontend/src/app/company/CompanyGuide.tsx`)가 점수 만점·한자쌍 규칙·감점 예시를 글로 설명한다
+  — 엔진 계약을 바꾸면 이 파일도 같이 고칠 것. 업종을 더하면 `company/options.ts`도
 
 **톤이 결과를 바꾸는 방식 (2026-08-28 개편)** — 원래 톤은 업종이 고른 4개 축 안에서만
 가점해서, 두 톤의 교집합이 같으면 점수 함수가 완전히 같아졌다
@@ -185,8 +213,10 @@ D:\MyDev\NameForm\
   근접해 Dictionary 열거 순서에 노출된다. 빼면 같은 입력에 다른 결과가 나온다
 
 **키워드 3갈래** — 1~2음절 한글만 재료가 되던 것을 넓혔다.
-어미 절단(정성스러운→정성) / 한자 음절 매칭(지혜→智·慧·惠 든 검수쌍 가점) /
+어미 절단(정성스러운→정성) / 한자 음절 매칭(지혜→智·惠 든 검수쌍 가점) /
 반영 못 하면 안내. `SelectDiverse`가 키워드 적중 후보에 한 자리를 예약한다.
+- ⚠️ 한자 음절 매칭은 **소리 매칭**이다 — `KeywordHanjaChars`는 키워드 음절과 독음이 같은 한자를 고를 뿐 뜻은 보지 않는다
+  (惠는 '은혜 혜'라 '지혜'와 뜻이 다르고, 慧는 검수쌍 120개에 없어 나오지 않는다). 안내 문구·FAQ에 '같은 뜻의 한자'라고 쓰지 말 것
 - ⚠️ **키워드 안내(`BuildKeywordNotices`)는 반드시 최종 목록을 보고 발화한다** —
   결=한자·글자 수=2에서는 어근이 들어갈 경로가 없어, 선택 결과를 안 보고 안내하면
   "'정성'만 따서 썼어요"라고 말하고 목록에 0개인 거짓 약속이 된다(2026-08-30 점검에서
@@ -322,7 +352,9 @@ D:\MyDev\NameForm\
 `dotnet run -- dump-name-combos` → `dotnet run -- dump-name-scores` →
 `python scripts/build_name_seo_data.py`(combos·scores·stories 병합) → `dotnet run -- dump-combo-glosses`
 (글로스가 name-seo.json을 읽음 — 중간 누락 시 stale). 수록 이름 목록 자체가 변하면 build 2회.
-감사: `audit_combo_regressions.py`(A~F) + `audit_mean_combo_mismatch.py --fail`.
+감사: `audit_combo_regressions.py`(A~F) + `audit_mean_combo_mismatch.py --fail` +
+`audit_insights_tables.py`(데이터 리포트 표의 대표 한자·뜻 칸 대조 — 뜻 칸은 json 을 자동으로 따라가지 않는다.
+불일치면 `--fix`로 뜻 칸만 교체, 대표 한자가 바뀌면 본문 서술을 손으로 다시 읽을 것. `--fix`도 고치지 않은 불일치가 남으면 exit 1).
 ⚠️ **대표 뜻(mean) 계약 (2026-10-07~)**: creative-name-meanings는 6월 윤문 당시 첫 훈 기준이라
 combos가 바뀌면 낡는다(연우 "연꽃처럼…" 아래 然佑, 우정 "비 온 뒤…" 아래 佑晶, 예서 "아이처럼"=兒의
 '아' 소리 훈). build가 모순 뜻을 **1순위 조합 뜻으로 자동 교체**하므로 weak 추가 뒤 재생성만 하면
@@ -398,12 +430,12 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 ## 라우트 (정적 19,524유닛, 2026-07-22 기준)
 
 ```
-/                  홈 (Hero + Categories + ProPaths + WhyKyeol)
+/                  홈 (Hero + Categories + ProPaths + 데이터 리포트 카드 + WhyKyeol — 서버 컴포넌트)
 /hanja             인명용 한자 사전 인덱스 (독음 767개, 초성 ㄱ~ㅎ 탐색)
 /hanja/[독음|글자]  인명용 한자 사전 SEO (9,190자 수록·상세 9,096자, sitemap 전체 공개)
 /name              이름 뜻 사전 인덱스 (인기 이름 상위 1,000개 노출 — sitemap 등재 범위와 일치)
-/name/[이름]       이름 뜻 SEO (3,305개 — 통계·미학 점수·한자 조합
-                   + 이름별 OG/트위터 공유 카드 각 3,305장 정적 생성)
+/name/[이름]       이름 뜻 SEO (공개 3,795쪽 — 2026-10-21 빌드 기준, 주간 드립으로 증가. 전체 수록 5,340명 중
+                   1,545명은 개방 대기 · 통계·미학 점수·한자 조합 + 이름별 OG/트위터 공유 카드도 공개 수만큼 정적 생성)
 /search            이름 추천 (구 /baby — 301 리다이렉트 구성됨)
 /evaluate          이름 평가
 /analysis          이름 분석
@@ -440,7 +472,8 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   업종이 공유한다. `food/agri`·`fashion/culture`처럼 인접 업종은 축 재배치만으로 더
   갈라지지 않는다. 근본 해결은 축을 늘리거나 업종별 고유 어휘를 두는 것
 - **상호 v1은 외부 조회 없음**: 도메인 가용성·상표 간이 확인(KIPRIS)·상호 등기 중복은 미구현.
-  결과 화면 하단에 확정 전 별도 확인 안내를 노출 중
+  대신 결과 전에도 보이는 정적 확인 안내 + 목록 위 한 줄 요약 + 카드별 키프리스·네이버 새 창 검색 링크(자동 조회 아님, 2026-10-21).
+  기능 투자(도메인 RDAP·KIPRIS 조회)는 실사용 월 100회 이상이 확인될 때까지 보류(30일 15회 — 2026-10-21 감사)
 
 ### 인프라/운영
 - **Render Free cold start**: 15분 idle 후 첫 요청 30초+ — `.github/workflows/keepalive.yml`이 10분 간격 ping으로 회피 (실측: GitHub cron 스로틀링으로 약 1시간 간격까지 밀림 — cold start 완전 회피는 못 함). 같은 워크플로가 프론트(namingkyeol.com)도 확인해 3회 연속 비200이면 run 실패 → GitHub 실패 알림 메일이 다운 감지 채널 (2026-07-30 Vercel 정지 402 사후 대책). 저장소 60일 무커밋 시 GitHub이 스케줄 자동 비활성화하므로 알림 메일 주의
