@@ -476,7 +476,8 @@ public class HarmonyEngineTests
     }
 
     /// <summary>
-    /// breakdown.Notes에 수리사격 5단계 라벨(대길/중길/평/소흉/대흉) 중 하나가 포함되어야 한다.
+    /// breakdown.Notes에 수리사격 5단계 라벨 중 하나가 포함되어야 한다.
+    /// 라벨은 길흉 단정(대길/대흉) 대신 전통 분류 표현 — 2026-10 EV-4 문구 완화.
     /// </summary>
     [Fact]
     public async Task CalculateScore_SuriSagyeok_NotesIncludeFiveLevelLabel()
@@ -484,7 +485,7 @@ public class HarmonyEngineTests
         var breakdown = await _engine.CalculateScoreWithBreakdownAsync(
             "서연", "김", new DateTime(2024, 6, 15), "none");
 
-        var labels = new[] { "대길", "중길", "평", "소흉", "대흉" };
+        var labels = new[] { "길한 수", "비교적 길한 수", "보통", "다소 꺼리는 수", "피하는 수" };
         var suriNote = breakdown.Notes.FirstOrDefault(n => n.StartsWith("수리사격"));
         if (suriNote != null) // 획수 정보 부족 케이스 제외
         {

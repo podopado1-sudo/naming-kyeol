@@ -43,7 +43,7 @@ public class RecommendationService : IRecommendationService
         // 1. 입력 검증
         if (!DateTime.TryParse(request.BirthDate, out var birthDate))
         {
-            throw new ArgumentException("Invalid birth date format");
+            throw new ArgumentException("생년월일은 YYYY-MM-DD 형식이어야 합니다.");
         }
 
         TimeSpan? birthTime = null;

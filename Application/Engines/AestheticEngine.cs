@@ -279,7 +279,7 @@ public class AestheticEngine : IAestheticEngine
         if (matchCount >= syllableCount)
         {
             bonus = profile.BonusPoints;
-            notes.Add($"{tone} 톤에 잘 어울리는 발음 구성");
+            notes.Add($"{(tone == "soft" ? "부드러운" : "강한")} 톤에 잘 어울리는 발음 구성"); // 영문 코드 노출 방지
         }
         else if (matchCount > 0)
         {
@@ -343,16 +343,20 @@ public class AestheticEngine : IAestheticEngine
             if (hasMismatch && !hasMatch) mismatchCount++;
         }
 
+        // 노트는 /evaluate에 그대로 노출된다 — 영문 코드("female와")가 아니라 한국어 라벨로.
+        // 라벨은 dump-name-scores의 공개용 치환(PublicNote)과 같은 말이라 /name 점수 데이터는 재생성해도 그대로다.
+        var genderLabel = targetPref == HanjaData.GenderPreference.Male ? "남자 이름" : "여자 이름";
+
         int bonus = 0;
         if (matchCount > 0)
         {
             bonus = Math.Min(5, matchCount * 3);
-            notes.Add($"한자 성별 선호도가 {gender}와 잘 맞음");
+            notes.Add($"한자 성별 선호도가 {genderLabel}과 잘 맞음");
         }
         if (mismatchCount > 0)
         {
             bonus -= Math.Min(5, mismatchCount * 2);
-            notes.Add($"일부 한자의 성별 선호도가 {gender}와 맞지 않음");
+            notes.Add($"일부 한자의 성별 선호도가 {genderLabel}과 맞지 않음");
         }
 
         return Math.Max(-5, Math.Min(5, bonus));

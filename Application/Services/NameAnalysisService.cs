@@ -90,9 +90,13 @@ public class NameAnalysisService : INameAnalysisService
             finalScore = aestheticScore;
         }
 
-        // 5. 추천 이유
+        // 5. 추천 이유 — 종합 줄은 히어로(FinalScore)와 같은 값으로, 출생일이 없으면 조화는 '미산정'.
+        //    (전엔 조화를 50으로 메워 '종합 68점 — 미학 75 · 조화 50'이 히어로 '종합 75' 옆에 떴다.)
+        //    엔진 인터페이스가 정수 조화를 받아 미학 값을 넘기지만, 그 값은 종합 줄에만 쓰이고 그 줄은 바로 다시 쓴다.
+        //    분석 경로는 배정 한자가 없어 '한자 뜻' 대신 '한자 예'(음절별 1순위 후보) 줄이 나온다.
         var reasons = await _explanationEngine.GenerateReasonsAsync(
-            firstName, aestheticScore, harmonyScore ?? 50);
+            firstName, aestheticScore, harmonyScore ?? aestheticScore);
+        ExplanationEngine.AlignOverallReason(reasons, finalScore, aestheticScore, harmonyScore);
 
         // 6. 한자 분석
         var hanjaBreakdown = AnalyzeHanja(firstName);

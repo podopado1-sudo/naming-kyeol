@@ -199,6 +199,10 @@ public class YongshinCalculationService : IYongshinCalculationService
         string monthBranchChar, string monthBranchName)
     {
         string scoreSign = score >= 0 ? $"+{score}" : $"{score}";
+        // 조사는 괄호 앞 본어로 고른다 — 일간은 천간 독음("壬"→임이, "戊"→무가), 오행은 "목(木)"→목이.
+        // (전엔 '이' 하드코딩 + ')'로 끝나는 문자열에 IGa를 적용해 "목(木)가"·"戊(토(土))이"가 나왔다)
+        string dayMasterName = SajuData.Stems.FirstOrDefault(s => s.Char == dayMasterChar)?.Name ?? dayMasterChar;
+        string dayMasterIGa = KoreanUtils.IGa(dayMasterName);
         string strengthLabel = strength switch
         {
             DayMasterStrength.Strong   => "신강(身强)",
@@ -210,29 +214,31 @@ public class YongshinCalculationService : IYongshinCalculationService
         string strengthDesc = strength switch
         {
             DayMasterStrength.Strong =>
-                $"일간 {dayMasterChar}({ElementKorean[dayMasterElem]})이 사주에서 강하게 자리잡고 있어 {strengthLabel}입니다. " +
+                $"일간 {dayMasterChar}({ElementKorean[dayMasterElem]}){dayMasterIGa} 사주에서 강하게 자리잡고 있어 {strengthLabel}입니다. " +
                 $"생조하는 기운이 강해 일간을 억제하는 오행이 필요합니다. (강약 점수 {scoreSign})",
             DayMasterStrength.Weak =>
-                $"일간 {dayMasterChar}({ElementKorean[dayMasterElem]})이 사주에서 힘이 약한 {strengthLabel}입니다. " +
+                $"일간 {dayMasterChar}({ElementKorean[dayMasterElem]}){dayMasterIGa} 사주에서 힘이 약한 {strengthLabel}입니다. " +
                 $"극설하는 기운이 많아 일간을 생조하는 오행이 필요합니다. (강약 점수 {scoreSign})",
             DayMasterStrength.Balanced =>
-                $"일간 {dayMasterChar}({ElementKorean[dayMasterElem]})이 생조와 극설이 균형잡힌 {strengthLabel}입니다. " +
+                $"일간 {dayMasterChar}({ElementKorean[dayMasterElem]}){dayMasterIGa} 생조와 극설이 균형잡힌 {strengthLabel}입니다. " +
                 $"계절 기후 조절이 핵심입니다. (강약 점수 {scoreSign})",
             _ => ""
         };
 
         string johuDesc = johu != null
-            ? $" {monthBranchChar}({monthBranchName})월 조후법에서는 {ElementKorean[johu]}{KoreanUtils.IGa(ElementKorean[johu])} 기후 균형에 필요합니다."
+            ? $" {monthBranchChar}({monthBranchName})월 조후법에서는 {ElementKorean[johu]}{KoreanUtils.IGa(KoreanUtils.JosaBase(ElementKorean[johu]))} 기후 균형에 필요합니다."
             : "";
 
+        // '수(水)(관살)' 뒤 조사도 괄호 앞 본어('수')로 고른다 — '을' 하드코딩이면 '화(火)(관살)을'이 됐다(BT-8).
+        string eokbuEulReul = KoreanUtils.EulReul(KoreanUtils.JosaBase(ElementKorean[eokbu]));
         string yongshinReason = strength switch
         {
             DayMasterStrength.Strong =>
-                $"{strengthLabel}이므로 일간을 억제하는 {ElementKorean[eokbu]}(관살)을 억부 용신으로 취합니다.{johuDesc}" +
-                (primary != eokbu ? $" 강약이 약하므로 조후 용신 {ElementKorean[primary]}{KoreanUtils.EulReul(ElementKorean[primary])} 최종 용신으로 채택합니다." : ""),
+                $"{strengthLabel}이므로 일간을 억제하는 {ElementKorean[eokbu]}(관살){eokbuEulReul} 억부 용신으로 취합니다.{johuDesc}" +
+                (primary != eokbu ? $" 강약이 약하므로 조후 용신 {ElementKorean[primary]}{KoreanUtils.EulReul(KoreanUtils.JosaBase(ElementKorean[primary]))} 최종 용신으로 채택합니다." : ""),
             DayMasterStrength.Weak =>
-                $"{strengthLabel}이므로 일간을 생조하는 {ElementKorean[eokbu]}(인성)을 억부 용신으로 취합니다.{johuDesc}" +
-                (primary != eokbu ? $" 조후 용신 {ElementKorean[primary]}{KoreanUtils.EulReul(ElementKorean[primary])} 최종 용신으로 채택합니다." : ""),
+                $"{strengthLabel}이므로 일간을 생조하는 {ElementKorean[eokbu]}(인성){eokbuEulReul} 억부 용신으로 취합니다.{johuDesc}" +
+                (primary != eokbu ? $" 조후 용신 {ElementKorean[primary]}{KoreanUtils.EulReul(KoreanUtils.JosaBase(ElementKorean[primary]))} 최종 용신으로 채택합니다." : ""),
             DayMasterStrength.Balanced =>
                 $"{strengthLabel}에 가까우므로 조후법을 우선합니다.{johuDesc}" +
                 $" 최종 용신: {ElementKorean[primary]}.",

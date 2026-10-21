@@ -71,29 +71,29 @@ public class RecommendationsController : ControllerBase
             // 입력 검증
             if (string.IsNullOrWhiteSpace(request.LastName))
             {
-                return BadRequest(new { error = "LastName은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
             }
 
             if (string.IsNullOrWhiteSpace(request.BirthDate))
             {
-                return BadRequest(new { error = "BirthDate는 필수입니다." });
+                return BadRequest(new { error = "생년월일은 필수입니다." });
             }
 
             if (!DateTime.TryParse(request.BirthDate, out _))
             {
-                return BadRequest(new { error = "BirthDate는 YYYY-MM-DD 형식이어야 합니다. (예: 2024-01-15)" });
+                return BadRequest(new { error = "생년월일은 YYYY-MM-DD 형식이어야 합니다. (예: 2024-01-15)" });
             }
 
             var validGenders = new[] { "male", "female", "none" };
             if (!validGenders.Contains(request.Gender?.ToLower()))
             {
-                return BadRequest(new { error = $"Gender는 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
+                return BadRequest(new { error = $"성별은 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
             }
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!validTones.Contains(request.Tone?.ToLower()))
             {
-                return BadRequest(new { error = $"Tone은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
+                return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
             }
 
             _logger.LogInformation("이름 추천 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 생년월일={BirthDate}",
@@ -346,18 +346,18 @@ public class RecommendationsController : ControllerBase
             // 입력 검증
             if (string.IsNullOrWhiteSpace(feedback.RecommendationId))
             {
-                return BadRequest(new { error = "RecommendationId는 필수입니다." });
+                return BadRequest(new { error = "추천 ID는 필수입니다." });
             }
 
             if (string.IsNullOrWhiteSpace(feedback.Name))
             {
-                return BadRequest(new { error = "Name은 필수입니다." });
+                return BadRequest(new { error = "이름은 필수입니다." });
             }
 
             var validFeedbackTypes = new[] { "like", "dislike", "selected", "rejected" };
             if (!validFeedbackTypes.Contains(feedback.FeedbackType?.ToLower()))
             {
-                return BadRequest(new { error = $"FeedbackType은 다음 중 하나여야 합니다: {string.Join(", ", validFeedbackTypes)}" });
+                return BadRequest(new { error = $"피드백 유형은 다음 중 하나여야 합니다: {string.Join(", ", validFeedbackTypes)}" });
             }
 
             _logger.LogInformation("피드백 수신: 추천ID={RecommendationId}, 이름={Name}, 유형={FeedbackType}",
@@ -416,7 +416,7 @@ public class RecommendationsController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(recommendationId))
             {
-                return BadRequest(new { error = "RecommendationId는 필수입니다." });
+                return BadRequest(new { error = "추천 ID는 필수입니다." });
             }
 
             // 추천 결과 존재 확인
@@ -465,7 +465,7 @@ public class RecommendationsController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(recommendationId))
             {
-                return BadRequest(new { error = "RecommendationId는 필수입니다." });
+                return BadRequest(new { error = "추천 ID는 필수입니다." });
             }
 
             // 추천 결과 존재 확인
@@ -558,44 +558,46 @@ public class RecommendationsController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "성(LastName)은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             // RequiredChar 또는 RequiredHanja 둘 중 하나는 필수
             if (string.IsNullOrWhiteSpace(request.RequiredChar) && string.IsNullOrWhiteSpace(request.RequiredHanja))
-                return BadRequest(new { error = "필수 글자(RequiredChar) 또는 항렬자(RequiredHanja) 중 하나는 필수입니다." });
+                return BadRequest(new { error = "필수 글자 또는 항렬자 중 하나는 입력해야 합니다." });
 
             if (!string.IsNullOrWhiteSpace(request.RequiredChar) && request.RequiredChar.Length != 1)
-                return BadRequest(new { error = "RequiredChar는 한 글자여야 합니다." });
+                return BadRequest(new { error = "필수 글자는 한 글자여야 합니다." });
 
             if (!string.IsNullOrWhiteSpace(request.RequiredHanja) && request.RequiredHanja.Length != 1)
-                return BadRequest(new { error = "RequiredHanja는 한자 한 글자여야 합니다." });
+                return BadRequest(new { error = "항렬자는 한자 한 글자여야 합니다." });
 
             var validPositions = new[] { "first", "last", "any" };
             if (!validPositions.Contains(request.Position?.ToLower()))
-                return BadRequest(new { error = "Position은 'first', 'last', 'any' 중 하나여야 합니다." });
+                return BadRequest(new { error = "위치는 'first', 'last', 'any' 중 하나여야 합니다." });
 
             if (string.IsNullOrWhiteSpace(request.BirthDate) || !DateTime.TryParse(request.BirthDate, out var birthDate))
-                return BadRequest(new { error = "BirthDate는 필수이며 YYYY-MM-DD 형식이어야 합니다." });
+                return BadRequest(new { error = "생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다." });
 
             var validGenders = new[] { "male", "female", "none" };
             if (!string.IsNullOrEmpty(request.Gender) && !validGenders.Contains(request.Gender.ToLower()))
-                return BadRequest(new { error = "Gender는 'male', 'female', 'none' 중 하나여야 합니다." });
+                return BadRequest(new { error = "성별은 'male', 'female', 'none' 중 하나여야 합니다." });
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!string.IsNullOrEmpty(request.Tone) && !validTones.Contains(request.Tone.ToLower()))
-                return BadRequest(new { error = "Tone은 'neutral', 'soft', 'strong' 중 하나여야 합니다." });
+                return BadRequest(new { error = "톤은 'neutral', 'soft', 'strong' 중 하나여야 합니다." });
 
             _logger.LogInformation("필수 글자 이름 요청: 성={LastName}, 글자={RequiredChar}, 위치={Position}",
                 request.LastName, request.RequiredChar, request.Position);
             await _usageTracker.TrackAsync("endpoint", "required-char");
 
+            // 프론트가 "Male"/"Soft"처럼 대문자로 보내는데 엔진은 소문자로 비교한다 —
+            // 스마트 서비스와 같은 정규화 (없으면 성별·톤 보너스가 통째로 빠진다).
             var candidates = await _requiredCharEngine.GenerateCandidatesAsync(
                 request.LastName,
                 request.RequiredChar,
                 request.Position ?? "any",
                 birthDate,
-                request.Gender ?? "none",
-                request.Tone ?? "neutral",
+                (request.Gender ?? "none").ToLowerInvariant(),
+                (request.Tone ?? "neutral").ToLowerInvariant(),
                 requiredHanja: request.RequiredHanja);
 
             _logger.LogInformation("필수 글자 이름 완료: 후보수={CandidateCount}", candidates.Count);
@@ -624,18 +626,18 @@ public class RecommendationsController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "LastName은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             if (string.IsNullOrWhiteSpace(request.BirthDate) || !DateTime.TryParse(request.BirthDate, out var birthDate))
-                return BadRequest(new { error = "BirthDate는 필수이며 YYYY-MM-DD 형식이어야 합니다." });
+                return BadRequest(new { error = "생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다." });
 
             var validGenders = new[] { "male", "female", "none" };
             if (!validGenders.Contains(request.Gender?.ToLower()))
-                return BadRequest(new { error = $"Gender는 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
+                return BadRequest(new { error = $"성별은 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!validTones.Contains(request.Tone?.ToLower()))
-                return BadRequest(new { error = $"Tone은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
+                return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
 
             _logger.LogInformation("부모 기반 작명 요청: 성={LastName}, 성별={Gender}, 톤={Tone}",
                 request.LastName, request.Gender, request.Tone);
@@ -677,18 +679,18 @@ public class RecommendationsController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "LastName은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             if (string.IsNullOrWhiteSpace(request.BirthDate) || !DateTime.TryParse(request.BirthDate, out var birthDate))
-                return BadRequest(new { error = "BirthDate는 필수이며 YYYY-MM-DD 형식이어야 합니다." });
+                return BadRequest(new { error = "생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다." });
 
             var validGenders = new[] { "male", "female", "none" };
             if (!validGenders.Contains(request.Gender?.ToLower()))
-                return BadRequest(new { error = $"Gender는 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
+                return BadRequest(new { error = $"성별은 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!validTones.Contains(request.Tone?.ToLower()))
-                return BadRequest(new { error = $"Tone은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
+                return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
 
             _logger.LogInformation("이중 이름 요청: 성={LastName}, 영어이름={EnglishName}, 성별={Gender}",
                 request.LastName, request.PreferredEnglishName, request.Gender);
@@ -726,18 +728,18 @@ public class RecommendationsController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "LastName은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             var validGenders = new[] { "male", "female", "none" };
             if (!validGenders.Contains(request.Gender?.ToLower()))
-                return BadRequest(new { error = $"Gender는 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
+                return BadRequest(new { error = $"성별은 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!validTones.Contains(request.Tone?.ToLower()))
-                return BadRequest(new { error = $"Tone은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
+                return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
 
             if (request.Count < 1 || request.Count > 50)
-                return BadRequest(new { error = "Count는 1~50 사이여야 합니다." });
+                return BadRequest(new { error = "개수는 1~50 사이여야 합니다." });
 
             _logger.LogInformation("순우리말 이름 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 개수={Count}",
                 request.LastName, request.Gender, request.Tone, request.Count);
@@ -790,21 +792,21 @@ public class RecommendationsController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "LastName은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             if (string.IsNullOrWhiteSpace(request.BirthDate) || !DateTime.TryParse(request.BirthDate, out var birthDate))
-                return BadRequest(new { error = "BirthDate는 필수이며 YYYY-MM-DD 형식이어야 합니다." });
+                return BadRequest(new { error = "생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다." });
 
             var validGenders = new[] { "male", "female", "none" };
             if (!validGenders.Contains(request.Gender?.ToLower()))
-                return BadRequest(new { error = $"Gender는 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
+                return BadRequest(new { error = $"성별은 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!validTones.Contains(request.Tone?.ToLower()))
-                return BadRequest(new { error = $"Tone은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
+                return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
 
             if (request.Count < 1 || request.Count > 50)
-                return BadRequest(new { error = "Count는 1~50 사이여야 합니다." });
+                return BadRequest(new { error = "개수는 1~50 사이여야 합니다." });
 
             _logger.LogInformation("희귀 성씨 이름 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 개수={Count}",
                 request.LastName, request.Gender, request.Tone, request.Count);
@@ -860,22 +862,22 @@ public class RecommendationsController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "LastName은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             var validGenders = new[] { "male", "female", "none" };
             if (!validGenders.Contains(request.Gender?.ToLower()))
-                return BadRequest(new { error = $"Gender는 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
+                return BadRequest(new { error = $"성별은 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!validTones.Contains(request.Tone?.ToLower()))
-                return BadRequest(new { error = $"Tone은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
+                return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
 
             var validNameTypes = new[] { "pure-korean", "hanja", "mixed" };
             if (!validNameTypes.Contains(request.NameType?.ToLower()))
-                return BadRequest(new { error = $"NameType은 다음 중 하나여야 합니다: {string.Join(", ", validNameTypes)}" });
+                return BadRequest(new { error = $"이름 유형은 다음 중 하나여야 합니다: {string.Join(", ", validNameTypes)}" });
 
             if (request.Count < 1 || request.Count > 50)
-                return BadRequest(new { error = "Count는 1~50 사이여야 합니다." });
+                return BadRequest(new { error = "개수는 1~50 사이여야 합니다." });
 
             _logger.LogInformation("3글자 이름 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 유형={NameType}, 개수={Count}",
                 request.LastName, request.Gender, request.Tone, request.NameType, request.Count);
@@ -913,18 +915,18 @@ public class RecommendationsController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "LastName은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             var validGenders = new[] { "male", "female", "none" };
             if (!validGenders.Contains(request.Gender?.ToLower()))
-                return BadRequest(new { error = $"Gender는 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
+                return BadRequest(new { error = $"성별은 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!validTones.Contains(request.Tone?.ToLower()))
-                return BadRequest(new { error = $"Tone은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
+                return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
 
             if (request.Count < 1 || request.Count > 50)
-                return BadRequest(new { error = "Count는 1~50 사이여야 합니다." });
+                return BadRequest(new { error = "개수는 1~50 사이여야 합니다." });
 
             _logger.LogInformation("창의적 작명 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 개수={Count}",
                 request.LastName, request.Gender, request.Tone, request.Count);
@@ -961,18 +963,18 @@ public class RecommendationsController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "성(LastName)은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             if (string.IsNullOrWhiteSpace(request.BirthDate))
-                return BadRequest(new { error = "생년월일(BirthDate)은 필수입니다." });
+                return BadRequest(new { error = "생년월일은 필수입니다." });
 
             var validGenders = new HashSet<string> { "male", "female", "none" };
             if (!validGenders.Contains(request.Gender?.ToLower() ?? "none"))
-                return BadRequest(new { error = "Gender는 'male', 'female', 'none' 중 하나입니다." });
+                return BadRequest(new { error = "성별은 'male', 'female', 'none' 중 하나입니다." });
 
             var validTones = new HashSet<string> { "neutral", "soft", "strong" };
             if (!validTones.Contains(request.Tone?.ToLower() ?? "neutral"))
-                return BadRequest(new { error = "Tone은 'neutral', 'soft', 'strong' 중 하나입니다." });
+                return BadRequest(new { error = "톤은 'neutral', 'soft', 'strong' 중 하나입니다." });
 
             await _usageTracker.TrackAsync("endpoint", "smart");
             var result = await _smartRecommendationService.GenerateSmartRecommendationsAsync(request);
@@ -1024,12 +1026,12 @@ public class RecommendationsController : ControllerBase
             // 입력 검증
             if (string.IsNullOrWhiteSpace(request.Name))
             {
-                return BadRequest(new { error = "Name은 필수입니다." });
+                return BadRequest(new { error = "이름은 필수입니다." });
             }
 
             if (string.IsNullOrWhiteSpace(request.LastName))
             {
-                return BadRequest(new { error = "LastName은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
             }
 
             // 출생일은 선택 사항 — 없으면 미학 점수만 평가한다(평가 서비스가 처리).
@@ -1039,7 +1041,7 @@ public class RecommendationsController : ControllerBase
             {
                 if (!DateTime.TryParse(request.BirthDate, out var parsedBirth))
                 {
-                    return BadRequest(new { error = "BirthDate는 YYYY-MM-DD 형식이어야 합니다. (예: 2024-01-15)" });
+                    return BadRequest(new { error = "생년월일은 YYYY-MM-DD 형식이어야 합니다. (예: 2024-01-15)" });
                 }
                 birthDate = parsedBirth;
             }
@@ -1047,13 +1049,13 @@ public class RecommendationsController : ControllerBase
             var validGenders = new[] { "male", "female", "none" };
             if (!validGenders.Contains(request.Gender?.ToLower()))
             {
-                return BadRequest(new { error = $"Gender는 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
+                return BadRequest(new { error = $"성별은 다음 중 하나여야 합니다: {string.Join(", ", validGenders)}" });
             }
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!validTones.Contains(request.Tone?.ToLower()))
             {
-                return BadRequest(new { error = $"Tone은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
+                return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
             }
 
             _logger.LogInformation("이름 평가 요청: 이름={Name}, 성={LastName}, 성별={Gender}, 톤={Tone}",

@@ -35,21 +35,21 @@ public class NameAnalysisController : ControllerBase
         {
             // 입력 검증
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "성(LastName)은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             if (string.IsNullOrWhiteSpace(request.FirstName))
-                return BadRequest(new { error = "이름(FirstName)은 필수입니다." });
+                return BadRequest(new { error = "이름은 필수입니다." });
 
             var validGenders = new[] { "male", "female", "none" };
             if (!string.IsNullOrEmpty(request.Gender) && !validGenders.Contains(request.Gender.ToLower()))
-                return BadRequest(new { error = "Gender는 'male', 'female', 'none' 중 하나여야 합니다." });
+                return BadRequest(new { error = "성별은 'male', 'female', 'none' 중 하나여야 합니다." });
 
             var validTones = new[] { "neutral", "soft", "strong" };
             if (!string.IsNullOrEmpty(request.Tone) && !validTones.Contains(request.Tone.ToLower()))
-                return BadRequest(new { error = "Tone은 'neutral', 'soft', 'strong' 중 하나여야 합니다." });
+                return BadRequest(new { error = "톤은 'neutral', 'soft', 'strong' 중 하나여야 합니다." });
 
             if (!string.IsNullOrEmpty(request.BirthDate) && !DateTime.TryParse(request.BirthDate, out _))
-                return BadRequest(new { error = "BirthDate 형식이 올바르지 않습니다. (YYYY-MM-DD)" });
+                return BadRequest(new { error = "생년월일은 YYYY-MM-DD 형식이어야 합니다. (예: 2024-01-15)" });
 
             _logger.LogInformation("이름 분석 요청: 성={LastName}, 이름={FirstName}",
                 request.LastName, request.FirstName);

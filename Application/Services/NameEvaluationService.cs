@@ -46,7 +46,11 @@ public class NameEvaluationService : INameEvaluationService
             score.Aesthetic.GenerationFit,
             selectedHanja);
 
-        var hanjaCandidates = BuildHanjaCandidates(name);
+        // 종합 줄은 화면의 '종합' 타일(FinalScore)과 같은 값으로 — 출생일이 없으면 조화는 '미산정'.
+        ExplanationEngine.AlignOverall(explanation, score.FinalScore, score.AestheticScore, score.HarmonyScore,
+            birthDate.HasValue, ScoringService.NormalizeTone(tone));
+
+        var hanjaCandidates = BuildHanjaCandidates(name, selectedHanja);
 
         return new NameEvaluationResultDto
         {
@@ -120,18 +124,33 @@ public class NameEvaluationService : INameEvaluationService
         };
     }
 
-    /// <summary>음절별 상위 5개 한자 후보 조립.</summary>
-    private static List<HanjaCandidateGroupDto> BuildHanjaCandidates(string name)
+    /// <summary>
+    /// 음절별 상위 5개 한자 후보 조립.
+    /// 불용한자(恥 부끄러울·懍 위태할 등)는 빼고, 약한 한자는 뒤로(안정 정렬이라 관련도 순서 보존),
+    /// 점수·의미 메모가 실제로 쓴 배정 한자를 맨 앞에 둔다 — 의미 메모의 硏이 표에 없던 불일치(EV-3).
+    /// </summary>
+    private static List<HanjaCandidateGroupDto> BuildHanjaCandidates(
+        string name, IReadOnlyList<HanjaData.HanjaInfo?>? assigned)
     {
         var result = new List<HanjaCandidateGroupDto>();
 
-        foreach (char c in name)
+        for (int i = 0; i < name.Length; i++)
         {
-            var syllable = c.ToString();
-            var hanjaList = HanjaData.FindByReading(syllable);
+            var syllable = name[i].ToString();
+            var hanjaList = HanjaData.FindByReading(syllable)
+                .Where(h => !string.IsNullOrEmpty(h.Meaning) && !HanjaData.IsForbiddenNameHanja(h.Character))
+                .OrderBy(h => HanjaData.IsWeakGivenNameHanja(h.Character) ? 1 : 0)
+                .ToList();
+
+            // 배정 한자는 뜻이 있을 때만 앞세운다(의미 메모와 같은 조건 — 뜻 없는 글자는 메모에도 안 나온다).
+            var pick = assigned != null && i < assigned.Count ? assigned[i] : null;
+            if (pick != null && !string.IsNullOrEmpty(pick.Meaning))
+            {
+                hanjaList.RemoveAll(h => h.Character == pick.Character);
+                hanjaList.Insert(0, pick);
+            }
 
             var candidates = hanjaList
-                .Where(h => !string.IsNullOrEmpty(h.Meaning))
                 .Take(5)
                 .Select(h => new HanjaCandidateDto
                 {

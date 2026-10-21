@@ -21,9 +21,9 @@ public class ExplanationEngine : IExplanationEngine
         IReadOnlyList<HanjaInfo?>? selectedHanja = null)
     {
         var reasons = new List<string>();
-        int overall = (int)Math.Round(aestheticScore * 0.7 + harmonyScore * 0.3);
 
-        reasons.Add($"종합 {overall}점 — 미학 {aestheticScore} · 조화 {harmonyScore}");
+        // harmonyScore는 이 종합 줄에만 쓰인다 — 조화 미산정 경로는 AlignOverallReason으로 이 줄을 다시 쓴다.
+        reasons.Add(OverallReason(BlendOverall(aestheticScore, harmonyScore), aestheticScore, harmonyScore));
 
         var pronEvidence = BuildPronunciationEvidence(name, null);
         if (!string.IsNullOrEmpty(pronEvidence))
@@ -35,9 +35,12 @@ public class ExplanationEngine : IExplanationEngine
             reasons.Add(ohaeng);
 
         // 한자 뜻 — 점수(Harmony)가 실제로 배정한 한자로 표시(일관). 없으면 정제 폴백.
-        var meaning = BuildMeaningEvidence(name, selectedHanja);
+        // 폴백 글자는 음절별 1순위 후보일 뿐 이 이름의 한자가 아니다 — 하나라도 섞이면 '한자 예'로 적어
+        // 단정하지 않는다(/analysis·쌍둥이는 배정 한자를 넘기지 않아 '하늘 → 荷+乻'이 '한자 뜻'으로 나갔다).
+        var resolved = ResolveMeaningHanja(name, selectedHanja);
+        var meaning = FormatMeaningEvidence(resolved.Reps);
         if (!string.IsNullOrEmpty(meaning))
-            reasons.Add($"한자 뜻 — {meaning}");
+            reasons.Add(resolved.UsedFallback ? $"한자 예 — {meaning}" : $"한자 뜻 — {meaning}");
 
         return await Task.FromResult(reasons.Take(5).ToList());
     }
@@ -55,13 +58,14 @@ public class ExplanationEngine : IExplanationEngine
         GenerationFitResult? generationFit,
         IReadOnlyList<HanjaInfo?>? selectedHanja = null)
     {
-        int overall = (int)Math.Round(aestheticScore * 0.7 + harmonyScore * 0.3);
+        int overall = BlendOverall(aestheticScore, harmonyScore);
         var toneLabel = NormalizeTone(tone);
 
         var result = new ExplanationResult
         {
             Summary = BuildSummary(overall, aestheticScore, harmonyScore, toneLabel),
-            Strengths = BuildStrengths(name, lastName, aestheticScore, harmonyScore, rarityScore, generationFit),
+            // 강점의 한자 뜻도 MeaningNote와 같은 배정 한자로 — 한 화면에서 書+蓮 / 瑞+硏처럼 갈리던 것(EV-3).
+            Strengths = BuildStrengths(name, lastName, aestheticScore, harmonyScore, rarityScore, generationFit, selectedHanja, overall),
             Cautions = BuildCautions(name, lastName, aestheticScore, rarityScore, generationFit),
             PronunciationNote = BuildPronunciationNote(name, lastName, aestheticScore),
             // 한자 뜻 — 점수(Harmony)가 실제 배정한 한자로 표시(추천 카드와 일관). 없으면 정제 폴백.
@@ -79,7 +83,17 @@ public class ExplanationEngine : IExplanationEngine
     // Summary — 점수 한 줄 진단
     // ═══════════════════════════════════════════════════════════════
 
-    private static string BuildSummary(int overall, int aesthetic, int harmony, string tone)
+    /// <summary>'기본기 갖춤' 강점 줄의 꼬리 — <see cref="AlignOverall"/>가 이 줄의 종합 점수를 다시 쓴다.</summary>
+    private const string BasicsTail = "점 — 기본기 갖춤";
+
+    /// <summary>
+    /// 미학·조화 가중 종합 — ScoringService.EvaluateAsync(출생일 있음)와 같은 식(Math.Round, 0~100).
+    /// 버림((int) 캐스트)을 섞으면 FinalScore 75인데 강점은 '종합 74점'이 됐다.
+    /// </summary>
+    private static int BlendOverall(int aesthetic, int harmony)
+        => Math.Clamp((int)Math.Round(aesthetic * 0.7 + harmony * 0.3), 0, 100);
+
+    private static string BuildSummary(int overall, int aesthetic, int harmony, string tone, bool harmonyProvided = true)
     {
         var toneNote = tone switch
         {
@@ -87,7 +101,45 @@ public class ExplanationEngine : IExplanationEngine
             "strong" => " · 강한 톤",
             _        => ""
         };
-        return $"종합 {overall}점 — 미학 {aesthetic} · 조화 {harmony}{toneNote}";
+        // 출생일이 없으면 조화는 0점이 아니라 '산정하지 않음' — "조화 0"은 낮은 점수로 읽힌다.
+        return harmonyProvided
+            ? $"종합 {overall}점 — 미학 {aesthetic} · 조화 {harmony}{toneNote}"
+            : $"종합 {overall}점 — 미학 {aesthetic} (조화 미산정){toneNote}";
+    }
+
+    /// <summary>추천 이유 첫 줄 — 조화를 산정하지 않았으면(null) 수치 대신 '(조화 미산정)'.</summary>
+    public static string OverallReason(int finalScore, int aestheticScore, int? harmonyScore)
+        => harmonyScore is int harmony
+            ? $"종합 {finalScore}점 — 미학 {aestheticScore} · 조화 {harmony}"
+            : $"종합 {finalScore}점 — 미학 {aestheticScore} (조화 미산정)";
+
+    /// <summary>
+    /// <see cref="GenerateReasonsAsync"/> 결과의 종합 줄을 FinalScore로 맞춘다 — /name-analysis용(AlignOverall과 같은 후처리).
+    /// 분석 경로는 출생일이 없으면 조화를 산정하지 않는데, 전엔 호출부가 50으로 메워 히어로 '종합 75'(=미학) 옆에
+    /// '종합 68점 — 미학 75 · 조화 50'이 떴다(2026-10 BT-4). 점수는 바꾸지 않는다(표시만).
+    /// </summary>
+    public static void AlignOverallReason(List<string> reasons, int finalScore, int aestheticScore, int? harmonyScore)
+    {
+        if (reasons.Count > 0 && reasons[0].StartsWith("종합 "))
+            reasons[0] = OverallReason(finalScore, aestheticScore, harmonyScore);
+    }
+
+    /// <summary>
+    /// 종합 점수 줄(Summary·'기본기 갖춤' 강점)을 ScoringService의 FinalScore로 맞춘다 — /evaluate 전용.
+    /// 위 생성 경로는 출생일 유무를 몰라 미학·조화를 늘 0.7/0.3으로 섞는데, 출생일이 없으면 FinalScore는
+    /// 미학 100%다. 그대로 두면 "종합 48점 — 미학 68 · 조화 0" 알약과 "종합 68" 타일이 한 화면에 함께 떴다.
+    /// 출생일이 없으면 조화를 '미산정'으로 적는다. 점수 자체는 바꾸지 않는다(표시만).
+    /// </summary>
+    public static void AlignOverall(
+        ExplanationResult result, int finalScore, int aestheticScore, int harmonyScore,
+        bool harmonyProvided, string tone)
+    {
+        result.Summary = BuildSummary(finalScore, aestheticScore, harmonyScore, NormalizeTone(tone), harmonyProvided);
+        for (int i = 0; i < result.Strengths.Count; i++)
+        {
+            if (result.Strengths[i].StartsWith("종합 ") && result.Strengths[i].EndsWith(BasicsTail))
+                result.Strengths[i] = $"종합 {finalScore}{BasicsTail}";
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -97,7 +149,8 @@ public class ExplanationEngine : IExplanationEngine
     private static List<string> BuildStrengths(
         string name, string? lastName,
         int aestheticScore, int harmonyScore, int rarityScore,
-        GenerationFitResult? generationFit)
+        GenerationFitResult? generationFit,
+        IReadOnlyList<HanjaInfo?>? selectedHanja, int overall)
     {
         var strengths = new List<string>();
 
@@ -131,9 +184,15 @@ public class ExplanationEngine : IExplanationEngine
             }
         }
 
-        // 한자 의미 (자연/덕목 등)
-        var meaning = BuildMeaningEvidence(name);
-        if (!string.IsNullOrEmpty(meaning) && meaning.Contains("+"))
+        // 한자 의미 (자연/덕목 등) — MeaningNote와 같은 배정 한자 (없으면 같은 정제 폴백).
+        // '강점'으로 올리는 건 모든 음절 한자가 인명 빈출(CommonNameHanja)이고 약한 글자(weak)가 아닐 때만 —
+        // 배정이 菻(쑥 림)·雌(암컷 자)처럼 이름 뜻으로 약한 글자를 고르면 그 줄은 MeaningNote에만 남긴다(BT-6).
+        // 긍정 조건이라 weak 세트에 아직 없는 글자(雌)도 막는다. 점수·MeaningNote는 그대로(표시만).
+        var resolved = ResolveMeaningHanja(name, selectedHanja);
+        var meaning = FormatMeaningEvidence(resolved.Reps);
+        bool strongMeaning = resolved.Reps.Count == name.Length
+            && resolved.Reps.All(h => HanjaData.IsCommonNameHanja(h.Character) && !HanjaData.IsWeakGivenNameHanja(h.Character));
+        if (strongMeaning && meaning.Contains("+"))
             strengths.Add(meaning);
 
         // 세대 중립
@@ -163,7 +222,7 @@ public class ExplanationEngine : IExplanationEngine
             if (harmonyScore >= 70 && !strengths.Any(s => s.Contains("조화")))
                 strengths.Add($"조화 {harmonyScore}점 — 사주·오행 균형");
             if (strengths.Count < 2)
-                strengths.Add($"종합 {(int)(aestheticScore * 0.7 + harmonyScore * 0.3)}점 — 기본기 갖춤");
+                strengths.Add($"종합 {overall}{BasicsTail}");
         }
 
         return strengths.Take(4).ToList();
@@ -298,41 +357,60 @@ public class ExplanationEngine : IExplanationEngine
     }
 
     private static string BuildMeaningEvidence(string name, IReadOnlyList<HanjaInfo?>? preselected = null)
-    {
-        if (string.IsNullOrEmpty(name)) return string.Empty;
+        => FormatMeaningEvidence(ResolveMeaningHanja(name, preselected).Reps);
 
-        var hanjaParts = new List<string>();
-        var categories = new List<string>();
+    /// <summary>
+    /// 음절별 표시 한자 — 점수(HarmonyEngine)가 배정한 한자가 있으면 그것, 없으면 정제 폴백(음절별 1순위 후보).
+    /// UsedFallback: 표시 한자 중 하나라도 폴백이면 true — 그 줄은 이 이름의 한자가 아니라 '예'다.
+    /// 한자가 없는 음절은 Reps에서 빠진다(Reps.Count &lt; name.Length).
+    /// </summary>
+    private static (List<HanjaInfo> Reps, bool UsedFallback) ResolveMeaningHanja(
+        string name, IReadOnlyList<HanjaInfo?>? preselected)
+    {
+        var reps = new List<HanjaInfo>();
+        bool usedFallback = false;
+        if (string.IsNullOrEmpty(name)) return (reps, usedFallback);
 
         for (int i = 0; i < name.Length; i++)
         {
-            HanjaInfo? rep;
             // 점수(HarmonyEngine)가 실제로 배정한 한자가 있으면 그걸로 표시 — 점수=표시 일관.
             if (preselected != null && i < preselected.Count
                 && preselected[i] is { } pre && !string.IsNullOrEmpty(pre.Meaning))
             {
-                rep = pre;
+                reps.Add(pre);
+                continue;
             }
-            else
-            {
-                // 폴백: 창의 2-a와 동일 정제(불용한자 배제 + 인명 빈출 우선).
-                var cands = HanjaData.FindByReading(name[i].ToString())
-                    .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning))
-                    .ToList();
-                var common = cands.Where(h => HanjaData.IsCommonNameHanja(h.Character)).ToList();
-                // 약한 한자(菜 나물·雨 비 등)는 뒤로 — 안정 정렬이라 기존 관련도 순서는 보존.
-                rep = (common.Count > 0 ? common : cands)
-                    .OrderBy(h => HanjaData.IsWeakGivenNameHanja(h.Character) ? 1 : 0)
-                    .FirstOrDefault();
-            }
+
+            // 폴백: 창의 2-a와 동일 정제(불용한자 배제 + 인명 빈출 우선).
+            var cands = HanjaData.FindByReading(name[i].ToString())
+                .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning))
+                .ToList();
+            var common = cands.Where(h => HanjaData.IsCommonNameHanja(h.Character)).ToList();
+            // 약한 한자(菜 나물·雨 비 등)는 뒤로 — 안정 정렬이라 기존 관련도 순서는 보존.
+            var rep = (common.Count > 0 ? common : cands)
+                .OrderBy(h => HanjaData.IsWeakGivenNameHanja(h.Character) ? 1 : 0)
+                .FirstOrDefault();
             if (rep != null)
             {
-                hanjaParts.Add($"{rep.Character}({rep.Reading}, {CleanGloss(rep.Meaning)})");
-                if (!string.IsNullOrEmpty(rep.Category)) categories.Add(rep.Category);
+                reps.Add(rep);
+                usedFallback = true;
             }
         }
 
-        if (hanjaParts.Count == 0) return string.Empty;
+        return (reps, usedFallback);
+    }
+
+    private static string FormatMeaningEvidence(List<HanjaInfo> reps)
+    {
+        if (reps.Count == 0) return string.Empty;
+
+        var hanjaParts = new List<string>();
+        var categories = new List<string>();
+        foreach (var rep in reps)
+        {
+            hanjaParts.Add($"{rep.Character}({rep.Reading}, {CleanGloss(rep.Meaning)})");
+            if (!string.IsNullOrEmpty(rep.Category)) categories.Add(rep.Category);
+        }
 
         var hanjaText = string.Join(" + ", hanjaParts);
 

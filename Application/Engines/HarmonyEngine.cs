@@ -189,6 +189,9 @@ public class HarmonyEngine : IHarmonyEngine
 
         int score = 50; // 기본 점수 (100점 만점 기준)
 
+        // 용신·희신·기신 — 아래 보조 부족/과다 노트가 같은 오행을 반대 방향으로 말할 때 문구를 맞추는 데만 쓴다.
+        string? yongPrimary = null, yongHee = null, yongGi = null;
+
         // ── 용신 기반 가산 (가장 정확한 보완 평가) ──────────────────
         // 용신 = 일간 강약·조후를 종합해 도출한 "꼭 필요한 오행"
         // 단순 lacking 판단보다 우선
@@ -197,6 +200,9 @@ public class HarmonyEngine : IHarmonyEngine
             try
             {
                 var yongshin = _yongshinCalculationService.Calculate(chart);
+                yongPrimary = yongshin.PrimaryYongshin;
+                yongHee = yongshin.Heeshin;
+                yongGi = yongshin.Gishin;
 
                 // PrimaryYongshin: 가장 큰 가산
                 if (!string.IsNullOrEmpty(yongshin.PrimaryYongshin)
@@ -232,12 +238,18 @@ public class HarmonyEngine : IHarmonyEngine
         }
 
         // ── 보조: 단순 부족/과다 보완 (용신 가산이 없는 케이스 보완) ──
+        // 조후법 용신은 사주에 이미 많은 오행일 수 있어, 같은 오행이 "용신 보완"(가점)과
+        // "과다한 오행 증가"(감점)로 나란히 떠 모순처럼 읽혔다(이서연·제갈하늘·남궁민 실측).
+        // 점수는 그대로 두고 문구만 "가점 일부 상쇄"로 이어 읽히게 한다 — 감점 제외는 HarmonyScore와
+        // /name 점수 데이터가 바뀌는 일이라 별도 작업.
         foreach (var el in lackingElements)
         {
             if (elements.ContainsKey(el) && elements[el] > 0)
             {
                 score += 10; // 용신 가산보다 약하게 (기존 20 → 10)
-                notes.Add($"부족한 오행 '{el}' 보완");
+                notes.Add(el == yongGi
+                    ? $"기신 '{el}' — 사주에 부족한 오행이라 감점 일부 상쇄"
+                    : $"부족한 오행 '{el}' 보완");
             }
         }
 
@@ -246,7 +258,9 @@ public class HarmonyEngine : IHarmonyEngine
             if (elements.ContainsKey(el) && elements[el] > 0)
             {
                 score -= 10; // 기존 15 → 10
-                notes.Add($"과다한 오행 '{el}' 증가 (감점)");
+                notes.Add(el == yongPrimary ? $"용신 '{el}' — 사주에 이미 많은 오행이라 가점 일부 상쇄 (감점)"
+                    : el == yongHee ? $"희신 '{el}' — 사주에 이미 많은 오행이라 가점 일부 상쇄 (감점)"
+                    : $"과다한 오행 '{el}' 증가 (감점)");
             }
         }
 
@@ -330,7 +344,8 @@ public class HarmonyEngine : IHarmonyEngine
         else if (hasLowConfidence)
         {
             score = (int)Math.Round(score * 0.85);
-            notes.Add("ConfidenceGrade C/D 한자 포함 — 자원오행 점수 보수적 산출");
+            // 사용자 노트 — 내부 등급 코드(ConfidenceGrade C/D)는 화면에 그대로 나가므로 한국어 문장으로 쓴다.
+            notes.Add("일부 한자의 오행 판정 신뢰도가 낮음 — 자원오행 점수 보수적 산출");
         }
 
         return score;
@@ -514,13 +529,18 @@ public class HarmonyEngine : IHarmonyEngine
         return SuriGrade.MinorMisfortune;
     }
 
+    /// <summary>
+    /// 표시용 등급 말 — '대흉/대길' 같은 길흉 단정 대신 "전통적으로 어떻게 분류하는 수인지"로 쓴다.
+    /// 수리 길흉은 전통 성명학의 분류일 뿐 검증된 주장이 아니어서(국민 다빈도 이름 김민준에도
+    /// '대흉' 2개가 붙었다) 노트 머리에 '전통 81수리, 참고'를 함께 밝힌다. 점수(GradeScore)는 그대로.
+    /// </summary>
     private static string GradeLabel(SuriGrade g) => g switch
     {
-        SuriGrade.GreatFortune => "대길",
-        SuriGrade.MediumFortune => "중길",
-        SuriGrade.Neutral => "평",
-        SuriGrade.MinorMisfortune => "소흉",
-        SuriGrade.GreatMisfortune => "대흉",
+        SuriGrade.GreatFortune => "길한 수",
+        SuriGrade.MediumFortune => "비교적 길한 수",
+        SuriGrade.Neutral => "보통",
+        SuriGrade.MinorMisfortune => "다소 꺼리는 수",
+        SuriGrade.GreatMisfortune => "피하는 수",
         _ => "?"
     };
 
@@ -574,8 +594,16 @@ public class HarmonyEngine : IHarmonyEngine
         int totalPoints = GradeScore(wonGrade) + GradeScore(hyeongGrade)
                         + GradeScore(iGrade) + GradeScore(jeongGrade);
 
-        notes.Add($"수리사격: 원{won}({GradeLabel(wonGrade)}) 형{hyeong}({GradeLabel(hyeongGrade)}) " +
-                  $"이{i}({GradeLabel(iGrade)}) 정{jeong}({GradeLabel(jeongGrade)})");
+        notes.Add($"수리사격(전통 81수리, 참고): 원격 {won}({GradeLabel(wonGrade)}) · 형격 {hyeong}({GradeLabel(hyeongGrade)}) · " +
+                  $"이격 {i}({GradeLabel(iGrade)}) · 정격 {jeong}({GradeLabel(jeongGrade)})");
+
+        // 이 엔진의 한자는 늘 HanjaSelector가 자동 배정한 것이다(평가 입력에 한자 선택이 없음) —
+        // 순우리말 이름(제갈하늘 → 荷+乻)에도 획수 수리가 매겨지므로, 기준 한자와 달라질 수 있음을 함께 알린다.
+        // 성씨 획수도 GetSurnameStrokeCount가 독음 1순위 한자로 추정한 값이라(이→11획, 남궁→첫 글자만) 함께 밝힌다.
+        // (성씨 대표 한자 표로 바로잡는 건 HarmonyScore가 바뀌는 일이라 재생성·감사 묶음에서 — BT-3.)
+        if (selectedHanja.Any(h => h != null))
+            notes.Add("획수는 성씨와 이름 음절에 자동으로 고른 한자 기준이에요(성씨 한자도 추정이에요). " +
+                      "실제 한자가 다르면 수리가 달라질 수 있어요.");
 
         // 16점 만점 → 15점 만점 환산 (Math.Round로 일관성)
         return (int)Math.Round(totalPoints * (15.0 / 16.0));

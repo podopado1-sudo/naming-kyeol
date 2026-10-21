@@ -34,17 +34,17 @@ public class TwinNameController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.LastName))
-                return BadRequest(new { error = "성(LastName)은 필수입니다." });
+                return BadRequest(new { error = "성씨는 필수입니다." });
 
             if (string.IsNullOrWhiteSpace(request.BirthDate) || !DateTime.TryParse(request.BirthDate, out _))
-                return BadRequest(new { error = "출생일(BirthDate)은 필수이며 YYYY-MM-DD 형식이어야 합니다." });
+                return BadRequest(new { error = "생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다." });
 
             if (request.ChildCount < 2 || request.ChildCount > 3)
-                return BadRequest(new { error = "ChildCount는 2 또는 3이어야 합니다." });
+                return BadRequest(new { error = "자녀 수는 2 또는 3이어야 합니다." });
 
             var validGenders = new[] { "male", "female", "none" };
             if (!string.IsNullOrEmpty(request.Gender) && !validGenders.Contains(request.Gender.ToLower()))
-                return BadRequest(new { error = "Gender는 'male', 'female', 'none' 중 하나여야 합니다." });
+                return BadRequest(new { error = "성별은 'male', 'female', 'none' 중 하나여야 합니다." });
 
             _logger.LogInformation("쌍둥이 이름 요청: 성={LastName}, 자녀수={ChildCount}",
                 request.LastName, request.ChildCount);

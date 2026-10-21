@@ -478,7 +478,7 @@ public class CreativeNamingEngine : ICreativeNamingEngine
 
                 var connection = (fromSurname && surnameMeaning != null)
                     ? $"'{lastName}'({surnameMeaning.Hanja})의 뜻 '{surnameMeaning.CoreMeaning}'에서 연상"
-                    : $"성씨 '{lastName}'과 조화로운 이름";
+                    : $"성씨 '{lastName}'{KoreanUtils.GwaWa(lastName)} 조화로운 이름";
 
                 results.Add(new CreativeNameCandidate
                 {
@@ -580,7 +580,7 @@ public class CreativeNamingEngine : ICreativeNamingEngine
                 Name = name,
                 FullName = lastName + name,
                 Concept = "실제 쓰이는 흔치 않은 이름 (개성 있는 실명)",
-                SurnameConnection = $"성씨 '{lastName}'과 발음이 어울리는 실명",
+                SurnameConnection = $"성씨 '{lastName}'{KoreanUtils.GwaWa(lastName)} 발음이 어울리는 실명",
                 Meaning = "",   // 최종 후보에만 뜻 풀이 (아래 FillRealNameMeanings)
                 CreativityScore = score,   // 정렬용 — 100 클램프는 표시 직전에만(시드 분산 보존)
                 GenderTag = femaleRatio > 0.6 ? "female" : femaleRatio < 0.4 ? "male" : "neutral",

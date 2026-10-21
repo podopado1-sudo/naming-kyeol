@@ -32,10 +32,10 @@ public class UsageController : ControllerBase
     public async Task<IActionResult> TrackEvent([FromBody] TrackEventRequest request)
     {
         if (request.EventType != "tab_view")
-            return BadRequest(new { error = "eventType은 'tab_view'만 허용됩니다." });
+            return BadRequest(new { error = "이벤트 종류는 'tab_view'만 허용됩니다." });
 
         if (string.IsNullOrWhiteSpace(request.Key) || !AllowedTabKeys.Contains(request.Key))
-            return BadRequest(new { error = $"key는 다음 중 하나여야 합니다: {string.Join(", ", AllowedTabKeys)}" });
+            return BadRequest(new { error = $"탭 키는 다음 중 하나여야 합니다: {string.Join(", ", AllowedTabKeys)}" });
 
         await _usageTracker.TrackAsync("tab_view", request.Key);
         return NoContent();
@@ -45,7 +45,7 @@ public class UsageController : ControllerBase
     /// 기간별 사용량 집계 조회
     /// </summary>
     [HttpGet("summary")]
-    public async Task<IActionResult> GetSummary([FromQuery][Range(1, 365)] int days = 30)
+    public async Task<IActionResult> GetSummary([FromQuery][Range(1, 365, ErrorMessage = "조회 기간은 1~365일이어야 합니다.")] int days = 30)
     {
         var since = DateTime.UtcNow.AddDays(-days);
         var rows = await _db.UsageEvents

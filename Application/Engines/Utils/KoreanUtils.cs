@@ -105,6 +105,19 @@ public static class KoreanUtils
     }
 
     /// <summary>
+    /// 조사를 고를 기준 말 — 괄호 앞 본어. "목(木)" → "목", "신강(身强)" → "신강".
+    /// 위 조사 함수는 마지막 글자로 판정하므로 "목(木)"을 그대로 넘기면 ')'를 받침 없음으로 보고
+    /// "목(木)가"가 된다(용신 사유 실측). 괄호로 시작하거나 괄호가 없으면 원문 그대로.
+    /// 사용: $"{label}{KoreanUtils.IGa(KoreanUtils.JosaBase(label))}"
+    /// </summary>
+    public static string JosaBase(string word)
+    {
+        if (string.IsNullOrEmpty(word)) return word ?? string.Empty;
+        int open = word.IndexOf('(');
+        return open > 0 ? word[..open].TrimEnd() : word;
+    }
+
+    /// <summary>
     /// 발음 난이도 평가 (받침이 적을수록 쉬움)
     /// </summary>
     public static int EvaluatePronunciationDifficulty(string name)

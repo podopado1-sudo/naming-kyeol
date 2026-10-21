@@ -48,7 +48,7 @@ public class SmartRecommendationService : ISmartRecommendationService
         if (!DateTime.TryParseExact(request.BirthDate, "yyyy-MM-dd",
                 CultureInfo.InvariantCulture, DateTimeStyles.None, out var birthDate))
         {
-            throw new ArgumentException("BirthDate는 yyyy-MM-dd 형식이어야 합니다.");
+            throw new ArgumentException("생년월일은 YYYY-MM-DD 형식이어야 합니다.");
         }
 
         var lastName = request.LastName;
@@ -226,16 +226,29 @@ public class SmartRecommendationService : ISmartRecommendationService
                     ChildCount = 2
                 };
                 var result = await _twinNameService.GenerateTwinNamesAsync(twinRequest);
+                // 세트를 낱개 카드로 펴되 세트 의미는 남긴다 — 같은 이름이 두 세트에 나올 수 있어 이름 기준
+                // 중복 제거는 하지 않고(짝이 사라짐), 카드마다 '짝: 형제 이름' 태그로 어느 둘이 한 쌍인지 보인다.
+                // 미학·조화도 /twin-names가 준 실제 값으로 — 비우면 프론트가 Score로 추정해 같은 카드의
+                // '종합 90점 — 미학 94 · 조화 82' 이유 줄과 '미학 86 · 조화 83' 타일이 갈렸다(FT-2).
                 var names = result.NameSets.SelectMany(set =>
-                    set.Names.Select(c => new SmartNameCandidateDto
+                    set.Names.Select((c, idx) => new SmartNameCandidateDto
                     {
                         Name = c.Name,
                         FullName = lastName + c.Name,
                         Meaning = "", // 이유는 Reasons 불릿으로 표시
                         Reasons = c.Reasons,
                         Score = c.FinalScore,
-                        Tags = new List<string> { set.Theme, "쌍둥이" }
+                        AestheticScore = c.AestheticScore,
+                        HarmonyScore = c.HarmonyScore,
+                        Tags = TwinTags(set.Theme, set.Names.Where((_, j) => j != idx).Select(s => s.Name).ToList())
                     })).ToList();
+
+                static List<string> TwinTags(string theme, List<string> partners)
+                {
+                    var tags = new List<string> { theme, "쌍둥이" };
+                    if (partners.Count > 0) tags.Add($"짝: {string.Join("·", partners)}");
+                    return tags;
+                }
 
                 AddCategory(categoryResults, lockObj, "twin", "쌍둥이 이름", "TwinNameService", names);
             }));
