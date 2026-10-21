@@ -57,22 +57,38 @@ public class CompanyNamingEngine : ICompanyNamingEngine
 
         var profile = CompanyNamingData.Industries[industryKey];
         var toneProfile = CompanyNamingData.Tones[toneKey];
+        // NFC는 여기서 한 번만 한다 — 한글 IME로 두음 독음을 변환하면 호환 한자(림 → U+F9F4 林)가 들어오는데,
+        // 축 씨앗·검수쌍·한자 사전은 통합 한자(U+6797)로 적혀 있다. 매칭만 NFC로 맞추면 판정·조사는 원문 글자를 봐서
+        // 독음을 못 찾고 "'林'는"이 됐다(2026-10-21 검토 BCF-3). 판정·조사·매칭·안내가 모두 같은 글자를 보게 한다.
         var cleanKeywords = (keywords ?? Array.Empty<string>())
             .Where(k => !string.IsNullOrWhiteSpace(k))
-            .Select(k => k.Trim())
+            .Select(k => ToNfc(k.Trim()))
             .Take(3)
             .ToList();
 
-        // 업종 일반어·클리셰·일반명사 키워드는 안내 대상일 뿐 재료가 아니다.
+        // 한자와 한글이 섞인 키워드('淸빛')는 글자 갈래마다 나눠 따로 판정하고 따로 쓴다(淸 → 한자 재료, 빛 → 한글 재료).
+        // 통째로 한자 키워드로 다루면 한글 부분이 재료로도 안내로도 다뤄지지 않고 말없이 버려졌다(BCF-2).
+        var keywordParts = cleanKeywords.SelectMany(SplitKeyword).ToList();
+
+        // 업종 일반어·클리셰·금칙어 키워드는 안내 대상일 뿐 재료가 아니다.
         // 안내문이 "이름에는 쓰지 않았어요"라고 말하는 이상, 어근 삽입·한자 매칭·
         // 축 가중치·예약 슬롯 어느 경로로도 정말로 쓰이면 안 된다 — 실측에서
         // '카페' 키워드에 예약 슬롯이 '카페담'을 앉혀 안내와 정면 모순이 났었다.
-        var materialKeywords = cleanKeywords
-            .Where(k => !IsRefusedKeyword(k, profile))
+        //
+        // 한자 키워드(林)의 독음(임)은 거절 판정(일반어·클리셰·금칙어)에만 쓰고, 재료로는 글자 그대로 쓴다.
+        // 독음을 재료로 쓰면 두음법칙으로 '림'이 '임'이 되어 稔(임)·거둠(거둬들임) 축으로 쏠리고,
+        // 순우리말 리터럴 경로로 들어가 '임담'이 '순우리말' 카드로 나왔다(2026-10-21 검토).
+        var acceptedParts = keywordParts.Where(p => !IsRefusedPart(p, profile)).ToList();
+        var materialKeywords = acceptedParts
+            .Where(p => !p.HanjaTyped)
+            .Select(p => p.Text)
+            .Distinct(StringComparer.Ordinal)
             .ToList();
+        var hanjaKeywordChars = HanCharsOf(acceptedParts.Where(p => p.HanjaTyped).Select(p => p.Text));
 
-        var axisWeights = ResolveAxisWeights(profile, toneProfile, materialKeywords);
+        var axisWeights = ResolveAxisWeights(profile, toneProfile, materialKeywords, hanjaKeywordChars);
         var keywordHanja = KeywordHanjaChars(materialKeywords);
+        keywordHanja.UnionWith(hanjaKeywordChars);
 
         // 활용형에서 잘라낸 어근. 안내에 "'정성'만 따서 썼어요"라고 말하면서 결과에
         // 정성이 든 이름이 하나도 없으면 아무 말 안 한 것보다 나쁘다 — 약속을 지킨다.
@@ -118,7 +134,13 @@ public class CompanyNamingEngine : ICompanyNamingEngine
 
         // 키워드를 반영했다고 안내할 거라면 목록에 실제로 있어야 한다.
         // 점수만 올려서는 상위 12칸 경쟁에 밀릴 수 있으므로 한 자리를 미리 잡아둔다.
-        var keywordMarks = materialKeywords.Concat(clippedRoots).Distinct(StringComparer.Ordinal).ToList();
+        // 한글 키워드는 표기에, 한자 키워드는 한자 표기에 그 글자가 든 후보를 앉힌다.
+        var keywordMarks = materialKeywords.Concat(clippedRoots)
+            .Distinct(StringComparer.Ordinal)
+            .Select(mark => (Func<CompanyNameCandidate, bool>)(c => c.Name.Contains(mark, StringComparison.Ordinal)))
+            .Concat(hanjaKeywordChars.Select(ch =>
+                (Func<CompanyNameCandidate, bool>)(c => c.Hanja != null && c.Hanja.Contains(ch, StringComparison.Ordinal))))
+            .ToList();
         var top = SelectDiverse(scored, toneProfile, count, keywordMarks);
 
         return Task.FromResult(new CompanyNamingResult
@@ -126,7 +148,7 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             Industry = industryKey,
             IndustryLabel = profile.Label,
             IndustrySuffixes = profile.Suffixes.ToList(),
-            KeywordNotices = BuildKeywordNotices(profile, cleanKeywords, top, styleKey, syllables),
+            KeywordNotices = BuildKeywordNotices(profile, cleanKeywords, keywordParts, top, meta, styleKey, syllables),
             Candidates = top,
             TotalCount = top.Count,
         });
@@ -145,7 +167,7 @@ public class CompanyNamingEngine : ICompanyNamingEngine
         List<CompanyNameCandidate> pool,
         CompanyNamingData.ToneProfile tone,
         int count,
-        List<string> keywordMarks)
+        List<Func<CompanyNameCandidate, bool>> keywordMarks)
     {
         // 톤별 결 쿼터 — 12칸의 구성비 자체를 톤이 정한다.
         // 축 주입만으로는 재료가 갈려도 '클래식'과 '프리미엄'처럼 둘 다 한자를 좋아하는
@@ -221,8 +243,7 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             foreach (var mark in keywordMarks)
             {
                 if (reserved >= reserveCap) break;
-                var hit = ordered.FirstOrDefault(
-                    c => !taken.Contains(c.Name) && c.Name.Contains(mark, StringComparison.Ordinal));
+                var hit = ordered.FirstOrDefault(c => !taken.Contains(c.Name) && mark(c));
                 if (hit == null) continue;
 
                 picked.Add(hit);
@@ -252,14 +273,199 @@ public class CompanyNamingEngine : ICompanyNamingEngine
     /// 여기서 걸리는 키워드는 안내문이 "이름에는 쓰지 않았어요"라고 말하므로,
     /// 생성·가점·예약 어느 경로에도 들어가면 안 된다.
     /// </summary>
-    private static bool IsRefusedKeyword(string keyword, CompanyNamingData.IndustryProfile profile)
+    private static bool IsRefusedKeyword(
+        string keyword, CompanyNamingData.IndustryProfile profile, bool hanjaTyped = false, bool skipForbidden = false)
     {
-        if (profile.GenericWords.Any(w => keyword.Contains(w, StringComparison.Ordinal)
-                                       || w.Contains(keyword, StringComparison.Ordinal)))
+        if (GenericWordIn(keyword, profile, hanjaTyped) != null)
             return true;
         if (CompanyNamingData.ClicheParts.Any(w => keyword.Contains(w, StringComparison.Ordinal)))
             return true;
+        if (!skipForbidden && ForbiddenPartOf(keyword) != null)
+            return true;
         return false;
+    }
+
+    /// <summary>키워드 조각의 거절 판정 — 판정은 독음으로, 축 씨앗 한자는 독음 금칙어를 보지 않는다(SkipsReadingForbidden)</summary>
+    private static bool IsRefusedPart(KeywordPart part, CompanyNamingData.IndustryProfile profile) =>
+        IsRefusedKeyword(NormalizeKeyword(part.Text), profile, part.HanjaTyped, SkipsReadingForbidden(part));
+
+    /// <summary>
+    /// 한자로 친 조각의 글자가 모두 축 씨앗(HanjaIndex)이면 독음 금칙어 판정을 건너뛴다.
+    ///
+    /// 和(화, 어울림)·開(개, 엶)는 축 씨앗인데 독음이 공용 금칙어 '화'·'개'에 걸려 "'開'는 소리 '개'가 부정적으로
+    /// 읽힐 수 있어"로 통째로 거절됐고, 프로덕션에서 움직이던 축(START·WARMTH)이 멈췄다(2026-10-21 검토 BCF-1).
+    /// 한자 키워드는 글자 그대로만 쓰이므로(축 씨앗·검수쌍 매칭) 독음이 이름에 들어갈 경로가 없고,
+    /// 그 소리가 든 표기는 IsUsableName이 어차피 거른다. 범위는 축 씨앗으로 좁힌다 — 씨앗이 아닌 한자는
+    /// 효과가 없으니 거절 판정을 그대로 둔다. 일반어·클리셰 판정은 그대로 한다(美容 → 미용).
+    /// </summary>
+    private static bool SkipsReadingForbidden(KeywordPart part)
+    {
+        if (!part.HanjaTyped) return false;
+        return HanCharsOf(new[] { part.Text }).All(CompanyNamingData.HanjaIndex.ContainsKey);
+    }
+
+    /// <summary>
+    /// 키워드 한 조각 — 판정·재료·안내의 단위. 한자와 한글(또는 다른 글자)이 섞인 키워드('淸빛')는 글자 갈래마다
+    /// 조각으로 나눈다(淸 / 빛). Origin은 나누기 전의 원래 키워드다(나누지 않았으면 null) — 안내가
+    /// "'淸빛'의 '빛'은 …"처럼 사용자가 친 말을 가리키게 한다.
+    /// </summary>
+    private readonly record struct KeywordPart(string Text, string? Origin)
+    {
+        public bool HanjaTyped => Text.Any(IsHanChar);
+
+        /// <summary>안내문에서 이 조각을 가리키는 말 (따옴표 포함)</summary>
+        public string Label => Origin == null ? $"'{Text}'" : $"'{Origin}'의 '{Text}'";
+    }
+
+    /// <summary>
+    /// 키워드를 한자 갈래·그 밖 갈래의 연속 구간으로 나눈다 ('淸빛' → 淸, 빛 / '美容실' → 美容, 실).
+    /// 한쪽 갈래뿐이면(공백 제외) 나누지 않고 그대로 한 조각이다.
+    /// </summary>
+    private static IEnumerable<KeywordPart> SplitKeyword(string keyword)
+    {
+        bool hasHan = keyword.Any(IsHanChar);
+        bool hasOther = keyword.Any(ch => !IsHanChar(ch) && !char.IsWhiteSpace(ch));
+        if (!hasHan || !hasOther)
+        {
+            yield return new KeywordPart(keyword, null);
+            yield break;
+        }
+
+        int start = 0;
+        for (int i = 1; i <= keyword.Length; i++)
+        {
+            if (i < keyword.Length && IsHanChar(keyword[i]) == IsHanChar(keyword[start])) continue;
+            var text = keyword[start..i].Trim();
+            if (text.Length > 0) yield return new KeywordPart(text, keyword);
+            start = i;
+        }
+    }
+
+    /// <summary>NFC 정규화 — 짝 없는 서로게이트처럼 정규화할 수 없는 문자열은 원문 그대로 둔다(예외로 500이 나지 않게)</summary>
+    private static string ToNfc(string s)
+    {
+        try { return s.Normalize(System.Text.NormalizationForm.FormC); }
+        catch (ArgumentException) { return s; }
+    }
+
+    /// <summary>
+    /// 키워드와 겹치는 업종 일반어 (없으면 null). 한글 키워드는 양방향(커피·'카'⊂카페)으로 본다.
+    /// 한자 키워드는 독음이 일반어를 통째로 품을 때만 본다(美容→미용) — 독음 한 음절이 일반어 안에
+    /// 들었다고 일반어로 몰면 '美'(미)가 "뷰티 · 미용 일반어예요"가 됐다(2026-10-21 검토).
+    /// </summary>
+    private static string? GenericWordIn(string keyword, CompanyNamingData.IndustryProfile profile, bool hanjaTyped)
+    {
+        return profile.GenericWords.FirstOrDefault(w =>
+            keyword.Contains(w, StringComparison.Ordinal)
+            || (!hanjaTyped && w.Contains(keyword, StringComparison.Ordinal)));
+    }
+
+    /// <summary>
+    /// 키워드 어근에 든 금칙어 (없으면 null).
+    ///
+    /// 금칙어는 부분일치로 걸러지고 '화'·'피'·'개' 같은 한 음절도 들어 있어서, '화사한'·'조화'·
+    /// '피어나는'으로 만든 후보는 구조적으로 전부 IsUsableName에서 떨어진다. 생성해 보고
+    /// 사라진 뒤에 "이번 결과에는 넣지 못했어요"라고 말하면 같은 입력을 몇 번 다시 눌러도
+    /// 같은 말만 듣는다(결과가 결정적이다) — 생성 전에 판정해 이유를 말한다.
+    /// 공용 금칙어 목록은 인명 엔진과 같이 쓰므로 여기서는 읽기만 한다.
+    /// </summary>
+    private static string? ForbiddenPartOf(string keyword)
+    {
+        var root = ClipKeywordRoot(keyword);
+        if (root == null) return null;
+
+        // 여러 개가 걸리면 가장 긴 것을 말한다 — HashSet 열거 순서에 안내 문구가 흔들리지 않게
+        return ForbiddenWordData.ForbiddenWords
+            .Where(w => root.Contains(w, StringComparison.Ordinal))
+            .OrderByDescending(w => w.Length)
+            .ThenBy(w => w, StringComparer.Ordinal)
+            .FirstOrDefault();
+    }
+
+    /// <summary>
+    /// 금칙어에 걸린 키워드 대신 넣어 볼 말 2개 — 업종 축 순서대로 순우리말 어근을 훑어,
+    /// 어미를 붙였을 때 실제로 이름이 되는 것(소리 변화·금칙어·일반명사에 안 걸리는 조합이
+    /// 하나라도 있는 것)만 고른다. 권한 말을 넣었는데 또 "넣지 못했어요"가 나오면 안 된다.
+    ///
+    /// 고른 글자 수도 지킨다 — 4음절을 골랐는데 1음절 '빛'을 권하면 빛+어미는 3음절을 못 넘어
+    /// 같은 응답 안에서 "'빛'은 … 넣지 못했어요"가 나왔다(2026-10-21 검토). 사용자가 이미 넣은
+    /// 말(과 그 말에 든 어근)은 다시 권하지 않는다. 결(한자·영문)은 호출하는 쪽이 문구로 처리한다 —
+    /// 그 결에는 한글 어근이 들어갈 경로가 없어서, 권하려면 결을 '전체'로 두라고 함께 말해야 한다.
+    /// </summary>
+    private static List<string> SuggestKeywordAlternatives(
+        CompanyNamingData.IndustryProfile profile,
+        int syllables,
+        IReadOnlyCollection<string> alreadyTyped)
+    {
+        bool lengthFixed = syllables is >= 2 and <= 4;
+        return profile.AxisKeys
+            .SelectMany(key => CompanyNamingData.Axes[key].Korean)
+            .Select(root => root.Text)
+            .Where(text => text.Length <= 2 && !IsRefusedKeyword(text, profile))
+            .Where(text => !alreadyTyped.Any(typed => typed.Contains(text, StringComparison.Ordinal)))
+            .Where(text => CompanyNamingData.KoreanTailRoots.Any(t =>
+                t.Root.Text != text
+                && !ShiftsAtRootTailJoin(text[^1], t.Root.Text[0])
+                && (!lengthFixed || text.Length + t.Root.Text.Length == syllables)
+                && IsUsableName(text + t.Root.Text)
+                && !CompanyNamingData.BareCommonNouns.Contains(text + t.Root.Text)))
+            .Distinct(StringComparer.Ordinal)
+            .Take(2)
+            .ToList();
+    }
+
+    /// <summary>
+    /// 한자 키워드의 독음 (淸 → 청, 林 → 임). 한글과 섞여 있어도 한자만 바꾼다.
+    /// 독음을 모르는 한자나 한글·한자가 아닌 글자가 있으면 원문 그대로 둔다.
+    ///
+    /// **판정·안내 전용이다** — 일반어·클리셰·금칙어 판정과 안내 조사('淸은')에만 쓴다.
+    /// 재료(축 매칭·한자 가점·리터럴 어근)로는 한자 글자 그대로 쓴다(HanCharsOf). 독음을 재료로
+    /// 쓰면 林이 두음법칙으로 '임'이 되어 稔(임)이 든 결실 축으로 쏠리고, '임담'이 순우리말
+    /// 카드로 나왔다(2026-10-21 검토).
+    /// </summary>
+    private static string NormalizeKeyword(string keyword)
+    {
+        if (!keyword.Any(IsHanChar)) return keyword;
+
+        var sb = new System.Text.StringBuilder(keyword.Length);
+        for (int i = 0; i < keyword.Length; i++)
+        {
+            var ch = keyword[i];
+            if (IsHangulSyllable(ch)) { sb.Append(ch); continue; }
+
+            var reading = HanjaReading(ch.ToString());
+            if (reading == null) return keyword;
+
+            // 키워드 어근은 상호 앞자리에 서므로 첫머리에만 두음법칙을 건다 (林 림 → 임)
+            sb.Append(i == 0 ? NamingPrinciples.ApplyDueum(reading) : reading);
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// 한자 한 글자의 독음 — 상호 검수 사전(HanjaIndex)을 먼저 보고, 없으면 인명 사전의 대표 독음.
+    /// 한글 한 음절이 아니면 모르는 것으로 본다.
+    /// </summary>
+    private static string? HanjaReading(string ch)
+    {
+        if (CompanyNamingData.HanjaIndex.TryGetValue(ch, out var seed))
+            return seed.Seed.Reading;
+
+        var reading = HanjaData.FindByCharacter(ch)?.Reading;
+        return reading is { Length: 1 } && IsHangulSyllable(reading[0]) ? reading : null;
+    }
+
+    /// <summary>
+    /// 키워드들에 든 한자 글자 (입력 순서, 중복 제거). 호환 한자는 NFC로 통합 한자에 맞춘다 —
+    /// 축 데이터(CompanyNamingData)는 통합 한자로 적혀 있어 h.Char 비교가 어긋나지 않게.
+    /// </summary>
+    private static List<string> HanCharsOf(IEnumerable<string> keywords)
+    {
+        return keywords
+            .SelectMany(k => k.Where(IsHanChar))
+            .Select(ch => ch.ToString().Normalize(System.Text.NormalizationForm.FormC))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 
     /// <summary>활용 어미 — 사용자는 "정성스러운"처럼 꾸미는 말로 넣는다</summary>
@@ -295,10 +501,12 @@ public class CompanyNamingEngine : ICompanyNamingEngine
     }
 
     /// <summary>
-    /// 키워드 음절과 같은 독음을 가진 한자들.
+    /// 한글 키워드 음절과 같은 독음을 가진 한자들 — **소리 매칭**이다, 뜻은 보지 않는다.
     ///
-    /// '지혜'를 넣으면 {지, 혜} → 智·慧·惠 를 찾아, 그 글자가 든 검수쌍을 위로 올린다.
-    /// 조합을 만들지 않고 126쌍 안에서 고르기만 하므로 '구속(久續)' 류 동음 사고가 날 수 없다.
+    /// '지혜'를 넣으면 {지, 혜} → 智(슬기)·惠(베풂)를 찾아, 그 글자가 든 검수쌍을 위로 올린다.
+    /// 惠는 소리만 같고 뜻은 다르다. 慧는 축 씨앗에는 있지만 검수쌍에 없어 결과에 나오지 않는다.
+    /// 조합을 만들지 않고 검수쌍(HanjaPairs) 안에서 고르기만 하므로 '구속(久續)' 류 동음 사고가 날 수 없다.
+    /// 한자로 친 키워드는 이 함수를 거치지 않고 그 글자 자체만 쓴다(HanCharsOf).
     /// </summary>
     private static HashSet<string> KeywordHanjaChars(List<string> keywords)
     {
@@ -335,7 +543,8 @@ public class CompanyNamingEngine : ICompanyNamingEngine
     private static Dictionary<string, double> ResolveAxisWeights(
         CompanyNamingData.IndustryProfile profile,
         CompanyNamingData.ToneProfile tone,
-        List<string> keywords)
+        List<string> keywords,
+        List<string> hanjaKeywordChars)
     {
         var weights = new Dictionary<string, double>();
 
@@ -355,10 +564,11 @@ public class CompanyNamingEngine : ICompanyNamingEngine
                 Math.Min(1.0, weights[tone.SignatureAxes[0]] + SignatureAxisBoost);
 
         var matched = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var kw in keywords)
         foreach (var axis in CompanyNamingData.Axes.Values)
         {
-            if (AxisMatchesKeyword(axis, kw)) matched.Add(axis.Key);
+            if (keywords.Any(kw => AxisMatchesKeyword(axis, kw))) matched.Add(axis.Key);
+            // 한자 키워드는 그 글자가 축 씨앗에 있을 때만 잡는다 — 독음으로 넓히면 林(림→임)이 稔(임)을 끌어온다
+            else if (axis.Hanja.Any(h => hanjaKeywordChars.Contains(h.Char))) matched.Add(axis.Key);
         }
 
         if (matched.Count == 0) return weights;
@@ -396,47 +606,143 @@ public class CompanyNamingEngine : ICompanyNamingEngine
     private static List<string> BuildKeywordNotices(
         CompanyNamingData.IndustryProfile profile,
         List<string> keywords,
+        List<KeywordPart> parts,
         List<CompanyNameCandidate> top,
+        IReadOnlyDictionary<CompanyNameCandidate, (string axisA, string axisB)> meta,
         string styleKey,
         int syllables)
     {
         var notices = new List<string>();
+        bool suggested = false; // 대안 제안은 한 번만 — 금칙어 키워드가 여럿이면 같은 문장이 되풀이된다
 
-        foreach (var kw in keywords)
+        // 대안으로 다시 권하지 않을 말 — 사용자가 친 그대로(나눈 조각 포함), 독음, 잘라낸 어근
+        var alreadyTyped = keywords.Concat(parts.Select(p => p.Text))
+            .SelectMany(k => new[] { k, NormalizeKeyword(k), ClipKeywordRoot(NormalizeKeyword(k)) })
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Select(s => s!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        // 이 조건에서 키워드가 들어갈 수 없을 때 붙이는 '푸는 법' — **실제로 막은 조건만** 말한다.
+        // 고정 문구("결을 '전체', 글자 수를 '무관'으로")는 이미 무관인 글자 수·이미 전체인 결까지 바꾸라고 했다
+        // (2026-10-21 검토 BCF-5). 한자 키워드는 한자 조합 결로도 들어가고(검수쌍은 늘 2음절이라) 2글자에서도 들어간다 —
+        // 그 글자의 축이 키워드로 선택되므로 막은 조건만 풀면 예약 슬롯이 그 글자가 든 쌍을 앉힌다.
+        string NotIncluded(string topic, bool hanjaTyped)
         {
-            var generic = profile.GenericWords.FirstOrDefault(
-                w => kw.Contains(w, StringComparison.Ordinal) || w.Contains(kw, StringComparison.Ordinal));
+            bool styleBlocks = hanjaTyped ? styleKey is "pure-korean" or "english" : styleKey != "all";
+            bool lengthBlocks = hanjaTyped ? syllables is 3 or 4 : syllables != 0;
+            if (!styleBlocks && !lengthBlocks) return $"{topic} 이름에 넣지 못했어요.";
+
+            var blocked = styleBlocks && lengthBlocks ? "결·글자 수" : styleBlocks ? "결" : "글자 수";
+            var fixes = new List<string>();
+            if (styleBlocks) fixes.Add(hanjaTyped ? "결을 '전체'나 '한자 조합'으로" : "결을 '전체'로");
+            if (lengthBlocks) fixes.Add(hanjaTyped ? "글자 수를 '무관'이나 '2글자'로" : "글자 수를 '무관'으로");
+            return $"{topic} 지금 고른 {blocked}에서는 이름에 넣지 못했어요. {string.Join(", ", fixes)} 바꾸면 들어갈 수 있어요.";
+        }
+
+        foreach (var part in parts)
+        {
+            // 판정은 독음으로 바꾼 말로, 안내는 사용자가 친 그대로 한다.
+            // 조사도 독음 기준이다 ('淸는' 방지 — 淸 → 청 → '淸은')
+            // 섞인 키워드에서 나눈 조각이면 원래 키워드를 함께 가리킨다 ("'淸빛'의 '빛'은")
+            var kw = part.Text;
+            var label = part.Label;
+            var norm = NormalizeKeyword(kw);
+            var topic = $"{label}{KoreanUtils.EunNeun(norm)}";
+            bool hanjaTyped = part.HanjaTyped;
+            var thisWord = part.Origin == null ? "이 키워드" : "이 부분"; // 나눈 조각이면 그 조각만 뺐다
+            var thisWordTopic = part.Origin == null ? "이 키워드는" : "이 부분은";
+
+            var generic = GenericWordIn(norm, profile, hanjaTyped);
             if (generic != null)
             {
-                notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} {profile.Label} 일반어예요. 상호에 그대로 넣으면 상표 등록이 어렵고 " +
+                notices.Add($"{topic} {profile.Label} 일반어예요. 상호에 그대로 넣으면 상표 등록이 어렵고 " +
                             "검색에서도 같은 업종 상호에 묻히기 때문에 이름에는 쓰지 않았어요.");
                 continue;
             }
 
             var cliche = CompanyNamingData.ClicheParts.FirstOrDefault(
-                w => kw.Contains(w, StringComparison.Ordinal));
+                w => norm.Contains(w, StringComparison.Ordinal));
             if (cliche != null)
             {
-                notices.Add($"'{kw}'에 든 '{cliche}'{KoreanUtils.EunNeun(cliche)} 상호에 매우 흔히 쓰이는 말이라 " +
+                notices.Add($"{label}에 든 '{cliche}'{KoreanUtils.EunNeun(cliche)} 상호에 매우 흔히 쓰이는 말이라 " +
                             "기억에 남기 어려워 이름에는 쓰지 않았어요.");
                 continue;
             }
 
-            var root = ClipKeywordRoot(kw);
+            // 금칙어는 생성 전에 이미 재료에서 뺐다 — 결과를 볼 필요 없이 규칙을 그대로 말한다.
+            // "이번 결과에는"이라고 하면 다시 눌러 보게 되는데, 같은 입력은 늘 같은 결과다.
+            // 이유는 중립적으로 말한다 — 목록에는 '흙'·'모기'처럼 두 뜻이 아니라 그 자체로 든 말도 있어
+            // "다른 뜻으로도 읽혀"는 틀린 설명이었다. 부분일치면 키워드 '전체'가 빠졌다는 것도 밝힌다
+            // ("'조화'에 든 '화'는 …"은 '조'는 썼다는 뜻으로 읽혔다, 2026-10-21 검토).
+            // 축 씨앗 한자(和·開)는 독음 금칙어로 거절하지 않았다(SkipsReadingForbidden) — 안내도 같은 판정을 따른다
+            var forbidden = SkipsReadingForbidden(part) ? null : ForbiddenPartOf(norm);
+            if (forbidden != null)
+            {
+                string refusal;
+                if (hanjaTyped)
+                    refusal = forbidden == norm
+                        ? $"{topic} 소리 '{norm}'{KoreanUtils.IGa(norm)} 부정적으로 읽힐 수 있어 {thisWordTopic} 쓰지 않았어요."
+                        : $"{topic} 소리 '{norm}'에 부정적으로 읽힐 수 있는 '{forbidden}'{KoreanUtils.IGa(forbidden)} 들어 있어 {thisWordTopic} 쓰지 않았어요.";
+                else
+                    refusal = forbidden == norm
+                        ? $"{topic} 부정적으로 읽힐 수 있는 말이라 {thisWordTopic} 쓰지 않았어요."
+                        : $"{label}에는 부정적으로 읽힐 수 있는 '{forbidden}'{KoreanUtils.IGa(forbidden)} 들어 있어 {thisWord} 전체를 쓰지 않았어요.";
+
+                var alternatives = suggested
+                    ? new List<string>()
+                    : SuggestKeywordAlternatives(profile, syllables, alreadyTyped);
+                var suggestion = "";
+                if (alternatives.Count > 0)
+                {
+                    // 한자·영문 결에는 한글 어근이 들어갈 경로가 없다 — 권하려면 결부터 풀어야 참이다
+                    var condition = styleKey is "hanja" or "english" ? "결을 '전체'로 두고 " : "";
+                    suggestion = $" {condition}{string.Join("·", alternatives.Select(a => $"'{a}'"))}처럼 " +
+                                 $"{profile.Label} 업종에 어울리는 다른 말을 넣어 보세요.";
+                }
+                suggested |= alternatives.Count > 0;
+                notices.Add(refusal + suggestion);
+                continue;
+            }
+
+            if (hanjaTyped)
+            {
+                // 한자로 친 키워드는 그 글자 그대로 한자 표기에 들어갔을 때만 반영된 것이다 (淸 → 淸智).
+                // 독음 '청'으로 만든 순우리말 후보는 만들지 않는다 — 林이 '임담(순우리말)'이 되던 것.
+                var chars = HanCharsOf(new[] { kw });
+                if (top.Any(c => c.Hanja != null && chars.Any(ch => c.Hanja.Contains(ch, StringComparison.Ordinal))))
+                    continue; // 그대로 들어갔으면 침묵 — 한글 리터럴과 같은 규칙
+
+                bool inPairs = chars.Any(ch => CompanyNamingData.HanjaPairs.Any(p => p.Head == ch || p.Tail == ch));
+                if (!inPairs)
+                {
+                    // 검수쌍에 없어도 축 씨앗이면 그 글자의 축은 키워드로 선택됐다(ResolveAxisWeights, 光·和·開).
+                    // 결과가 그 축 쪽으로 움직였는데 "넣지 못했어요"만 말하면 반쪽 설명이다 — 그 축의 이름이
+                    // 최종 목록에 실제로 있을 때만 그렇다고 말한다(확인한 것만 말한다).
+                    var axisLabels = CompanyNamingData.Axes.Values
+                        .Where(a => a.Hanja.Any(h => chars.Contains(h.Char)))
+                        .Where(a => top.Any(c => meta.TryGetValue(c, out var ax) && (ax.axisA == a.Key || ax.axisB == a.Key)))
+                        .Select(a => $"'{a.Label}'")
+                        .ToList();
+                    notices.Add(axisLabels.Count > 0
+                        ? $"{topic} 검수한 상호 한자쌍에 없는 글자라 이름에 글자로 넣지는 못했어요. " +
+                          $"대신 이 글자가 속한 {string.Join("·", axisLabels)} 결의 이름을 함께 골랐어요."
+                        : $"{topic} 검수한 상호 한자쌍에 없는 글자라 이름에 넣지 못했어요. " +
+                          "1~2음절 우리말이 가장 잘 들어갑니다.");
+                }
+                else
+                    notices.Add(NotIncluded(topic, hanjaTyped: true));
+                continue;
+            }
+
+            var root = ClipKeywordRoot(norm);
             if (root == null)
             {
-                // 비한글 키워드도 말하기 전에 최종 목록을 본다 — '淸'을 치면 한자 표기
-                // 淸智가 목록에 실재하는데 "넣지 못했다"고 부정한 실측 사례가 있다.
-                bool present = top.Any(c =>
-                    c.Name.Contains(kw, StringComparison.Ordinal)
-                    || (c.Hanja != null && c.Hanja.Contains(kw, StringComparison.Ordinal)));
+                // 한글·한자가 아닌 키워드(영문 등)도 말하기 전에 최종 목록을 본다
+                bool present = top.Any(c => c.Name.Contains(kw, StringComparison.Ordinal));
                 if (present) continue; // 그대로 들어갔으면 침묵 — 한글 리터럴과 같은 규칙
 
-                // 조사는 한자면 독음 기준으로 고른다 ('淸는' 방지)
-                var particleBase = kw.Length == 1
-                    && CompanyNamingData.HanjaIndex.TryGetValue(kw, out var hi)
-                        ? hi.Seed.Reading : kw;
-                notices.Add($"'{kw}'{KoreanUtils.EunNeun(particleBase)} 이름에 글자로 넣지 못했어요. " +
+                notices.Add($"{topic} 이름에 글자로 넣지 못했어요. " +
                             "1~2음절 우리말이 가장 잘 들어갑니다.");
                 continue;
             }
@@ -445,42 +751,57 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             bool literal = top.Any(c => c.Name.Contains(root, StringComparison.Ordinal));
             if (literal)
             {
-                if (root != kw)
-                    notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} 그대로 넣기엔 길어 '{root}'만 따서 썼어요.");
+                if (root != norm)
+                    notices.Add($"{topic} 그대로 넣기엔 길어 '{root}'만 따서 썼어요.");
                 continue; // 원형 그대로 들어갔으면 말할 게 없다
             }
 
-            // 글자로는 못 남았지만 같은 뜻의 한자로 담겼는가 ('지혜' → 智·慧·惠)
-            var kwHanja = KeywordHanjaChars(new List<string> { kw });
+            // 글자로는 못 남았지만 소리가 같은 한자로 담겼는가 ('지혜' → 智·惠 — 뜻이 아니라 소리 매칭이다)
+            var kwHanja = KeywordHanjaChars(new List<string> { norm });
             bool viaHanja = kwHanja.Count > 0 && top.Any(c => c.Hanja != null
                 && c.Hanja.Any(ch => kwHanja.Contains(ch.ToString())));
             if (viaHanja)
             {
-                notices.Add($"'{kw}'{KoreanUtils.EunNeun(kw)} 같은 뜻의 한자로 담았어요.");
+                notices.Add($"{topic} 같은 소리의 한자로 담았어요.");
                 continue;
             }
 
-            // 진짜로 못 넣었다 — 조건을 좁혀서 못 넣은 거면 푸는 법을 알려준다
-            bool constrained = styleKey != "all" || syllables != 0;
-            notices.Add(constrained
-                ? $"'{kw}'{KoreanUtils.EunNeun(kw)} 지금 고른 결·글자 수에서는 이름에 넣지 못했어요. " +
-                  "결을 '전체', 글자 수를 '무관'으로 바꾸면 들어갈 수 있어요."
-                : $"'{kw}'{KoreanUtils.EunNeun(kw)} 이번 결과에는 넣지 못했어요.");
+            // 결·글자 수와 무관하게 이 어근은 어느 어미와도 쓴 대로 읽히지 않는다 (삶·앎 — 겹받침).
+            // 조건 탓으로 돌려 "바꾸면 들어갈 수 있어요"라고 하면 거짓 약속이 된다 — 이유를 말한다.
+            if (JoinsNoTail(root))
+            {
+                var subject = root == norm ? topic : $"{label}에서 딴 '{root}'{KoreanUtils.EunNeun(root)}";
+                var (_, _, rootFinal) = KoreanUtils.Decompose(root[^1]);
+                notices.Add(DoubleFinals.Contains(rootFinal)
+                    ? $"{subject} 받침이 둘이라 어떤 말과 이어도 쓴 대로 읽히지 않아 이름에 넣지 않았어요."
+                    : $"{subject} 뒤에 이을 말과 만나면 소리가 바뀌어 쓴 대로 읽히지 않아 이름에 넣지 않았어요.");
+                continue;
+            }
+
+            // 진짜로 못 넣었다 — 조건을 좁혀서 못 넣은 거면 막은 조건만 골라 푸는 법을 알려준다
+            notices.Add(NotIncluded(topic, hanjaTyped: false));
         }
 
         return notices;
     }
 
-    /// <summary>키워드가 축의 어휘·라벨과 겹치는지</summary>
+    /// <summary>
+    /// 한글 키워드가 축의 어휘·라벨과 겹치는지. (한자 키워드는 ResolveAxisWeights가 글자 일치로만 본다)
+    ///
+    /// 라틴 어근의 뜻풀이는 **완전일치**로만 본다. 부분일치였을 때는 WISDOM의 mente "마음" 때문에
+    /// 카페 키워드 '마음'이 12개 중 7개를 '슬기 · 앎' 축으로 뒤집었고(2026-10-21 감사), 그렇다고
+    /// 통째로 빼자 '꽃'(flor)·'바다'(mare)·'산'(monte)·'기술'(tecna)처럼 뜻풀이로만 축에 닿던
+    /// 흔한 키워드가 축을 못 움직였다(2026-10-21 검토). mente의 뜻풀이는 '생각하는 힘'으로 바꿨다.
+    /// </summary>
     private static bool AxisMatchesKeyword(CompanyNamingData.MeaningAxis axis, string keyword)
     {
         if (axis.Label.Contains(keyword, StringComparison.Ordinal)) return true;
         if (axis.Hanja.Any(h => h.Meaning.Contains(keyword, StringComparison.Ordinal))) return true;
-        // '淸' 또는 '청' 한 글자로도 축이 잡히게 한다
-        if (axis.Hanja.Any(h => h.Char == keyword || h.Reading == keyword)) return true;
+        // '청' 한 글자로도 淸의 축이 잡히게 한다 (한글로 친 독음)
+        if (axis.Hanja.Any(h => h.Reading == keyword)) return true;
         if (axis.Korean.Any(k => k.Text.Contains(keyword, StringComparison.Ordinal)
                               || k.Meaning.Contains(keyword, StringComparison.Ordinal))) return true;
-        if (axis.Latin.Any(l => l.Meaning.Contains(keyword, StringComparison.Ordinal))) return true;
+        if (axis.Latin.Any(l => l.Meaning == keyword)) return true;
         return false;
     }
 
@@ -546,6 +867,7 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             foreach (var (b, keyB) in CompanyNamingData.KoreanTailRoots)
             {
                 if (a.Text == b.Text) continue;
+                if (ShiftsAtRootTailJoin(a.Text[^1], b.Text[0])) continue;
 
                 var name = a.Text + b.Text;
                 if (name.Length is < 2 or > 4) continue;
@@ -582,6 +904,7 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             foreach (var (b, keyB) in CompanyNamingData.KoreanTailRoots)
             {
                 if (root == b.Text) continue;
+                if (ShiftsAtRootTailJoin(root[^1], b.Text[0])) continue; // '결' → 결누리[결루리], '볕' → 볕우리[벼두리] 방지
 
                 var name = root + b.Text;
                 if (name.Length is < 2 or > 4) continue;
@@ -605,6 +928,104 @@ public class CompanyNamingEngine : ICompanyNamingEngine
                 keywordHeadOf[candidate] = root;
             }
         }
+    }
+
+    /// <summary>
+    /// 대표음이 ㄱ·ㄷ·ㅂ으로 나는 받침 — ㅅ·ㅆ·ㅈ·ㅊ·ㅌ·ㅎ은 [ㄷ], ㅋ·ㄲ은 [ㄱ], ㅍ은 [ㅂ]으로 소리 난다.
+    /// 뒤에 ㄴ·ㅁ이 오면 비음화가 예외 없이 일어난다 (볕누리→[변누리], 첫마루→[천마루]).
+    /// </summary>
+    private static readonly HashSet<string> ObstruentFinals = new(StringComparer.Ordinal)
+    {
+        "ㄱ", "ㄲ", "ㅋ", "ㄷ", "ㅅ", "ㅆ", "ㅈ", "ㅊ", "ㅌ", "ㅎ", "ㅂ", "ㅍ",
+    };
+
+    /// <summary>겹받침 — 자음 앞에선 하나만 소리 나고(앎채→[암채]) 모음 앞에선 뒤 자음이 넘어간다(앎온→[알몬])</summary>
+    private static readonly HashSet<string> DoubleFinals = new(StringComparer.Ordinal)
+    {
+        "ㄳ", "ㄵ", "ㄶ", "ㄺ", "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅄ",
+    };
+
+    /// <summary>
+    /// 앞 음절 받침과 뒤 음절 초성이 만나는 자리에서 쓴 글자와 다른 소리가 나는지.
+    ///
+    /// 상호는 전화·입소문으로 듣고 받아적어 검색하는 이름이다. [변누리]를 들은 손님은
+    /// '볕누리'를 복원하지 못한다 — 한자쌍의 '받침+ㄹ 금지'(HanjaPairs_NoLiquidNasalShift)와
+    /// 같은 원칙을 순우리말 결합 경계에도 적용한다(2026-10-21 감사: 볕누리·결누리·앎채가 상위권).
+    ///   비음화  ㄱ·ㄷ·ㅂ 계열 받침 + ㄴ·ㅁ   볕누리→[변누리]  곁마루→[견마루]
+    ///   유음화  ㄹ + ㄴ / ㄴ + ㄹ             결누리→[결루리]  온림→[올림]
+    ///   ㄹ 비음화  ㄹ 외 받침 + ㄹ            담림→[담님]
+    ///   겹받침  어느 소리 앞이든              앎채→[암채]
+    /// 이 함수는 받침이 모음 앞에서 넘어가는 연음을 보지 않는다. 연음이 표기를 바꾸는지는
+    /// 경계가 어근+어미(실질 형태소끼리)인지 어근 안(접미사)인지에 달려서, 이름 전체를 훑는
+    /// HasSoundShift가 쓰기에는 맞지 않는다 — 어근+어미 경계는 ShiftsAtRootTailJoin이 따로 본다.
+    /// </summary>
+    private static bool ShiftsAtJoin(char front, char back)
+    {
+        var (_, _, final) = KoreanUtils.Decompose(front);
+        if (string.IsNullOrEmpty(final)) return false;
+        var (initial, _, _) = KoreanUtils.Decompose(back);
+
+        if (DoubleFinals.Contains(final)) return true;
+        if (ObstruentFinals.Contains(final) && (initial == "ㄴ" || initial == "ㅁ")) return true;
+        if (final == "ㄹ" && initial == "ㄴ") return true;
+        if (initial == "ㄹ" && final != "ㄹ") return true;
+        return false;
+    }
+
+    /// <summary>
+    /// 모음 앞에서 대표음으로 바뀐 뒤 넘어가는 받침 — ㅅ·ㅆ·ㅈ·ㅊ·ㅌ·ㅎ은 [ㄷ], ㅋ·ㄲ은 [ㄱ], ㅍ은 [ㅂ]
+    /// (ㅎ은 탈락). 받침이 원래 ㄱ·ㄷ·ㅂ이면 대표음이 그 자신이라 표기가 바뀌지 않는다(이삭온→[이사곤]).
+    /// </summary>
+    private static readonly HashSet<string> NeutralizedBeforeVowelFinals = new(StringComparer.Ordinal)
+    {
+        "ㅅ", "ㅆ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ", "ㄲ",
+    };
+
+    /// <summary>ㄴ첨가 모음 — 받침 뒤 실질 형태소가 이·야·여·요·유로 시작하면 ㄴ이 덧난다 (표준발음법 제29항)</summary>
+    private static readonly HashSet<string> NInsertionVowels = new(StringComparer.Ordinal)
+    {
+        "ㅣ", "ㅑ", "ㅕ", "ㅛ", "ㅠ",
+    };
+
+    /// <summary>
+    /// 순우리말 어근 + 어미가 만나는 자리(실질 형태소끼리의 경계)에서 쓴 글자와 다른 소리가 나는지.
+    /// 생성기(GenerateKorean 두 경로)와 대안 제안(SuggestKeywordAlternatives)만 쓴다. 검수·테스트용으로 공개한다.
+    ///
+    /// ShiftsAtJoin의 네 규칙에 연음 경계 둘을 더한다:
+    ///   대표음 연음  ㅅ·ㅆ·ㅈ·ㅊ·ㅋ·ㅌ·ㅍ·ㅎ·ㄲ 받침 + ㅇ   볕우리→[벼두리]  숲온→[수본]  (제15항)
+    ///   ㄴ첨가       받침 + 이·야·여·요·유                  잎이음→[임니음]             (제29항)
+    /// 이름 전체를 훑는 HasSoundShift에는 넣지 않는다 — 어근 안의 연음은 접미사 연음이라 표기대로
+    /// 넘어간다(맺음→[매즘]). ㄱ·ㄷ·ㅂ·ㄴ·ㄹ·ㅁ·ㅇ 받침의 단순 연음(이삭온·새김우리→[새기무리])은 그대로 둔다.
+    /// 지금 ㅇ으로 시작하는 어미는 온·우리뿐이지만, ㅇ 전부를 막는 단순한 규칙이 어미를 늘려도 안전하다.
+    /// </summary>
+    public static bool ShiftsAtRootTailJoin(char front, char back)
+    {
+        if (ShiftsAtJoin(front, back)) return true;
+
+        var (_, _, final) = KoreanUtils.Decompose(front);
+        if (string.IsNullOrEmpty(final)) return false;
+        var (initial, vowel, _) = KoreanUtils.Decompose(back);
+        if (initial != "ㅇ") return false;
+
+        if (NeutralizedBeforeVowelFinals.Contains(final)) return true;
+        if (NInsertionVowels.Contains(vowel)) return true;
+        return false;
+    }
+
+    /// <summary>어근이 어느 어미와도 쓴 대로 이어지지 않는지 (삶·앎 — 겹받침이면 모든 어미가 막힌다)</summary>
+    private static bool JoinsNoTail(string root) =>
+        CompanyNamingData.KoreanTailRoots.All(t =>
+            t.Root.Text == root || ShiftsAtRootTailJoin(root[^1], t.Root.Text[0]));
+
+    /// <summary>
+    /// 이름 안 어느 음절 경계에서든 소리가 표기와 갈라지는지 (어근 자체의 소리 포함 — 넉넉→[넝넉]).
+    /// 연음 규칙(ShiftsAtRootTailJoin)은 쓰지 않는다 — 쓰면 어근 안의 정상 연음(맺음→[매즘])까지 소리 변화로 잡는다.
+    /// </summary>
+    private static bool HasSoundShift(string name)
+    {
+        for (int i = 0; i < name.Length - 1; i++)
+            if (ShiftsAtJoin(name[i], name[i + 1])) return true;
+        return false;
     }
 
     // ============================================================
@@ -669,9 +1090,16 @@ public class CompanyNamingEngine : ICompanyNamingEngine
     // 뜻 문장
     // ============================================================
 
-    /// <summary>두 축을 "{앞축 부사구} {뒷축 명사구}" 로 잇는다</summary>
+    /// <summary>
+    /// 두 축을 "{앞축 부사구} {뒷축 명사구}" 로 잇는다.
+    /// 같은 축이면 전용 문장을 먼저 본다 — 영문 LIGHT 후보(루멘·솔라…)가 전부
+    /// "빛처럼 빛나는 곳"이 되던 것을 막는다.
+    /// </summary>
     private static string ComposeMeaning(string axisA, string axisB)
     {
+        if (axisA == axisB && CompanyNamingData.AxisSamePhrase.TryGetValue(axisA, out var same))
+            return same;
+
         var head = CompanyNamingData.AxisHeadPhrase.GetValueOrDefault(axisA, "한결같이");
         var tail = CompanyNamingData.AxisTailPhrase.GetValueOrDefault(axisB, "이어지는 곳");
         return $"{head} {tail}";
@@ -870,7 +1298,8 @@ public class CompanyNamingEngine : ICompanyNamingEngine
         else if (keywordHanja.Count > 0 && c.Hanja != null
                  && c.Hanja.Any(ch => keywordHanja.Contains(ch.ToString())))
         {
-            // 리터럴로는 못 남았지만 뜻이 같은 한자가 들어간 경우 ('지혜' → 智·慧·惠)
+            // 리터럴로는 못 남았지만 소리가 같은 한자(한글 키워드) 또는 친 그 한자(한자 키워드)가 든 경우
+            // ('지혜' → 智·惠, '林' → 芽林)
             score += 3;
         }
 
@@ -889,22 +1318,28 @@ public class CompanyNamingEngine : ICompanyNamingEngine
         string? keywordRoot)
     {
         // --- 추천 이유 ---
+        // 조사는 괄호 앞 말의 소리로 고른다 — 고정하면 '溫(따뜻함)를'·'채(집채)을'·'-on를'처럼
+        // 고유 후보 절반이 틀렸다(2026-10-21 감사 51%). 한자는 독음, 영문 어미는 한글 음차 기준.
+        var tail = c.Parts[1];
         var composition = keywordRoot != null
-            ? $"담고 싶은 말 '{keywordRoot}'{KoreanUtils.EulReul(keywordRoot)} 앞에 그대로 두고 {c.Parts[1].Symbol}({c.Parts[1].Meaning}){KoreanUtils.EulReul(c.Parts[1].Symbol)} 이었어요."
+            ? $"담고 싶은 말 '{keywordRoot}'{KoreanUtils.EulReul(keywordRoot)} 앞에 그대로 두고 {tail.Symbol}({tail.Meaning}){KoreanUtils.EulReul(tail.Symbol)} 이었어요."
             : c.Style switch
         {
-            "hanja" => $"{c.Parts[0].Symbol}({c.Parts[0].Meaning}) + {c.Parts[1].Symbol}({c.Parts[1].Meaning})를 붙여 만든 상호예요.",
-            "pure-korean" => $"{c.Parts[0].Symbol}({c.Parts[0].Meaning}) + {c.Parts[1].Symbol}({c.Parts[1].Meaning})을 이은 순우리말 합성어예요.",
-            _ => $"라틴 어근 {c.Parts[0].Symbol}({c.Parts[0].Meaning})에 어미 {c.Parts[1].Symbol}를 붙인 조어예요.",
+            "hanja" => $"{c.Parts[0].Symbol}({c.Parts[0].Meaning}) + {tail.Symbol}({tail.Meaning}){KoreanUtils.EulReul(tail.Reading)} 붙여 만든 상호예요.",
+            "pure-korean" => $"{c.Parts[0].Symbol}({c.Parts[0].Meaning}) + {tail.Symbol}({tail.Meaning}){KoreanUtils.EulReul(tail.Symbol)} 이은 순우리말 합성어예요.",
+            _ => $"라틴 어근 {c.Parts[0].Symbol}({c.Parts[0].Meaning})에 어미 {tail.Symbol}{KoreanUtils.EulReul(RomanizationUtils.ToHangul(tail.Symbol))} 붙인 조어예요.",
         };
         c.Reasons.Add(composition);
 
         int finals = KoreanUtils.CountFinalConsonants(c.Name);
+        // 쓴 글자와 소리가 갈라지는 이름에 '듣고 따라 부르기 좋다'고 말하면 거짓이다.
+        // 결합 경계는 생성 단계(ShiftsAtRootTailJoin)가 걸렀고, 여기 걸리는 건 어근 자체의 소리(넉넉→[넝넉]) 정도다.
+        bool shifted = HasSoundShift(c.Name);
         var soundNote = c.Name.Length switch
         {
-            2 when finals <= 1 => "2음절에 받침이 적어 한 번에 듣고 따라 부르기 좋아요.",
+            2 when finals <= 1 && !shifted => "2음절에 받침이 적어 한 번에 듣고 따라 부르기 좋아요.",
             2 => "2음절이라 짧게 붙지만 받침이 있어 소리가 다소 묵직해요.",
-            3 when finals <= 1 => "3음절이면서 받침이 적어 리듬이 살아 있어요.",
+            3 when finals <= 1 && !shifted => "3음절이면서 받침이 적어 리듬이 살아 있어요.",
             3 => "3음절 구성이라 간판과 도메인에 무리 없이 들어가요.",
             _ => "4음절이라 정식 상호로 쓰되 줄여 부르는 별칭을 함께 생각해두면 좋아요.",
         };
@@ -939,23 +1374,56 @@ public class CompanyNamingEngine : ICompanyNamingEngine
             c.Cautions.Add("모든 음절에 받침이 있어 소리가 답답할 수 있어요. 소리 내어 여러 번 불러보세요.");
 
         // --- 사용 예시 ---
-        foreach (var suffix in profile.Suffixes.Take(2))
+        // 의원·법률사무소처럼 주식회사로 열 수 없는 업종은 법인 예시 대신 업종 접미를 하나 더 쓴다
+        var corporate = profile.CorporateForm;
+        foreach (var suffix in profile.Suffixes.Take(corporate != null ? 2 : 3))
             c.UsageExamples.Add($"{c.Name} {suffix}");
-        c.UsageExamples.Add($"주식회사 {c.Name}");
+        if (corporate != null)
+            c.UsageExamples.Add($"{corporate} {c.Name}");
     }
 
     // ============================================================
     // 필터
     // ============================================================
 
-    /// <summary>상호로 내보낼 수 있는 표기인지 — 한글 음절만, 금칙어 없음</summary>
+    /// <summary>상호로 내보낼 수 있는 표기인지 — 한글 음절만, 금칙어 없음, 차단 표기 아님</summary>
     private static bool IsUsableName(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return false;
         if (!name.All(IsHangulSyllable)) return false;
         if (ForbiddenWordData.ContainsForbiddenWord(name)) return false;
+        if (CompanyNamingData.BlockedNames.Contains(name)) return false;
         return true;
     }
 
     private static bool IsHangulSyllable(char ch) => ch >= 0xAC00 && ch <= 0xD7A3;
+
+    /// <summary>CJK 통합 한자 (기본·확장 A·호환) — 키워드 독음 변환 대상 판정용</summary>
+    private static bool IsHanChar(char ch) =>
+        ch is >= '\u4E00' and <= '\u9FFF' or >= '\u3400' and <= '\u4DBF' or >= '\uF900' and <= '\uFAFF'; // 이스케이프 필수 — 호환 豈(U+F900) 글자는 NFC 정규화로 U+8C48이 된다
+
+    // ============================================================
+    // 검수용 전수 목록
+    // ============================================================
+
+    /// <summary>
+    /// 업종·톤·키워드와 무관하게 세 생성기가 낼 수 있는 표기 전부 (필터 통과분, 결·표기 중복 제거).
+    /// 점수·서사는 붙이지 않는다. 데이터 계약(결합 경계 소리 변화·차단 표기)을 테스트가 전수로
+    /// 기계 검사하고, 사람이 차단 목록(BlockedNames)을 채울 덤프를 뽑는 용도다 — 추천 경로에서는 쓰지 않는다.
+    /// </summary>
+    public static IReadOnlyList<CompanyNameCandidate> EnumerateAllCandidates()
+    {
+        var axisKeys = CompanyNamingData.Axes.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
+        var raw = new List<CompanyNameCandidate>();
+        var meta = new Dictionary<CompanyNameCandidate, (string, string)>();
+
+        GenerateHanja(axisKeys, raw, meta);
+        GenerateKorean(axisKeys, new List<string>(), raw, meta, new Dictionary<CompanyNameCandidate, string>());
+        GenerateEnglish(axisKeys, raw, meta);
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        return raw
+            .Where(c => IsUsableName(c.Name) && seen.Add(c.Style + ":" + c.Name))
+            .ToList();
+    }
 }

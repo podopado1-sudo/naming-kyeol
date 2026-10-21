@@ -39,35 +39,35 @@ public class CompanyNameController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(request.Industry))
-                return BadRequest(new { error = "Industry는 필수입니다." });
+                return BadRequest(new { error = "업종은 필수입니다." });
 
             if (!CompanyNamingData.IsValidIndustry(request.Industry))
                 return BadRequest(new
                 {
-                    error = $"Industry는 다음 중 하나여야 합니다: {string.Join(", ", CompanyNamingData.Industries.Keys)}",
+                    error = $"업종은 다음 중 하나여야 합니다: {string.Join(", ", CompanyNamingData.Industries.Keys)}",
                 });
 
             if (!CompanyNamingData.IsValidTone(request.Tone))
                 return BadRequest(new
                 {
-                    error = $"Tone은 다음 중 하나여야 합니다: {string.Join(", ", CompanyNamingData.Tones.Keys)}",
+                    error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", CompanyNamingData.Tones.Keys)}",
                 });
 
             var validStyles = new[] { "all", "hanja", "pure-korean", "english" };
             if (!validStyles.Contains(request.Style?.ToLower()))
-                return BadRequest(new { error = $"Style은 다음 중 하나여야 합니다: {string.Join(", ", validStyles)}" });
+                return BadRequest(new { error = $"이름의 결(생성 방식)은 다음 중 하나여야 합니다: {string.Join(", ", validStyles)}" });
 
             if (request.Syllables != 0 && request.Syllables is < 2 or > 4)
-                return BadRequest(new { error = "Syllables는 0(무관) 또는 2~4여야 합니다." });
+                return BadRequest(new { error = "글자 수는 0(무관) 또는 2~4여야 합니다." });
 
             if (request.Count < 1 || request.Count > 50)
-                return BadRequest(new { error = "Count는 1~50 사이여야 합니다." });
+                return BadRequest(new { error = "추천 개수는 1~50 사이여야 합니다." });
 
             if (request.Keywords.Count > 3)
-                return BadRequest(new { error = "Keywords는 최대 3개까지 넣을 수 있습니다." });
+                return BadRequest(new { error = "키워드는 최대 3개까지 넣을 수 있습니다." });
 
             if (request.Keywords.Any(k => k?.Length > 20))
-                return BadRequest(new { error = "Keywords의 각 항목은 20자 이내여야 합니다." });
+                return BadRequest(new { error = "키워드는 각각 20자 이내여야 합니다." });
 
             _logger.LogInformation("상호 작명 요청: 업종={Industry}, 톤={Tone}, 축={Style}, 음절={Syllables}, 개수={Count}",
                 request.Industry, request.Tone, request.Style, request.Syllables, request.Count);
