@@ -44,10 +44,11 @@ const AESTHETIC_ROWS: PillarRow[] = [
 ];
 
 const HARMONY_ROWS: PillarRow[] = [
-  { label: "오행", weight: 40, detail: "사주 오행과 이름 오행의 보완 관계" },
-  { label: "자원오행", weight: 30, detail: "한자 획수 기반 오행 분포" },
-  { label: "음양", weight: 20, detail: "陽·陰 균형" },
-  { label: "성조화", weight: 10, detail: "성씨와 이름 글자의 결합 조화" },
+  { label: "오행", weight: 30, detail: "사주 오행과 이름 오행의 보완 관계" },
+  { label: "자원오행", weight: 20, detail: "한자 획수 기반 오행 분포" },
+  { label: "음양", weight: 10, detail: "陽·陰 균형" },
+  { label: "발음오행", weight: 25, detail: "성씨와 이름 첫소리의 오행 흐름" },
+  { label: "전통 81수리(참고)", weight: 15, detail: "획수 조합의 전통 길흉 — 참고 지표" },
 ];
 
 const TRADITION_CARDS: PrincipleCard[] = [

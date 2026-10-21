@@ -7,6 +7,7 @@
 import { useState, type ReactNode } from "react";
 import { FIVE_EL } from "./DetailPrimitives";
 import { SectionHead } from "./DetailPrimitives";
+import { isCautionNote } from "@/lib/note-polarity";
 
 // ============================================================
 // ConfBadgeE — 4축 뱃지 (DetailHanja의 ConfidenceBadge와 동일 스펙, sm 사이즈)
@@ -176,10 +177,13 @@ export function ScoreBar({
   void tint;
 
   return (
+    // 모바일(≤480px)에서는 라벨·값 1줄 + 막대 1줄로 접힌다 — BreakdownPanel의 EVAL_BAR_CSS
     <div
+      className="eval-score-bar"
       style={{
         display: "grid",
-        gridTemplateColumns: "130px 1fr 64px",
+        // 150px — '전통 81수리(참고)/15'가 한 줄에 들어가는 폭
+        gridTemplateColumns: "150px 1fr 64px",
         alignItems: "center",
         columnGap: 14,
       }}
@@ -207,6 +211,7 @@ export function ScoreBar({
         )}
       </div>
       <div
+        className="eval-score-bar__track"
         style={{
           height: 12,
           background: "rgba(43,43,43,0.06)",
@@ -252,8 +257,12 @@ export function ScoreBar({
 }
 
 // ============================================================
-// NotesList — checkmark bullet list
+// NotesList — 좋은 점은 청록 ✓, 감점·주의·참고는 중립 막대
 // ============================================================
+
+// 감점·주의·참고 노트 판정은 lib/note-polarity.ts — 키워드 목록과 근거는 그 파일 머리 주석,
+// 사례표는 tests/note-polarity.test.mjs (React 없이 node --test로 검사하려고 뺐다)
+
 export function NotesList({ items }: { items?: string[] }) {
   if (!items || items.length === 0) return null;
   return (
@@ -267,41 +276,53 @@ export function NotesList({ items }: { items?: string[] }) {
         gap: 8,
       }}
     >
-      {items.map((it, i) => (
-        <li
-          key={i}
-          style={{
-            position: "relative",
-            paddingLeft: 22,
-            fontSize: 13.5,
-            lineHeight: 1.65,
-            color: "var(--color-text-2)",
-          }}
-        >
-          <svg
-            viewBox="0 0 14 14"
-            width="12"
-            height="12"
+      {items.map((it, i) => {
+        const caution = isCautionNote(it);
+        return (
+          <li
+            key={i}
             style={{
-              position: "absolute",
-              left: 0,
-              top: 6,
-              color: "var(--color-teal)",
+              position: "relative",
+              paddingLeft: 22,
+              fontSize: 13.5,
+              lineHeight: 1.65,
+              color: "var(--color-text-2)",
             }}
-            fill="none"
-            aria-hidden="true"
           >
-            <path
-              d="M2.5 7.5 L5.5 10.5 L11.5 3.5"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {it}
-        </li>
-      ))}
+            <svg
+              viewBox="0 0 14 14"
+              width="12"
+              height="12"
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 6,
+                color: caution ? "var(--color-text-3)" : "var(--color-teal)",
+              }}
+              fill="none"
+              aria-hidden="true"
+            >
+              {caution ? (
+                <path
+                  d="M3.5 7 L10.5 7"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              ) : (
+                <path
+                  d="M2.5 7.5 L5.5 10.5 L11.5 3.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+            </svg>
+            {it}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -326,6 +347,7 @@ export function BreakdownPanel({
     <div>
       <SectionHead title={`${title} — ${total}점 / 100점`} />
       <div
+        className="eval-breakdown"
         style={{
           background: "var(--color-surface)",
           borderRadius: "var(--radius-lg)",
@@ -341,6 +363,20 @@ export function BreakdownPanel({
         <NotesList items={notes} />
         {footer}
       </div>
+      <style>{EVAL_BAR_CSS}</style>
     </div>
   );
 }
+
+// 360px 기기에서 라벨 150px + 값 64px를 빼면 막대가 25px로 짓눌렸다(감사 UX-2) —
+// 480px 이하에서는 라벨·값을 위 줄, 막대를 아래 줄 전체 폭으로 둔다.
+const EVAL_BAR_CSS = `
+  @media (max-width: 480px) {
+    .eval-breakdown { padding: 20px 16px !important; }
+    .eval-score-bar {
+      grid-template-columns: 1fr auto !important;
+      row-gap: 6px;
+    }
+    .eval-score-bar__track { grid-column: 1 / -1; grid-row: 2; }
+  }
+`;

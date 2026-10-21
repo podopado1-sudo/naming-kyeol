@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BASE_OPEN_GRAPH } from "@/lib/og";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 
@@ -6,6 +7,13 @@ export const metadata: Metadata = {
   title: "개인정보처리방침",
   description: "이름의 결(namingkyeol.com)의 개인정보처리방침입니다.",
   alternates: { canonical: "/privacy" },
+  // openGraph를 안 쓰면 루트 값(og:url=홈, og:title=홈 제목)이 그대로 상속된다 (FSC-6)
+  openGraph: {
+    ...BASE_OPEN_GRAPH,
+    title: "개인정보처리방침 — 이름의 결",
+    description: "이름의 결(namingkyeol.com)의 개인정보처리방침입니다.",
+    url: "/privacy",
+  },
 };
 
 const sectionTitle: React.CSSProperties = {

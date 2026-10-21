@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BASE_OPEN_GRAPH } from "@/lib/og";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { Mail, MessageSquare, Bug, Lightbulb } from "lucide-react";
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
     "이름의 결 문의 페이지. 점수·한자 의미 오류 신고, 기능 제안, 서비스 이용 방법 등 궁금한 점을 이메일로 보내주세요.",
   alternates: { canonical: "/contact" },
   openGraph: {
+    ...BASE_OPEN_GRAPH,
     title: "문의하기 — 이름의 결",
     description: "버그 신고·기능 제안·일반 문의는 이메일로 보내주세요.",
     url: "/contact",

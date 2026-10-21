@@ -1,6 +1,9 @@
 /**
  * EvalBody — Evaluate 결과 본문 (HanjaCandidatesTable + RecommendedCombo + StrengthsCautions + NoteBlocks)
  * Source: NameForm_design/src/EvalBody.jsx (Claude Design 산출물)
+ *
+ * 2열 그리드는 className "eval-2col" — 480px 이하 1열 전환 규칙은 평가 결과 화면
+ * (app/evaluate/EvaluateResult.tsx의 RESULT_CSS)이 갖고 있다.
  */
 "use client";
 
@@ -27,6 +30,7 @@ export interface HanjaGroup {
 export function HanjaCandidatesTable({ groups }: { groups: HanjaGroup[] }) {
   return (
     <div
+      className="eval-2col"
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(2, 1fr)",
@@ -299,6 +303,7 @@ export function StrengthsCautions({
 }) {
   return (
     <div
+      className="eval-2col"
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(2, 1fr)",
@@ -335,6 +340,7 @@ export function NoteBlocks({
 }) {
   return (
     <div
+      className="eval-2col"
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(2, 1fr)",

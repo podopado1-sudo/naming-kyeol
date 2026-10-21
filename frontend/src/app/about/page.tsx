@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BASE_OPEN_GRAPH } from "@/lib/og";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { Compass, BookOpen, Feather, ShieldCheck } from "lucide-react";
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
     "이름의 결은 미학 우선·사전 충실형 한자·유행 배제·투명한 알고리즘 네 가지 원칙으로 한국어 이름을 추천합니다. 9,190자 한자 사전과 미학 70% + 조화 30% 공식으로 만든 이유를 소개합니다.",
   alternates: { canonical: "/about" },
   openGraph: {
+    ...BASE_OPEN_GRAPH,
     title: "서비스 소개 — 이름의 결",
     description:
       "미학 우선·사전 충실형 한자·유행 배제·투명한 알고리즘 — 이름의 결을 만든 네 가지 원칙",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BASE_OPEN_GRAPH } from "@/lib/og";
 import Link from "next/link";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
     "이름에 쓰는 인명용 한자 9,000여 자의 뜻, 획수, 오행을 독음별로 찾아보세요. 대법원 인명용 한자 기준, 오행 검수 등급과 함께 제공합니다.",
   alternates: { canonical: "/hanja" },
   openGraph: {
+    ...BASE_OPEN_GRAPH,
     title: "인명용 한자 사전 — 뜻·획수·오행 검색",
     description:
       "이름에 쓰는 인명용 한자 9,000여 자의 뜻, 획수, 오행을 독음별로 찾아보세요.",

@@ -6,11 +6,16 @@
  *   - React.useState → useState import
  *   - React.Fragment → <></> 단축 사용
  *   - Button → ./Primitives에서 import
+ *   - 2026-10-21: 이동(handleHeroStart)을 홈 page.tsx에서 이 컴포넌트로 옮김 — 홈이 리포트 목록을
+ *     서버에서 읽는 서버 컴포넌트가 되어 콜백을 넘길 수 없다. onStart를 주면 그쪽이 우선.
  */
 "use client";
 
 import { Fragment, useRef, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "./Primitives";
+import { ambiguousCompoundSurname, splitFullName } from "@/lib/name-split";
+import { ENGLISH_NAME_MAX, englishNameProblem } from "@/lib/english-name";
 
 // 타이핑 효과는 수묵화 톤과 어울리지 않아 제거됨.
 // 헤드라인은 글자별 잉크 드롭 (.ink-char) 으로 표시.
@@ -77,11 +82,66 @@ export type HeroStartPayload =
       birthTime?: string;
     };
 
+/** Hero 입력 → /search 쿼리. 성씨가 있으면 autoStart로 결과까지 바로 간다. */
+function recommendHref(payload: Extract<HeroStartPayload, { mode: "recommend" }>): string {
+  const params = new URLSearchParams();
+  if (payload.lastName) params.set("lastName", payload.lastName);
+  if (payload.birth) params.set("birthDate", payload.birth);
+  if (payload.birthTime) params.set("birthTime", payload.birthTime);
+  if (payload.gender && payload.gender !== "any")
+    params.set("gender", payload.gender);
+  if (payload.tone) params.set("tone", payload.tone);
+  if (payload.parentName) params.set("parentName", payload.parentName);
+  if (payload.story) params.set("story", payload.story);
+  if (payload.englishName) params.set("englishName", payload.englishName);
+  // 성씨가 들어왔으면 자동 제출까지 진행 (Hero에서 한 번에 결과 확인)
+  if (payload.lastName) params.set("autoStart", "1");
+  const qs = params.toString();
+  return qs ? `/search?${qs}` : "/search";
+}
+
+/**
+ * Hero 입력 → /evaluate 쿼리. 성+이름 한 덩어리("김서준")는 splitFullName으로 나눈다 —
+ * charAt(0)로 자르면 '남궁민'이 '남'+'궁민'으로 평가됐다(감사 EV-6). 성·이름만 있어도
+ * /evaluate가 자동 평가한다(성별 '상관없음'·출생일 없음은 none·미학만으로).
+ */
+function evaluateHref(payload: Extract<HeroStartPayload, { mode: "evaluate" }>): string {
+  const params = new URLSearchParams();
+  const { lastName, name } = splitFullName(payload.name);
+  if (lastName) params.set("lastName", lastName);
+  if (name) params.set("name", name);
+  if (payload.birth) params.set("birthDate", payload.birth);
+  // 출생 시각은 생년월일과 함께일 때만 — /evaluate도 날짜 없는 시각은 버린다(evaluate-params timeWithDate)
+  if (payload.birth && payload.birthTime) params.set("birthTime", payload.birthTime);
+  // Hero가 recommend/evaluate 모두 "any"를 sentinel로 사용 → 통일된 처리
+  if (payload.gender && payload.gender !== "any" && payload.gender !== "none")
+    params.set("gender", payload.gender);
+  if (payload.tone) params.set("tone", payload.tone);
+  return `/evaluate?${params.toString()}`;
+}
+
 export function Hero({
   onStart,
 }: {
+  /** 지정하면 기본 이동 대신 호출 (기본: 추천 → /search, 평가 → /evaluate) */
   onStart?: (payload: HeroStartPayload) => void;
 }) {
+  const router = useRouter();
+
+  function start(payload: HeroStartPayload) {
+    if (onStart) {
+      onStart(payload);
+      return;
+    }
+    if (payload.mode === "recommend") {
+      router.push(recommendHref(payload));
+    } else {
+      // 풀 페이지 이동 — /evaluate 정적 라우트의 클라이언트 라우터 캐시가
+      // 이전 ?name=... 을 재사용하는 문제 우회 (검색 상세보기와 동일 처리).
+      window.location.assign(evaluateHref(payload));
+    }
+  }
+
   const [mode, setMode] = useState<"recommend" | "evaluate">("recommend");
   const [advOpen, setAdvOpen] = useState(false);
 
@@ -94,6 +154,10 @@ export function Hero({
   const [parentName, setParentName] = useState("");
   const [story, setStory] = useState("");
   const [englishName, setEnglishName] = useState("");
+  // /search와 같은 검증 — 한글('다니엘')·31자 이상이 넘어가면 /search가 autoStart 추천 전체를
+  // 멈추고 폼에 머물렀다(검토 FTE-3). 넘기기 전에 여기서 안내한다
+  const englishNameIssue = englishNameProblem(englishName);
+  const englishNameRef = useRef<HTMLInputElement | null>(null);
 
   // evaluate inputs
   const [evalQuery, setEvalQuery] = useState("");
@@ -135,8 +199,15 @@ export function Hero({
     display: "block",
   };
 
+  // 평가 입력이 어떻게 나뉘는지 미리 보여 준다 — 붙여 쓴 '선우진'은 선 + 우진으로 읽으므로
+  // 진짜 복성은 띄어 쓰게 안내한다(name-split.ts 규칙 3). 안내는 복성으로도 읽히는 앞머리
+  // (황보·서문·강전·선우)를 1자 성으로 읽었을 때만 — 김서준·이하윤에는 붙이지 않는다(검토 FTE-4)
+  const evalSplit = splitFullName(evalQuery);
+  const evalCompoundHint = ambiguousCompoundSurname(evalQuery);
+
   const popularLast = ["김", "이", "박", "최", "정"];
-  const popularFull = ["서준", "하윤", "지안", "도헌"];
+  // 평가 예시는 성까지 붙인다 — 이름만 넘기면 '서준'이 성 '서' + 이름 '준'으로 평가됐다(감사 EV-6)
+  const popularFull = ["김서준", "이하윤", "박지안", "최도헌"];
 
   const selectChevronBg =
     "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%235a6b7a' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>\")";
@@ -563,19 +634,49 @@ export function Hero({
                       />
                     </div>
                     <div>
-                      <label style={labelStyle}>
+                      <label htmlFor="hero-englishName" style={labelStyle}>
                         영어 이름{" "}
                         <span style={{ color: "var(--color-text-3)" }}>
                           (이중 이름 연결)
                         </span>
                       </label>
                       <input
+                        ref={englishNameRef}
+                        id="hero-englishName"
                         value={englishName}
                         onChange={(e) => setEnglishName(e.target.value)}
                         placeholder="예: Ethan"
+                        maxLength={ENGLISH_NAME_MAX}
+                        autoComplete="off"
+                        spellCheck={false}
+                        aria-invalid={englishNameIssue ? true : undefined}
+                        aria-describedby={
+                          englishNameIssue ? "hero-englishName-error" : undefined
+                        }
                         className="sumi-field"
-                      style={fieldStyle}
+                        style={
+                          englishNameIssue
+                            ? {
+                                ...fieldStyle,
+                                borderBottomColor: "var(--color-vermilion)",
+                              }
+                            : fieldStyle
+                        }
                       />
+                      {englishNameIssue && (
+                        <p
+                          id="hero-englishName-error"
+                          role="alert"
+                          style={{
+                            margin: "6px 0 0",
+                            fontSize: 12,
+                            lineHeight: 1.5,
+                            color: "var(--color-vermilion)",
+                          }}
+                        >
+                          {englishNameIssue}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -597,7 +698,13 @@ export function Hero({
                         notifyEmpty(birthRef);
                         return;
                       }
-                      onStart?.({
+                      if (englishNameIssue) {
+                        // 접어 둔 상세 입력 안에 있을 수 있다 — 펼친 뒤 칸으로 보낸다
+                        setAdvOpen(true);
+                        setTimeout(() => englishNameRef.current?.focus(), 0);
+                        return;
+                      }
+                      start({
                         mode: "recommend",
                         lastName,
                         gender,
@@ -606,7 +713,7 @@ export function Hero({
                         birthTime,
                         parentName,
                         story,
-                        englishName,
+                        englishName: englishName.trim(),
                       });
                     }}
                     style={{
@@ -725,20 +832,16 @@ export function Hero({
                     <label style={labelStyle}>
                       생년월일{" "}
                       <span style={{ color: "var(--color-text-3)" }}>
-                        (사주 반영)
+                        (선택 · 사주 반영)
                       </span>
                     </label>
+                    {/* 평가에서 출생일은 선택 — 빈칸 강조(--needs)를 하지 않는다 */}
                     <input
                       ref={birthRef}
-                      key={`birth-${shakeKey}`}
                       type="date"
                       value={birth}
                       onChange={(e) => setBirth(e.target.value)}
-                      className={
-                        !birth && shakeKey > 0
-                          ? "sumi-field sumi-field--needs"
-                          : "sumi-field"
-                      }
+                      className="sumi-field"
                       style={fieldStyle}
                     />
                   </div>
@@ -778,11 +881,8 @@ export function Hero({
                         notifyEmpty(evalQueryRef);
                         return;
                       }
-                      if (!birth) {
-                        notifyEmpty(birthRef);
-                        return;
-                      }
-                      onStart?.({
+                      // 출생일은 선택 — 없으면 미학 점수만 평가한다(/evaluate 입력 폼과 같은 계약)
+                      start({
                         mode: "evaluate",
                         name: evalQuery.trim(),
                         gender,
@@ -806,23 +906,40 @@ export function Hero({
                   {/* 朱印 名 도장 */}
                   <span className="sumi-stamp-name" aria-hidden>名</span>
                 </div>
-                {/* 검증 안내 — 빈 항목 우선순위 순 */}
-                {(!evalQuery.trim() || !birth) && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      fontSize: 12,
-                      color: "var(--color-text-3)",
-                      textAlign: "center",
-                      fontFamily: "var(--font-sans)",
-                      letterSpacing: "0.01em",
-                    }}
-                  >
-                    {!evalQuery.trim()
-                      ? "평가할 이름(예: 김서준)을 입력하세요."
-                      : "생년월일을 입력하면 사주 조화도 함께 살펴봐요."}
-                  </div>
-                )}
+                {/* 안내 — 이름이 없으면 입력 요청, 있으면 나뉜 성·이름 확인 + 빈 출생일 안내 */}
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 12,
+                    lineHeight: 1.6,
+                    color: "var(--color-text-3)",
+                    textAlign: "center",
+                    fontFamily: "var(--font-sans)",
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  {!evalQuery.trim() ? (
+                    "평가할 이름(예: 김서준)을 입력하세요."
+                  ) : (
+                    <>
+                      <div>
+                        {evalSplit.name
+                          ? `성 ${evalSplit.lastName} · 이름 ${evalSplit.name}`
+                          : "성과 이름을 함께 입력하세요(예: 김서준)."}
+                        {evalSplit.name &&
+                          evalCompoundHint &&
+                          ` — ${evalCompoundHint} 씨라면 '${evalCompoundHint} ${evalSplit.name.slice(1)}'처럼 띄어 써 주세요`}
+                      </div>
+                      {!birth && (
+                        <div>
+                          {birthTime
+                            ? "출생 시각은 생년월일과 함께 넣어야 반영돼요."
+                            : "생년월일을 입력하면 사주 조화도 함께 살펴봐요."}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -879,7 +996,7 @@ export function Hero({
                     onClick={(e) => {
                       e.preventDefault();
                       setEvalQuery(n);
-                      onStart?.({ mode: "evaluate", name: n });
+                      start({ mode: "evaluate", name: n, gender, tone });
                     }}
                     href="#"
                     style={{

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Mark } from "./Mark";
 import { Button } from "./Primitives";
 import { DualCard, type DualCandidate, type DualMode } from "./DualCard";
+import { withJosa } from "@/lib/josa";
 
 export interface DualContext {
   lastName: string;
@@ -101,9 +102,11 @@ function DualSubHeader({
           <Button variant="ghost" size="sm" onClick={onRegenerate}>
             ↻ 새로 생성
           </Button>
-          <Button variant="secondary" size="sm" onClick={onSave}>
-            ♡ 이 결과 저장
-          </Button>
+          {onSave && (
+            <Button variant="secondary" size="sm" onClick={onSave}>
+              ♡ 이 결과 저장
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -655,7 +658,8 @@ export function DualResultPage({
               marginBottom: 12,
             }}
           >
-            {context.preferredEnglishName}과 어울리는 한국 이름
+            {/* 영문 이름 뒤라 받침을 판정할 수 없다 — 조사 갈림이 없는 '에'로 ('Emma과' 방지) */}
+            ‘{context.preferredEnglishName}’에 어울리는 한국 이름
           </h1>
           <p
             style={{
@@ -729,7 +733,7 @@ export function DualResultPage({
             }}
           >
             {selected && selectedCand
-              ? `${selectedCand.koreanFull}으로 결정하기 ✓`
+              ? `${withJosa(selectedCand.koreanFull, "으로/로")} 결정하기 ✓`
               : "카드를 선택해주세요"}
           </Button>
           <Link

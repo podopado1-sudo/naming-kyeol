@@ -7,8 +7,43 @@
  */
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ExternalLink } from "lucide-react";
 import type { CompanyNameCandidate } from "@/lib/types";
+
+// ============================================================
+// 같은 이름 찾아보기 — 외부 검색 링크 (자동 조회가 아니다)
+// 키프리스 결과 페이지는 GET queryText를 받는다(2026-10-21 확인: tab=trademark 상표 탭).
+// ============================================================
+function kiprisSearchUrl(name: string): string {
+  return `https://www.kipris.or.kr/khome/search/searchResult.do?tab=trademark&queryText=${encodeURIComponent(name)}`;
+}
+
+function naverSearchUrl(name: string): string {
+  return `https://search.naver.com/search.naver?query=${encodeURIComponent(name)}`;
+}
+
+function LookupLink({
+  href,
+  label,
+  name,
+}: {
+  href: string;
+  label: string;
+  name: string;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="nofollow noopener noreferrer"
+      aria-label={`${name} — ${label} (새 창)`}
+      className="inline-flex items-center gap-1 text-teal underline-offset-2 hover:underline"
+    >
+      {label}
+      <ExternalLink className="size-3" />
+    </a>
+  );
+}
 
 // ============================================================
 // 점수 색 분기 — globals.css의 score 토큰을 그대로 쓴다
@@ -209,6 +244,17 @@ export function CompanyNameCard({
           ))}
         </div>
       )}
+
+      {/* 확정 전 확인의 첫걸음 — 이름을 복사해 직접 검색하던 수고를 덜어 준다.
+          등록 가능 여부를 판단하는 기능이 아니므로 '확인 완료'처럼 들리는 말은 쓰지 않는다 */}
+      <div
+        className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 text-xs"
+        style={{ borderTop: "1px solid var(--color-divider)" }}
+      >
+        <span className="text-text-3">같은 이름 찾아보기</span>
+        <LookupLink href={kiprisSearchUrl(c.name)} label="키프리스 상표 검색" name={c.name} />
+        <LookupLink href={naverSearchUrl(c.name)} label="네이버 검색" name={c.name} />
+      </div>
     </article>
   );
 }

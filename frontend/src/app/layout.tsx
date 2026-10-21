@@ -3,6 +3,7 @@ import { Noto_Serif_KR, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { BASE_OPEN_GRAPH } from "@/lib/og";
 
 // Pretendard Variable (한글 본문/제목) — 로컬 폰트
 const pretendard = localFont({
@@ -104,23 +105,14 @@ export const metadata: Metadata = {
     },
     // Google은 DNS TXT로 이미 인증 완료 (Cloudflare에 google-site-verification 레코드)
   },
-  // Open Graph — 카카오톡/페이스북 공유 미리보기
-  // TODO: og-image.png (1200×630) 제작 후 이미지가 표시됨. 아직 미제작이면 폴백으로 apple-touch-icon이 사용됨.
+  // Open Graph — 카카오톡/페이스북 공유 미리보기 (public/og-image.png 1200×630)
+  // ⚠️ 얕은 병합: 하위 페이지가 openGraph를 쓰면 이 객체는 통째로 대체된다 — 페이지에서도
+  // BASE_OPEN_GRAPH(lib/og.ts)를 펼쳐야 이미지·siteName·locale이 남는다.
   openGraph: {
-    type: "website",
-    locale: "ko_KR",
+    ...BASE_OPEN_GRAPH,
     url: SITE_URL,
-    siteName: SITE_NAME,
     title: `${SITE_NAME} — 한국어 이름 추천 서비스`,
     description: SITE_DESCRIPTION,
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: `${SITE_NAME} — 한국어 이름 추천 서비스`,
-      },
-    ],
   },
   // Twitter/X 카드
   twitter: {

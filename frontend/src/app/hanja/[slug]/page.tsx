@@ -21,6 +21,8 @@ import {
   getSiblingReadings,
   hasDetailPage,
 } from "@/lib/hanja-seo";
+import { josa } from "@/lib/josa";
+import { BASE_OPEN_GRAPH } from "@/lib/og";
 
 /**
  * /hanja/[slug] — 한자 사전 SEO 페이지.
@@ -83,13 +85,13 @@ export async function generateMetadata({
   if (resolved.kind === "reading") {
     const { reading, chars } = resolved;
     const title = `이름에 쓰는 '${reading}' 한자 ${chars.length}자 — 종류·뜻·획수·오행`;
-    const description = `'${reading}'(으)로 읽는 인명용 한자 ${chars.length}자의 뜻, 획수, 오행을 한눈에 비교하세요. 검수 등급과 함께 이름에 어울리는 글자를 찾아드립니다.`;
+    const description = `'${reading}'${josa(reading, "으로/로")} 읽는 인명용 한자 ${chars.length}자의 뜻, 획수, 오행을 한눈에 비교하세요. 검수 등급과 함께 이름에 어울리는 글자를 찾아드립니다.`;
     const canonical = `/hanja/${encodeURIComponent(reading)}`;
     return {
       title,
       description,
       alternates: { canonical },
-      openGraph: { title, description, url: `${SITE_URL}${canonical}` },
+      openGraph: { ...BASE_OPEN_GRAPH, title, description, url: `${SITE_URL}${canonical}` },
     };
   }
 
@@ -107,7 +109,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    openGraph: { title, description, url: `${SITE_URL}${canonical}` },
+    openGraph: { ...BASE_OPEN_GRAPH, title, description, url: `${SITE_URL}${canonical}` },
     // 글자 상세 9,096쪽은 색인 제외(2026-10-06). 애드센스가 "가치가 별로 없는 콘텐츠"로
     // 거절한 몸통이 이 구간이다 — 전체 URL의 83%가 450~750자짜리 같은 틀(D등급 5,652자는
     // "획수 기반 자동 판정"뿐). 2026-07-15 전량 사이트맵 등재 나흘 뒤 구글 유입이 급락한
@@ -145,6 +147,9 @@ function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
 }
 
 function CtaBanner({ char, label }: { char: string; label: string }) {
+  // BMP 밖 글자(코드포인트 > 0xFFFF, 확장 B 이후 80자)는 추천 엔진이 한 글자로 받지 못해
+  // /required-char가 일반 오류로 끝난다 — 막다른 버튼을 두지 않고 숨긴다 (2026-10-21)
+  if ((char.codePointAt(0) ?? 0) > 0xffff) return null;
   return (
     <div className="my-10 rounded-xl border border-paper-line bg-paper-tint p-6 text-center">
       <p className="mb-4 text-sm text-text-2">{label}</p>
@@ -207,7 +212,7 @@ function ReadingPage({ reading, chars }: { reading: string; chars: string[] }) {
           이름에 쓰는 &lsquo;{reading}&rsquo; 한자 {chars.length}자
         </h1>
         <p className="mb-10 max-w-2xl text-[15px] leading-relaxed text-text-2">
-          &lsquo;{reading}&rsquo;(으)로 읽는 인명용 한자는 모두 {chars.length}
+          &lsquo;{reading}&rsquo;{josa(reading, "으로/로")} 읽는 인명용 한자는 모두 {chars.length}
           자입니다.
           {distText && <> 오행 분포는 {distText}입니다.</>} 신뢰 등급(검수
           완료순)과 획수 순으로 정렬했습니다.
@@ -221,7 +226,7 @@ function ReadingPage({ reading, chars }: { reading: string; chars: string[] }) {
 
         <CtaBanner
           char={reading}
-          label={`'${reading}'이(가) 들어가는 이름이 궁금하신가요? 미학 점수와 오행 조화까지 분석해 드립니다.`}
+          label={`'${reading}'${josa(reading, "이/가")} 들어가는 이름이 궁금하신가요? 미학 점수와 오행 조화까지 분석해 드립니다.`}
         />
 
         {siblings.length > 0 && (
@@ -414,7 +419,8 @@ function CharPage({ char }: { char: string }) {
               )}
               {generatedBy && (
                 <>
-                  {generates ? "과 " : " "}
+                  {/* 조사는 괄호 앞 오행 이름에 맞춘다 — 화(불)와 · 목(나무)과 */}
+                  {generates ? `${josa(ELEMENT_KO[generates], "과/와")} ` : " "}
                   {ELEMENT_KO[generatedBy]} ({generatedBy}生{record.e})
                 </>
               )}{" "}

@@ -84,7 +84,8 @@ export default function GuidePage() {
 
         {/* ── 데이터 리포트 ───────────────────────────────────── */}
         {INSIGHTS.length > 0 && (
-          <section style={{ marginBottom: 56 }}>
+          // id는 푸터 '데이터 리포트'(/guide#reports) 앵커
+          <section id="reports" style={{ marginBottom: 56, scrollMarginTop: 80 }}>
             <div
               style={{
                 fontSize: 11,

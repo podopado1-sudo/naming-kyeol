@@ -1,6 +1,13 @@
 // ============================================================
 // Smart Router (통합 추천)
 // ============================================================
+/**
+ * 백엔드 SmartRecommendationRequestDto와 필드명이 1:1이어야 한다 — 없는 필드는
+ * 오류 없이 조용히 무시된다 (includeTwin·englishName으로 보내 쌍둥이·영어 겸용이
+ * 출시 이후 한 번도 켜지지 않았던 전력, 2026-10-21).
+ * 부모 이름·영어 이름·필수 글자 카테고리는 켜기 플래그가 따로 없고, 해당 값이
+ * 들어오면 백엔드가 카테고리를 붙인다.
+ */
 export interface SmartRecommendationRequest {
   lastName: string;
   birthDate?: string;
@@ -10,21 +17,23 @@ export interface SmartRecommendationRequest {
   tone?: string;
   fatherSurname?: string;
   motherSurname?: string;
+  /** 부모 이름 — 하나라도 있으면 parent-based 카테고리 추가 */
   fatherName?: string;
   motherName?: string;
-  includePureKorean?: boolean;
-  includeThreeSyllable?: boolean;
-  includeCreative?: boolean;
-  includeTwin?: boolean;
-  includeParentBased?: boolean;
-  includeDualName?: boolean;
-  includeRequiredChar?: boolean;
+  storyKeyword?: string;
+  /** 선호 영어 이름 — 있으면 dual-name 카테고리 추가 */
+  preferredEnglishName?: string;
+  /** 필수 글자 — requiredChar 또는 requiredHanja가 있으면 required-char 카테고리 추가 */
   requiredChar?: string;
+  /** "first" | "last" | "any" */
   requiredCharPosition?: string;
   /** 항렬자(한자 1글자, 선택) — 형제자매 공유 한자 */
   requiredHanja?: string;
-  englishName?: string;
-  count?: number;
+  /** 쌍둥이 — true면 twin 카테고리 추가 */
+  isTwin?: boolean;
+  includeThreeSyllable?: boolean;
+  includePureKorean?: boolean;
+  includeCreative?: boolean;
   preferredFiveElement?: string;
   /** 의미 선호 키워드 (예: ["지혜", "용기", "맑음"]) */
   preferredMeanings?: string[];
@@ -172,12 +181,37 @@ export interface RequiredCharRequest {
   /** 항렬자 (한자 1글자, 선택) — 지정 시 발음은 한자의 음으로 자동 도출 */
   requiredHanja?: string;
   position?: string;
+  /** 출생일 (YYYY-MM-DD) — 백엔드 필수, 없으면 400 */
   birthDate?: string;
   /** 출생 시각 (HH:mm, 선택) */
   birthTime?: string;
+  /** "male" | "female" | "none" — 엔진이 소문자로 비교한다 */
   gender?: string;
+  /** "neutral" | "soft" | "strong" — 엔진이 소문자로 비교한다 */
   tone?: string;
-  count?: number;
+}
+
+/**
+ * /recommendations/required-char 원본 응답 후보 — 백엔드 RequiredCharCandidate를
+ * DTO 변환 없이 배열로 그대로 반환한다 ({names,totalCount} 객체가 아님).
+ * 점수 필드가 없어서 화면에서는 점수를 표시하지 않는다.
+ */
+export interface RequiredCharCandidate {
+  /** 이름 (성 제외, 예: "준서") */
+  name: string;
+  /** 필수로 들어간 글자 (한글) */
+  requiredChar: string;
+  /** 필수 글자가 놓인 자리 — "first" | "last" */
+  position: string;
+  /**
+   * 한자 옵션 "글자(훈음)" — 필수 글자 쪽 후보 최대 2개와 짝 글자 1개를 이름 순서대로
+   * (예: 용준 → ["勇(날랠 용)", "俊(준걸 준, 순임금 순)", "峻(높을 준/준엄할 준)"])
+   */
+  hanjaOptions: string[];
+  /** 고정된 항렬자 한자 — 항렬자 모드가 아니면 null */
+  fixedHanja: string | null;
+  /** 이름 의미 설명 */
+  meaning: string;
 }
 
 // ============================================================
@@ -380,22 +414,57 @@ export interface EumryeongAnalysis {
   dominantElement?: string;
 }
 
+/** 이름 분석 — 음절 하나에 쓸 수 있는 한자 후보 (백엔드 HanjaOptionDto) */
+export interface AnalysisHanjaOption {
+  character: string;
+  /** 대표 훈음 (예: "민첩할 민") */
+  meaning: string;
+  fiveElement?: string | null;
+  /** 자연/덕목/개념 */
+  category?: string | null;
+  strokeCount?: number | null;
+  /** 강희자전 원획수 */
+  kangxiStrokes?: number | null;
+  /** 오행 판정 신뢰도: S=검수완료, A=규칙기반, B=수동입력, D=획수자동 */
+  confidenceGrade: string;
+  rationale?: string | null;
+}
+
+/** 이름 분석 — 음절별 한자 후보 (성씨 제외, 이름 음절만) */
+export interface AnalysisHanjaBreakdown {
+  syllable: string;
+  /** 관련도순 상위 10개 — 사용자가 고른 한자가 아니라 후보 목록 */
+  possibleHanja: AnalysisHanjaOption[];
+}
+
+/** 이름 분석 — 뒤집기·변형 이름 (백엔드 NameVariantDto) */
+export interface AnalysisNameVariant {
+  name: string;
+  /** "반전" | "재조합" | "음절교환" */
+  variationType: string;
+  description: string;
+}
+
+/** 백엔드 NameAnalysisResponseDto와 1:1 */
 export interface NameAnalysisResponse {
+  /** 성+이름 */
   fullName: string;
-  aestheticScore?: number;
-  harmonyScore?: number;
-  finalScore?: number;
-  strengths?: string[];
-  weaknesses?: string[];
-  hanja?: {
-    character: string;
-    meaning: string;
-    reading: string;
-    fiveElement?: string;
-    strokeCount?: number;
-  }[];
-  saju?: SajuChartData;
-  eumryeongAnalysis?: EumryeongAnalysis;
+  aestheticScore: number;
+  /** 생년월일 미제공 시 null */
+  harmonyScore: number | null;
+  /** 유니크 지수 (0~100) */
+  rarityScore: number;
+  /** 미학*0.7 + 조화*0.3 — 조화가 없으면 미학 점수 */
+  finalScore: number;
+  hanjaBreakdown: AnalysisHanjaBreakdown[];
+  strengths: string[];
+  weaknesses: string[];
+  /** 추천 이유 (ExplanationEngine) */
+  reasons: string[];
+  reversalVariants: AnalysisNameVariant[];
+  /** 생년월일 제공 시에만 */
+  saju?: SajuChartData | null;
+  eumryeongAnalysis?: EumryeongAnalysis | null;
 }
 
 // ============================================================

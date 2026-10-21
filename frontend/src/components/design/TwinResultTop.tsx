@@ -115,9 +115,11 @@ export function TwinSubHeader({
           <Button variant="ghost" size="sm" onClick={onRegenerate}>
             ↻ 새로 생성
           </Button>
-          <Button variant="secondary" size="sm" onClick={onSave}>
-            ♡ 이 결과 저장
-          </Button>
+          {onSave && (
+            <Button variant="secondary" size="sm" onClick={onSave}>
+              ♡ 이 결과 저장
+            </Button>
+          )}
         </div>
       </div>
     </div>

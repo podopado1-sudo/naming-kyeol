@@ -11,6 +11,7 @@ import { notFound } from "next/navigation";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { getAllInsights, getInsight } from "@/lib/insights";
+import { BASE_OPEN_GRAPH } from "@/lib/og";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://namingkyeol.com";
 
@@ -34,6 +35,7 @@ export async function generateMetadata({
     description: article.description,
     alternates: { canonical },
     openGraph: {
+      ...BASE_OPEN_GRAPH,
       type: "article",
       title: article.title,
       description: article.description,

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BASE_OPEN_GRAPH } from "@/lib/og";
 import Link from "next/link";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
     "지우·서윤·민준 등 인기 이름의 뜻과 한자, 출생신고 통계 기준 순위와 남녀 비율을 찾아보세요. 대법원 출생신고 데이터 기반 이름 뜻 사전입니다.",
   alternates: { canonical: "/name" },
   openGraph: {
+    ...BASE_OPEN_GRAPH,
     title: "이름 뜻 사전 — 인기 이름 순위·한자·의미",
     description:
       "인기 이름의 뜻과 한자, 출생신고 통계 기준 순위와 남녀 비율을 찾아보세요.",

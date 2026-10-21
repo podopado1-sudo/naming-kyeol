@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BASE_OPEN_GRAPH } from "@/lib/og";
 
 export const metadata: Metadata = {
   title: "부모 이름 기반 작명",
@@ -6,6 +7,7 @@ export const metadata: Metadata = {
     "아버지·어머니 이름의 음운과 의미를 이어받는 이름. 가족 서사를 담은 작명 추천.",
   alternates: { canonical: "/parent-based" },
   openGraph: {
+    ...BASE_OPEN_GRAPH,
     title: "부모 이름 기반 작명 — 이름의 결",
     description: "부모 이름의 음운·의미를 이어받는 가족 서사형 이름 추천",
     url: "/parent-based",

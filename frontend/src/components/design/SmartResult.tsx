@@ -6,13 +6,17 @@
  *   - React.useState/useRef → 명시적 import
  *   - PascalCase 데이터 → camelCase
  *   - 백엔드 SmartRecommendationResponse 직접 받음 + RequestSummary는 별도 prop
- *   - 백엔드에 없는 필드(aesthetics/harmony/rarity/reasons/hanjaName)는 score에서 mock
+ *   - 미학·조화는 백엔드 실제 값만 표시(없으면 숨김). RARITY 막대는 표준 후보의 '희귀도:N' 태그 값만
+ *     (없으면 숨김)
  */
 "use client";
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { toast } from "sonner";
 import { trackTabView } from "@/lib/api";
+import { toggleFavorite, useIsFavorite } from "@/lib/favorites";
+import type { CandidateDetailContext } from "@/lib/useCandidateDetail";
 import type {
   PhonologyNote,
   SmartNameCandidate,
@@ -39,9 +43,31 @@ interface UICandidate {
   meaning: string;
   /** 사람 서사형 코이닝 한 문장 (창의 한정). 없으면 숨김. */
   story?: string;
+  /**
+   * 백엔드가 종합 점수(score)를 준 후보인지 — FINAL 표시 여부. required-char·dual-name·
+   * parent-based는 score가 null이라 false면 점수 UI를 모두 숨긴다.
+   */
+  hasScore: boolean;
+  /**
+   * 미학·조화를 백엔드가 실제로 준 후보인지 — 미학·조화 줄 표시 여부.
+   * ⚠️ 2026-10-21 전에는 aestheticScore가 null이면 score에서 미학·조화를 지어내, 쌍둥이 탭
+   * 이우선 카드가 '미학 86 · 조화 83'인데 펼친 이유는 '미학 94 · 조화 82'로 한 카드에서 갈렸다.
+   * 창의·순우리말·3글자처럼 종합만 있는 탭은 FINAL만 보인다.
+   */
+  hasDetailScores: boolean;
+  /** hasDetailScores가 true일 때만 의미 있음 */
   aesthetics: number;
+  /** hasDetailScores가 true일 때만 의미 있음 */
   harmony: number;
   finalScore: number;
+  /**
+   * 백엔드 희귀도를 받은 후보인지 — RARITY 막대 표시 여부. 값은 표준 탭의 '희귀도:N' 태그
+   * (SmartRecommendationService.BuildStandardTags)에서만 온다.
+   * ⚠️ 2026-10-21 전에는 score−10으로 지어내, 같은 카드에 태그 '희귀도:90'과 'RARITY (82)'가 함께
+   * 보였고 희귀도 값이 없는 쌍둥이 탭에도 'RARITY (80)'이 붙었다(검토 FTE-7).
+   */
+  hasRarity: boolean;
+  /** hasRarity가 true일 때만 의미 있음 */
   rarity: number;
   tags: string[];
   reasons: string[];
@@ -61,8 +87,19 @@ interface UICategory {
 // ============================================================
 // 백엔드 → UI 매핑 어댑터
 // ============================================================
+
+/** 표준 후보 태그의 '희귀도:N' 값 — 없으면 null (SmartNameCandidateDto에 희귀도 필드가 아직 없다) */
+function rarityFromTags(tags: string[] | undefined): number | null {
+  for (const t of tags ?? []) {
+    const m = /^희귀도:(\d{1,3})$/.exec(t.trim());
+    if (m) return Math.min(100, Number(m[1]));
+  }
+  return null;
+}
+
 function mapCandidate(c: SmartNameCandidate): UICandidate {
   const score = c.score ?? 0;
+  const rarity = rarityFromTags(c.tags);
   // 배정된 실제 한자(예: "友晶") 우선 — 한자 이름 탭이 진짜 한자를 serif로 표시.
   // 없으면(창의·순우리말 등) 기존 휴리스틱(한글 이름)으로 폴백.
   const hanjaName =
@@ -77,15 +114,93 @@ function mapCandidate(c: SmartNameCandidate): UICandidate {
     hanjaName,
     meaning: c.meaning,
     story: c.story || undefined,
-    // 한자 카테고리는 실제 미학/조화 점수, 그 외는 score 기반 추정 (서브엔진들의 점수 의미가 달라 분리 불가)
-    aesthetics: c.aestheticScore ?? Math.max(0, Math.min(100, Math.round(score * 0.95))),
-    harmony: c.harmonyScore ?? Math.max(0, Math.min(100, Math.round(score * 0.92))),
+    hasScore: c.score != null,
+    // 미학·조화는 백엔드 실제 값만 쓴다 — score에서 추정하지 않는다 (없으면 숨김)
+    hasDetailScores: c.aestheticScore != null && c.harmonyScore != null,
+    aesthetics: c.aestheticScore ?? 0,
+    harmony: c.harmonyScore ?? 0,
     finalScore: Math.round(score),
-    rarity: Math.max(40, Math.min(95, Math.round(score - 10))),
+    hasRarity: rarity != null,
+    rarity: rarity ?? 0,
     tags: c.tags ?? [],
     reasons: c.reasons ?? [],
     genderNote: c.genderNote,
     phonologyNotes: c.phonologyNotes ?? [],
+  };
+}
+
+// ------------------------------------------------------------
+// 필수 글자 후보의 뜻 줄 — 이름 순서로 다시 짓는다
+// ⚠️ 2026-10-21: RequiredCharEngine의 meaning은 자리와 상관없이 '필수 글자 뜻, 짝 글자 뜻'이라
+// 끝글자 후보 아준이 '준걸 준, 순임금 순, 맑을 아/바를 아'로 거꾸로 나왔고, 다중 훈의 쉼표가
+// 글자 경계 쉼표와 겹쳐 어디까지가 한 글자인지 보이지 않았다. 한자 옵션("字(훈음)")은 이름 순서로
+// 오므로(첫글자: 필수…·짝 / 끝글자: 짝·필수…) 거기서 음절마다 그 소리의 훈 하나만 골라
+// ' + '로 잇는다. 원래 meaning은 읽지 않으니 백엔드가 순서를 고쳐도 두 번 뒤집히지 않는다.
+// ------------------------------------------------------------
+function parseHanjaOption(opt: string): { ch: string; meaning: string } | null {
+  const m = opt.match(/^(.)\((.+)\)$/u);
+  return m ? { ch: m[1], meaning: m[2] } : null;
+}
+
+/** 다중 훈음 중 이 음절로 읽히는 것 — '그물 라(나)'처럼 괄호 속 두음 독음도 인정, 없으면 첫 훈음 */
+function glossForSyllable(meaning: string, syllable: string): string {
+  const parts = meaning
+    .split(/[,/;·]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const hit = parts.find((s) => {
+    const m = s.match(/\s([^\s(]+)(?:\(([^)]+)\))?$/);
+    return !!m && (m[1] === syllable || m[2] === syllable);
+  });
+  return hit ?? parts[0] ?? "";
+}
+
+/**
+ * 필수 글자 후보 뜻 줄 (예: 아준 → "맑을 아 + 준걸 준").
+ * position은 "first"|"last", hanjaOptions는 엔진이 이름 순서로 준 "字(훈음)" 목록.
+ * 모양이 예상과 다르면 fallback(엔진 meaning)을 그대로 쓴다.
+ */
+export function requiredCharMeaning(
+  name: string,
+  position: string,
+  hanjaOptions: readonly string[],
+  fallback: string
+): string {
+  const syllables = [...name];
+  if (syllables.length !== 2 || hanjaOptions.length < 2) return fallback;
+  const pair =
+    position === "first"
+      ? [hanjaOptions[0], hanjaOptions[hanjaOptions.length - 1]]
+      : position === "last"
+        ? [hanjaOptions[0], hanjaOptions[1]]
+        : null;
+  if (!pair) return fallback;
+  const glosses = pair.map((opt, i) => {
+    const p = parseHanjaOption(opt);
+    return p ? glossForSyllable(p.meaning, syllables[i]) : "";
+  });
+  return glosses.every(Boolean) ? glosses.join(" + ") : fallback;
+}
+
+const REQUIRED_CHAR_POSITION_TAG: Record<string, string> = {
+  first: "첫글자",
+  last: "끝글자",
+};
+
+/**
+ * /search의 required-char 카테고리 — 태그가 [필수:X|항렬:X, "first"|"last", ...한자 옵션]
+ * (SmartRecommendationService). 뜻 줄을 이름 순서로 다시 짓고 자리 태그를 한글로 바꾼다.
+ * /required-char 페이지는 어댑터에서 이미 한글 자리 태그·뜻 줄을 만들어 오므로 건드리지 않는다.
+ */
+function normalizeRequiredCharCandidate(c: SmartNameCandidate): SmartNameCandidate {
+  const tags = c.tags ?? [];
+  const pos = tags[1];
+  if (pos !== "first" && pos !== "last") return c;
+  const options = tags.slice(2);
+  return {
+    ...c,
+    meaning: requiredCharMeaning(c.name, pos, options, c.meaning),
+    tags: [tags[0], REQUIRED_CHAR_POSITION_TAG[pos], ...options],
   };
 }
 
@@ -114,7 +229,10 @@ function mapResponse(
       description: CATEGORY_DESCRIPTIONS[cat.type] ?? "",
       engineUsed: cat.engineUsed,
       totalInCategory: cat.names.length,
-      names: cat.names.map(mapCandidate),
+      names: (cat.type === "required-char"
+        ? cat.names.map(normalizeRequiredCharCandidate)
+        : cat.names
+      ).map(mapCandidate),
     };
     const prev = seen.get(cat.type);
     if (!prev) {
@@ -137,7 +255,11 @@ function mapResponse(
   const topPick = res.topPick
     ? {
         categoryLabel: res.topPick.categoryLabel,
-        candidate: mapCandidate(res.topPick.candidate),
+        candidate: mapCandidate(
+          res.topPick.categoryType === "required-char"
+            ? normalizeRequiredCharCandidate(res.topPick.candidate)
+            : res.topPick.candidate
+        ),
       }
     : null;
 
@@ -422,10 +544,20 @@ function SubHeader({
   summary,
   onRegenerate,
   onSave,
+  saveLabel = "이 결과 저장",
+  saved,
 }: {
   summary: RequestSummary;
   onRegenerate?: () => void;
+  /** 없으면 저장 버튼을 숨긴다 — 눌러도 아무 일 없는 버튼을 두지 않는다 */
   onSave?: () => void;
+  /**
+   * 버튼 이름 — 상태와 상관없이 고정한다(하트 글리프 제외). 저장 여부는 saved →
+   * aria-pressed와 하트 모양으로만 알린다 ('저장됨'·'눌림'이 두 번 읽히지 않게).
+   */
+  saveLabel?: string;
+  /** 토글 상태 — undefined면 토글 버튼이 아니다(aria-pressed 생략) */
+  saved?: boolean;
 }) {
   const chips = [
     `성 ${summary.lastName}`,
@@ -506,9 +638,22 @@ function SubHeader({
         <button type="button" onClick={onRegenerate} style={btnGhost}>
           ↻ 새로 생성
         </button>
-        <button type="button" onClick={onSave} style={btnGhost}>
-          ♡ 이 결과 저장
-        </button>
+        {onSave && (
+          <button
+            type="button"
+            onClick={onSave}
+            style={btnGhost}
+            aria-pressed={saved}
+          >
+            <span
+              aria-hidden="true"
+              style={saved ? { color: "var(--color-gold-600)" } : undefined}
+            >
+              {saved ? "♥" : "♡"}
+            </span>{" "}
+            {saveLabel}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -683,16 +828,18 @@ function TopPickCard({
           <Eyebrow color="var(--color-gold-600)">
             Top Pick · {pick.categoryLabel}
           </Eyebrow>
-          <span
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 11,
-              color: "var(--color-text-3)",
-              letterSpacing: "0.06em",
-            }}
-          >
-            SCORE OUT OF 100
-          </span>
+          {c.hasScore && (
+            <span
+              style={{
+                fontFamily: "Inter, var(--font-sans)",
+                fontSize: 11,
+                color: "var(--color-text-3)",
+                letterSpacing: "0.06em",
+              }}
+            >
+              SCORE OUT OF 100
+            </span>
+          )}
         </div>
 
         <div
@@ -772,62 +919,68 @@ function TopPickCard({
               </p>
             )}
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div
-              style={{
-                fontFamily: "Inter, var(--font-sans)",
-                fontSize: 32,
-                fontWeight: 700,
-                color: "var(--color-navy)",
-                letterSpacing: "-0.02em",
-                lineHeight: 1,
-              }}
-            >
-              {c.finalScore}
+          {c.hasScore && (
+            <div style={{ textAlign: "right" }}>
+              <div
+                style={{
+                  fontFamily: "Inter, var(--font-sans)",
+                  fontSize: 32,
+                  fontWeight: 700,
+                  color: "var(--color-navy)",
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1,
+                }}
+              >
+                {c.finalScore}
+              </div>
+              <div
+                style={{
+                  fontFamily: "Inter, var(--font-sans)",
+                  fontSize: 11,
+                  color: "var(--color-text-3)",
+                  marginTop: 4,
+                  letterSpacing: "0.08em",
+                }}
+              >
+                FINAL
+              </div>
             </div>
-            <div
-              style={{
-                fontFamily: "Inter, var(--font-sans)",
-                fontSize: 11,
-                color: "var(--color-text-3)",
-                marginTop: 4,
-                letterSpacing: "0.08em",
-              }}
-            >
-              FINAL
-            </div>
-          </div>
+          )}
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 18,
-            marginTop: 16,
-            paddingTop: 14,
-            borderTop: "1px dashed var(--color-divider)",
-            fontFamily: "Inter, var(--font-sans)",
-            fontSize: 13,
-            color: "var(--color-text-2)",
-            flexWrap: "wrap",
-          }}
-        >
-          <span>
-            미학{" "}
-            <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-              {c.aesthetics}
-            </b>
-          </span>
-          <span>
-            조화{" "}
-            <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-              {c.harmony}
-            </b>
-          </span>
-          <span style={{ marginLeft: "auto" }}>
-            <RarityBar value={c.rarity} />
-          </span>
-        </div>
+        {c.hasDetailScores && (
+          <div
+            style={{
+              display: "flex",
+              gap: 18,
+              marginTop: 16,
+              paddingTop: 14,
+              borderTop: "1px dashed var(--color-divider)",
+              fontFamily: "Inter, var(--font-sans)",
+              fontSize: 13,
+              color: "var(--color-text-2)",
+              flexWrap: "wrap",
+            }}
+          >
+            <span>
+              미학{" "}
+              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
+                {c.aesthetics}
+              </b>
+            </span>
+            <span>
+              조화{" "}
+              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
+                {c.harmony}
+              </b>
+            </span>
+            {c.hasRarity && (
+              <span style={{ marginLeft: "auto" }}>
+                <RarityBar value={c.rarity} />
+              </span>
+            )}
+          </div>
+        )}
 
         {c.tags.length > 0 && (
           <div style={{ marginTop: 16 }}>
@@ -1156,7 +1309,7 @@ function CandidateCard({
         >
           #{index + 1}
         </span>
-        <RarityBar value={c.rarity} />
+        {c.hasRarity && <RarityBar value={c.rarity} />}
       </div>
 
       <div
@@ -1248,55 +1401,59 @@ function CandidateCard({
               </span>
             </p>
           )}
-          <div
-            style={{
-              display: "flex",
-              gap: 14,
-              marginTop: 10,
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 12,
-              color: "var(--color-text-2)",
-            }}
-          >
-            <span>
-              미학{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.aesthetics}
-              </b>
-            </span>
-            <span>
-              조화{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.harmony}
-              </b>
-            </span>
-          </div>
+          {c.hasDetailScores && (
+            <div
+              style={{
+                display: "flex",
+                gap: 14,
+                marginTop: 10,
+                fontFamily: "Inter, var(--font-sans)",
+                fontSize: 12,
+                color: "var(--color-text-2)",
+              }}
+            >
+              <span>
+                미학{" "}
+                <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
+                  {c.aesthetics}
+                </b>
+              </span>
+              <span>
+                조화{" "}
+                <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
+                  {c.harmony}
+                </b>
+              </span>
+            </div>
+          )}
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 36,
-              fontWeight: 700,
-              color: "var(--color-navy)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-            }}
-          >
-            {c.finalScore}
+        {c.hasScore && (
+          <div style={{ textAlign: "right" }}>
+            <div
+              style={{
+                fontFamily: "Inter, var(--font-sans)",
+                fontSize: 36,
+                fontWeight: 700,
+                color: "var(--color-navy)",
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+              }}
+            >
+              {c.finalScore}
+            </div>
+            <div
+              style={{
+                fontFamily: "Inter, var(--font-sans)",
+                fontSize: 10,
+                color: "var(--color-text-3)",
+                marginTop: 4,
+                letterSpacing: "0.08em",
+              }}
+            >
+              FINAL
+            </div>
           </div>
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 10,
-              color: "var(--color-text-3)",
-              marginTop: 4,
-              letterSpacing: "0.08em",
-            }}
-          >
-            FINAL
-          </div>
-        </div>
+        )}
       </div>
 
       {c.tags.length > 0 && (
@@ -1704,16 +1861,68 @@ export function SmartResultPage({
   onRegenerate,
   onSave,
   onCandidateDetail,
+  favoriteContext,
 }: {
   data: SmartRecommendationResponse;
   requestSummary: RequestSummary;
   initialTab?: string;
   editHref?: string;
   onRegenerate?: () => void;
+  /** 없으면 저장 버튼이 TopPick 이름을 즐겨찾기(/favorites)에 넣고 뺀다 */
   onSave?: () => void;
   onCandidateDetail?: (fullName: string) => void;
+  /**
+   * 즐겨찾기에 함께 남길 요청 맥락(API 값) — /favorites에서 /evaluate로 다시 열 때
+   * 같은 조건으로 평가되도록. 없으면 requestSummary.date만 출생일로 쓴다.
+   */
+  favoriteContext?: CandidateDetailContext;
 }) {
   const { topPick, categories } = mapResponse(data);
+
+  // ---- TopPick 즐겨찾기 (onSave를 안 넘긴 페이지의 기본 저장 동작) ----
+  const rawTop = data.topPick?.candidate ?? null;
+  const favBirthDate = favoriteContext?.birthDate ?? requestSummary.date;
+  const topSaved = useIsFavorite(rawTop?.fullName ?? "", favBirthDate);
+  function saveTopPick() {
+    if (!rawTop) return;
+    const ln = requestSummary.lastName;
+    // 점수는 미학·조화가 모두 있는 한자 이름일 때만 남긴다 — 다른 카테고리의 score는
+    // 창의성·발음 점수라 /favorites의 '종합' 표기와 뜻이 다르다
+    const scored = rawTop.aestheticScore != null && rawTop.harmonyScore != null;
+    toggleFavorite({
+      fullName: rawTop.fullName,
+      lastName: ln,
+      name: rawTop.fullName.startsWith(ln)
+        ? rawTop.fullName.slice(ln.length)
+        : rawTop.name,
+      birthDate: favBirthDate,
+      birthTime: favoriteContext?.birthTime,
+      gender: favoriteContext?.gender,
+      tone: favoriteContext?.tone,
+      finalScore:
+        scored && rawTop.score != null ? Math.round(rawTop.score) : undefined,
+      aestheticScore: scored ? rawTop.aestheticScore : undefined,
+      harmonyScore: scored ? rawTop.harmonyScore : undefined,
+    });
+    if (topSaved) toast.success(`${rawTop.fullName} 저장 해제`);
+    else
+      toast.success(`${rawTop.fullName} 저장됨`, {
+        description: "'저장한 이름'에서 다시 볼 수 있어요",
+        action: {
+          label: "보기",
+          onClick: () => window.location.assign("/favorites"),
+        },
+      });
+  }
+  const saveHandler = onSave ?? (rawTop ? saveTopPick : undefined);
+  // 라벨은 고정 — 상태는 aria-pressed와 하트(aria-hidden)로만 (SubHeader 참고)
+  const saveLabel = onSave
+    ? undefined
+    : rawTop
+      ? `${rawTop.fullName} 저장`
+      : undefined;
+  const saved = onSave ? undefined : topSaved;
+
   const initialTabType = initialTab ?? categories[0]?.type ?? "standard";
   const [tab, setTab] = useState(initialTabType);
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -1761,7 +1970,9 @@ export function SmartResultPage({
         <SubHeader
           summary={requestSummary}
           onRegenerate={onRegenerate}
-          onSave={onSave}
+          onSave={saveHandler}
+          saveLabel={saveLabel}
+          saved={saved}
         />
         <div
           style={{
@@ -1800,7 +2011,9 @@ export function SmartResultPage({
       <SubHeader
         summary={requestSummary}
         onRegenerate={onRegenerate}
-        onSave={onSave}
+        onSave={saveHandler}
+        saveLabel={saveLabel}
+        saved={saved}
       />
       {data.isRareSurname && (
         <RareSurnameBanner name={requestSummary.lastName} />

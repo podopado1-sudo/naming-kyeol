@@ -19,11 +19,15 @@ const SERVICE_LINKS: FooterLink[] = [
   { label: "쌍둥이 작명", href: "/twin" },
   { label: "한·영 이중 이름", href: "/dual-name" },
   { label: "희귀 성씨", href: "/rare-surname" },
+  // 상호 작명 — 헤더·푸터 어디에도 링크가 없어 /guide 한 곳에서만 닿던 것(2026-10-21)
+  { label: "회사·가게 이름", href: "/company" },
 ];
 
 const GUIDE_LINKS: FooterLink[] = [
   // 헤더 nav와 동일 라벨 — 일관성 유지
   { label: "작명 가이드", href: "/guide" },
+  // 출생신고 통계 리포트 5편 — /guide 안의 목록으로 바로 (2026-10-21)
+  { label: "데이터 리포트", href: "/guide#reports" },
   { label: "작명 원리", href: "/method" },
   { label: "인명용 한자 사전", href: "/hanja" },
   { label: "이름 뜻 사전", href: "/name" },
@@ -193,7 +197,10 @@ export function Footer() {
         }}
       >
         <div>© 2026 이름의 결 · Naming.kyeol</div>
-        <div>개인정보처리방침 · 이용약관</div>
+        {/* 이용약관 페이지는 없다 — 링크 없는 글자로 두지 않는다(2026-10-21) */}
+        <Link href="/privacy" style={{ color: "inherit", textDecoration: "none" }}>
+          개인정보처리방침
+        </Link>
       </div>
     </footer>
   );

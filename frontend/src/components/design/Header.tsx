@@ -15,6 +15,8 @@ import { Mark } from "./Mark";
 import { Heart, Menu, X } from "lucide-react";
 
 type NavKey = "home" | "search" | "guide" | "method";
+/** 메뉴에 없는 화면(/company 등)은 "none" — 어떤 메뉴도 켜지 않는다 (메뉴 항목은 늘리지 않음) */
+type CurrentKey = NavKey | "none";
 
 const NAV_ITEMS: { key: NavKey; label: string; href: string }[] = [
   { key: "home", label: "홈", href: "/" },
@@ -27,7 +29,7 @@ export function Header({
   current = "home",
   onNav,
 }: {
-  current?: NavKey;
+  current?: CurrentKey;
   onNav?: (key: NavKey) => void;
 }) {
   const [scrolled, setScrolled] = useState(false);

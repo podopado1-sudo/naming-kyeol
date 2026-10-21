@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { HanjaGradeBadge } from "@/components/hanja/HanjaBadges";
 import { ScoreBreakdownCard } from "@/components/results/ScoreBreakdownCard";
 import { ELEMENT_KO, getHanja, getReadingChars } from "@/lib/hanja-seo";
+import { getInsight, type Insight } from "@/lib/insights";
+import { hasBatchim, josa, withJosa } from "@/lib/josa";
+import { OG_SITE } from "@/lib/og";
 import {
   glossForReading,
   genderSplit,
@@ -24,7 +27,8 @@ import {
  * /name/[이름] — 이름 뜻 SEO 페이지.
  *
  * 대법원 출생신고 빈도(인기 순위·성별 비율) + 자연어 뜻을 보여주고
- * 음절별로 /hanja/[독음], 비슷한 이름으로 /name/[이름] 내부링크를 건다.
+ * 음절별로 /hanja/[독음], 비슷한 이름으로 /name/[이름], 관련 데이터 리포트로 /guide/[slug]
+ * 내부링크를 건다.
  * 전부 빌드 타임 정적 생성 — 백엔드 호출 없음.
  */
 
@@ -65,7 +69,7 @@ export async function generateMetadata({
   if (!rec) return {};
 
   const { gender } = genderSplit(rec);
-  const meanPart = rec.mean ? ` ${name}은(는) '${rec.mean}' 뜻을 담습니다.` : "";
+  const meanPart = rec.mean ? ` ${withJosa(name, "은/는")} '${rec.mean}' 뜻을 담습니다.` : "";
   const scorePart = rec.sc ? ` 발음·미학 점수 ${rec.sc.t}점.` : "";
   const title = `${name} 이름 뜻 — 인기 순위·한자·의미`;
   const description = `${name}: ${GENDER_LABEL[gender]}.${meanPart} 출생신고 통계 기준 인기 순위와 남녀 비율, 이름에 쓰는 한자를 확인하세요.${scorePart}`;
@@ -74,7 +78,8 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    openGraph: { title, description, url: `${SITE_URL}${canonical}` },
+    // OG_SITE만 펼친다(images 키 없음) — 세그먼트 opengraph-image.tsx가 이름별 카드를 주입하게.
+    openGraph: { ...OG_SITE, title, description, url: `${SITE_URL}${canonical}` },
     // 루트 layout의 twitter(공용 카드 title/images)를 통째로 대체(shallow merge) —
     // images는 비워 세그먼트 twitter-image.tsx가 이름별 카드를 주입하게 한다.
     twitter: { card: "summary_large_image", title, description },
@@ -92,8 +97,9 @@ function Breadcrumb({ name }: { name: string }) {
         홈
       </Link>
       <span className="mx-2 text-paper-line">/</span>
-      <Link href="/search" className="text-teal-700 no-underline hover:underline">
-        이름 찾기
+      {/* 부모는 도구(/search)가 아니라 사전 인덱스 — JSON-LD BreadcrumbList와 같게 (2026-10-21) */}
+      <Link href="/name" className="text-teal-700 no-underline hover:underline">
+        이름 뜻 사전
       </Link>
       <span className="mx-2 text-paper-line">/</span>
       <span className="text-navy">{name}</span>
@@ -207,6 +213,74 @@ function ComboCard({
 }
 
 // ---------------------------------------------------------------
+// 관련 데이터 리포트 (content/insights → /guide/[slug])
+// ---------------------------------------------------------------
+
+const BATCHIM_LABEL = (has: boolean | null) => (has ? "받침 있음" : "받침 없음");
+
+/** 중성 이름 리포트(unisex-names.md)의 최소 출생신고 건수 — 리포트 본문 정의와 맞춘다 */
+const UNISEX_REPORT_MIN_TOTAL = 300;
+
+/**
+ * 이 이름과 이어지는 리포트 — 이름 페이지에서 리포트로 가는 링크가 0이던 것(2026-10-21 감사 AS-8).
+ * 순위표에 실린 이름은 그 순위표로, 남아 비율 35~65%·출생신고 300건 이상은 중성 이름 리포트로,
+ * 음절 지도·받침 패턴은 모든 이름에 건다. 파일이 없는 리포트는 조용히 빠진다.
+ */
+function relatedInsights(
+  name: string,
+  rec: NameSeoRecord,
+): { insight: Insight; reason: string }[] {
+  const picks: { slug: string; reason: string }[] = [];
+  // 두 순위표는 남아·여아 내 순위(rm·rf) 상위 50과 같은 집합·같은 순위다(2026-10-21 대조)
+  if (rec.rm && rec.rm <= 50) {
+    picks.push({
+      slug: "boy-names-top50",
+      reason: `${withJosa(name, "은/는")} 남자 이름 ${rec.rm}위입니다. 상위 50개 이름과 그 흐름을 정리했습니다.`,
+    });
+  }
+  if (rec.rf && rec.rf <= 50) {
+    picks.push({
+      slug: "girl-names-top50",
+      reason: `${withJosa(name, "은/는")} 여자 이름 ${rec.rf}위입니다. 상위 50개 이름과 그 흐름을 정리했습니다.`,
+    });
+  }
+  // 리포트(unisex-names.md) 정의와 같은 조건: 반올림 전 남아 비율 35~65% + 출생신고 300건 이상.
+  // 페이지 성별 배지는 genderSplit(한쪽 60% 이상) 기준이라 두 기준이 갈리는 이름(지원 39%=여자 이름)이
+  // 있다 — 그런 이름은 문구에서 두 기준을 함께 밝힌다(2026-10-21 FSC-3).
+  const maleRatio = rec.m / Math.max(rec.t, 1);
+  if (maleRatio >= 0.35 && maleRatio <= 0.65 && rec.t >= UNISEX_REPORT_MIN_TOTAL) {
+    const { malePct, femalePct, gender } = genderSplit(rec);
+    const basis = "남아 35~65%·출생신고 300건 이상을 중성 이름으로 본 리포트 기준";
+    picks.push({
+      slug: "unisex-names",
+      reason:
+        gender === "male"
+          ? `${withJosa(name, "은/는")} 남아 비율 ${malePct}%라 이 페이지에서는 남자 이름으로 표시하지만, ${basis}에는 해당합니다.`
+          : gender === "female"
+            ? `${withJosa(name, "은/는")} 여아 비율 ${femalePct}%라 이 페이지에서는 여자 이름으로 표시하지만, ${basis}에는 해당합니다.`
+            : `${withJosa(name, "은/는")} 남아 비율 ${malePct}%로, ${basis}에 해당합니다.`,
+    });
+  }
+  const syl = syllablesOf(name);
+  picks.push({
+    slug: "syllable-map",
+    reason: `첫 음절 ‘${syl[0]}’, 끝 음절 ‘${syl[syl.length - 1]}’ — 이름에 많이 쓰이는 첫 음절·끝 음절 순위를 정리했습니다.`,
+  });
+  picks.push({
+    slug: "batchim-pattern",
+    // 리포트는 두 음절 이름만 집계했다 — 세 음절 이름엔 꼴을 말하지 않는다
+    reason:
+      syl.length === 2
+        ? `${withJosa(name, "은/는")} ‘${BATCHIM_LABEL(hasBatchim(syl[0]))} + ${BATCHIM_LABEL(hasBatchim(syl[1]))}’ 꼴입니다. 받침 꼴에 따라 남녀 비율이 어떻게 갈리는지 다룹니다.`
+        : "받침 꼴에 따라 두 음절 이름의 남녀 비율이 어떻게 갈리는지 다룹니다.",
+  });
+  return picks.flatMap(({ slug, reason }) => {
+    const insight = getInsight(slug);
+    return insight ? [{ insight, reason }] : [];
+  });
+}
+
+// ---------------------------------------------------------------
 // 페이지
 // ---------------------------------------------------------------
 
@@ -215,6 +289,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
   const genderRank = gender === "male" ? rec.rm : gender === "female" ? rec.rf : undefined;
   const syllables = syllablesOf(name);
   const siblings = getSiblingNames(name, 12);
+  const related = relatedInsights(name, rec);
 
   // 음절별 /hanja/[독음] 링크 (해당 음절이 한자 독음으로 존재할 때만)
   const syllableLinks = syllables.map((syl) => ({
@@ -284,7 +359,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
           </div>
           <GenderBar rec={rec} />
           <p className="mt-4 text-sm leading-relaxed text-text-2">
-            {name}은(는) 대법원 출생신고 통계에서{" "}
+            {withJosa(name, "은/는")} 대법원 출생신고 통계에서{" "}
             {gender === "neutral" ? (
               <>남자 {malePct}% · 여자 {femalePct}%로 고르게 쓰이는 남녀 공용 이름</>
             ) : (
@@ -407,7 +482,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
         {siblings.length > 0 && (
           <section>
             <h2 className="mb-4 text-base font-semibold text-navy">
-              &lsquo;{name[0]}&rsquo;(으)로 시작하는 다른 이름
+              &lsquo;{name[0]}&rsquo;{josa(name[0], "으로/로")} 시작하는 다른 이름
             </h2>
             <div className="flex flex-wrap gap-2">
               {siblings.map((sib) => (
@@ -422,6 +497,32 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
             </div>
           </section>
         )}
+
+        {/* 관련 데이터 리포트 */}
+        {related.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-4 text-base font-semibold text-navy">
+              관련 데이터 리포트
+            </h2>
+            <ul className="grid gap-3">
+              {related.map(({ insight, reason }) => (
+                <li key={insight.slug}>
+                  <Link
+                    href={`/guide/${insight.slug}`}
+                    className="block rounded-xl border border-paper-line bg-paper-card px-4 py-3 no-underline transition hover:border-teal"
+                  >
+                    <span className="block text-sm font-semibold text-navy">
+                      {insight.title}
+                    </span>
+                    <span className="mt-1 block text-xs leading-relaxed text-text-2">
+                      {reason}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
       <Footer />
       <JsonLd
@@ -434,8 +535,8 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
               {
                 "@type": "ListItem",
                 position: 2,
-                name: "이름 찾기",
-                item: `${SITE_URL}/search`,
+                name: "이름 뜻 사전",
+                item: `${SITE_URL}/name`,
               },
               {
                 "@type": "ListItem",
@@ -452,8 +553,8 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
             ...(rec.mean ? { description: `${rec.mean} 이름` } : {}),
             inDefinedTermSet: {
               "@type": "DefinedTermSet",
-              name: "이름의 결 이름 사전",
-              url: `${SITE_URL}/search`,
+              name: "이름의 결 이름 뜻 사전",
+              url: `${SITE_URL}/name`,
             },
             url: `${SITE_URL}/name/${encodeURIComponent(name)}`,
           },

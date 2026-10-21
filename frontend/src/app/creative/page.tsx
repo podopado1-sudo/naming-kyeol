@@ -152,6 +152,9 @@ export default function CreativePage() {
         editHref="/creative"
         onRegenerate={handleReset}
         onCandidateDetail={(fn) => navDetail(lastName, fn, { gender, tone })}
+        // 저장(TopPick)에도 성별·톤을 남긴다 — 없으면 /favorites가 옛 저장분으로 보고
+        // 선우리를 선우+리로 다시 나누고, 다시 보기가 성별·톤 없이 평가된다 (2026-10-21)
+        favoriteContext={{ gender, tone }}
       />
     );
   }

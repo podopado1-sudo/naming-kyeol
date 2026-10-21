@@ -316,9 +316,12 @@ function SubHeaderRare({
         <button type="button" onClick={onRegenerate} style={btnGhostR}>
           ↻ 새로 생성
         </button>
-        <button type="button" onClick={onSave} style={btnGhostR}>
-          ♡ 이 결과 저장
-        </button>
+        {/* onSave가 없으면 숨김 — 눌러도 아무 일 없는 버튼을 두지 않는다 */}
+        {onSave && (
+          <button type="button" onClick={onSave} style={btnGhostR}>
+            ♡ 이 결과 저장
+          </button>
+        )}
       </div>
     </div>
   );

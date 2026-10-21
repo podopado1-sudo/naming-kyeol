@@ -1,10 +1,14 @@
 /**
- * ProPaths — 특수 작명 경로 5개 카드 (평가/쌍둥이/부모/희귀성씨/이중이름)
+ * ProPaths — 특수 작명 경로 6개 카드 (평가/쌍둥이/부모/희귀성씨/이중이름/필수 글자)
  * Source: NameForm_design/src/ProPaths.jsx (Claude Design 산출물)
+ *
+ * 2026-10-21: <a href="#"> + onClick→router.push를 실제 href의 next/link로 — 크롤러가
+ * 도구 페이지로 가는 링크를 하나도 못 읽던 것(감사 DD-1).
  */
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export type ProPathKey =
   | "evaluate"
@@ -16,6 +20,7 @@ export type ProPathKey =
 
 interface ProPathCard {
   key: ProPathKey;
+  href: string;
   eyebrow: string;
   title: string;
   copy: string;
@@ -25,6 +30,7 @@ interface ProPathCard {
 const CARDS: ProPathCard[] = [
   {
     key: "evaluate",
+    href: "/evaluate",
     eyebrow: "정해둔 이름이 있다면",
     title: "이름 평가 리포트",
     copy: "점수와 상세 리포트를 받아보세요 — 미학·조화·유니크 지수.",
@@ -32,6 +38,7 @@ const CARDS: ProPathCard[] = [
   },
   {
     key: "twin",
+    href: "/twin",
     eyebrow: "둘 이상을 함께 부를 때",
     title: "쌍둥이 작명",
     copy: "조화로우면서 각자 독립된 정체성을 갖는 이름 세트.",
@@ -39,6 +46,7 @@ const CARDS: ProPathCard[] = [
   },
   {
     key: "parent",
+    href: "/parent-based",
     eyebrow: "가족의 이야기를 잇는",
     title: "부모 이름 기반",
     copy: "부모님의 이름에서 영감을 받아 서사를 이어갑니다.",
@@ -46,6 +54,7 @@ const CARDS: ProPathCard[] = [
   },
   {
     key: "rare",
+    href: "/rare-surname",
     eyebrow: "선우·남궁·황보를 위한",
     title: "희귀 성씨 특화",
     copy: "2음절 복성(複姓)과 희귀 성씨에 맞춘 전문 작명.",
@@ -53,6 +62,7 @@ const CARDS: ProPathCard[] = [
   },
   {
     key: "dual",
+    href: "/dual-name",
     eyebrow: "국제적 소통까지",
     title: "한영 이중 이름",
     copy: "한국 이름과 영어 이름이 자연스럽게 연결되는 세트.",
@@ -60,6 +70,7 @@ const CARDS: ProPathCard[] = [
   },
   {
     key: "required",
+    href: "/required-char",
     eyebrow: "꼭 넣고 싶은 글자가 있다면",
     title: "필수 글자 포함",
     copy: "돌림자(항렬자)나 특정 글자를 포함한 이름만 골라드립니다.",
@@ -67,11 +78,7 @@ const CARDS: ProPathCard[] = [
   },
 ];
 
-export function ProPaths({
-  onSelect,
-}: {
-  onSelect?: (key: ProPathKey) => void;
-}) {
+export function ProPaths() {
   const [hover, setHover] = useState<ProPathKey | null>(null);
 
   return (
@@ -109,13 +116,9 @@ export function ProPaths({
         {CARDS.map((c) => {
           const isHover = hover === c.key;
           return (
-            <a
+            <Link
               key={c.key}
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                onSelect?.(c.key);
-              }}
+              href={c.href}
               onMouseEnter={() => setHover(c.key)}
               onMouseLeave={() => setHover(null)}
               style={{
@@ -190,7 +193,7 @@ export function ProPaths({
                   →
                 </span>
               </div>
-            </a>
+            </Link>
           );
         })}
       </div>

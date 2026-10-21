@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -34,6 +35,7 @@ import {
 } from "@/components/design/SmartResult";
 import { cn } from "@/lib/utils";
 import { smart } from "@/lib/api";
+import { ENGLISH_NAME_MAX, englishNameProblem } from "@/lib/english-name";
 import type {
   SmartRecommendationRequest,
   SmartRecommendationResponse,
@@ -46,7 +48,12 @@ const HERO_SUBLINES = [
   "결이 고운 이름은 시간이 흐를수록 그 가치를 증명합니다.",
 ];
 
-function BabyNamingInner() {
+function BabyNamingInner({
+  onResultChange,
+}: {
+  /** 결과 화면으로 바뀌는지 — 바깥의 헤더·제목·소개·푸터를 숨기는 데 쓴다 */
+  onResultChange: (showingResult: boolean) => void;
+}) {
   const searchParams = useSearchParams();
 
   function handleCandidateDetail(fullName: string) {
@@ -66,21 +73,6 @@ function BabyNamingInner() {
     // 직전 평가 이름이 표시되던 버그) searchParams가 갱신되지 않는 문제를 우회.
     window.location.assign(`/evaluate?${params.toString()}`);
   }
-
-  // ---- hero subline rotation ----
-  const [subIndex, setSubIndex] = useState(0);
-  const [subVisible, setSubVisible] = useState(true);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSubVisible(false);
-      setTimeout(() => {
-        setSubIndex((i) => (i + 1) % HERO_SUBLINES.length);
-        setSubVisible(true);
-      }, 500);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
 
   // ---- form state (Hero에서 query로 들어오면 초기값 사용) ----
   const initialGender = (() => {
@@ -126,6 +118,7 @@ function BabyNamingInner() {
   const [fatherName, setFatherName] = useState(queryParentName);
   const [motherName, setMotherName] = useState("");
   const [englishName, setEnglishName] = useState(queryEnglishName);
+  const englishNameIssue = englishNameProblem(englishName);
   const [requiredChar, setRequiredChar] = useState("");
   const [requiredCharPosition, setRequiredCharPosition] = useState("any");
   // 항렬자 한자 (선택) — 형제자매 공유 한자
@@ -137,8 +130,14 @@ function BabyNamingInner() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SmartRecommendationResponse | null>(null);
 
+  // 결과 상태와 바깥 화면 전환을 한 번에 바꾼다 (같은 렌더에 묶여 깜빡임 없음)
+  function showResult(next: SmartRecommendationResponse | null) {
+    setResult(next);
+    onResultChange(next !== null);
+  }
+
   function handleReset() {
-    setResult(null);
+    showResult(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -155,6 +154,16 @@ function BabyNamingInner() {
       return;
     }
 
+    if (includeDualName && englishNameIssue) {
+      toast.error(englishNameIssue);
+      document.getElementById("englishName")?.focus();
+      return;
+    }
+
+    // 필드명은 백엔드 SmartRecommendationRequestDto 그대로 — 없는 필드는 조용히 무시된다
+    // (includeTwin·englishName으로 보내 쌍둥이·영어 겸용 토글이 아무 효과 없던 전력).
+    // 부모 이름·영어 이름·필수 글자는 켜기 플래그가 없고 값이 있으면 카테고리가 붙으므로
+    // 토글이 꺼져 있으면 값을 보내지 않는 것으로 끈다.
     const req: SmartRecommendationRequest = {
       lastName: lastName.trim(),
       // 백엔드가 소문자로 비교하므로 그대로 전달 (대문자로 변환 시 gender/tone 보너스 누락)
@@ -166,13 +175,11 @@ function BabyNamingInner() {
       includePureKorean,
       includeThreeSyllable,
       includeCreative,
-      includeTwin,
-      includeParentBased,
-      includeDualName,
-      includeRequiredChar,
+      isTwin: includeTwin,
       fatherName: includeParentBased && fatherName ? fatherName : undefined,
       motherName: includeParentBased && motherName ? motherName : undefined,
-      englishName: includeDualName && englishName ? englishName : undefined,
+      preferredEnglishName:
+        includeDualName && englishName.trim() ? englishName.trim() : undefined,
       requiredChar:
         includeRequiredChar && requiredChar ? requiredChar : undefined,
       requiredCharPosition:
@@ -191,11 +198,11 @@ function BabyNamingInner() {
     };
 
     setLoading(true);
-    setResult(null);
+    showResult(null);
 
     try {
       const data = await smart(req);
-      setResult(data);
+      showResult(data);
       if (data.categories.length === 0) {
         toast.info("조건에 맞는 이름을 찾지 못했습니다.");
       }
@@ -258,38 +265,13 @@ function BabyNamingInner() {
         editHref="/search"
         onRegenerate={handleReset}
         onCandidateDetail={handleCandidateDetail}
+        favoriteContext={{ birthDate, birthTime, gender, tone }}
       />
     );
   }
 
   return (
-    <>
-      <Header current="search" />
-      <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      {/* Hero */}
-      <header className="mb-12 space-y-4 text-center">
-        <p className="eyebrow">NAMING · 이름 찾기</p>
-        <h1
-          className="text-3xl md:text-4xl font-bold leading-snug tracking-tight"
-          style={{
-            fontFamily: "var(--font-serif)",
-            color: "var(--color-text)",
-          }}
-        >
-          당신이라는 고유한 흐름이
-          <br />
-          아름다운 문장이 되도록.
-        </h1>
-        <p
-          className={cn(
-            "mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground transition-opacity duration-500",
-            subVisible ? "opacity-100" : "opacity-0"
-          )}
-        >
-          {HERO_SUBLINES[subIndex]}
-        </p>
-      </header>
-
+    <div className="mx-auto w-full max-w-2xl px-4">
       {/* 용신 적용 중 배너 */}
       {preferredElement && (
         <div className="mb-6 flex items-center gap-3 rounded-lg border border-teal/30 bg-teal-50 px-4 py-3 text-sm text-teal-700">
@@ -469,7 +451,27 @@ function BabyNamingInner() {
                       placeholder="예: Daniel"
                       value={englishName}
                       onChange={(e) => setEnglishName(e.target.value)}
+                      maxLength={ENGLISH_NAME_MAX}
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-invalid={englishNameIssue ? true : undefined}
+                      aria-describedby={
+                        englishNameIssue ? "englishName-error" : undefined
+                      }
+                      className={cn(
+                        englishNameIssue &&
+                          "border-destructive focus-visible:ring-destructive"
+                      )}
                     />
+                    {englishNameIssue && (
+                      <p
+                        id="englishName-error"
+                        className="text-xs text-destructive"
+                        role="alert"
+                      >
+                        {englishNameIssue}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -572,18 +574,117 @@ function BabyNamingInner() {
           )}
         </div>
       </form>
+    </div>
+  );
+}
 
+/** 폼이 클라이언트에서 그려지기 전 자리 — 아래 소개·푸터가 밀려 내려오지 않게 높이만 잡는다 */
+function FormFallback() {
+  return <div aria-hidden className="mx-auto min-h-[27rem] w-full max-w-2xl px-4" />;
+}
+
+/** 정적 HTML에 그대로 나가는 도구 소개 — 무엇을 어떻게 보는지 (과장·단정 금지) */
+function SearchIntro() {
+  return (
+    <section
+      aria-labelledby="search-intro"
+      className="mx-auto w-full max-w-2xl px-4 pb-8"
+    >
+      <div className="mt-12 space-y-3 border-t pt-8 text-sm leading-relaxed text-muted-foreground">
+        <h2 id="search-intro" className="text-base font-semibold text-foreground">
+          이름 추천은 이렇게 골라요
+        </h2>
+        <p>
+          성씨와 생년월일을 넣으면 한자 이름·순우리말·3글자·창의적 작명 후보를
+          탭으로 나눠 한 번에 보여드려요. 한자 이름은 성씨와 이어 부를 때의 발음과
+          리듬, 어느 세대에도 어색하지 않은지, 한자의 뜻을 보는 미학 점수로 먼저
+          고르고, 출생 정보로 계산한 오행 조화 점수는 보조로 더해요(종합 = 미학
+          70% + 조화 30%).
+        </p>
+        <p>
+          사주는 이름을 만드는 출발점이 아니라, 미학으로 고른 후보의 순서와 한자
+          선택을 보정하는 보조 기준이에요. 추가 옵션에서 부모 이름, 영어 이름, 쌍둥이, 항렬자, 담고 싶은 뜻을
+          지정할 수 있어요.
+        </p>
+        <p>
+          점수는 후보를 비교하기 위한 참고값이에요. 마음에 드는 이름은 소리 내어
+          불러 보고{" "}
+          <Link href="/evaluate" className="text-foreground underline underline-offset-4">
+            이름 평가
+          </Link>
+          에서 근거를 확인해 보세요. 점수 계산 방식은{" "}
+          <Link href="/method" className="text-foreground underline underline-offset-4">
+            작명 원리
+          </Link>
+          에 정리해 두었어요.
+        </p>
       </div>
-      <Footer />
-    </>
+    </section>
   );
 }
 
 export default function BabyNamingPage() {
+  const [showingResult, setShowingResult] = useState(false);
+
+  // ---- hero subline rotation ----
+  const [subIndex, setSubIndex] = useState(0);
+  const [subVisible, setSubVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSubVisible(false);
+      setTimeout(() => {
+        setSubIndex((i) => (i + 1) % HERO_SUBLINES.length);
+        setSubVisible(true);
+      }, 500);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
-    <Suspense fallback={<div className="mx-auto w-full max-w-2xl px-4 py-8 text-muted-foreground">로딩 중...</div>}>
-      <BabyNamingInner />
-    </Suspense>
+    <>
+      {!showingResult && (
+        <>
+          <Header current="search" />
+          <div className="mx-auto w-full max-w-2xl px-4 pt-8">
+            {/* Hero */}
+            <header className="mb-12 space-y-4 text-center">
+              <p className="eyebrow">NAMING · 이름 찾기</p>
+              <h1
+                className="text-3xl md:text-4xl font-bold leading-snug tracking-tight"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--color-text)",
+                }}
+              >
+                당신이라는 고유한 흐름이
+                <br />
+                아름다운 문장이 되도록.
+              </h1>
+              <p
+                className={cn(
+                  "mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground transition-opacity duration-500",
+                  subVisible ? "opacity-100" : "opacity-0"
+                )}
+              >
+                {HERO_SUBLINES[subIndex]}
+              </p>
+            </header>
+          </div>
+        </>
+      )}
+      {/* useSearchParams는 정적 렌더링 시 Suspense 경계가 필요 — 폼만 감싸서
+          헤더·제목·소개·푸터는 정적 HTML에 그대로 나가게 한다 */}
+      <Suspense fallback={<FormFallback />}>
+        <BabyNamingInner onResultChange={setShowingResult} />
+      </Suspense>
+      {!showingResult && (
+        <>
+          <SearchIntro />
+          <Footer />
+        </>
+      )}
+    </>
   );
 }
 

@@ -166,9 +166,6 @@ export default function TwinPage() {
         context={ctx}
         themes={themes}
         onRegenerate={handleReset}
-        onSave={() => {
-          /* TODO: 저장 백엔드 연결 */
-        }}
       />
     );
   }

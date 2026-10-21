@@ -1,11 +1,15 @@
 /**
- * EvaluateInput — 이름 평가 입력 페이지
+ * EvaluateInput — 이름 평가 입력 페이지 조각 (소개 · 입력 폼 · 점수 설명)
  * Source: NameForm_design/src/EvaluateInput.jsx (Claude Design 산출물)
  *
  * 변환 사항:
  *   - React.useState → 명시적 import
  *   - injectStyles IIFE → useEffect (SSR 안전)
  *   - onSubmit prop 추가 (외부에서 평가 요청 트리거)
+ *   - 2026-10-21: 자체 미니 헤더·푸터를 걷고 사이트 Header/Footer를 쓴다. 소개(h1)·점수 설명이
+ *     정적 HTML에 실리도록 EvaluateIntro / EvaluateAbout으로 분리 — 예전에는 페이지 전체가
+ *     useSearchParams Suspense 안이라 크롤러에게 '로딩 중...'만 보였다(감사 AS-3·DD-3).
+ *     미니 푸터의 죽은 링크(href="#" 소개·문의)는 사이트 Footer의 /about·/contact로 대체(UX-3).
  */
 "use client";
 
@@ -23,7 +27,8 @@ export type EvalSubmitPayload = {
   tone: "부드러운" | "중립" | "강한" | "";
 };
 
-interface InitialSeed {
+/** 폼 초기값 — 비어 있는 성별·톤("")은 미선택으로 시작한다 */
+export interface InitialSeed {
   lastName?: string;
   firstName?: string;
   birth?: string;
@@ -32,12 +37,193 @@ interface InitialSeed {
   tone?: EvalSubmitPayload["tone"];
 }
 
+// ============================================================
+// EvaluateIntro — eyebrow + h1 + 안내 (정적, 입력 화면 맨 위)
+// ============================================================
+export function EvaluateIntro() {
+  return (
+    <div style={{ marginBottom: 32, textAlign: "center" }}>
+      <div className="eyebrow" style={{ marginBottom: 16 }}>
+        Evaluate
+      </div>
+      <h1
+        style={{
+          fontFamily: "var(--font-serif)",
+          fontSize: 34,
+          fontWeight: 700,
+          margin: "0 0 14px",
+          letterSpacing: "-0.018em",
+          lineHeight: 1.3,
+          color: "var(--color-text)",
+        }}
+      >
+        마음에 둔 이름,
+        <br />
+        어떤 결인지 알려드릴게요
+      </h1>
+      <p
+        style={{
+          fontSize: 15,
+          color: "var(--color-text-2)",
+          margin: 0,
+          lineHeight: 1.65,
+        }}
+      >
+        이름과 출생 정보를 입력하시면 미학·조화·희귀도를 분석합니다
+      </p>
+
+      <aside
+        style={{
+          marginTop: 24,
+          background: "var(--color-background)",
+          borderLeft: "3px solid var(--color-teal)",
+          borderRadius: "0 var(--radius-md) var(--radius-md) 0",
+          padding: "16px 20px",
+          border: "1px solid var(--color-divider)",
+          borderLeftWidth: 3,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 10,
+          }}
+        >
+          <span
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 999,
+              background: "var(--color-teal)",
+              color: "#fff",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              fontWeight: 700,
+            }}
+          >
+            i
+          </span>
+          <span
+            style={{
+              fontWeight: 600,
+              fontSize: 14,
+              color: "var(--color-text)",
+            }}
+          >
+            평가는 추천과 다른 관점이에요
+          </span>
+        </div>
+        <ul
+          style={{
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+            display: "grid",
+            gap: 4,
+            fontSize: 13.5,
+            color: "var(--color-text-2)",
+            lineHeight: 1.6,
+          }}
+        >
+          <li>
+            <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
+              추천
+            </b>{" "}
+            · 후보를 새로 생성
+          </li>
+          <li>
+            <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
+              평가
+            </b>{" "}
+            · 정해진 이름을 분석
+          </li>
+          <li>두 결과는 서로를 보완해요</li>
+        </ul>
+      </aside>
+    </div>
+  );
+}
+
+// ============================================================
+// EvaluateAbout — 점수 산식 설명 (정적, 입력 화면 맨 아래)
+// 숫자는 AestheticEngine(30/25/15/15/10)·HarmonyEngine(30/20/10/25/15)·ScoringService(7:3)와 같아야 한다
+// ============================================================
+export function EvaluateAbout() {
+  const linkStyle: CSSProperties = {
+    color: "var(--color-teal)",
+    fontWeight: 500,
+    textDecoration: "none",
+  };
+  return (
+    <section
+      style={{
+        marginTop: 8,
+        padding: "28px 28px 8px",
+        borderTop: "1px solid #F0EAE0",
+        maxWidth: 560,
+        marginLeft: "auto",
+        marginRight: "auto",
+      }}
+    >
+      <h2
+        style={{
+          margin: "0 0 14px",
+          fontSize: 14,
+          fontWeight: 600,
+          color: "var(--color-text)",
+          letterSpacing: "-0.01em",
+        }}
+      >
+        점수는 이렇게 매겨요
+      </h2>
+      <p style={aboutParagraphStyle}>
+        미학 점수(100점)는 발음 30·리듬 25·음절 15·세대 중립 15·의미 10점으로,
+        소리 내어 부르기 좋은지와 특정 시대에 묶이지 않는지를 봅니다. 출생일을
+        넣으면 조화 점수(100점)도 함께 계산해요. 사주 오행 30·자원오행 20·음양
+        10·발음오행 25·전통 81수리 15점이며, 81수리는 한자 획수로 보는 옛
+        기준이라 길흉 표기는 참고로만 보여 드려요.
+      </p>
+      <p style={aboutParagraphStyle}>
+        종합 점수는 미학 70%와 조화 30%를 더한 값이고, 출생일이 없으면 미학
+        점수가 곧 종합 점수가 됩니다. 유니크 지수는 흔히 쓰는 이름인지를 따로
+        보여 주는 지표라 종합 점수에 들어가지 않아요. 계산 방식은{" "}
+        <Link href="/method" style={linkStyle}>
+          작명 원리
+        </Link>
+        에서, 이름을 고르는 기준은{" "}
+        <Link href="/guide" style={linkStyle}>
+          작명 가이드
+        </Link>
+        에서 더 자세히 볼 수 있어요.
+      </p>
+    </section>
+  );
+}
+
+const aboutParagraphStyle: CSSProperties = {
+  margin: "0 0 12px",
+  fontSize: 13.5,
+  lineHeight: 1.75,
+  color: "var(--color-text-2)",
+  wordBreak: "keep-all",
+};
+
+// ============================================================
+// EvaluateInputPage — 입력 폼 (성·이름·출생일·성별·톤)
+// ============================================================
 export function EvaluateInputPage({
   seed,
   onSubmit,
+  loading = false,
 }: {
   seed?: InitialSeed;
   onSubmit?: (payload: EvalSubmitPayload) => void;
+  /** 평가 요청 중 — 버튼을 잠가 중복 요청(사용량·분당 20회 리미터 소모)을 막는다 (감사 UX-1) */
+  loading?: boolean;
 }) {
   const [lastName, setLastName] = useState(seed?.lastName ?? "");
   const [firstName, setFirstName] = useState(seed?.firstName ?? "");
@@ -75,495 +261,311 @@ export function EvaluateInputPage({
     lastValid && firstValid && lastName.trim() !== "" && firstName.trim() !== "";
 
   function handleSubmit() {
-    if (!canSubmit) return;
+    if (!canSubmit || loading) return;
     onSubmit?.({ lastName, firstName, birth, birthTime, gender, tone });
   }
 
+  const buttonReady = canSubmit && !loading;
+
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-background)" }}>
-      {/* Mini header */}
-      <header
+    <>
+      {/* Form card — 수묵화 톤: 직선 + 모서리 ㄱㄴ + sumi-form (underline 입력) */}
+      <div
+        className="sumi-card sumi-form"
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 30,
-          background: "rgba(250, 247, 242, 0.92)",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
-          borderBottom: "1px solid var(--color-divider)",
-          padding: "12px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          maxWidth: 560,
+          margin: "0 auto",
+          padding: 0,
         }}
       >
-        <Link
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            textDecoration: "none",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "var(--font-serif)",
-              fontSize: 20,
-              fontWeight: 700,
-              color: "var(--color-text)",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            이름의 결
-          </span>
-          <span
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 11,
-              color: "var(--color-text-3)",
-              letterSpacing: "0.08em",
-            }}
-          >
-            NAMING.KYEOL
-          </span>
-        </Link>
-        <Link
-          href="/"
-          style={{
-            fontSize: 13,
-            color: "var(--color-text-2)",
-            textDecoration: "none",
-          }}
-        >
-          ← 홈으로
-        </Link>
-      </header>
-
-      <main
-        style={{ padding: "48px 24px 32px", maxWidth: 720, margin: "0 auto" }}
-      >
-        {/* Hero — 수묵화 톤: eyebrow + 명조 헤드라인 */}
-        <div style={{ marginBottom: 32, textAlign: "center" }}>
-          <div className="eyebrow" style={{ marginBottom: 16 }}>
-            Evaluate
-          </div>
-          <h1
-            style={{
-              fontFamily: "var(--font-serif)",
-              fontSize: 34,
-              fontWeight: 700,
-              margin: "0 0 14px",
-              letterSpacing: "-0.018em",
-              lineHeight: 1.3,
-              color: "var(--color-text)",
-            }}
-          >
-            마음에 둔 이름,
-            <br />
-            어떤 결인지 알려드릴게요
-          </h1>
-          <p
-            style={{
-              fontSize: 15,
-              color: "var(--color-text-2)",
-              margin: 0,
-              lineHeight: 1.65,
-            }}
-          >
-            이름과 출생 정보를 입력하시면 미학·조화·희귀도를 분석합니다
-          </p>
-
-          <aside
-            style={{
-              marginTop: 24,
-              background: "var(--color-background)",
-              borderLeft: "3px solid var(--color-teal)",
-              borderRadius: "0 var(--radius-md) var(--radius-md) 0",
-              padding: "16px 20px",
-              border: "1px solid var(--color-divider)",
-              borderLeftWidth: 3,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 10,
-              }}
-            >
-              <span
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  background: "var(--color-teal)",
-                  color: "#fff",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 10,
-                  fontWeight: 700,
-                }}
-              >
-                i
-              </span>
-              <span
-                style={{
-                  fontWeight: 600,
-                  fontSize: 14,
-                  color: "var(--color-text)",
-                }}
-              >
-                평가는 추천과 다른 관점이에요
-              </span>
-            </div>
-            <ul
-              style={{
-                margin: 0,
-                padding: 0,
-                listStyle: "none",
-                display: "grid",
-                gap: 4,
-                fontSize: 13.5,
-                color: "var(--color-text-2)",
-                lineHeight: 1.6,
-              }}
-            >
-              <li>
-                <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                  추천
-                </b>{" "}
-                · 후보를 새로 생성
-              </li>
-              <li>
-                <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                  평가
-                </b>{" "}
-                · 정해진 이름을 분석
-              </li>
-              <li>두 결과는 서로를 보완해요</li>
-            </ul>
-          </aside>
-        </div>
-
-        {/* Form card — 수묵화 톤: 직선 + 모서리 ㄱㄴ + sumi-form (underline 입력) */}
-        <div
-          className="sumi-card sumi-form"
-          style={{
-            maxWidth: 560,
-            margin: "0 auto",
-            padding: 0,
-          }}
-        >
-          <Section title="이름" subtitle={`총 ${total}자`}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "30% 1fr",
-                gap: 10,
-              }}
-            >
-              <Input
-                value={lastName}
-                onChange={setLastName}
-                placeholder="예: 김"
-                invalid={!lastValid}
-                ariaLabel="성"
-              />
-              <Input
-                value={firstName}
-                onChange={setFirstName}
-                placeholder="예: 서윤"
-                invalid={!firstValid}
-                ariaLabel="이름"
-              />
-            </div>
-            {!firstValid && (
-              <FieldHint kind="warn">한글로 입력해주세요</FieldHint>
-            )}
-            {firstValid && tooLong && (
-              <FieldHint kind="warn">
-                긴 이름은 평가 정확도가 낮아질 수 있어요
-              </FieldHint>
-            )}
-            <div style={{ marginTop: 14 }}>
-              <NamePreview lastName={lastName} firstName={firstName} />
-            </div>
-          </Section>
-
-          <Divider />
-
-          <Section title="출생일">
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.4fr 1fr",
-                gap: 10,
-              }}
-            >
-              <DateInput value={birth} onChange={setBirth} />
-              <input
-                type="time"
-                value={birthTime}
-                onChange={(e) => setBirthTime(e.target.value)}
-                style={{
-                  appearance: "none",
-                  width: "100%",
-                  boxSizing: "border-box",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 15,
-                  color: birthTime ? "var(--color-text)" : "var(--color-text-3)",
-                  padding: "12px 14px",
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-md)",
-                  outline: "none",
-                }}
-                aria-label="출생 시각 (선택, 시주 반영)"
-                placeholder="시:분"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpenBirthHelp((o) => !o)}
-              style={helpToggleStyle}
-            >
-              <span
-                style={{
-                  display: "inline-block",
-                  transition: "transform 180ms",
-                  transform: openBirthHelp ? "rotate(90deg)" : "rotate(0deg)",
-                }}
-              >
-                ▸
-              </span>
-              출생 정보가 왜 필요한가요?
-            </button>
-            {openBirthHelp && (
-              <div style={helpBodyStyle}>
-                사주 오행을 분석해 이름과의 조화를 계산해요.
-                <br />
-                출생일을 입력하지 않으면 미학 점수만 평가됩니다.
-                <br />
-                출생 시각까지 알면 시주(時柱)도 반영해 4기둥 분석이 가능해요.
-              </div>
-            )}
-          </Section>
-
-          <Divider />
-
-          <Section title="성별">
-            <Segmented
-              options={["남", "여", "중립"]}
-              value={gender}
-              onChange={(v) =>
-                setGender(v as EvalSubmitPayload["gender"])
-              }
-            />
-            <FieldHint>중립은 성별 무관 평가를 진행해요</FieldHint>
-          </Section>
-
-          <Divider />
-
-          <Section title="톤">
-            <Segmented
-              options={["부드러운", "중립", "강한"]}
-              value={tone}
-              onChange={(v) => setTone(v as EvalSubmitPayload["tone"])}
-            />
-            <button
-              type="button"
-              onClick={() => setOpenToneHelp((o) => !o)}
-              style={helpToggleStyle}
-            >
-              <span
-                style={{
-                  display: "inline-block",
-                  transition: "transform 180ms",
-                  transform: openToneHelp ? "rotate(90deg)" : "rotate(0deg)",
-                }}
-              >
-                ▸
-              </span>
-              톤이 평가에 어떻게 반영되나요?
-            </button>
-            {openToneHelp && (
-              <div style={helpBodyStyle}>
-                톤은 발음·받침·자음 강도에 대한 선호를 의미해요.
-                <br />
-                평가 시 입력 톤과 이름의 실제 톤을 함께 보여드립니다.
-              </div>
-            )}
-          </Section>
-
+        <Section title="이름" subtitle={`총 ${total}자`}>
           <div
             style={{
-              padding: "20px 24px 24px",
-              borderTop: "1px solid #F0EAE0",
+              display: "grid",
+              gridTemplateColumns: "30% 1fr",
+              gap: 10,
             }}
           >
-            {/* 제출 — 수묵화 톤: 풀폭 명조 + 朱印 名 도장. 비활성 시도 cursor:default로 부드럽게 */}
-            <div style={{ position: "relative" }}>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                style={{
-                  width: "100%",
-                  padding: "16px 22px",
-                  background: canSubmit
-                    ? "var(--color-ink-jiao)"
-                    : "var(--color-surface-2)",
-                  color: canSubmit
-                    ? "var(--color-background)"
-                    : "var(--color-text-3)",
-                  border: "none",
-                  borderRadius: 0,
-                  fontFamily: "var(--font-serif)",
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: canSubmit ? "pointer" : "default",
-                  letterSpacing: "0.1em",
-                  transition: "all 180ms",
-                }}
-              >
-                {canSubmit
+            <Input
+              value={lastName}
+              onChange={setLastName}
+              placeholder="예: 김"
+              invalid={!lastValid}
+              ariaLabel="성"
+            />
+            <Input
+              value={firstName}
+              onChange={setFirstName}
+              placeholder="예: 서윤"
+              invalid={!firstValid}
+              ariaLabel="이름"
+            />
+          </div>
+          {!firstValid && (
+            <FieldHint kind="warn">한글로 입력해주세요</FieldHint>
+          )}
+          {firstValid && tooLong && (
+            <FieldHint kind="warn">
+              긴 이름은 평가 정확도가 낮아질 수 있어요
+            </FieldHint>
+          )}
+          <div style={{ marginTop: 14 }}>
+            <NamePreview lastName={lastName} firstName={firstName} />
+          </div>
+        </Section>
+
+        <Divider />
+
+        <Section title="출생일">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.4fr 1fr",
+              gap: 10,
+            }}
+          >
+            <DateInput value={birth} onChange={setBirth} />
+            <input
+              type="time"
+              value={birthTime}
+              onChange={(e) => setBirthTime(e.target.value)}
+              style={{
+                appearance: "none",
+                width: "100%",
+                boxSizing: "border-box",
+                fontFamily: "var(--font-sans)",
+                fontSize: 15,
+                color: birthTime ? "var(--color-text)" : "var(--color-text-3)",
+                padding: "12px 14px",
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-md)",
+                outline: "none",
+              }}
+              aria-label="출생 시각 (선택, 시주 반영)"
+              placeholder="시:분"
+            />
+          </div>
+          {/* 날짜 없는 시각은 평가에 쓰지 않는다(evaluate-params timeWithDate) — 조용히 버리지 않고 알린다 */}
+          {birthTime && !birth && (
+            <FieldHint kind="warn">출생 시각은 생년월일과 함께 넣어야 반영돼요</FieldHint>
+          )}
+          <button
+            type="button"
+            onClick={() => setOpenBirthHelp((o) => !o)}
+            style={helpToggleStyle}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                transition: "transform 180ms",
+                transform: openBirthHelp ? "rotate(90deg)" : "rotate(0deg)",
+              }}
+            >
+              ▸
+            </span>
+            출생 정보가 왜 필요한가요?
+          </button>
+          {openBirthHelp && (
+            <div style={helpBodyStyle}>
+              사주 오행을 분석해 이름과의 조화를 계산해요.
+              <br />
+              출생일을 입력하지 않으면 미학 점수만 평가됩니다.
+              <br />
+              출생 시각까지 알면 시주(時柱)도 반영해 4기둥 분석이 가능해요.
+            </div>
+          )}
+        </Section>
+
+        <Divider />
+
+        <Section title="성별">
+          <Segmented
+            options={["남", "여", "중립"]}
+            value={gender}
+            onChange={(v) =>
+              setGender(v as EvalSubmitPayload["gender"])
+            }
+          />
+          <FieldHint>중립은 성별 무관 평가를 진행해요</FieldHint>
+        </Section>
+
+        <Divider />
+
+        <Section title="톤">
+          <Segmented
+            options={["부드러운", "중립", "강한"]}
+            value={tone}
+            onChange={(v) => setTone(v as EvalSubmitPayload["tone"])}
+          />
+          <button
+            type="button"
+            onClick={() => setOpenToneHelp((o) => !o)}
+            style={helpToggleStyle}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                transition: "transform 180ms",
+                transform: openToneHelp ? "rotate(90deg)" : "rotate(0deg)",
+              }}
+            >
+              ▸
+            </span>
+            톤이 평가에 어떻게 반영되나요?
+          </button>
+          {openToneHelp && (
+            <div style={helpBodyStyle}>
+              톤은 발음·받침·자음 강도에 대한 선호를 의미해요.
+              <br />
+              평가 시 입력 톤과 이름의 실제 톤을 함께 보여드립니다.
+            </div>
+          )}
+        </Section>
+
+        <div
+          style={{
+            padding: "20px 24px 24px",
+            borderTop: "1px solid #F0EAE0",
+          }}
+        >
+          {/* 제출 — 수묵화 톤: 풀폭 명조 + 朱印 名 도장. 비활성 시도 cursor:default로 부드럽게 */}
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!buttonReady}
+              aria-busy={loading}
+              style={{
+                width: "100%",
+                padding: "16px 22px",
+                background: buttonReady
+                  ? "var(--color-ink-jiao)"
+                  : "var(--color-surface-2)",
+                color: buttonReady
+                  ? "var(--color-background)"
+                  : "var(--color-text-3)",
+                border: "none",
+                borderRadius: 0,
+                fontFamily: "var(--font-serif)",
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: buttonReady ? "pointer" : "default",
+                letterSpacing: "0.1em",
+                transition: "all 180ms",
+              }}
+            >
+              {loading
+                ? "살펴보는 중이에요…"
+                : canSubmit
                   ? "이 이름 살펴보기"
                   : firstName.trim() !== "" && lastName.trim() === ""
                     ? "성씨를 입력해주세요"
                     : "이름을 입력해주세요"}
-              </button>
-              {canSubmit && (
-                <span className="sumi-stamp-name" aria-hidden>名</span>
-              )}
-            </div>
-            {canSubmit && !birth && (
-              <div
-                style={{
-                  marginTop: 10,
-                  fontSize: 12.5,
-                  color: "var(--color-text-2)",
-                  textAlign: "center",
-                }}
-              >
-                출생일 없이 진행하면 미학 점수만 평가돼요
-              </div>
+            </button>
+            {buttonReady && (
+              <span className="sumi-stamp-name" aria-hidden>名</span>
             )}
           </div>
-        </div>
-
-        <div
-          style={{
-            marginTop: 24,
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: 13,
-            color: "var(--color-text-2)",
-            flexWrap: "wrap",
-            gap: 16,
-            maxWidth: 560,
-            marginLeft: "auto",
-            marginRight: "auto",
-          }}
-        >
-          <Link
-            href="/"
-            style={{ color: "var(--color-text-2)", textDecoration: "none" }}
-          >
-            ← 홈으로 돌아가기
-          </Link>
-          <span>
-            추천을 받고 싶으시면?{" "}
-            <Link
-              href="/search"
+          {canSubmit && !loading && !birth && (
+            <div
               style={{
-                color: "var(--color-teal)",
-                fontWeight: 500,
-                textDecoration: "none",
+                marginTop: 10,
+                fontSize: 12.5,
+                color: "var(--color-text-2)",
+                textAlign: "center",
               }}
             >
-              작명하러 가기 →
-            </Link>
-          </span>
+              출생일 없이 진행하면 미학 점수만 평가돼요
+            </div>
+          )}
         </div>
+      </div>
 
-        <section
-          style={{
-            marginTop: 40,
-            padding: "28px 28px 24px",
-            borderTop: "1px solid #F0EAE0",
-            maxWidth: 560,
-            marginLeft: "auto",
-            marginRight: "auto",
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 14px",
-              fontSize: 14,
-              fontWeight: 600,
-              color: "var(--color-text)",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            평가 후 어떤 결과를 받나요?
-          </h2>
-          <ul
-            style={{
-              margin: 0,
-              padding: 0,
-              listStyle: "none",
-              display: "grid",
-              gap: 10,
-            }}
-          >
-            <InfoRow
-              icon={<Music size={20} strokeWidth={1.5} />}
-              label="미학 점수"
-              detail="발음·리듬·음절·세대중립"
-            />
-            <InfoRow
-              icon={<Leaf size={20} strokeWidth={1.5} />}
-              label="조화 점수"
-              detail="오행·자원오행·음양·성조화 — 출생일 있을 때"
-            />
-            <InfoRow
-              icon={<BookOpen size={20} strokeWidth={1.5} />}
-              label="한자 후보 분석"
-              detail="의미·신뢰도"
-            />
-          </ul>
-        </section>
-      </main>
-
-      <footer
+      <div
         style={{
-          padding: "32px 24px 48px",
-          borderTop: "1px solid var(--color-divider)",
-          textAlign: "center",
-          color: "var(--color-text-3)",
-          fontSize: 12,
+          marginTop: 24,
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: 13,
+          color: "var(--color-text-2)",
+          flexWrap: "wrap",
+          gap: 16,
+          maxWidth: 560,
+          marginLeft: "auto",
+          marginRight: "auto",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
-          <a
-            href="#"
-            style={{ color: "var(--color-text-3)", textDecoration: "none" }}
+        <Link
+          href="/"
+          style={{ color: "var(--color-text-2)", textDecoration: "none" }}
+        >
+          ← 홈으로 돌아가기
+        </Link>
+        <span>
+          추천을 받고 싶으시면?{" "}
+          <Link
+            href="/search"
+            style={{
+              color: "var(--color-teal)",
+              fontWeight: 500,
+              textDecoration: "none",
+            }}
           >
-            이름의 결에 대하여
-          </a>
-          <span style={{ color: "var(--color-divider)" }}>·</span>
-          <a
-            href="#"
-            style={{ color: "var(--color-text-3)", textDecoration: "none" }}
-          >
-            문의
-          </a>
-        </div>
-      </footer>
-    </div>
+            작명하러 가기 →
+          </Link>
+        </span>
+      </div>
+
+      <section
+        style={{
+          marginTop: 40,
+          padding: "28px 28px 24px",
+          borderTop: "1px solid #F0EAE0",
+          maxWidth: 560,
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}
+      >
+        <h2
+          style={{
+            margin: "0 0 14px",
+            fontSize: 14,
+            fontWeight: 600,
+            color: "var(--color-text)",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          평가 후 어떤 결과를 받나요?
+        </h2>
+        <ul
+          style={{
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <InfoRow
+            icon={<Music size={20} strokeWidth={1.5} />}
+            label="미학 점수"
+            detail="발음·리듬·음절·세대중립·의미"
+          />
+          {/* 조화 축은 HarmonyEngine 산식과 같게 — 옛 '성조화'는 발음오행에 흡수돼 항상 0 (감사 EV-2) */}
+          <InfoRow
+            icon={<Leaf size={20} strokeWidth={1.5} />}
+            label="조화 점수"
+            detail="오행·자원오행·음양·발음오행·전통 81수리(참고) — 출생일 있을 때"
+          />
+          <InfoRow
+            icon={<BookOpen size={20} strokeWidth={1.5} />}
+            label="한자 후보 분석"
+            detail="의미·신뢰도"
+          />
+        </ul>
+      </section>
+    </>
   );
 }
 

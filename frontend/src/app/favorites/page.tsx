@@ -4,7 +4,8 @@ import { Heart, X } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
-import { removeFavorite, useFavorites } from "@/lib/favorites";
+import { removeFavorite, useFavorites, type FavoriteName } from "@/lib/favorites";
+import { splitFullName } from "@/lib/name-split";
 
 export default function FavoritesPage() {
   const items = useFavorites();
@@ -101,8 +102,7 @@ export default function FavoritesPage() {
                         종합 {f.finalScore}
                         {typeof f.aestheticScore === "number" &&
                           ` · 미학 ${f.aestheticScore}`}
-                        {typeof f.harmonyScore === "number" &&
-                          ` · 조화 ${f.harmonyScore}`}
+                        {showHarmony(f) && ` · 조화 ${f.harmonyScore}`}
                       </>
                     )}
                     {f.birthDate && (
@@ -150,10 +150,38 @@ export default function FavoritesPage() {
   );
 }
 
-function buildEvaluateUrl(f: { lastName: string; name: string; birthDate?: string; birthTime?: string; gender?: string; tone?: string }) {
+/**
+ * 찜의 성·이름 — 저장된 값을 믿되 두 경우는 splitFullName으로 다시 나눈다 (감사 EV-6).
+ * - 성·이름이 비었거나 합쳐도 fullName이 안 되는 항목
+ * - 2026-10-21 이전 평가 화면 저장분: fullName[0]으로 성을 잘라 '남궁민'이 '남'+'궁민'으로 들어갔다.
+ *   그때 저장분은 gender가 없으므로, gender 없는 1자 성 항목이 복성으로 읽히면 복성을 따른다
+ *   (지금 저장분은 gender를 늘 담고, 입력한 성을 그대로 쓴다)
+ */
+function nameParts(f: FavoriteName): { lastName: string; name: string } {
+  const split = splitFullName(f.fullName);
+  if (!f.lastName || !f.name || f.lastName + f.name !== f.fullName) return split;
+  const legacyCut =
+    f.gender === undefined &&
+    f.lastName.length === 1 &&
+    split.lastName.length === 2;
+  return legacyCut ? split : { lastName: f.lastName, name: f.name };
+}
+
+/**
+ * 조화 점수를 보일지 — 출생일 없이 평가한 옛 저장분은 API가 준 harmonyScore 0을 그대로 담아
+ * '조화 0'으로 보였다(지금 저장분은 출생일이 없으면 harmonyScore를 비운다). 출생일이 없고
+ * 0인 항목만 숨긴다: 출생일을 넣고 평가해 실제 조화 점수를 가진 옛 저장분은 그대로 보인다.
+ */
+function showHarmony(f: FavoriteName): boolean {
+  if (typeof f.harmonyScore !== "number") return false;
+  return !(!f.birthDate && f.harmonyScore === 0);
+}
+
+function buildEvaluateUrl(f: FavoriteName) {
   const params = new URLSearchParams();
-  if (f.lastName) params.set("lastName", f.lastName);
-  if (f.name) params.set("name", f.name);
+  const { lastName, name } = nameParts(f);
+  if (lastName) params.set("lastName", lastName);
+  if (name) params.set("name", name);
   if (f.birthDate) params.set("birthDate", f.birthDate);
   if (f.birthTime) params.set("birthTime", f.birthTime);
   if (f.gender) params.set("gender", f.gender);

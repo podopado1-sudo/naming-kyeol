@@ -433,8 +433,9 @@ export function HanjaBreakdown({
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {breakdown
         .filter((b) => b.possibleHanja.length > 0)
-        .map((b) => (
-          <HanjaCard key={b.syllable} entry={b} />
+        .map((b, i) => (
+          // 같은 음절이 반복되는 이름(예: 하하)도 있어 음절만으로는 키가 겹친다
+          <HanjaCard key={`${i}-${b.syllable}`} entry={b} />
         ))}
     </div>
   );

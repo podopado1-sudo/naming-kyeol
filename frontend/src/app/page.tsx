@@ -1,125 +1,177 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
-import { Hero, type HeroStartPayload } from "@/components/design/Hero";
-import {
-  Categories,
-  type CategoryItem,
-  type CategoryKey,
-} from "@/components/design/Categories";
-import { ProPaths, type ProPathKey } from "@/components/design/ProPaths";
+import { Hero } from "@/components/design/Hero";
+import { Categories } from "@/components/design/Categories";
+import { ProPaths } from "@/components/design/ProPaths";
 import { WhyKyeol } from "@/components/design/WhyKyeol";
 import { BrushDivider } from "@/components/design/BrushDivider";
-import {
-  ComingSoonModal,
-  type ComingSoonMode,
-} from "@/components/design/ComingSoonModal";
+import { ApiWarmup } from "@/components/design/ApiWarmup";
+import { getAllInsights, type InsightMeta } from "@/lib/insights";
 
-// 라이프 컨텍스트 → 라우트 매핑
-const CATEGORY_ROUTES: Record<CategoryKey, string | null> = {
-  baby: "/search",
-  rename: "/search?mode=rename", // TODO: /rename 라우트 신설 시 변경
-  company: "/company",
-  pet: null, // Coming Soon
-};
-
-const PROPATH_ROUTES: Record<ProPathKey, string> = {
-  evaluate: "/evaluate",
-  twin: "/twin",
-  parent: "/parent-based",
-  rare: "/rare-surname",
-  dual: "/dual-name",
-  required: "/required-char",
-};
-
+/**
+ * 홈 — 서버 컴포넌트 (2026-10-21).
+ *
+ * 데이터 리포트 목록(content/insights/*.md)을 빌드 타임에 읽어 정적 HTML에 싣는다 —
+ * 홈에서 /guide/[slug]로 가는 링크가 0개라 심사 근거가 될 편집 글이 2클릭 아래에 묻혀 있었다(감사 AS-8).
+ * 인터랙션(Hero 이동·반려동물 준비 중 모달)은 각 클라이언트 컴포넌트가 스스로 처리한다.
+ */
 export default function HomePage() {
-  const router = useRouter();
-  const [comingSoonMode, setComingSoonMode] = useState<ComingSoonMode | null>(
-    null
-  );
-
-  function handleHeroStart(payload: HeroStartPayload) {
-    if (payload.mode === "recommend") {
-      const params = new URLSearchParams();
-      if (payload.lastName) params.set("lastName", payload.lastName);
-      if (payload.birth) params.set("birthDate", payload.birth);
-      if (payload.birthTime) params.set("birthTime", payload.birthTime);
-      if (payload.gender && payload.gender !== "any")
-        params.set("gender", payload.gender);
-      if (payload.tone) params.set("tone", payload.tone);
-      if (payload.parentName) params.set("parentName", payload.parentName);
-      if (payload.story) params.set("story", payload.story);
-      if (payload.englishName) params.set("englishName", payload.englishName);
-      // 성씨가 들어왔으면 자동 제출까지 진행 (Hero에서 한 번에 결과 확인)
-      if (payload.lastName) params.set("autoStart", "1");
-      const qs = params.toString();
-      router.push(qs ? `/search?${qs}` : "/search");
-    } else {
-      const params = new URLSearchParams();
-      if (payload.name) {
-        // "김서준"처럼 성+이름 한 덩어리로 들어옴 → split
-        const lastName = payload.name.charAt(0);
-        const firstName = payload.name.slice(1);
-        params.set("lastName", lastName);
-        if (firstName) params.set("name", firstName);
-      }
-      if (payload.birth) params.set("birthDate", payload.birth);
-      if (payload.birthTime) params.set("birthTime", payload.birthTime);
-      // Hero가 recommend/evaluate 모두 "any"를 sentinel로 사용 → 통일된 처리
-      if (payload.gender && payload.gender !== "any" && payload.gender !== "none")
-        params.set("gender", payload.gender);
-      if (payload.tone) params.set("tone", payload.tone);
-      // 풀 페이지 이동 — /evaluate 정적 라우트의 클라이언트 라우터 캐시가
-      // 이전 ?name=... 을 재사용하는 문제 우회 (검색 상세보기와 동일 처리).
-      window.location.assign(`/evaluate?${params.toString()}`);
-    }
-  }
-
-  function handleCategorySelect(key: CategoryKey) {
-    const route = CATEGORY_ROUTES[key];
-    if (route) router.push(route);
-  }
-
-  function handleCategoryNotify(item: CategoryItem) {
-    if (item.key === "pet") {
-      setComingSoonMode(item.key);
-    }
-  }
-
-  function handleProPathSelect(key: ProPathKey) {
-    router.push(PROPATH_ROUTES[key]);
-  }
+  const reports = getAllInsights();
 
   return (
     <>
       <Header current="home" />
 
       <main>
-        <Hero onStart={handleHeroStart} />
+        <Hero />
         <BrushDivider />
-        <Categories
-          onSelect={handleCategorySelect}
-          onNotify={handleCategoryNotify}
-        />
+        <Categories />
         <BrushDivider />
-        <ProPaths onSelect={handleProPathSelect} />
-        <BrushDivider />
+        <ProPaths />
+        {reports.length > 0 && (
+          <>
+            <BrushDivider />
+            <InsightReports reports={reports} />
+          </>
+        )}
         <WhyKyeol />
       </main>
 
       <Footer />
-
-      {comingSoonMode && (
-        <ComingSoonModal
-          mode={comingSoonMode}
-          open={true}
-          onClose={() => setComingSoonMode(null)}
-        />
-      )}
+      <ApiWarmup />
     </>
+  );
+}
+
+// ============================================================
+// 데이터로 읽는 이름 — 리포트 카드 (서버 렌더)
+// ============================================================
+function InsightReports({ reports }: { reports: InsightMeta[] }) {
+  return (
+    <section
+      style={{
+        maxWidth: 1120,
+        margin: "0 auto",
+        padding: "40px 32px 24px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
+          marginBottom: 28,
+        }}
+      >
+        <div>
+          <h2
+            style={{
+              fontSize: 22,
+              lineHeight: 1.3,
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+              margin: 0,
+            }}
+          >
+            데이터로 읽는 이름
+          </h2>
+          <p
+            style={{
+              fontSize: 13.5,
+              color: "var(--color-text-2)",
+              margin: "8px 0 0",
+              lineHeight: 1.6,
+            }}
+          >
+            대법원 출생신고 통계와 인명용 한자 사전을 직접 집계해 쓴
+            리포트입니다.
+          </p>
+        </div>
+        <Link
+          href="/guide#reports"
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: "var(--color-teal)",
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          리포트 전체 보기 →
+        </Link>
+      </div>
+
+      <ul
+        className="sumi-grid-3"
+        style={{ listStyle: "none", margin: 0, padding: 0 }}
+      >
+        {reports.map((r) => (
+          <li key={r.slug} style={{ display: "flex" }}>
+            <Link
+              href={`/guide/${r.slug}`}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                width: "100%",
+                background: "var(--color-surface)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--color-border)",
+                padding: "20px 22px",
+                textDecoration: "none",
+                color: "var(--color-text)",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.02em",
+                  color: "var(--color-text-3)",
+                  marginBottom: 6,
+                }}
+              >
+                {r.eyebrow}
+              </span>
+              <span
+                style={{
+                  fontSize: 15.5,
+                  fontWeight: 600,
+                  lineHeight: 1.45,
+                  letterSpacing: "-0.005em",
+                  marginBottom: 8,
+                  wordBreak: "keep-all",
+                }}
+              >
+                {r.title}
+              </span>
+              <span
+                style={{
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  color: "var(--color-text-2)",
+                  flex: 1,
+                }}
+              >
+                {r.description}
+              </span>
+              <span
+                style={{
+                  marginTop: 14,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "var(--color-teal)",
+                }}
+              >
+                리포트 읽기 →
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
