@@ -534,19 +534,12 @@ public class HarmonyEngine : IHarmonyEngine
         _ => 2
     };
 
-    private int GetSurnameStrokeCount(string lastName)
-    {
-        if (string.IsNullOrEmpty(lastName)) return 0;
-        // 성씨 첫 글자 독음으로 한자 조회
-        var candidates = HanjaData.FindByReading(lastName[0].ToString());
-        if (candidates.Count == 0) return 0;
-        var sorted = HanjaData.SortByRelevance(candidates);
-        return sorted.FirstOrDefault(h => h.StrokeCount > 0)?.StrokeCount ?? 0;
-    }
-
     private int CalculateSuriSagyeokScore(string lastName, List<HanjaInfo?> selectedHanja, List<string> notes)
     {
-        int s = GetSurnameStrokeCount(lastName);
+        // 성씨 획수 — 성씨 대표 한자 표(이 → 李 7획, 복성은 두 글자 합). 2026-10-22 S5a 전에는 성씨 첫 글자 독음의
+        // 관련도 1순위 한자를 썼다(이 → 11획, 박 → 16획, 남궁 → '남' 한 글자만 — 감사 BT-3). 표에 없는 성씨만 그 방식으로 추정한다.
+        var surname = SurnameData.ResolveStrokes(lastName);
+        int s = surname.Strokes;
         var nameStrokes = selectedHanja.Select(h => h?.StrokeCount ?? 0).ToList();
 
         // 획수 불명 글자가 과반이면 스킵
@@ -579,11 +572,14 @@ public class HarmonyEngine : IHarmonyEngine
 
         // 이 엔진의 한자는 늘 HanjaSelector가 자동 배정한 것이다(평가 입력에 한자 선택이 없음) —
         // 순우리말 이름(제갈하늘 → 荷+乻)에도 획수 수리가 매겨지므로, 기준 한자와 달라질 수 있음을 함께 알린다.
-        // 성씨 획수도 GetSurnameStrokeCount가 독음 1순위 한자로 추정한 값이라(이→11획, 남궁→첫 글자만) 함께 밝힌다.
-        // (성씨 대표 한자 표로 바로잡는 건 HarmonyScore가 바뀌는 일이라 재생성·감사 묶음에서 — BT-3.)
+        // 성씨는 대표 한자 표에 있으면 그 한자를 밝히고(가장 흔한 한자로 본 것이라 다른 본관 한자면 달라진다),
+        // 표에 없으면 독음으로 고른 추정이라고 말한다. 두 문장 모두 '추정'을 담아 화면 노트 극성(주의)이 그대로다.
         if (selectedHanja.Any(h => h != null))
-            notes.Add("획수는 성씨와 이름 음절에 자동으로 고른 한자 기준이에요(성씨 한자도 추정이에요). " +
-                      "실제 한자가 다르면 수리가 달라질 수 있어요.");
+            notes.Add(surname.FromTable && s > 0
+                ? $"획수는 성씨의 가장 흔한 한자({surname.Hanja})와 이름 음절에 자동으로 고른 한자로 추정했어요. " +
+                  "실제 한자가 다르면 수리가 달라질 수 있어요."
+                : "획수는 성씨와 이름 음절에 자동으로 고른 한자 기준이에요(성씨 한자도 추정이에요). " +
+                  "실제 한자가 다르면 수리가 달라질 수 있어요.");
 
         // 16점 만점 → 15점 만점 환산 (Math.Round로 일관성)
         return (int)Math.Round(totalPoints * (15.0 / 16.0));

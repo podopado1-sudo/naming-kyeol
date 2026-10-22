@@ -24,7 +24,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,428 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,454 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -48,7 +48,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,428개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,454개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -132,6 +132,8 @@ D:\MyDev\NameForm\
           │     HarmonyEngine           → 조화 점수 0~100 (자원오행 보완 30 + 획수 조화 20 + 음양 10 + 발음오행 25 + 전통 81수리 15 — 성조화 필드는 폐기, 항상 0)
           │                               ⚠️ 2026-10-22 S4 축 이름: '자원오행 보완' = 배정 한자의 부수 기준 자원오행 ↔ 사주(옛 '오행 30'),
           │                               '획수 조화' = 두 글자 획수 합 구간(옛 '자원오행 20' — 오행 무관). 산식·DTO 필드명(fiveElement·resourceElement) 유지
+          │                               ⚠️ S5a 수리 15 의 성씨 획수 = 성씨 대표 한자 표(`SurnameData.RepresentativeHanja` — 이 李·박 朴·유 柳, 복성은
+          │                               두 글자 합). 표 밖 성씨만 음절마다 독음 1순위 한자로 추정(옛 방식: 이 → 11획, 남궁 → '남'만)
           │     RankerEngine            → 최종 점수 = aesthetic * 0.7 + harmony * 0.3
           │     ExplanationEngine       → 추천 이유 3줄 생성
           │     RarityScoringEngine     → 희귀도/독창성 점수

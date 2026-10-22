@@ -622,36 +622,56 @@ public class ToolAccuracyRegressionTests
     // ═══════════════════════════════════════════════════════════════
 
     [Theory]
-    [InlineData("민준", "김", "2020-03-15", "male")]   // 감사: 원10(대흉)·이19(대흉)
-    [InlineData("하늘", "제갈", "2022-05-05", "none")] // 감사: 순우리말에 자동 배정 荷+乻 획수로 '대흉' 4개
+    [InlineData("민준", "김", "2020-03-15", "male", "金")]     // 감사: 원10(대흉)·이19(대흉)
+    [InlineData("하늘", "제갈", "2022-05-05", "none", "諸葛")] // 감사: 순우리말에 자동 배정 荷+乻 획수로 '대흉' 4개
     public async Task Harmony_SuriNote_IsReferenceWordingWithAutoAssignHint(
-        string name, string lastName, string date, string gender)
+        string name, string lastName, string date, string gender, string surnameHanja)
     {
         var b = await new HarmonyEngine(_saju, _yongshin)
             .CalculateScoreWithBreakdownAsync(name, lastName, DateTime.Parse(date), gender);
 
         Assert.DoesNotContain(b.Notes, n => n.Contains("대흉") || n.Contains("대길") || n.Contains("소흉") || n.Contains("중길"));
         Assert.Contains(b.Notes, n => n.StartsWith("수리사격(전통 81수리, 참고): 원격 "));
-        // BT-3: 성씨 획수도 추정이라는 사실을 함께 밝히고, 한자를 고르는 입력이 없으니 '정하면' 대신 '다르면'
-        Assert.Contains(SuriBasisNote, b.Notes);
+        // BT-3: 성씨 한자를 무엇으로 봤는지 밝히고, 한자를 고르는 입력이 없으니 '정하면' 대신 '다르면'
+        Assert.Contains(SuriBasisNoteFor(surnameHanja), b.Notes);
         Assert.DoesNotContain(b.Notes, n => n.Contains("한자를 정하면") || n.Contains("이름 음절에 자동 배정한 한자("));
     }
 
-    private const string SuriBasisNote =
+    /// <summary>성씨가 대표 한자 표에 있을 때의 수리 기준 안내 (2026-10-22 S5a)</summary>
+    private static string SuriBasisNoteFor(string surnameHanja) =>
+        $"획수는 성씨의 가장 흔한 한자({surnameHanja})와 이름 음절에 자동으로 고른 한자로 추정했어요. 실제 한자가 다르면 수리가 달라질 수 있어요.";
+
+    /// <summary>성씨가 표에 없을 때(독음으로 고른 추정 한자) — S5a 전에는 모든 성씨가 이 문구였다</summary>
+    private const string SuriBasisNoteEstimatedSurname =
         "획수는 성씨와 이름 음절에 자동으로 고른 한자 기준이에요(성씨 한자도 추정이에요). 실제 한자가 다르면 수리가 달라질 수 있어요.";
 
     [Theory]
-    [InlineData("서연", "이", "2021-07-02", "female")] // 감사 역산: 성씨 이 → 11획(李는 7획) — 성씨도 추정임을 밝혀야 하는 사례
-    [InlineData("민", "남궁", "2022-01-10", "none")]  // 복성은 첫 글자 독음으로만 추정(楠 13획)
-    public async Task Harmony_SuriNote_AdmitsSurnameStrokesAreEstimated(
-        string name, string lastName, string date, string gender)
+    [InlineData("서연", "이", "2021-07-02", "female", "李", 7)]    // 감사 역산: S5a 전 성씨 이 → 11획(관련도 1순위 글자)
+    [InlineData("민", "남궁", "2022-01-10", "none", "南宮", 19)]  // S5a 전 복성은 첫 글자 독음으로만(楠 13획) — 南 9 + 宮 10
+    [InlineData("지우", "박", "2023-03-15", "female", "朴", 6)]    // S5a 전 16획
+    public async Task Harmony_SuriSurnameStrokes_UseRepresentativeHanja(
+        string name, string lastName, string date, string gender, string surnameHanja, int surnameStrokes)
     {
         var b = await new HarmonyEngine(_saju, _yongshin)
             .CalculateScoreWithBreakdownAsync(name, lastName, DateTime.Parse(date), gender);
 
         var suri = b.Notes.FirstOrDefault(n => n.StartsWith("수리사격(전통 81수리"));
         Assert.NotNull(suri); // 이 사례들은 획수가 있어 수리가 계산된다 — 안내 줄이 함께 나와야 함
-        Assert.Contains(SuriBasisNote, b.Notes);
+        // 형격 = 성 + 이름 첫 글자, 원격 = 이름 첫 글자 → 성씨 획수 = 형격 − 원격
+        var m = Regex.Match(suri!, @"원격 (\d+)\(.*?형격 (\d+)\(");
+        Assert.True(m.Success, suri);
+        Assert.Equal(surnameStrokes, int.Parse(m.Groups[2].Value) - int.Parse(m.Groups[1].Value));
+        Assert.Contains(SuriBasisNoteFor(surnameHanja), b.Notes);
+    }
+
+    [Fact]
+    public async Task Harmony_SuriNote_SurnameOutsideTable_SaysEstimated()
+    {
+        // 대표 한자 표에 없는 성씨 입력(소봉 — 복성 목록 밖)은 음절마다 독음으로 고른 한자 획수를 더한 추정 — 옛 안내 문구를 그대로 쓴다
+        var b = await new HarmonyEngine(_saju, _yongshin)
+            .CalculateScoreWithBreakdownAsync("민", "소봉", DateTime.Parse("2022-01-10"), "none");
+
+        Assert.Contains(SuriBasisNoteEstimatedSurname, b.Notes);
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -36,7 +36,7 @@ public class HanjaDictionaryIntegrityTests
     [Fact]
     public void FindByReading_Gim_SurnameResolvesToUnifiedGold()
     {
-        // HarmonyEngine.GetSurnameStrokeCount 는 성씨 독음의 첫 후보 획수를 쓴다 — 김 → 金(8획)
+        // 독음 조회 1순위가 통합 한자 金(8획) — 성씨 대표 한자 표(SurnameData, 2026-10-22 S5a) 밖의 성씨는 이 조회로 획수를 추정한다
         var list = HanjaData.FindByReading("김");
 
         Assert.NotEmpty(list);
