@@ -408,8 +408,8 @@ public static class HanjaData
 
     /// <summary>
     /// 총획수가 있고 음양이 비어 있으면 획수로 음양을 채운다 (이미 있으면 그대로 — 처음 채운 값이 남는다).
-    /// 2026-10-22 S4 전에는 오행도 획수 끝자리로 채웠다(AutoCalculateFiveElementAndYinYang, 옛 D등급) — 음양은 그대로 둔다
-    /// (hanja_unihan.json 음양값·프론트와의 홀짝 규칙 통일은 계획 S5·D9).
+    /// 2026-10-22 S4 전에는 오행도 획수 끝자리로 채웠다(AutoCalculateFiveElementAndYinYang, 옛 D등급).
+    /// 로드 중간값일 뿐이다 — 사전의 음양은 ApplyYinYangFromStrokes 가 모든 글자를 StrokeCount 홀짝으로 다시 정한다(2026-10-22 S5c-1).
     /// </summary>
     /// <param name="hanjaInfo">한자 정보</param>
     private static void AutoCalculateYinYang(HanjaInfo hanjaInfo)
@@ -746,6 +746,9 @@ public static class HanjaData
         // ── 호환 한자 → 통합 한자 병합 (데이터 파일 적재가 모두 끝난 뒤 — 파일마다 호환 코드 키에도 값을 실었으므로) ──
         MergeCompatibilityIdeographs();
 
+        // ── 음양 (YinYang 의 유일한 기록자 — StrokeCount 홀짝, 홀수 陽 · 병합 뒤 통합 키에, 2026-10-22 S5c-1) ──
+        ApplyYinYangFromStrokes();
+
         // ── 부수 기준 자원오행 (FiveElement 의 유일한 기록자 — 병합 뒤 통합 키에만, 2026-10-22 S4) ──
         ApplyResourceElements();
 
@@ -854,9 +857,8 @@ public static class HanjaData
                     existing.ConfidenceGrade = entry.Confidence ?? "S";
                     existing.Source = "Core_v1";
 
-                    // 음양은 KangxiStrokes 기준으로 재계산
-                    if (entry.KangxiStrokes > 0)
-                        existing.YinYang = CalculateYinYangFromStrokes(entry.KangxiStrokes);
+                    // 음양은 여기서 정하지 않는다 — S5c-1 전에는 KangxiStrokes(원획) 홀짝으로 덮었다. 이제 모든 글자가
+                    // ApplyYinYangFromStrokes 의 StrokeCount 홀짝 하나다(원획법은 D10 별도 결정 — KangxiStrokes 는 보존).
                 }
                 // 사전에 없는 글자는 추가하지 않는다 — 수록 범위는 hanja_dictionary_final.json 이 정한다(/hanja 와 같은 집합).
                 // 2026-10-22 기준 core_v1 에만 있는 6자 晩·查·随·皂·颻·慥 은 대법원 인명용 한자표(data-gov.csv)·네이버 자료에
@@ -924,6 +926,21 @@ public static class HanjaData
         {
             System.Diagnostics.Debug.WriteLine($"[StrokeData] 로드 실패: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// 음양 적용 (2026-10-22 S5c-1 — 계획 docs/plan-radical-ohaeng-2026-10.md §3-1·§5 '음양 홀짝 통일', D9).
+    /// YinYang 의 유일한 기록자다. 호환 한자 병합(과 획수 적용) 뒤에 불러 사전에는 통합 키만 있다.
+    /// YinYang = StrokeCount 홀짝(홀수 陽·짝수 陰 — CalculateYinYangFromStrokes, /hanja 의 y 와 같은 규칙). 획수가 없으면 빈 값.
+    /// S5c-1 전에는 먼저 채운 값이 남았다: hanja_unihan.json 음양(수집 스크립트가 짝수를 陽 으로 거꾸로 셌다) →
+    /// Core 2,054자는 강희 원획(KangxiStrokes) 홀짝 → 하드코딩 35자는 수동 값. 원획법 음양은 별도 결정(D10)이라 KangxiStrokes 는 보존만 한다(DTO 표시).
+    /// </summary>
+    private static void ApplyYinYangFromStrokes()
+    {
+        var dict = _loadedDictionary;
+        if (dict == null) return;
+        foreach (var h in dict.Values)
+            h.YinYang = CalculateYinYangFromStrokes(h.StrokeCount);
     }
 
     /// <summary>
@@ -1799,19 +1816,9 @@ public static class HanjaData
                                 }
                                 
                                 // 오행(fiveElement — 획수 끝자리 값)은 읽지 않는다. 자원오행은 ApplyResourceElements 하나만 기록한다(2026-10-22 S4)
-                                
-                                // 음양 정보 업데이트 (JSON에 있는 경우 우선, 없으면 자동 계산)
-                                if (string.IsNullOrEmpty(hanjaInfo.YinYang))
-                                {
-                                    if (!string.IsNullOrEmpty(data.yinYang))
-                                    {
-                                        hanjaInfo.YinYang = data.yinYang;
-                                    }
-                                }
+                                // 음양(yinYang)도 읽지 않는다 — 수집 스크립트가 짝수를 陽 으로 거꾸로 셌다. 음양은
+                                // ApplyYinYangFromStrokes(StrokeCount 홀짝)가 마지막에 정한다(2026-10-22 S5c-1)
                             }
-                            
-                            // 음양이 없으면 획수로 계산 (있으면 그대로)
-                            AutoCalculateYinYang(hanjaInfo);
                             
                             // GenderPref/TonePref 업데이트 (기본값인 Neutral일 때만)
                             if (hanjaInfo.GenderPref == GenderPreference.Neutral && !string.IsNullOrEmpty(data.genderPref))

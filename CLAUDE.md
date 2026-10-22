@@ -24,7 +24,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,456 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,460 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -48,7 +48,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,456개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,460개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -135,6 +135,7 @@ D:\MyDev\NameForm\
           │                               ⚠️ S5a 수리 15 의 성씨 획수 = 성씨 대표 한자 표(`SurnameData.RepresentativeHanja` — 이 李·박 朴·유 柳, 복성은
           │                               두 글자 합). 표 밖 성씨만 음절마다 독음 1순위 한자로 추정(옛 방식: 이 → 11획, 남궁 → '남'만)
           │                               ⚠️ S5b 자원오행 보완 30: 사주 과다 오행 감점(−10)에서 용신·희신은 뺀다(EV-5 — 옛 노트 '가점 일부 상쇄 (감점)' 없음)
+          │                               ⚠️ S5c-1 음양 10 = 배정 한자 획수 홀짝(홀수 陽) 하나 — 옛 hanja_unihan.json 의 거꾸로 된 음양(짝수 陽)·Core 원획 홀짝 없음
           │     RankerEngine            → 최종 점수 = aesthetic * 0.7 + harmony * 0.3
           │     ExplanationEngine       → 추천 이유 3줄 생성
           │     RarityScoringEngine     → 희귀도/독창성 점수
@@ -294,14 +295,15 @@ D:\MyDev\NameForm\
 - 기본: Character, Reading, Meaning, Unicode, Consonant
 - 오행: FiveElement (木/火/土/金/水 — **부수 기준 자원오행**, `data/hanja_resource_element.json` 의 e 하나만 쓴다, 2026-10-22 S4),
   ResourceGrade (R 확정/V 이견 있음/X 예외 적용/U 미상), RadicalNumber·RadicalChar·AltRadicalElements·AltCharElements, Rationale(부수 근거 한 줄 = 결과 파일 note),
-  YinYang (陽/陰), StrokeCount
+  YinYang (陽/陰 — StrokeCount 홀짝, 홀수 陽, 2026-10-22 S5c-1), StrokeCount,
+  KangxiStrokes(Core 강희 원획 — 보존·표시만, 원획법 수리·음양은 D10 별도 결정)
 - 옛 뜻 기반 오행(D4 — 보존만, 화면·점수에 안 씀): MeaningElement·MeaningRationale(core_v1 → radical_map, 옛 획수 대체값 D 는 없음),
   ConfidenceGrade(옛 S/C/D — FiveElement 와 무관). 옛 S 에 기대던 가중치(관련도 +100·획수 조화 감산)는 `IsCoreData`(Source == Core_v1, 옛 S 와 같은 집합)로 옮겼다
 - 카테고리: Category (자연/덕목/개념), CategoryMajor/Minor, Tags, Evidence, Confidence
 - 선호: GenderPref (Neutral/Male/Female), TonePref (Neutral/Soft/Strong)
 
 ### 데이터 소스
-- **하드코딩 상세 데이터**: 35자 (오행/음양/획수 완비). ⚠️ 키는 한자만 — 초기 커밋의 한글 음절 키
+- **하드코딩 상세 데이터**: 35자 (뜻 기반 오행·음양·획수 — 음양은 S5c-1 부터 획수 홀짝이 덮는다). ⚠️ 키는 한자만 — 초기 커밋의 한글 음절 키
   10건(우·진·서·하·윤·민·지·현·연·채, 뜻 "하=아래" 등 오류)은 2026-09-08 제거, 가드 테스트
   `GetAllHanja_ContainsNoNonHanCodePoints`가 비한자 키를 막는다
 - **data/hanja_resource_element.json**: 부수 기준 자원오행 결과 파일(S1 `scripts/build_resource_element.py` — 대상 = 사전 파일 등재 한자 키,
@@ -350,7 +352,7 @@ D:\MyDev\NameForm\
 ### 데이터 로딩
 - `HanjaData.cs`: static Dictionary + lock 기반 스레드 안전 싱글톤
 - `Program.cs`에서 `LoadExternalData()` 호출로 시작 시 로드
-- 대표 훈 오버라이드는 모든 Meaning 기록자 이후(`LoadStrokeData()` 직후) 적용 —
+- 대표 훈 오버라이드는 모든 Meaning 기록자 이후(호환 병합·음양(`ApplyYinYangFromStrokes`)·자원오행 적용 직후) 적용 —
   `hanja_meanings.json`이 Meaning을 무조건 덮어쓰기 때문
 
 ## 주요 유틸리티

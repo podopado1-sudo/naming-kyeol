@@ -106,26 +106,33 @@ public class HanjaDataEnhancementTests
     }
 
     [Fact]
-    public void YinYang_StrokeBasedCalc_EvenIsYang_OddIsYin()
+    public void YinYang_IsStrokeParity_OddIsYang_ForEveryHanja()
     {
-        var allHanja = HanjaData.GetAllHanja()
-            .Where(h => h.StrokeCount > 0 && !string.IsNullOrEmpty(h.YinYang))
+        // 2026-10-22 S5c-1: 모든 글자의 음양 = StrokeCount 홀짝(홀수 陽·짝수 陰) — /hanja(build_hanja_seo_data.py)와 같은 규칙.
+        // 이 테스트는 전에 '짝수 陽·홀수 陰' 일치율 40% 이상을 요구했다 — hanja_unihan.json 이 거꾸로 실은 값을 규칙으로 굳힌 것이었다.
+        // Core 2,054자의 강희 원획(KangxiStrokes) 홀짝·하드코딩 35자 수동 값도 이제 쓰지 않는다(원획법은 D10 별도 결정)
+        var bad = HanjaData.GetAllHanja()
+            .Where(h => h.YinYang != (h.StrokeCount <= 0 ? "" : h.StrokeCount % 2 == 1 ? "陽" : "陰"))
+            .Select(h => $"{h.Character}{h.StrokeCount}{h.YinYang}")
             .ToList();
 
-        // 하드코딩 35자는 수동 설정이므로 제외할 수 없지만,
-        // 자동 계산된 대다수는 규칙을 따라야 함
-        var conforming = allHanja.Count(h =>
-            (h.StrokeCount % 2 == 0 && h.YinYang == "陽") ||
-            (h.StrokeCount % 2 != 0 && h.YinYang == "陰"));
+        Assert.True(bad.Count == 0, $"획수 홀짝과 다른 음양 {bad.Count}자: {string.Join(" ", bad.Take(10))}");
+    }
 
-        var ratio = (double)conforming / allHanja.Count;
+    // 획수 출처(S5c-2)·획수 파일 값(S5c-3)이 바뀌어도 획수가 같은 Core 글자만 고른다 — 원획 홀짝과 총획 홀짝이 다른 글자
+    [Theory]
+    [InlineData("河", 8, 9, "陰")]   // 강희 원획 9(水 4획)면 陽 — S5c-1 전 Core 음양
+    [InlineData("浩", 10, 11, "陰")]
+    [InlineData("珍", 9, 10, "陽")]   // 원획 10(玉 5획)이면 陰
+    [InlineData("洪", 9, 10, "陽")]
+    public void YinYang_CoreHanja_UsesTotalStrokesNotKangxi(string character, int strokes, int kangxi, string yinYang)
+    {
+        var h = HanjaData.FindByCharacter(character);
 
-        // 40% 이상이 규칙을 따라야 함
-        // Core Dataset(2,060자)은 KangxiStrokes(원획법) 기준으로 음양을 재계산하므로
-        // StrokeCount(현대 획수) 기반 검증식과는 일부 어긋남 — 이는 정확도 개선의 결과
-        // (예: 氵=3획이 아닌 水=4획으로 계산되는 한자들)
-        Assert.True(ratio >= 0.4,
-            $"음양 자동 계산 일치율: {conforming}/{allHanja.Count} ({ratio:P0})");
+        Assert.NotNull(h);
+        Assert.Equal(strokes, h!.StrokeCount);
+        Assert.Equal(kangxi, h.KangxiStrokes); // 원획은 보존(평가·분석 DTO 표시)
+        Assert.Equal(yinYang, h.YinYang);
     }
 
     // ===== GenderPref 검증 =====
