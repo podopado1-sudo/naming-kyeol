@@ -18,11 +18,13 @@
 - **데이터베이스:** EF Core 10.0
   - 개발: SQLite (`nameform.db`)
   - 프로덕션: PostgreSQL (Connection string에 따라 자동 분기)
-- **한자 사전:** JSON/CSV 9,595자 수록, 이 중 9,190자를 로드 (유니코드 미등재 코드포인트 405자는 `HanjaData.IsHanCodePoint`가 제외)
+- **한자 사전:** JSON/CSV 9,595자 수록, 이 중 9,105자를 로드 (유니코드 미등재 코드포인트 405자는 `HanjaData.IsHanCodePoint`가 제외,
+  호환 한자 85자는 `MergeCompatibilityIdeographs`가 통합 한자에 병합 — 2026-10-22). 수록 범위는 이 사전 파일이 정한다:
+  Unihan·core_v1 로더는 사전에 있는 글자만 보강하고 새 글자를 넣지 않는다(백엔드 집합 = /hanja 집합)
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,339 테스트, 2026-10-21 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,365 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -46,7 +48,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,339개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,365개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -295,8 +297,12 @@ D:\MyDev\NameForm\
   `GetAllHanja_ContainsNoNonHanCodePoints`가 비한자 키를 막는다
 - **hanja_dictionary_final.json**: 9,595자 (마스터 통합 사전). ⚠️ 이 중 405자는 대법원 목록의
   유니코드 미등재 글자가 법원 자체 코드(a01b1 등)로 변환된 가짜 코드포인트(U+A0xxx·U+F0xxx) —
-  백엔드 로더(`HanjaData.IsHanCodePoint`)와 `build_hanja_seo_data.py`가 같은 영역 규칙으로 걸러낸다
-- **data-gov.csv / data-naver.csv**: 대법원/네이버 인명용 한자
+  백엔드 로더(`HanjaData.IsHanCodePoint`)와 `build_hanja_seo_data.py`가 같은 영역 규칙으로 걸러낸다.
+  ⚠️ 원본은 gov CSV 의 쉼표 독음 칸(`"금,김"`)을 한 덩어리로, 빈 초성을 'nan' 으로 실은 864항목이 깨져 있었다 —
+  2026-10-22 `scripts/repair_hanja_dictionary.py`(멱등, `--check`)로 수리. 호환 한자 85자(金 U+F90A 등)는 파일에 남아 있고
+  로더·빌드가 NFKC 로 통합 한자에 병합한다(뜻이 호환 쪽에만 있던 金·蘭·朗·廊·剆 은 수리 때 통합 쪽에도 넣음)
+- **data-gov.csv / data-naver.csv**: 대법원/네이버 인명용 한자. ⚠️ CSV 는 Web SDK 의 Content 가 아니라서
+  `NameForm.csproj`의 `None Update="data\**\*.csv"`로 산출물에 넣는다(2026-10-22 전까지 publish 에 빠져 운영 `IsGovernmentListed` 전부 false)
 - **Unihan_*.txt**: Unicode 표준 발음/획수/부수 데이터
 - **data/hanja-gloss-overrides.json**: 대표 훈 오버라이드 95자 (然 불탈→그럴 연 등,
   로드 시 Meaning 재배열 — 원 훈 보존·멱등, 소비처는 첫 훈만 취하므로 무수정 전파)
@@ -304,7 +310,7 @@ D:\MyDev\NameForm\
 
 ### 글자 품질 세트 (HanjaData.cs 인라인, 2026-07-02 기준)
 - **ForbiddenNameHanjaSet 850자** — 명백 부정 훈 하드 배제 (생성 경로만, 평가/분석은 통과).
-  호환 코드포인트는 NFKC 정규형 조회로 자동 차단 (리터럴 등재 금지 — NFC 정규화 회귀 전력)
+  호환 코드포인트는 NFKC 정규형 조회로 자동 차단 (리터럴 등재 금지 — NFC 정규화 회귀 전력). `IsWeakGivenNameHanja`도 같은 폴백
 - **WeakGivenNameHanjaSet 667자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
   감점. 배제가 아니라 동음 대안 있을 때만 양보 → combos 소실 없음.
   `SelectCombos`(/name 조합)는 약자 없는 조합이 하나라도 있으면 약자 쌍을 **빈칸 채우기로도 쓰지 않는다**

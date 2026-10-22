@@ -86,7 +86,8 @@ public class RequiredCharEngine : IRequiredCharEngine
         if (!string.IsNullOrWhiteSpace(requiredHanja))
         {
             var hanjaChar = requiredHanja.Trim();
-            if (hanjaChar.Length == 1 && HanjaData.HanjaDictionary.TryGetValue(hanjaChar, out var hi))
+            // FindByCharacter — IME 가 낸 호환 한자(金 U+F90A 등)도 통합 한자 항목으로 찾는다(사전은 통합 쪽에 병합)
+            if (hanjaChar.Length == 1 && HanjaData.FindByCharacter(hanjaChar) is { } hi)
             {
                 fixedHanja = hi;
                 // 발음 자동 도출 (사용자가 requiredChar 비워도 동작)

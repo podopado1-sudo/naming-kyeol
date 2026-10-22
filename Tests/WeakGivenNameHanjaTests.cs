@@ -22,6 +22,20 @@ public class WeakGivenNameHanjaTests
     }
 
     [Theory]
+    [InlineData(0x2F9A3)] // 菜 호환 보충 — 사전 원본에 별도 항목으로 있던 호환형(2026-10-22 기준 14자)
+    [InlineData(0xF974)]  // 若 호환
+    [InlineData(0xF910)]  // 蘿 호환
+    public void CompatCodepoint_WeakViaNfkc(int codepoint)
+    {
+        // IsForbiddenNameHanja 와 같은 NFKC 폴백 — 세트에는 통합 한자만 두고 호환형은 정규형으로 조회.
+        // 정수 코드포인트: 호환 한자 리터럴은 편집기 NFC 정규화로 통합 한자로 바뀐 회귀 전력이 있다.
+        var compat = char.ConvertFromUtf32(codepoint);
+        Assert.NotEqual(compat, compat.Normalize(System.Text.NormalizationForm.FormKC));
+        Assert.True(HanjaData.IsWeakGivenNameHanja(compat.Normalize(System.Text.NormalizationForm.FormKC)));
+        Assert.True(HanjaData.IsWeakGivenNameHanja(compat));
+    }
+
+    [Theory]
     [InlineData("菜")] // 나물 채 (확장분 대표)
     [InlineData("枷")] // 도리깨 가
     [InlineData("焉")] // 어찌 언 (허사)

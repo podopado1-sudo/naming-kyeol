@@ -9,14 +9,21 @@ data/ 의 한자 JSON 4종을 병합해 frontend/src/data/hanja-seo.json 을 생
   Tier 4: 획수 기반 fallback           (D) — 끝자리 1·2→木 3·4→火 5·6→土 7·8→金 9·0→水
 음양: 획수 끝자리 홀수→陽, 짝수→陰 (CalculateYinYangFromStrokes 동일)
 
-사용법:  python scripts/build_hanja_seo_data.py
-출력:    frontend/src/data/hanja-seo.json + 검증 리포트(stdout)
+호환 한자(U+F900~FAFF·U+2F800~ 중 NFKC 로 통합 한자에 대응하는 85자)는 통합 한자 항목에 병합하고
+출력에서 뺀다 — HanjaData.MergeCompatibilityIdeographs(C#)와 같은 규칙(통합 쪽 값 우선, 빈 칸만 호환 쪽으로).
+같은 글자가 두 코드로 실려 독음 페이지에 같은 모양 카드가 2장 뜨던 것(79쪽)과, 뜻이 호환 쪽에만 있던
+金·蘭·朗·廊 의 통합 글자 상세 페이지가 없던 것(404)을 함께 없앤다.
+
+사용법:  python scripts/build_hanja_seo_data.py [--out PATH]
+출력:    frontend/src/data/hanja-seo.json(기본) + 검증 리포트(stdout)
 """
 
+import argparse
 import json
 import os
 import re
 import sys
+import unicodedata
 from collections import Counter, defaultdict
 
 HANGUL_SYLLABLE = re.compile(r"^[가-힣]$")
@@ -40,6 +47,13 @@ def is_han_codepoint(char):
         return False
     cp = ord(char)
     return any(lo <= cp <= hi for lo, hi in HAN_RANGES)
+
+
+def to_unified(char):
+    """호환 한자이면 NFKC 통합 한자, 아니면 그대로 (HanjaData.ToUnifiedHanja 와 같은 규칙)."""
+    unified = unicodedata.normalize("NFKC", char)
+    return unified if unified != char and is_han_codepoint(char) and is_han_codepoint(unified) else char
+
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
@@ -79,9 +93,24 @@ def reorder_gloss(meaning, preferred):
     return ", ".join(tokens)
 
 
+def split_readings(entry):
+    # 원본에 "온,은"처럼 쉼표로 묶인 항목과 "nan" 오염값이 있었다(2026-10-22 repair_hanja_dictionary.py 로 수리).
+    # 다시 들어와도 안전하게 분리 후 한글 1음절만 독음으로 인정
+    readings = []
+    for raw in entry.get("readings_hangul") or []:
+        for part in raw.split(","):
+            part = part.strip()
+            if HANGUL_SYLLABLE.match(part) and part not in readings:
+                readings.append(part)
+    return readings
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # Windows cp949 콘솔 대응
+    parser = argparse.ArgumentParser(description="hanja-seo.json 빌드")
+    parser.add_argument("--out", default=OUT_PATH, help=f"출력 경로 (기본 {OUT_PATH})")
+    out_path = parser.parse_args().out
     dictionary = load("hanja_dictionary_final.json")
     strokes_map = load("hanja_strokes.json")
     radical_map = load("hanja_radical_element_map.json")
@@ -91,6 +120,7 @@ def main():
         gloss_overrides = load("hanja-gloss-overrides.json")  # 대표 훈 오버라이드 (백엔드와 공유)
     except FileNotFoundError:
         gloss_overrides = {}
+    gloss_overrides = {to_unified(k): v for k, v in gloss_overrides.items()}  # 출력 키는 통합 한자
 
     out = {}
     grade_counter = Counter()
@@ -99,35 +129,53 @@ def main():
     skipped_no_reading = []
     skipped_non_han = []
 
+    # 호환 한자 → 통합 한자 묶음 (통합 글자 키로 출력하고 호환 글자는 출력하지 않는다)
+    compat_of = defaultdict(list)
+    for char in dictionary:
+        if is_han_codepoint(char) and to_unified(char) != char:
+            compat_of[to_unified(char)].append(char)
+    merged_compat = []
+
     for char, entry in dictionary.items():
         if not is_han_codepoint(char):
             skipped_non_han.append(char)
             continue
-        # 원본에 "온,은"처럼 쉼표로 묶인 항목(863자)과 "nan" 오염값(𥡴)이 있어
-        # 분리 후 한글 1음절만 독음으로 인정
+        if to_unified(char) != char:
+            if to_unified(char) in dictionary:
+                continue  # 통합 한자 항목에서 병합
+            # 통합 글자 항목이 없는 호환 글자 — 통합 글자 키로 옮겨 싣는다(현재 데이터엔 없음)
+            char = to_unified(char)
+        compats = [c for c in compat_of.get(char, []) if c != char]
+        sources = [entry] + [dictionary[c] for c in compats]
+
         readings = []
-        for raw in entry.get("readings_hangul") or []:
-            for part in raw.split(","):
-                part = part.strip()
-                if HANGUL_SYLLABLE.match(part) and part not in readings:
-                    readings.append(part)
+        for e in sources:
+            for r in split_readings(e):
+                if r not in readings:
+                    readings.append(r)
         if not readings:
             skipped_no_reading.append(char)
             continue
-        meaning = entry.get("meaning_ko") or None
-        if meaning and char in gloss_overrides:
-            meaning = reorder_gloss(meaning, gloss_overrides[char])
-        strokes = strokes_map.get(char)
-        is_gov = "gov" in (entry.get("sources") or [])
+        meaning = next((e.get("meaning_ko") for e in sources if e.get("meaning_ko")), None)
+        if char in gloss_overrides:
+            # C# ReorderGloss 와 같이 뜻이 비어 있으면 대표 훈 자체를 뜻으로 쓴다
+            meaning = reorder_gloss(meaning or "", gloss_overrides[char]) or None
+        strokes = strokes_map.get(char) or next((strokes_map[c] for c in compats if strokes_map.get(c)), None)
+        is_gov = any("gov" in (e.get("sources") or []) for e in sources)
+        if compats:
+            merged_compat.extend(compats)
 
+        # 오행: 통합 글자의 검수(core)·의미 기반(radical) 판정 → 없으면 호환 글자의 의미 기반 판정 → 획수 대체값
+        radical_key = next((k for k in [char] + compats
+                            if k in radical_map and radical_map[k].get("five_element")), None)
         element = grade = rationale = None
         if char in core_map:
             core = core_map[char]
             element = core.get("five_element")
             grade = core.get("confidence") or "S"
             rationale = core.get("rationale")
-        elif char in radical_map and radical_map[char].get("five_element"):
-            rad = radical_map[char]
+        elif radical_key:
+            rad = radical_map[radical_key]
             element = rad["five_element"]
             grade = "C"
             rationale = rad.get("rationale")
@@ -160,16 +208,24 @@ def main():
         if not (meaning and strokes):
             skipped_thin.append(char)
 
-    os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
-    with open(OUT_PATH, "w", encoding="utf-8", newline="\n") as f:
+    # 독음 페이지 중복 카드 검사 — 같은 독음 아래 NFKC 로 같은 글자가 둘이면 실패
+    dup_readings = sorted(r for r, chars in readings_index.items()
+                          if len({unicodedata.normalize("NFKC", c) for c in chars}) != len(chars))
+    if dup_readings:
+        print(f"[오류] 독음 페이지 중복 카드 {len(dup_readings)}쪽: {' '.join(dup_readings[:10])}")
+        return 1
+
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
 
-    size_mb = os.path.getsize(OUT_PATH) / 1024 / 1024
+    size_mb = os.path.getsize(out_path) / 1024 / 1024
     detail_pages = len(out) - len(skipped_thin)
 
     print("=== hanja-seo.json 빌드 리포트 ===")
     print(f"총 글자: {len(out)}")
-    print(f"출력 크기: {size_mb:.2f} MB → {OUT_PATH}")
+    print(f"출력 크기: {size_mb:.2f} MB → {out_path}")
+    print(f"호환 한자 병합: {len(merged_compat)}자 → 통합 한자 항목으로 (출력에서 제외, 독음 페이지 중복 카드 0)")
     print(f"오행 등급 분포: {dict(sorted(grade_counter.items()))}")
     print(f"고유 독음 수: {len(readings_index)}")
     print(f"상세 페이지 대상 (뜻+획수 보유): {detail_pages}")
@@ -183,7 +239,9 @@ def main():
 
     core_missing = [c for c in core_map if c not in dictionary]
     if core_missing:
-        print(f"[경고] core_v1에만 있고 사전에 없는 글자 {len(core_missing)}자: {''.join(core_missing[:20])}...")
+        # 백엔드 HanjaData 도 이 글자들을 싣지 않는다(수록 범위 = 이 사전). 2026-10-22 기준 6자(晩·查·随·皂·颻·慥) —
+        # 대법원 인명용 한자표(data-gov.csv)에 없다. 앞 넷은 표준형 晚·査·隨·皁 이 수록돼 있고 颻·慥 은 대응 글자가 없다.
+        print(f"[참고] core_v1에만 있고 사전에 없는 글자 {len(core_missing)}자(수록 안 함): {''.join(core_missing[:20])}")
 
     return 0
 

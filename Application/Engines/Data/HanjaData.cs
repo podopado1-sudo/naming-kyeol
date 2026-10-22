@@ -755,7 +755,10 @@ public static class HanjaData
         // ── Unicode 획수 (수리사격용 — kTotalStrokes 95.8% 커버) ──────────
         LoadStrokeData();
 
-        // ── 대표 훈 오버라이드 (모든 Meaning 기록자 이후 — LoadMeaningsFromJson이 덮어쓰므로) ──
+        // ── 호환 한자 → 통합 한자 병합 (데이터 파일 적재가 모두 끝난 뒤 — 파일마다 호환 코드 키에도 값을 실었으므로) ──
+        MergeCompatibilityIdeographs();
+
+        // ── 대표 훈 오버라이드 (모든 Meaning 기록자 이후 — LoadMeaningsFromJson이 덮어쓰고, 병합이 빈 뜻을 채우므로) ──
         ApplyGlossOverrides();
     }
 
@@ -859,24 +862,11 @@ public static class HanjaData
                     if (entry.KangxiStrokes > 0)
                         existing.YinYang = CalculateYinYangFromStrokes(entry.KangxiStrokes);
                 }
-                else
-                {
-                    // 사전에 없는 경우 새로 추가
-                    dict[entry.Hanja] = new HanjaInfo
-                    {
-                        Character      = entry.Hanja,
-                        Reading        = entry.Hangul ?? string.Empty,
-                        FiveElement    = entry.FiveElement ?? string.Empty,
-                        YinYang        = entry.KangxiStrokes > 0
-                            ? CalculateYinYangFromStrokes(entry.KangxiStrokes) : string.Empty,
-                        StrokeCount    = entry.KangxiStrokes,
-                        KangxiStrokes  = entry.KangxiStrokes,
-                        Rationale      = entry.Rationale ?? string.Empty,
-                        ConfidenceGrade = entry.Confidence ?? "S",
-                        Source         = "Core_v1",
-                        Category       = "덕목",
-                    };
-                }
+                // 사전에 없는 글자는 추가하지 않는다 — 수록 범위는 hanja_dictionary_final.json 이 정한다(/hanja 와 같은 집합).
+                // 2026-10-22 기준 core_v1 에만 있는 6자 晩·查·随·皂·颻·慥 은 대법원 인명용 한자표(data-gov.csv)·네이버 자료에
+                // 없다. 앞 넷은 표준형 晚·査·隨·皁 가 사전에 있고(査·隨 는 core_v1 에도 있음), 颻·慥 은 대응 글자가 목록에 없다.
+                // 예전엔 여기서(독음 없는 다섯은 Unihan 로더가 먼저) 새 항목으로 넣어, 뜻 없는 查(독음 사)가 Core 가점(+2000)을
+                // 달고 뜻을 보지 않는 생성 풀(NamePoolEngine 등)에 섞였다.
             }
 
             // ── Core Dataset 후처리: "기타" 카테고리 재분류 ────────────────────
@@ -1122,6 +1112,88 @@ public static class HanjaData
             || (codePoint >= 0x20000 && codePoint <= 0x2EBEF)   // 확장 B~F
             || (codePoint >= 0x2F800 && codePoint <= 0x2FA1F)   // 호환 보충
             || (codePoint >= 0x30000 && codePoint <= 0x323AF);  // 확장 G~H
+    }
+
+    /// <summary>
+    /// CJK 호환 한자(U+F900~FAFF·U+2F800~2FA1F 중 정규화로 통합 한자에 대응하는 글자)이면 그 통합 한자를,
+    /// 아니면 입력을 그대로 돌려준다(호환 블록 안의 통합 한자 12자는 정규형이 자기 자신이라 그대로).
+    /// KS X 1001 이 金(금·김)·蘭(난·란)처럼 독음마다 코드를 따로 둬서 한국어 IME·네이버 자료가 호환 코드를 낸다.
+    /// ⚠️ 호환 한자를 소스 리터럴로 쓰지 말 것 — 편집 도구의 NFC 정규화로 통합 한자로 바뀐 회귀 전력이 있다.
+    /// </summary>
+    public static string ToUnifiedHanja(string character)
+    {
+        // 한자 1글자만 — 빈 문자열·여러 글자·홀로 남은 서로게이트(Normalize 가 예외를 던짐)는 그대로 돌려준다
+        if (!IsHanCodePoint(character)) return character;
+        var unified = character.Normalize(System.Text.NormalizationForm.FormKC);
+        return unified != character && IsHanCodePoint(unified) ? unified : character;
+    }
+
+    /// <summary>
+    /// 호환 한자 항목을 통합 한자 항목에 합치고 사전에서 뺀다 (ND-4, 2026-10-22).
+    /// 사전·뜻·Unihan·카테고리 파일이 같은 글자를 호환 코드(金 U+F90A)와 통합 코드(金 U+91D1)로 따로 실어,
+    /// 독음 조회에 같은 모양 글자가 둘 나오고, 뜻이 호환 쪽에만 있던 金·蘭·朗·廊·剆 은 후보에서 빠졌다.
+    /// 규칙: 통합 쪽 값이 있으면 통합 쪽이 이기고 빈 칸만 호환 쪽 값으로 채운다. 뜻을 호환 쪽에서 받으면
+    /// 뜻에서 나온 값(카테고리·성별·톤)도 함께 받는다. 오행은 통합 쪽이 획수 대체값뿐일 때만 호환 쪽 판정을 쓴다.
+    /// scripts/build_hanja_seo_data.py 가 같은 규칙으로 병합한다(/hanja 독음 페이지 중복 카드 제거).
+    /// </summary>
+    private static void MergeCompatibilityIdeographs()
+    {
+        var dict = _loadedDictionary;
+        if (dict == null) return;
+
+        var compatKeys = dict.Keys.Where(k => ToUnifiedHanja(k) != k).ToList();
+        foreach (var key in compatKeys)
+        {
+            var src = dict[key];
+            var unified = ToUnifiedHanja(key);
+            dict.Remove(key);
+
+            if (!dict.TryGetValue(unified, out var dst))
+            {
+                src.Character = unified;
+                dict[unified] = src;
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(dst.Reading)) dst.Reading = src.Reading;
+            foreach (var r in src.AlternateReadings.Prepend(src.Reading))
+            {
+                if (!string.IsNullOrEmpty(r) && r != dst.Reading && !dst.AlternateReadings.Contains(r))
+                    dst.AlternateReadings.Add(r);
+            }
+
+            if (string.IsNullOrEmpty(dst.Meaning) && !string.IsNullOrEmpty(src.Meaning))
+            {
+                dst.Meaning = src.Meaning;
+                if (string.IsNullOrEmpty(dst.Category) || dst.Category == "기타") dst.Category = src.Category;
+                if (string.IsNullOrEmpty(dst.CategoryMajor))
+                {
+                    dst.CategoryMajor = src.CategoryMajor;
+                    dst.CategoryMinor = src.CategoryMinor;
+                    dst.CategoryTags = src.CategoryTags;
+                    dst.CategoryEvidence = src.CategoryEvidence;
+                    dst.CategoryConfidence = src.CategoryConfidence;
+                }
+                if (dst.GenderPref == GenderPreference.Neutral) dst.GenderPref = src.GenderPref;
+                if (dst.TonePref == TonePreference.Neutral) dst.TonePref = src.TonePref;
+            }
+
+            if (dst.StrokeCount == 0) dst.StrokeCount = src.StrokeCount;
+            if (dst.KangxiStrokes == 0) dst.KangxiStrokes = src.KangxiStrokes;
+            if (string.IsNullOrEmpty(dst.YinYang)) dst.YinYang = src.YinYang;
+            if (string.IsNullOrEmpty(dst.Consonant)) dst.Consonant = src.Consonant;
+            dst.IsGovernmentListed |= src.IsGovernmentListed;
+
+            bool dstFallbackOnly = string.IsNullOrEmpty(dst.FiveElement) || dst.Source == "Auto_Fallback";
+            bool srcJudged = !string.IsNullOrEmpty(src.FiveElement) && src.Source != "Auto_Fallback";
+            if (dstFallbackOnly && (srcJudged || string.IsNullOrEmpty(dst.FiveElement)))
+            {
+                dst.FiveElement = src.FiveElement;
+                dst.ConfidenceGrade = src.ConfidenceGrade;
+                dst.Rationale = src.Rationale;
+                dst.Source = src.Source;
+            }
+        }
     }
 
     /// <summary>
@@ -1386,8 +1458,14 @@ public static class HanjaData
     /// <summary>실제 인명에 자주 쓰이는 대표 한자(인명 빈출 셋)인지 판정. 뜻 풀이 시 비(非)이름 한자 배제용.</summary>
     public static bool IsCommonNameHanja(string character) => CommonNameHanja.Contains(character);
 
-    /// <summary>이름 뜻으로 약한 한자(감점 대상)인지 판정 — 동음의 더 나은 대안이 있으면 양보.</summary>
-    public static bool IsWeakGivenNameHanja(string character) => WeakGivenNameHanjaSet.Contains(character);
+    /// <summary>이름 뜻으로 약한 한자(감점 대상)인지 판정 — 동음의 더 나은 대안이 있으면 양보.
+    /// 호환 코드포인트는 <see cref="IsForbiddenNameHanja"/>와 같이 NFKC 정규형으로 조회한다(세트에는 통합 한자만 둔다).</summary>
+    public static bool IsWeakGivenNameHanja(string character)
+    {
+        if (WeakGivenNameHanjaSet.Contains(character)) return true;
+        var unified = ToUnifiedHanja(character); // NFKC — 한자 1글자가 아니면 그대로
+        return unified != character && WeakGivenNameHanjaSet.Contains(unified);
+    }
 
     public static int CalculateRelevanceScore(HanjaInfo hanja)
     {
@@ -1467,7 +1545,11 @@ public static class HanjaData
     /// </summary>
     public static HanjaInfo? FindByCharacter(string character)
     {
-        return HanjaDictionary.TryGetValue(character, out var info) ? info : null;
+        if (string.IsNullOrEmpty(character)) return null;
+        if (HanjaDictionary.TryGetValue(character, out var info)) return info;
+        // 사전은 호환 한자를 통합 한자 항목에 병합해 두므로, IME 가 낸 호환 코드(김→金 U+F90A)는 통합 쪽으로 찾는다
+        var unified = ToUnifiedHanja(character);
+        return unified != character && HanjaDictionary.TryGetValue(unified, out info) ? info : null;
     }
 
     /// <summary>
@@ -1607,49 +1689,10 @@ public static class HanjaData
                     var data = kvp.Value;
                     var hanja = kvp.Key;
                     
-                    // 한자가 사전에 없으면 기본 정보로 추가
-                    if (!HanjaDictionary.ContainsKey(hanja))
-                    {
-                        lock (_lockObject)
-                        {
-                            var newHanjaInfo = new HanjaInfo
-                            {
-                                Character = hanja,
-                                Reading = string.Empty,
-                                Unicode = string.Empty,
-                                Category = "기타"
-                            };
-                            
-                            // 총획수가 있으면 자동으로 오행과 음양 계산
-                            if (data.strokeCount.HasValue && data.strokeCount.Value > 0)
-                            {
-                                newHanjaInfo.StrokeCount = data.strokeCount.Value;
-                                AutoCalculateFiveElementAndYinYang(newHanjaInfo);
-                            }
-
-                            // GenderPref/TonePref 설정
-                            if (!string.IsNullOrEmpty(data.genderPref))
-                            {
-                                newHanjaInfo.GenderPref = data.genderPref switch
-                                {
-                                    "Male" => GenderPreference.Male,
-                                    "Female" => GenderPreference.Female,
-                                    _ => GenderPreference.Neutral
-                                };
-                            }
-                            if (!string.IsNullOrEmpty(data.tonePref))
-                            {
-                                newHanjaInfo.TonePref = data.tonePref switch
-                                {
-                                    "Strong" => TonePreference.Strong,
-                                    "Soft" => TonePreference.Soft,
-                                    _ => TonePreference.Neutral
-                                };
-                            }
-
-                            _loadedDictionary![hanja] = newHanjaInfo;
-                        }
-                    }
+                    // 사전에 없는 글자는 추가하지 않는다 — 수록 범위는 hanja_dictionary_final.json(인명용 목록)이 정한다.
+                    // (2026-10-22까지는 여기서 독음·뜻 없는 Unihan 전용 5,482자를 새 항목으로 넣어, 백엔드 사전이
+                    //  사이트 /hanja 보다 컸다. 독음이 없어 조회 경로엔 안 나왔지만 FindByCharacter·전수 순회에는 섞였다.)
+                    if (!HanjaDictionary.ContainsKey(hanja)) continue;
                     
                     if (HanjaDictionary.TryGetValue(hanja, out var hanjaInfo))
                     {
@@ -1784,7 +1827,7 @@ public static class HanjaData
                     if (overrides == null) return;
                     foreach (var (ch, preferred) in overrides)
                     {
-                        if (dict.TryGetValue(ch, out var h))
+                        if (dict.TryGetValue(ToUnifiedHanja(ch), out var h)) // 사전은 통합 한자 키만 둔다
                             h.Meaning = ReorderGloss(h.Meaning, preferred);
                     }
                 }

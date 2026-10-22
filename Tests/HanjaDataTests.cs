@@ -29,7 +29,7 @@ public class HanjaDataTests
     [InlineData(0x2F9A2)] // 菌 호환자
     public void IsForbiddenNameHanja_CompatCodepoint_BlockedViaNfkc(int codepoint)
     {
-        // 사전에 호환 코드포인트가 별도 엔트리로 존재 — NFKC 정규형 조회로 차단돼야 함.
+        // 원본 데이터 파일엔 호환 코드포인트가 별도 키로 있다(로더가 통합 한자에 병합) — 입력으로 들어와도 NFKC 정규형 조회로 차단돼야 함.
         // 문자 리터럴 대신 정수 코드포인트 사용: 리터럴은 편집기 NFC 정규화로
         // 조용히 일반자로 바뀐 회귀 전력이 있음(그게 이 테스트가 지키는 버그).
         var compat = char.ConvertFromUtf32(codepoint);

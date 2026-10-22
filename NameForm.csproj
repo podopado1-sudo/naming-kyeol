@@ -49,6 +49,14 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
 
+    <!-- data/*.csv (대법원·네이버 인명용 한자표) — Web SDK 는 .json 만 Content 로 잡아서 CSV 는 None 항목이다.
+         위 Content Update 가 닿지 않아 빌드·publish 산출물에 CSV 가 0개였고(2026-10-22 확인), 운영(/app)에서
+         HanjaData.LoadGovernmentHanjaList 가 data-gov.csv 를 못 찾아 IsGovernmentListed 가 전부 false 였다. -->
+    <None Update="data\**\*.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+
     <!-- scripts/ 디렉토리의 JSON만 (Python 스크립트는 제외) -->
     <Content Update="scripts\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

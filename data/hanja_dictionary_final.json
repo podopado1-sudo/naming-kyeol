@@ -17,11 +17,9 @@
     "hanja": "㒚",
     "readings_hangul": [
       "온",
-      "온,은",
       "은"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "0349a",
@@ -107,10 +105,12 @@
   "㖀": {
     "hanja": "㖀",
     "readings_hangul": [
-      "률,율"
+      "률",
+      "율"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "03580",
     "sources": [
@@ -281,11 +281,9 @@
     "hanja": "㛦",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -475,11 +473,9 @@
     "hanja": "㢃",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -666,10 +662,11 @@
   "㥼": {
     "hanja": "㥼",
     "readings_hangul": [
-      "언,은"
+      "언",
+      "은"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ"
     ],
     "unicode_hex": "0397c",
     "sources": [
@@ -724,11 +721,9 @@
     "hanja": "㦐",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -1091,10 +1086,11 @@
   "㭲": {
     "hanja": "㭲",
     "readings_hangul": [
-      "극,급"
+      "극",
+      "급"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ"
     ],
     "unicode_hex": "03b72",
     "sources": [
@@ -1147,10 +1143,12 @@
   "㯖": {
     "hanja": "㯖",
     "readings_hangul": [
-      "덕,적"
+      "덕",
+      "적"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄷ",
+      "ㅈ"
     ],
     "unicode_hex": "03bd6",
     "sources": [
@@ -1451,10 +1449,12 @@
   "㵪": {
     "hanja": "㵪",
     "readings_hangul": [
-      "선,연"
+      "선",
+      "연"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅇ"
     ],
     "unicode_hex": "03d6a",
     "sources": [
@@ -1637,11 +1637,9 @@
     "hanja": "㻽",
     "readings_hangul": [
       "선",
-      "선,수",
       "수"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "03efd",
@@ -1756,10 +1754,12 @@
   "䀸": {
     "hanja": "䀸",
     "readings_hangul": [
-      "절,체"
+      "절",
+      "체"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅈ",
+      "ㅊ"
     ],
     "unicode_hex": "04038",
     "sources": [
@@ -2288,11 +2288,9 @@
     "hanja": "䗲",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -2307,11 +2305,9 @@
     "hanja": "䘘",
     "readings_hangul": [
       "소",
-      "소,어",
       "어"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅇ"
     ],
@@ -2325,10 +2321,11 @@
   "䙘": {
     "hanja": "䙘",
     "readings_hangul": [
-      "초,축"
+      "초",
+      "축"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅊ"
     ],
     "unicode_hex": "04658",
     "sources": [
@@ -2495,10 +2492,11 @@
   "䛥": {
     "hanja": "䛥",
     "readings_hangul": [
-      "흔,희"
+      "흔",
+      "희"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅎ"
     ],
     "unicode_hex": "046e5",
     "sources": [
@@ -2551,10 +2549,15 @@
   "䜌": {
     "hanja": "䜌",
     "readings_hangul": [
-      "난,란,련,연"
+      "난",
+      "란",
+      "련",
+      "연"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "0470c",
     "sources": [
@@ -2592,10 +2595,12 @@
   "䜫": {
     "hanja": "䜫",
     "readings_hangul": [
-      "강,홍"
+      "강",
+      "홍"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "0472b",
     "sources": [
@@ -2606,11 +2611,9 @@
     "hanja": "䜭",
     "readings_hangul": [
       "예",
-      "예,준",
       "준"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅈ"
     ],
@@ -2785,11 +2788,9 @@
     "hanja": "䢖",
     "readings_hangul": [
       "건",
-      "건,율",
       "율"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅇ"
     ],
@@ -3009,11 +3010,9 @@
     "hanja": "䫟",
     "readings_hangul": [
       "운",
-      "운,혼",
       "혼"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅎ"
     ],
@@ -3072,11 +3071,9 @@
     "hanja": "䭓",
     "readings_hangul": [
       "안",
-      "안,온",
       "온"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "04b53",
@@ -3146,10 +3143,12 @@
   "䲻": {
     "hanja": "䲻",
     "readings_hangul": [
-      "연,현"
+      "연",
+      "현"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ",
+      "ㅎ"
     ],
     "unicode_hex": "04cbb",
     "sources": [
@@ -3368,11 +3367,9 @@
     "hanja": "不",
     "readings_hangul": [
       "부",
-      "부,불",
       "불"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ"
     ],
     "unicode_hex": "04e0d",
@@ -3595,11 +3592,9 @@
     "hanja": "串",
     "readings_hangul": [
       "곶",
-      "곶,관",
       "관"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ"
     ],
     "unicode_hex": "04e32",
@@ -3628,12 +3623,10 @@
     "hanja": "丹",
     "readings_hangul": [
       "난",
-      "난,단,란",
       "단",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄷ",
       "ㄹ"
@@ -3993,11 +3986,11 @@
   "乻": {
     "hanja": "乻",
     "readings_hangul": [
-      "늘,얼",
+      "늘",
       "얼"
     ],
     "initial_consonants": [
-      "nan",
+      "ㄴ",
       "ㅇ"
     ],
     "unicode_hex": "04e7b",
@@ -4041,11 +4034,9 @@
     "hanja": "亂",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -4060,11 +4051,9 @@
     "hanja": "了",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -4199,11 +4188,9 @@
     "hanja": "亘",
     "readings_hangul": [
       "긍",
-      "긍,선",
       "선"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅅ"
     ],
@@ -4427,11 +4414,9 @@
     "hanja": "亮",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -4536,11 +4521,9 @@
     "hanja": "什",
     "readings_hangul": [
       "십",
-      "십,집",
       "집"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -4866,11 +4849,9 @@
     "hanja": "令",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -4914,10 +4895,11 @@
   "仱": {
     "hanja": "仱",
     "readings_hangul": [
-      "금,긍"
+      "금",
+      "긍"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ"
     ],
     "unicode_hex": "04ef1",
     "sources": [
@@ -5330,11 +5312,9 @@
     "hanja": "伶",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -5526,10 +5506,11 @@
   "佉": {
     "hanja": "佉",
     "readings_hangul": [
-      "거,구"
+      "거",
+      "구"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ"
     ],
     "unicode_hex": "04f49",
     "sources": [
@@ -5780,11 +5761,9 @@
     "hanja": "佞",
     "readings_hangul": [
       "녕",
-      "녕,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -6112,11 +6091,9 @@
     "hanja": "來",
     "readings_hangul": [
       "내",
-      "내,래",
       "래"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -6176,11 +6153,9 @@
     "hanja": "例",
     "readings_hangul": [
       "례",
-      "례,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -6300,11 +6275,9 @@
     "hanja": "侖",
     "readings_hangul": [
       "륜",
-      "륜,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -6484,11 +6457,9 @@
     "hanja": "侶",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -6562,11 +6533,9 @@
     "hanja": "便",
     "readings_hangul": [
       "변",
-      "변,편",
       "편"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ",
       "ㅍ"
     ],
@@ -6701,11 +6670,9 @@
     "hanja": "俍",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -6750,11 +6717,9 @@
     "hanja": "俐",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -6889,11 +6854,9 @@
     "hanja": "俚",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -7250,11 +7213,9 @@
     "hanja": "倆",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -7715,11 +7676,9 @@
     "hanja": "倫",
     "readings_hangul": [
       "륜",
-      "륜,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -7764,11 +7723,9 @@
     "hanja": "倮",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -7783,11 +7740,9 @@
     "hanja": "倰",
     "readings_hangul": [
       "능",
-      "능,릉",
       "릉"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -8708,11 +8663,9 @@
     "hanja": "僂",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -8756,10 +8709,12 @@
   "僆": {
     "hanja": "僆",
     "readings_hangul": [
-      "련,연"
+      "련",
+      "연"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "050c6",
     "sources": [
@@ -8827,11 +8782,11 @@
   "僎": {
     "hanja": "僎",
     "readings_hangul": [
-      "선,준",
+      "선",
       "준"
     ],
     "initial_consonants": [
-      "nan",
+      "ㅅ",
       "ㅈ"
     ],
     "unicode_hex": "050ce",
@@ -8934,11 +8889,9 @@
     "hanja": "僚",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -9474,11 +9427,9 @@
     "hanja": "儜",
     "readings_hangul": [
       "녕",
-      "녕,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -9508,11 +9459,9 @@
     "hanja": "儡",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -9527,11 +9476,9 @@
     "hanja": "儢",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -9635,11 +9582,9 @@
     "hanja": "儱",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -9699,11 +9644,9 @@
     "hanja": "儷",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -9718,11 +9661,9 @@
     "hanja": "儸",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -10022,11 +9963,9 @@
     "hanja": "兒",
     "readings_hangul": [
       "아",
-      "아,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "05152",
@@ -10202,11 +10141,9 @@
     "hanja": "兩",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -10266,11 +10203,9 @@
     "hanja": "六",
     "readings_hangul": [
       "륙",
-      "륙,육",
       "육"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -10762,11 +10697,9 @@
     "hanja": "冷",
     "readings_hangul": [
       "냉",
-      "냉,랭",
       "랭"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -10781,11 +10714,9 @@
     "hanja": "冽",
     "readings_hangul": [
       "렬",
-      "렬,열",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -10814,10 +10745,11 @@
   "冿": {
     "hanja": "冿",
     "readings_hangul": [
-      "전,점"
+      "전",
+      "점"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅈ"
     ],
     "unicode_hex": "051bf",
     "sources": [
@@ -10887,11 +10819,9 @@
     "hanja": "凉",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -10936,11 +10866,9 @@
     "hanja": "凌",
     "readings_hangul": [
       "능",
-      "능,릉",
       "릉"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -11030,11 +10958,9 @@
     "hanja": "凛",
     "readings_hangul": [
       "늠",
-      "늠,름",
       "름"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -11049,11 +10975,9 @@
     "hanja": "凜",
     "readings_hangul": [
       "늠",
-      "늠,름",
       "름"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -11337,11 +11261,9 @@
     "hanja": "切",
     "readings_hangul": [
       "절",
-      "절,체",
       "체"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ",
       "ㅊ"
     ],
@@ -11446,11 +11368,9 @@
     "hanja": "列",
     "readings_hangul": [
       "렬",
-      "렬,열",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -11540,11 +11460,9 @@
     "hanja": "利",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -11709,11 +11627,9 @@
     "hanja": "刺",
     "readings_hangul": [
       "자",
-      "자,척",
       "척"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ",
       "ㅊ"
     ],
@@ -11772,15 +11688,19 @@
   "剆": {
     "hanja": "剆",
     "readings_hangul": [
-      "나,라"
+      "나",
+      "라"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "05246",
     "sources": [
-      "gov"
-    ]
+      "gov",
+      "naver"
+    ],
+    "meaning_ko": "칠 라(나)"
   },
   "則": {
     "hanja": "則",
@@ -11846,11 +11766,10 @@
     "hanja": "剌",
     "readings_hangul": [
       "날",
-      "날,라,랄",
+      "라",
       "랄"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -12176,11 +12095,9 @@
     "hanja": "剺",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -12285,11 +12202,9 @@
     "hanja": "劉",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -12394,11 +12309,9 @@
     "hanja": "力",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -12443,11 +12356,9 @@
     "hanja": "劣",
     "readings_hangul": [
       "렬",
-      "렬,열",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -12744,11 +12655,9 @@
     "hanja": "勒",
     "readings_hangul": [
       "늑",
-      "늑,륵",
       "륵"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -12867,11 +12776,9 @@
     "hanja": "勞",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -12901,11 +12808,9 @@
     "hanja": "勠",
     "readings_hangul": [
       "륙",
-      "륙,육",
       "육"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -13096,11 +13001,9 @@
     "hanja": "勵",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -13145,11 +13048,9 @@
     "hanja": "勻",
     "readings_hangul": [
       "균",
-      "균,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅇ"
     ],
@@ -13208,11 +13109,9 @@
     "hanja": "匀",
     "readings_hangul": [
       "균",
-      "균,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅇ"
     ],
@@ -13391,11 +13290,9 @@
     "hanja": "北",
     "readings_hangul": [
       "배",
-      "배,북",
       "북"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ"
     ],
     "unicode_hex": "05317",
@@ -13574,11 +13471,9 @@
     "hanja": "医",
     "readings_hangul": [
       "예",
-      "예,의",
       "의"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "0533b",
@@ -13622,11 +13517,9 @@
     "hanja": "匿",
     "readings_hangul": [
       "닉",
-      "닉,익",
       "익"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -14105,11 +13998,9 @@
     "hanja": "卵",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -14288,11 +14179,9 @@
     "hanja": "厘",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -14427,11 +14316,9 @@
     "hanja": "厲",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -14491,11 +14378,9 @@
     "hanja": "參",
     "readings_hangul": [
       "삼",
-      "삼,참",
       "참"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅊ"
     ],
@@ -14750,11 +14635,9 @@
     "hanja": "句",
     "readings_hangul": [
       "구",
-      "구,귀",
       "귀"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ"
     ],
     "unicode_hex": "053e5",
@@ -14768,11 +14651,9 @@
     "hanja": "另",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -15192,11 +15073,9 @@
     "hanja": "吏",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -15270,11 +15149,9 @@
     "hanja": "吝",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -15557,11 +15434,9 @@
     "hanja": "呂",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -15694,11 +15569,9 @@
     "hanja": "呢",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -15713,11 +15586,9 @@
     "hanja": "呤",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -16341,11 +16212,9 @@
     "hanja": "咽",
     "readings_hangul": [
       "열",
-      "열,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "054bd",
@@ -16523,11 +16392,9 @@
     "hanja": "員",
     "readings_hangul": [
       "운",
-      "운,원",
       "원"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "054e1",
@@ -16586,11 +16453,9 @@
     "hanja": "哩",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -16812,11 +16677,9 @@
     "hanja": "唎",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -16979,11 +16842,9 @@
     "hanja": "唳",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -17089,10 +16950,11 @@
   "啁": {
     "hanja": "啁",
     "readings_hangul": [
-      "조,주"
+      "조",
+      "주"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅈ"
     ],
     "unicode_hex": "05541",
     "sources": [
@@ -17445,11 +17307,9 @@
     "hanja": "喇",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -17704,11 +17564,9 @@
     "hanja": "喨",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -17976,11 +17834,9 @@
     "hanja": "嗠",
     "readings_hangul": [
       "낙",
-      "낙,락",
       "락"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -18174,11 +18030,9 @@
     "hanja": "嘍",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -18208,11 +18062,9 @@
     "hanja": "嘏",
     "readings_hangul": [
       "가",
-      "가,하",
       "하"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅎ"
     ],
@@ -18465,11 +18317,9 @@
     "hanja": "嘹",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -18842,11 +18692,9 @@
     "hanja": "嚀",
     "readings_hangul": [
       "녕",
-      "녕,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -18891,11 +18739,9 @@
     "hanja": "嚇",
     "readings_hangul": [
       "하",
-      "하,혁",
       "혁"
     ],
     "initial_consonants": [
-      "nan",
       "ㅎ"
     ],
     "unicode_hex": "05687",
@@ -18968,11 +18814,9 @@
     "hanja": "嚧",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -19180,11 +19024,9 @@
     "hanja": "囉",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -19421,11 +19263,9 @@
     "hanja": "囹",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -19545,11 +19385,9 @@
     "hanja": "圇",
     "readings_hangul": [
       "륜",
-      "륜,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -19890,11 +19728,9 @@
     "hanja": "圻",
     "readings_hangul": [
       "기",
-      "기,은",
       "은"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅇ"
     ],
@@ -19969,11 +19805,9 @@
     "hanja": "均",
     "readings_hangul": [
       "균",
-      "균,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅇ"
     ],
@@ -20374,10 +20208,12 @@
   "坽": {
     "hanja": "坽",
     "readings_hangul": [
-      "령,영"
+      "령",
+      "영"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "0577d",
     "sources": [
@@ -20816,11 +20652,9 @@
     "hanja": "埒",
     "readings_hangul": [
       "날",
-      "날,랄",
       "랄"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -21312,10 +21146,12 @@
   "堜": {
     "hanja": "堜",
     "readings_hangul": [
-      "련,연"
+      "련",
+      "연"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "0581c",
     "sources": [
@@ -21816,11 +21652,9 @@
     "hanja": "塞",
     "readings_hangul": [
       "새",
-      "새,색",
       "색"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "0585e",
@@ -21834,11 +21668,9 @@
     "hanja": "塡",
     "readings_hangul": [
       "전",
-      "전,진",
       "진"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ"
     ],
     "unicode_hex": "05861",
@@ -22016,10 +21848,12 @@
   "墆": {
     "hanja": "墆",
     "readings_hangul": [
-      "절,체"
+      "절",
+      "체"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅈ",
+      "ㅊ"
     ],
     "unicode_hex": "05886",
     "sources": [
@@ -22564,11 +22398,9 @@
     "hanja": "壘",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -22598,11 +22430,9 @@
     "hanja": "壚",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -22662,11 +22492,9 @@
     "hanja": "壟",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -22710,10 +22538,11 @@
   "壩": {
     "hanja": "壩",
     "readings_hangul": [
-      "파,패"
+      "파",
+      "패"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅍ"
     ],
     "unicode_hex": "058e9",
     "sources": [
@@ -23201,10 +23030,12 @@
   "夰": {
     "hanja": "夰",
     "readings_hangul": [
-      "고,호"
+      "고",
+      "호"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "05930",
     "sources": [
@@ -23335,11 +23166,9 @@
     "hanja": "奈",
     "readings_hangul": [
       "나",
-      "나,내",
       "내"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ"
     ],
     "unicode_hex": "05948",
@@ -23428,12 +23257,10 @@
     "hanja": "契",
     "readings_hangul": [
       "계",
-      "계,글,설",
       "글",
       "설"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅅ"
     ],
@@ -23700,11 +23527,9 @@
     "hanja": "奱",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -23719,11 +23544,9 @@
     "hanja": "奲",
     "readings_hangul": [
       "다",
-      "다,차",
       "차"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ",
       "ㅊ"
     ],
@@ -23738,11 +23561,9 @@
     "hanja": "女",
     "readings_hangul": [
       "녀",
-      "녀,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -24333,10 +24154,12 @@
   "妷": {
     "hanja": "妷",
     "readings_hangul": [
-      "일,질"
+      "일",
+      "질"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ",
+      "ㅈ"
     ],
     "unicode_hex": "059b7",
     "sources": [
@@ -24509,11 +24332,9 @@
     "hanja": "姈",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -24987,10 +24808,12 @@
   "姴": {
     "hanja": "姴",
     "readings_hangul": [
-      "렬,열"
+      "렬",
+      "열"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "059f4",
     "sources": [
@@ -25135,11 +24958,9 @@
     "hanja": "娃",
     "readings_hangul": [
       "와",
-      "와,왜",
       "왜"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "05a03",
@@ -25256,11 +25077,9 @@
     "hanja": "娘",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -25571,11 +25390,9 @@
     "hanja": "婁",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -25620,11 +25437,9 @@
     "hanja": "婉",
     "readings_hangul": [
       "완",
-      "원",
-      "원,완"
+      "원"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "05a49",
@@ -25638,11 +25453,9 @@
     "hanja": "婋",
     "readings_hangul": [
       "호",
-      "호,효",
       "효"
     ],
     "initial_consonants": [
-      "nan",
       "ㅎ"
     ],
     "unicode_hex": "05a4b",
@@ -25888,11 +25701,9 @@
     "hanja": "婧",
     "readings_hangul": [
       "정",
-      "정,청",
       "청"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ",
       "ㅊ"
     ],
@@ -25922,11 +25733,9 @@
     "hanja": "婪",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -26162,11 +25971,9 @@
     "hanja": "媞",
     "readings_hangul": [
       "시",
-      "시,제",
       "제"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -26465,11 +26272,9 @@
     "hanja": "嫋",
     "readings_hangul": [
       "뇨",
-      "뇨,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -26618,11 +26423,9 @@
     "hanja": "嫠",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -26711,11 +26514,11 @@
   "嫦": {
     "hanja": "嫦",
     "readings_hangul": [
-      "상,항",
+      "상",
       "항"
     ],
     "initial_consonants": [
-      "nan",
+      "ㅅ",
       "ㅎ"
     ],
     "unicode_hex": "05ae6",
@@ -26905,11 +26708,9 @@
     "hanja": "嫽",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -27206,11 +27007,9 @@
     "hanja": "嬲",
     "readings_hangul": [
       "뇨",
-      "뇨,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -27240,11 +27039,9 @@
     "hanja": "嬾",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -27320,10 +27117,11 @@
   "孋": {
     "hanja": "孋",
     "readings_hangul": [
-      "려,리"
+      "려",
+      "리"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ"
     ],
     "unicode_hex": "05b4b",
     "sources": [
@@ -27334,11 +27132,9 @@
     "hanja": "孌",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -27829,11 +27625,9 @@
     "hanja": "宅",
     "readings_hangul": [
       "댁",
-      "댁,택",
       "택"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ",
       "ㅌ"
     ],
@@ -28043,11 +27837,9 @@
     "hanja": "宛",
     "readings_hangul": [
       "완",
-      "완,울",
       "울"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "05b9b",
@@ -28330,11 +28122,9 @@
     "hanja": "宿",
     "readings_hangul": [
       "수",
-      "수,숙",
       "숙"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "05bbf",
@@ -28557,11 +28347,9 @@
     "hanja": "寗",
     "readings_hangul": [
       "녕",
-      "녕,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -28681,11 +28469,9 @@
     "hanja": "實",
     "readings_hangul": [
       "실",
-      "실,지",
       "지"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -28700,11 +28486,9 @@
     "hanja": "寧",
     "readings_hangul": [
       "녕",
-      "녕,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -28794,11 +28578,9 @@
     "hanja": "寮",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -29307,11 +29089,9 @@
     "hanja": "尼",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -29356,11 +29136,9 @@
     "hanja": "尿",
     "readings_hangul": [
       "뇨",
-      "뇨,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -29495,11 +29273,9 @@
     "hanja": "屎",
     "readings_hangul": [
       "시",
-      "시,히",
       "히"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅎ"
     ],
@@ -29589,11 +29365,9 @@
     "hanja": "屢",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -29622,11 +29396,9 @@
     "hanja": "履",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -29967,11 +29739,9 @@
     "hanja": "岦",
     "readings_hangul": [
       "립",
-      "립,입",
       "입"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -30076,11 +29846,9 @@
     "hanja": "岭",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -30198,11 +29966,9 @@
     "hanja": "岺",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -30482,10 +30248,12 @@
   "峼": {
     "hanja": "峼",
     "readings_hangul": [
-      "곡,호"
+      "곡",
+      "호"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "05cfc",
     "sources": [
@@ -30541,11 +30309,9 @@
     "hanja": "崍",
     "readings_hangul": [
       "내",
-      "내,래",
       "래"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -30678,11 +30444,9 @@
     "hanja": "崘",
     "readings_hangul": [
       "륜",
-      "륜,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -30697,11 +30461,9 @@
     "hanja": "崙",
     "readings_hangul": [
       "륜",
-      "륜,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -30922,11 +30684,9 @@
     "hanja": "嵂",
     "readings_hangul": [
       "률",
-      "률,율",
       "율"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -31057,11 +30817,9 @@
     "hanja": "嵐",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -31293,11 +31051,9 @@
     "hanja": "嶁",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -31460,11 +31216,9 @@
     "hanja": "嶙",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -31671,11 +31425,9 @@
     "hanja": "嶺",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -32137,11 +31889,9 @@
     "hanja": "巸",
     "readings_hangul": [
       "이",
-      "이,희",
       "희"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅎ"
     ],
@@ -32396,11 +32146,9 @@
     "hanja": "帥",
     "readings_hangul": [
       "솔",
-      "솔,수",
       "수"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "05e25",
@@ -32862,11 +32610,9 @@
     "hanja": "幱",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -32911,11 +32657,9 @@
     "hanja": "年",
     "readings_hangul": [
       "년",
-      "년,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -33317,11 +33061,9 @@
     "hanja": "度",
     "readings_hangul": [
       "도",
-      "도,탁",
       "탁"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ",
       "ㅌ"
     ],
@@ -33574,11 +33316,9 @@
     "hanja": "廉",
     "readings_hangul": [
       "렴",
-      "렴,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -33592,15 +33332,19 @@
   "廊": {
     "hanja": "廊",
     "readings_hangul": [
-      "낭,랑"
+      "낭",
+      "랑"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "05eca",
     "sources": [
-      "gov"
-    ]
+      "gov",
+      "naver"
+    ],
+    "meaning_ko": "사랑채 랑(낭)"
   },
   "廋": {
     "hanja": "廋",
@@ -33666,11 +33410,9 @@
     "hanja": "廓",
     "readings_hangul": [
       "곽",
-      "곽,확",
       "확"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅎ"
     ],
@@ -33700,11 +33442,9 @@
     "hanja": "廖",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -33914,11 +33654,9 @@
     "hanja": "廩",
     "readings_hangul": [
       "늠",
-      "늠,름",
       "름"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -33933,11 +33671,9 @@
     "hanja": "廬",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -34115,11 +33851,9 @@
     "hanja": "弄",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -34639,11 +34373,9 @@
     "hanja": "彔",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -34673,11 +34405,9 @@
     "hanja": "彗",
     "readings_hangul": [
       "세",
-      "세,혜",
       "혜"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅎ"
     ],
@@ -35126,11 +34856,9 @@
     "hanja": "律",
     "readings_hangul": [
       "률",
-      "률,율",
       "율"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -35294,11 +35022,9 @@
     "hanja": "徠",
     "readings_hangul": [
       "내",
-      "내,래",
       "래"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -35402,11 +35128,9 @@
     "hanja": "復",
     "readings_hangul": [
       "복",
-      "복,부",
       "부"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ"
     ],
     "unicode_hex": "05fa9",
@@ -35584,10 +35308,12 @@
   "徿": {
     "hanja": "徿",
     "readings_hangul": [
-      "룡,용"
+      "룡",
+      "용"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "05fbf",
     "sources": [
@@ -35627,10 +35353,12 @@
   "忇": {
     "hanja": "忇",
     "readings_hangul": [
-      "늑,륵"
+      "늑",
+      "륵"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "05fc7",
     "sources": [
@@ -35760,11 +35488,9 @@
     "hanja": "忓",
     "readings_hangul": [
       "간",
-      "간,한",
       "한"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅎ"
     ],
@@ -35779,11 +35505,9 @@
     "hanja": "忕",
     "readings_hangul": [
       "세",
-      "세,태",
       "태"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅌ"
     ],
@@ -36022,11 +35746,9 @@
     "hanja": "忯",
     "readings_hangul": [
       "기",
-      "기,지",
       "지"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅈ"
     ],
@@ -36056,11 +35778,9 @@
     "hanja": "念",
     "readings_hangul": [
       "념",
-      "념,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -36075,11 +35795,11 @@
     "hanja": "忸",
     "readings_hangul": [
       "뉴",
-      "뉴,유"
+      "유"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄴ"
+      "ㄴ",
+      "ㅇ"
     ],
     "unicode_hex": "05ff8",
     "sources": [
@@ -36315,11 +36035,9 @@
     "hanja": "怜",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -36453,11 +36171,9 @@
     "hanja": "怩",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -36709,11 +36425,11 @@
   "恔": {
     "hanja": "恔",
     "readings_hangul": [
-      "교,효",
+      "교",
       "효"
     ],
     "initial_consonants": [
-      "nan",
+      "ㄱ",
       "ㅎ"
     ],
     "unicode_hex": "06054",
@@ -36950,11 +36666,9 @@
     "hanja": "恬",
     "readings_hangul": [
       "념",
-      "념,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -37103,11 +36817,9 @@
     "hanja": "悆",
     "readings_hangul": [
       "서",
-      "서,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅇ"
     ],
@@ -37167,11 +36879,9 @@
     "hanja": "悋",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -37366,11 +37076,9 @@
     "hanja": "悢",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -37415,11 +37123,9 @@
     "hanja": "悧",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -37631,11 +37337,9 @@
     "hanja": "惄",
     "readings_hangul": [
       "녁",
-      "녁,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -37739,11 +37443,9 @@
     "hanja": "惏",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -37818,11 +37520,9 @@
     "hanja": "惗",
     "readings_hangul": [
       "녑",
-      "녑,엽",
       "엽"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -37957,11 +37657,9 @@
     "hanja": "惡",
     "readings_hangul": [
       "악",
-      "악,오",
       "오"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "060e1",
@@ -37974,10 +37672,12 @@
   "惢": {
     "hanja": "惢",
     "readings_hangul": [
-      "쇄,예"
+      "쇄",
+      "예"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅇ"
     ],
     "unicode_hex": "060e2",
     "sources": [
@@ -38197,11 +37897,9 @@
     "hanja": "愃",
     "readings_hangul": [
       "선",
-      "선,훤",
       "훤"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅎ"
     ],
@@ -38467,11 +38165,9 @@
     "hanja": "愢",
     "readings_hangul": [
       "새",
-      "새,시",
       "시"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "06122",
@@ -38619,11 +38315,9 @@
     "hanja": "愼",
     "readings_hangul": [
       "신",
-      "신,진",
       "진"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -38683,11 +38377,9 @@
     "hanja": "慄",
     "readings_hangul": [
       "률",
-      "률,율",
       "율"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -39118,11 +38810,9 @@
     "hanja": "慮",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -39242,11 +38932,9 @@
     "hanja": "慺",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -39396,11 +39084,9 @@
     "hanja": "憐",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -40069,10 +39755,12 @@
   "懰": {
     "hanja": "懰",
     "readings_hangul": [
-      "류,유"
+      "류",
+      "유"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "061f0",
     "sources": [
@@ -40098,11 +39786,9 @@
     "hanja": "懶",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -40222,11 +39908,9 @@
     "hanja": "戀",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -40511,11 +40195,9 @@
     "hanja": "戭",
     "readings_hangul": [
       "연",
-      "연,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "0622d",
@@ -40529,11 +40211,9 @@
     "hanja": "戮",
     "readings_hangul": [
       "륙",
-      "륙,육",
       "육"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -40668,11 +40348,9 @@
     "hanja": "戾",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -41610,10 +41288,11 @@
   "抾": {
     "hanja": "抾",
     "readings_hangul": [
-      "거,겁"
+      "거",
+      "겁"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ"
     ],
     "unicode_hex": "062be",
     "sources": [
@@ -41713,11 +41392,9 @@
     "hanja": "拈",
     "readings_hangul": [
       "념",
-      "념,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -41732,11 +41409,9 @@
     "hanja": "拉",
     "readings_hangul": [
       "납",
-      "납,랍",
       "랍"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -41811,11 +41486,11 @@
     "hanja": "拏",
     "readings_hangul": [
       "나",
-      "나,라"
+      "라"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄴ"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "062cf",
     "sources": [
@@ -41873,11 +41548,9 @@
     "hanja": "拓",
     "readings_hangul": [
       "척",
-      "척,탁",
       "탁"
     ],
     "initial_consonants": [
-      "nan",
       "ㅊ",
       "ㅌ"
     ],
@@ -42175,11 +41848,9 @@
     "hanja": "拾",
     "readings_hangul": [
       "습",
-      "습,십",
       "십"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "062fe",
@@ -42252,10 +41923,12 @@
   "挈": {
     "hanja": "挈",
     "readings_hangul": [
-      "계,설"
+      "계",
+      "설"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅅ"
     ],
     "unicode_hex": "06308",
     "sources": [
@@ -42340,11 +42013,9 @@
     "hanja": "挒",
     "readings_hangul": [
       "렬",
-      "렬,열",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -42741,10 +42412,12 @@
   "捒": {
     "hanja": "捒",
     "readings_hangul": [
-      "속,송,수"
+      "속",
+      "송",
+      "수"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ"
     ],
     "unicode_hex": "06352",
     "sources": [
@@ -42873,11 +42546,9 @@
     "hanja": "捩",
     "readings_hangul": [
       "렬",
-      "렬,열",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -43011,11 +42682,9 @@
     "hanja": "捻",
     "readings_hangul": [
       "념",
-      "념,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -43076,12 +42745,10 @@
     "readings_hangul": [
       "논",
       "론",
-      "론,륜,윤",
       "륜",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ",
       "ㅇ"
@@ -43334,11 +43001,9 @@
     "hanja": "掠",
     "readings_hangul": [
       "략",
-      "략,약",
       "약"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -44361,11 +44026,9 @@
     "hanja": "摛",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -44394,11 +44057,9 @@
     "hanja": "摞",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -44413,11 +44074,9 @@
     "hanja": "摟",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -44640,11 +44299,9 @@
     "hanja": "撈",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -44718,11 +44375,9 @@
     "hanja": "撓",
     "readings_hangul": [
       "뇨",
-      "뇨,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -44781,11 +44436,9 @@
     "hanja": "撚",
     "readings_hangul": [
       "년",
-      "년,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -44800,11 +44453,9 @@
     "hanja": "撛",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -44894,11 +44545,9 @@
     "hanja": "撩",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -45063,11 +44712,9 @@
     "hanja": "擄",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -45336,11 +44983,9 @@
     "hanja": "擥",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -45519,11 +45164,9 @@
     "hanja": "攂",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -45582,11 +45225,9 @@
     "hanja": "攊",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -45615,11 +45256,9 @@
     "hanja": "攏",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -45648,11 +45287,9 @@
     "hanja": "攔",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -45784,11 +45421,9 @@
     "hanja": "攣",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -45848,11 +45483,9 @@
     "hanja": "攬",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -45881,10 +45514,11 @@
   "攱": {
     "hanja": "攱",
     "readings_hangul": [
-      "궤,기"
+      "궤",
+      "기"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ"
     ],
     "unicode_hex": "06531",
     "sources": [
@@ -46490,11 +46124,9 @@
     "hanja": "數",
     "readings_hangul": [
       "삭",
-      "삭,수",
       "수"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "06578",
@@ -46537,11 +46169,9 @@
     "hanja": "斂",
     "readings_hangul": [
       "렴",
-      "렴,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -46692,11 +46322,9 @@
     "hanja": "料",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -46935,11 +46563,9 @@
     "hanja": "斴",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -47074,11 +46700,9 @@
     "hanja": "旅",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -47168,11 +46792,9 @@
     "hanja": "旒",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -47337,11 +46959,11 @@
     "hanja": "旲",
     "readings_hangul": [
       "대",
-      "대,영"
+      "영"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄷ"
+      "ㄷ",
+      "ㅇ"
     ],
     "unicode_hex": "065f2",
     "sources": [
@@ -47636,11 +47258,9 @@
     "hanja": "昍",
     "readings_hangul": [
       "헌",
-      "헌,훤",
       "훤"
     ],
     "initial_consonants": [
-      "nan",
       "ㅎ"
     ],
     "unicode_hex": "0660d",
@@ -47714,11 +47334,9 @@
     "hanja": "易",
     "readings_hangul": [
       "역",
-      "역,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "06613",
@@ -47867,11 +47485,9 @@
     "hanja": "昤",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -47946,11 +47562,9 @@
     "hanja": "昭",
     "readings_hangul": [
       "소",
-      "조",
-      "조,소"
+      "조"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -48025,11 +47639,9 @@
     "hanja": "昵",
     "readings_hangul": [
       "닐",
-      "닐,일",
       "일"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -48447,11 +48059,9 @@
     "hanja": "晢",
     "readings_hangul": [
       "절",
-      "절,제",
       "제"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ"
     ],
     "unicode_hex": "06662",
@@ -48750,11 +48360,9 @@
     "hanja": "晽",
     "readings_hangul": [
       "림",
-      "림,임",
       "임"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -48768,10 +48376,12 @@
   "晾": {
     "hanja": "晾",
     "readings_hangul": [
-      "량,양"
+      "량",
+      "양"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "0667e",
     "sources": [
@@ -48841,11 +48451,9 @@
     "hanja": "暈",
     "readings_hangul": [
       "운",
-      "운,훈",
       "훈"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅎ"
     ],
@@ -49184,11 +48792,9 @@
     "hanja": "暱",
     "readings_hangul": [
       "닐",
-      "닐,일",
       "일"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -49233,11 +48839,9 @@
     "hanja": "暴",
     "readings_hangul": [
       "포",
-      "포,폭",
       "폭"
     ],
     "initial_consonants": [
-      "nan",
       "ㅍ"
     ],
     "unicode_hex": "066b4",
@@ -49281,11 +48885,9 @@
     "hanja": "暸",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -49452,11 +49054,9 @@
     "hanja": "曆",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -49693,11 +49293,9 @@
     "hanja": "曞",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -49785,11 +49383,9 @@
     "hanja": "曨",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -49819,11 +49415,9 @@
     "hanja": "曪",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -49928,11 +49522,9 @@
     "hanja": "更",
     "readings_hangul": [
       "갱",
-      "갱,경",
       "경"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ"
     ],
     "unicode_hex": "066f4",
@@ -50200,11 +49792,9 @@
     "hanja": "朎",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -50248,15 +49838,19 @@
   "朗": {
     "hanja": "朗",
     "readings_hangul": [
-      "낭,랑"
+      "낭",
+      "랑"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "06717",
     "sources": [
-      "gov"
-    ]
+      "gov",
+      "naver"
+    ],
+    "meaning_ko": "밝을 랑(낭)"
   },
   "朘": {
     "hanja": "朘",
@@ -50396,11 +49990,9 @@
     "hanja": "朧",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -50699,11 +50291,9 @@
     "hanja": "李",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -50777,10 +50367,12 @@
   "杕": {
     "hanja": "杕",
     "readings_hangul": [
-      "체,타"
+      "체",
+      "타"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅊ",
+      "ㅌ"
     ],
     "unicode_hex": "06755",
     "sources": [
@@ -50895,11 +50487,9 @@
     "hanja": "来",
     "readings_hangul": [
       "내",
-      "내,래",
       "래"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -50943,11 +50533,9 @@
     "hanja": "杬",
     "readings_hangul": [
       "완",
-      "완,원",
       "원"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "0676c",
@@ -51021,11 +50609,9 @@
     "hanja": "杲",
     "readings_hangul": [
       "고",
-      "고,호",
       "호"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅎ"
     ],
@@ -51098,10 +50684,12 @@
   "杸": {
     "hanja": "杸",
     "readings_hangul": [
-      "대,수"
+      "대",
+      "수"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄷ",
+      "ㅅ"
     ],
     "unicode_hex": "06778",
     "sources": [
@@ -51126,11 +50714,9 @@
     "hanja": "杻",
     "readings_hangul": [
       "뉴",
-      "뉴,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -51410,11 +50996,9 @@
     "hanja": "林",
     "readings_hangul": [
       "림",
-      "림,임",
       "임"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -51637,11 +51221,9 @@
     "hanja": "枻",
     "readings_hangul": [
       "설",
-      "설,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅇ"
     ],
@@ -51701,11 +51283,9 @@
     "hanja": "柃",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -51735,11 +51315,9 @@
     "hanja": "柅",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -51782,10 +51360,11 @@
   "柍": {
     "hanja": "柍",
     "readings_hangul": [
-      "앙,영"
+      "앙",
+      "영"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ"
     ],
     "unicode_hex": "067cd",
     "sources": [
@@ -52064,11 +51643,9 @@
     "hanja": "柰",
     "readings_hangul": [
       "나",
-      "나,내",
       "내"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ"
     ],
     "unicode_hex": "067f0",
@@ -52096,10 +51673,12 @@
   "柲": {
     "hanja": "柲",
     "readings_hangul": [
-      "비,필"
+      "비",
+      "필"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅂ",
+      "ㅍ"
     ],
     "unicode_hex": "067f2",
     "sources": [
@@ -52110,11 +51689,9 @@
     "hanja": "柳",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -52323,11 +51900,9 @@
     "hanja": "栗",
     "readings_hangul": [
       "률",
-      "률,율",
       "율"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -52505,10 +52080,11 @@
   "栵": {
     "hanja": "栵",
     "readings_hangul": [
-      "렬,례"
+      "렬",
+      "례"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ"
     ],
     "unicode_hex": "06835",
     "sources": [
@@ -52992,11 +52568,9 @@
     "hanja": "梁",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -53175,11 +52749,9 @@
     "hanja": "梠",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -53194,11 +52766,9 @@
     "hanja": "梡",
     "readings_hangul": [
       "관",
-      "관,완",
       "완"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅇ"
     ],
@@ -53243,11 +52813,9 @@
     "hanja": "梨",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -53409,10 +52977,12 @@
   "棆": {
     "hanja": "棆",
     "readings_hangul": [
-      "륜,윤"
+      "륜",
+      "윤"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "068c6",
     "sources": [
@@ -53839,12 +53409,10 @@
     "hanja": "棽",
     "readings_hangul": [
       "림",
-      "림,임,침",
       "임",
       "침"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ",
       "ㅊ"
@@ -54422,11 +53990,9 @@
     "hanja": "楝",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -54441,11 +54007,9 @@
     "hanja": "楞",
     "readings_hangul": [
       "능",
-      "능,릉",
       "릉"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -54579,11 +54143,9 @@
     "hanja": "楫",
     "readings_hangul": [
       "즙",
-      "즙,집",
       "집"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ"
     ],
     "unicode_hex": "0696b",
@@ -54819,11 +54381,9 @@
     "hanja": "榔",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -55091,11 +54651,9 @@
     "hanja": "榴",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -55349,11 +54907,11 @@
     "hanja": "槏",
     "readings_hangul": [
       "겸",
-      "겸,염"
+      "염"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄱ"
+      "ㄱ",
+      "ㅇ"
     ],
     "unicode_hex": "069cf",
     "sources": [
@@ -55648,13 +55206,11 @@
     "hanja": "樂",
     "readings_hangul": [
       "낙",
-      "낙,락,악,요",
       "락",
       "악",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ",
       "ㅇ"
@@ -55715,11 +55271,9 @@
     "hanja": "樑",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -55749,11 +55303,9 @@
     "hanja": "樓",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -55887,11 +55439,9 @@
     "hanja": "樣",
     "readings_hangul": [
       "상",
-      "상,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅇ"
     ],
@@ -56041,11 +55591,9 @@
     "hanja": "橅",
     "readings_hangul": [
       "모",
-      "모,무",
       "무"
     ],
     "initial_consonants": [
-      "nan",
       "ㅁ"
     ],
     "unicode_hex": "06a45",
@@ -56105,11 +55653,9 @@
     "hanja": "橉",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -56124,11 +55670,9 @@
     "hanja": "橊",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -56899,11 +56443,9 @@
     "hanja": "櫓",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -56918,11 +56460,9 @@
     "hanja": "櫚",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -56997,11 +56537,9 @@
     "hanja": "櫟",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -57016,11 +56554,9 @@
     "hanja": "櫨",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -57035,11 +56571,9 @@
     "hanja": "櫪",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -57158,11 +56692,9 @@
     "hanja": "欄",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -57264,11 +56796,9 @@
     "hanja": "欒",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -57283,11 +56813,9 @@
     "hanja": "欖",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -57302,11 +56830,9 @@
     "hanja": "欗",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -57321,11 +56847,9 @@
     "hanja": "欞",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -57384,11 +56908,10 @@
   "欥": {
     "hanja": "欥",
     "readings_hangul": [
-      "율,일",
+      "율",
       "일"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "06b25",
@@ -58038,11 +57561,9 @@
     "hanja": "歷",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -58342,11 +57863,9 @@
     "hanja": "殮",
     "readings_hangul": [
       "렴",
-      "렴,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -58436,11 +57955,9 @@
     "hanja": "殺",
     "readings_hangul": [
       "살",
-      "살,쇄",
       "쇄"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "06bba",
@@ -59439,11 +58956,11 @@
   "汩": {
     "hanja": "汩",
     "readings_hangul": [
-      "골,율",
+      "골",
       "율"
     ],
     "initial_consonants": [
-      "nan",
+      "ㄱ",
       "ㅇ"
     ],
     "unicode_hex": "06c69",
@@ -59737,11 +59254,9 @@
     "hanja": "沇",
     "readings_hangul": [
       "연",
-      "연,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "06c87",
@@ -59755,11 +59270,9 @@
     "hanja": "沈",
     "readings_hangul": [
       "심",
-      "심,침",
       "침"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅊ"
     ],
@@ -59818,10 +59331,13 @@
   "沑": {
     "hanja": "沑",
     "readings_hangul": [
-      "뉴,뉵,유"
+      "뉴",
+      "뉵",
+      "유"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㅇ"
     ],
     "unicode_hex": "06c91",
     "sources": [
@@ -60070,10 +59586,12 @@
   "沴": {
     "hanja": "沴",
     "readings_hangul": [
-      "려,전"
+      "려",
+      "전"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅈ"
     ],
     "unicode_hex": "06cb4",
     "sources": [
@@ -60337,11 +59855,9 @@
     "hanja": "泌",
     "readings_hangul": [
       "비",
-      "비,필",
       "필"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ",
       "ㅍ"
     ],
@@ -60369,10 +59885,12 @@
   "泏": {
     "hanja": "泏",
     "readings_hangul": [
-      "굴,출"
+      "굴",
+      "출"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅊ"
     ],
     "unicode_hex": "06ccf",
     "sources": [
@@ -60383,11 +59901,9 @@
     "hanja": "泐",
     "readings_hangul": [
       "늑",
-      "늑,륵",
       "륵"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -60566,11 +60082,9 @@
     "hanja": "泠",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -60630,11 +60144,9 @@
     "hanja": "泥",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -60899,11 +60411,9 @@
     "hanja": "洌",
     "readings_hangul": [
       "렬",
-      "렬,열",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -60947,11 +60457,9 @@
     "hanja": "洒",
     "readings_hangul": [
       "선",
-      "선,세",
       "세"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "06d12",
@@ -60980,11 +60488,9 @@
     "hanja": "洗",
     "readings_hangul": [
       "선",
-      "선,세",
       "세"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "06d17",
@@ -61027,11 +60533,9 @@
     "hanja": "洛",
     "readings_hangul": [
       "낙",
-      "낙,락",
       "락"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -61061,11 +60565,9 @@
     "hanja": "洞",
     "readings_hangul": [
       "동",
-      "동,통",
       "통"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ",
       "ㅌ"
     ],
@@ -61375,11 +60877,9 @@
     "hanja": "洹",
     "readings_hangul": [
       "원",
-      "원,환",
       "환"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅎ"
     ],
@@ -61469,11 +60969,9 @@
     "hanja": "流",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -61694,11 +61192,9 @@
     "hanja": "浪",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -61713,11 +61209,9 @@
     "hanja": "浬",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -61936,11 +61430,11 @@
   "涅": {
     "hanja": "涅",
     "readings_hangul": [
-      "녈,열",
+      "녈",
       "열"
     ],
     "initial_consonants": [
-      "nan",
+      "ㄴ",
       "ㅇ"
     ],
     "unicode_hex": "06d85",
@@ -62147,11 +61641,9 @@
     "hanja": "涖",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -62330,11 +61822,9 @@
     "hanja": "涼",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -62469,11 +61959,9 @@
     "hanja": "淋",
     "readings_hangul": [
       "림",
-      "림,임",
       "임"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -62577,11 +62065,9 @@
     "hanja": "淖",
     "readings_hangul": [
       "뇨",
-      "뇨,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -62640,11 +62126,9 @@
     "hanja": "淚",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -62778,11 +62262,9 @@
     "hanja": "淥",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -62827,11 +62309,9 @@
     "hanja": "淪",
     "readings_hangul": [
       "륜",
-      "륜,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -62950,11 +62430,9 @@
     "hanja": "淶",
     "readings_hangul": [
       "내",
-      "내,래",
       "래"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -63592,11 +63070,9 @@
     "hanja": "湅",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -63788,10 +63264,12 @@
   "湝": {
     "hanja": "湝",
     "readings_hangul": [
-      "개,해"
+      "개",
+      "해"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "06e5d",
     "sources": [
@@ -64007,10 +63485,12 @@
   "湸": {
     "hanja": "湸",
     "readings_hangul": [
-      "량,양"
+      "량",
+      "양"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "06e78",
     "sources": [
@@ -64049,10 +63529,12 @@
   "溎": {
     "hanja": "溎",
     "readings_hangul": [
-      "계,연"
+      "계",
+      "연"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅇ"
     ],
     "unicode_hex": "06e8e",
     "sources": [
@@ -64168,11 +63650,9 @@
     "hanja": "溜",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -64246,11 +63726,9 @@
     "hanja": "溥",
     "readings_hangul": [
       "보",
-      "보,부",
       "부"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ"
     ],
     "unicode_hex": "06ea5",
@@ -64278,11 +63756,9 @@
     "hanja": "溧",
     "readings_hangul": [
       "률",
-      "률,율",
       "율"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -64446,11 +63922,9 @@
     "hanja": "溺",
     "readings_hangul": [
       "닉",
-      "닉,익",
       "익"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -64553,11 +64027,11 @@
   "滇": {
     "hanja": "滇",
     "readings_hangul": [
-      "신,진",
+      "신",
       "진"
     ],
     "initial_consonants": [
-      "nan",
+      "ㅅ",
       "ㅈ"
     ],
     "unicode_hex": "06ec7",
@@ -64646,11 +64120,9 @@
     "hanja": "滑",
     "readings_hangul": [
       "골",
-      "골,활",
       "활"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅎ"
     ],
@@ -64814,11 +64286,9 @@
     "hanja": "滷",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -65023,11 +64493,9 @@
     "hanja": "漉",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -65088,11 +64556,9 @@
     "hanja": "漏",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -65122,11 +64588,9 @@
     "hanja": "漓",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -65245,11 +64709,9 @@
     "hanja": "漣",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -65264,11 +64726,9 @@
     "hanja": "漤",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -65548,10 +65008,12 @@
   "漺": {
     "hanja": "漺",
     "readings_hangul": [
-      "상,창"
+      "상",
+      "창"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅊ"
     ],
     "unicode_hex": "06f3a",
     "sources": [
@@ -65561,10 +65023,11 @@
   "漻": {
     "hanja": "漻",
     "readings_hangul": [
-      "료,류"
+      "료",
+      "류"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ"
     ],
     "unicode_hex": "06f3b",
     "sources": [
@@ -65829,11 +65292,9 @@
     "hanja": "潞",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -65923,13 +65384,11 @@
     "hanja": "潦",
     "readings_hangul": [
       "노",
-      "노,로,료,요",
       "로",
       "료",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ",
       "ㅇ"
@@ -65944,10 +65403,12 @@
   "潨": {
     "hanja": "潨",
     "readings_hangul": [
-      "종,총"
+      "종",
+      "총"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅈ",
+      "ㅊ"
     ],
     "unicode_hex": "06f68",
     "sources": [
@@ -66123,11 +65584,9 @@
     "hanja": "潾",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -66202,11 +65661,9 @@
     "hanja": "澇",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -66444,11 +65901,9 @@
     "hanja": "澟",
     "readings_hangul": [
       "늠",
-      "늠,름",
       "름"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -66523,11 +65978,9 @@
     "hanja": "澧",
     "readings_hangul": [
       "례",
-      "례,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -66557,11 +66010,9 @@
     "hanja": "澪",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -66725,11 +66176,9 @@
     "hanja": "濂",
     "readings_hangul": [
       "렴",
-      "렴,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -66787,10 +66236,11 @@
   "濈": {
     "hanja": "濈",
     "readings_hangul": [
-      "즙,집"
+      "즙",
+      "집"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅈ"
     ],
     "unicode_hex": "06fc8",
     "sources": [
@@ -66845,12 +66295,10 @@
     "hanja": "濔",
     "readings_hangul": [
       "니",
-      "니,미,이",
       "미",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅁ",
       "ㅇ"
@@ -66881,11 +66329,9 @@
     "hanja": "濘",
     "readings_hangul": [
       "녕",
-      "녕,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -66929,10 +66375,12 @@
   "濜": {
     "hanja": "濜",
     "readings_hangul": [
-      "신,진"
+      "신",
+      "진"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅈ"
     ],
     "unicode_hex": "06fdc",
     "sources": [
@@ -67062,11 +66510,9 @@
     "hanja": "濫",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -67198,10 +66644,11 @@
   "濼": {
     "hanja": "濼",
     "readings_hangul": [
-      "락,록"
+      "락",
+      "록"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ"
     ],
     "unicode_hex": "06ffc",
     "sources": [
@@ -67212,11 +66659,9 @@
     "hanja": "濾",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -67363,11 +66808,9 @@
     "hanja": "瀏",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -67442,11 +66885,9 @@
     "hanja": "瀘",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -67506,11 +66947,9 @@
     "hanja": "瀝",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -67614,11 +67053,9 @@
     "hanja": "瀧",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -67633,11 +67070,9 @@
     "hanja": "瀨",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -67696,11 +67131,9 @@
     "hanja": "瀲",
     "readings_hangul": [
       "렴",
-      "렴,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -67774,11 +67207,9 @@
     "hanja": "瀾",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -67822,11 +67253,9 @@
     "hanja": "灆",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -67854,10 +67283,12 @@
   "灊": {
     "hanja": "灊",
     "readings_hangul": [
-      "심,첨"
+      "심",
+      "첨"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅊ"
     ],
     "unicode_hex": "0704a",
     "sources": [
@@ -67927,11 +67358,9 @@
     "hanja": "灓",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -67945,12 +67374,11 @@
   "灕": {
     "hanja": "灕",
     "readings_hangul": [
-      "라,리",
+      "라",
       "리",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -68022,10 +67450,12 @@
   "灠": {
     "hanja": "灠",
     "readings_hangul": [
-      "남,람"
+      "남",
+      "람"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "07060",
     "sources": [
@@ -68035,10 +67465,12 @@
   "灡": {
     "hanja": "灡",
     "readings_hangul": [
-      "난,란"
+      "난",
+      "란"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "07061",
     "sources": [
@@ -68194,10 +67626,12 @@
   "灱": {
     "hanja": "灱",
     "readings_hangul": [
-      "초,효"
+      "초",
+      "효"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅊ",
+      "ㅎ"
     ],
     "unicode_hex": "07071",
     "sources": [
@@ -68355,11 +67789,9 @@
     "hanja": "炎",
     "readings_hangul": [
       "담",
-      "담,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ",
       "ㅇ"
     ],
@@ -68462,11 +67894,9 @@
     "hanja": "炙",
     "readings_hangul": [
       "자",
-      "자,적",
       "적"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ"
     ],
     "unicode_hex": "07099",
@@ -68539,11 +67969,9 @@
     "hanja": "炤",
     "readings_hangul": [
       "소",
-      "소,조",
       "조"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -68558,11 +67986,9 @@
     "hanja": "炦",
     "readings_hangul": [
       "발",
-      "발,별",
       "별"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ"
     ],
     "unicode_hex": "070a6",
@@ -68781,11 +68207,9 @@
     "hanja": "烈",
     "readings_hangul": [
       "렬",
-      "렬,열",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -68815,11 +68239,9 @@
     "hanja": "烋",
     "readings_hangul": [
       "효",
-      "효,휴",
       "휴"
     ],
     "initial_consonants": [
-      "nan",
       "ㅎ"
     ],
     "unicode_hex": "070cb",
@@ -68922,11 +68344,9 @@
     "hanja": "烙",
     "readings_hangul": [
       "낙",
-      "낙,락",
       "락"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -69088,11 +68508,9 @@
     "hanja": "烺",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -69242,11 +68660,9 @@
     "hanja": "焛",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -69276,11 +68692,9 @@
     "hanja": "焞",
     "readings_hangul": [
       "돈",
-      "돈,순",
       "순"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ",
       "ㅅ"
     ],
@@ -69501,11 +68915,9 @@
     "hanja": "煇",
     "readings_hangul": [
       "훈",
-      "훈,휘",
       "휘"
     ],
     "initial_consonants": [
-      "nan",
       "ㅎ"
     ],
     "unicode_hex": "07147",
@@ -69519,11 +68931,9 @@
     "hanja": "煉",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -69612,11 +69022,9 @@
     "hanja": "煒",
     "readings_hangul": [
       "위",
-      "위,휘",
       "휘"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅎ"
     ],
@@ -69645,10 +69053,12 @@
   "煔": {
     "hanja": "煔",
     "readings_hangul": [
-      "섬,첨"
+      "섬",
+      "첨"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅊ"
     ],
     "unicode_hex": "07154",
     "sources": [
@@ -69941,11 +69351,9 @@
     "hanja": "熀",
     "readings_hangul": [
       "엽",
-      "엽,황",
       "황"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅎ"
     ],
@@ -70004,11 +69412,9 @@
     "hanja": "熇",
     "readings_hangul": [
       "혹",
-      "혹,효",
       "효"
     ],
     "initial_consonants": [
-      "nan",
       "ㅎ"
     ],
     "unicode_hex": "07187",
@@ -70199,11 +69605,9 @@
     "hanja": "熡",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -70395,10 +69799,12 @@
   "燀": {
     "hanja": "燀",
     "readings_hangul": [
-      "단,천"
+      "단",
+      "천"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄷ",
+      "ㅊ"
     ],
     "unicode_hex": "071c0",
     "sources": [
@@ -70513,11 +69919,9 @@
     "hanja": "燎",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -70547,11 +69951,9 @@
     "hanja": "燐",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -70671,12 +70073,10 @@
     "hanja": "燠",
     "readings_hangul": [
       "오",
-      "오,우,욱",
       "우",
       "욱"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "071e0",
@@ -70900,11 +70300,9 @@
     "hanja": "爁",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -70979,11 +70377,9 @@
     "hanja": "爐",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -71043,11 +70439,9 @@
     "hanja": "爛",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -71600,11 +70994,9 @@
     "hanja": "牢",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -71783,11 +71175,9 @@
     "hanja": "犁",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -71802,11 +71192,9 @@
     "hanja": "犂",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -71866,11 +71254,9 @@
     "hanja": "犖",
     "readings_hangul": [
       "낙",
-      "낙,락",
       "락"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -71990,11 +71376,9 @@
     "hanja": "狀",
     "readings_hangul": [
       "상",
-      "상,장",
       "장"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -72217,11 +71601,9 @@
     "hanja": "狸",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -72281,11 +71663,9 @@
     "hanja": "狼",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -72389,11 +71769,9 @@
     "hanja": "猗",
     "readings_hangul": [
       "아",
-      "아,의",
       "의"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "07317",
@@ -72795,11 +72173,9 @@
     "hanja": "獜",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -72814,11 +72190,9 @@
     "hanja": "獠",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -72923,11 +72297,9 @@
     "hanja": "獰",
     "readings_hangul": [
       "녕",
-      "녕,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -72957,11 +72329,9 @@
     "hanja": "獵",
     "readings_hangul": [
       "렵",
-      "렵,엽",
       "엽"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -73096,12 +72466,10 @@
     "hanja": "率",
     "readings_hangul": [
       "률",
-      "률,솔,율",
       "솔",
       "율"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅅ",
       "ㅇ"
@@ -73117,11 +72485,9 @@
     "hanja": "玈",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -73401,11 +72767,9 @@
     "hanja": "玧",
     "readings_hangul": [
       "문",
-      "문,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㅁ",
       "ㅇ"
     ],
@@ -73435,12 +72799,10 @@
     "hanja": "玪",
     "readings_hangul": [
       "감",
-      "감,림,임",
       "림",
       "임"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㄹ",
       "ㅇ"
@@ -73500,11 +72862,9 @@
     "hanja": "玲",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -73653,11 +73013,9 @@
     "hanja": "珀",
     "readings_hangul": [
       "박",
-      "박,백",
       "백"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ"
     ],
     "unicode_hex": "073c0",
@@ -73686,11 +73044,9 @@
     "hanja": "珆",
     "readings_hangul": [
       "이",
-      "이,태",
       "태"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅌ"
     ],
@@ -73911,11 +73267,11 @@
     "hanja": "珙",
     "readings_hangul": [
       "공",
-      "공,홍"
+      "홍"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄱ"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "073d9",
     "sources": [
@@ -73957,11 +73313,9 @@
     "hanja": "珞",
     "readings_hangul": [
       "낙",
-      "낙,락",
       "락"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -74332,11 +73686,9 @@
     "hanja": "琅",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -74351,11 +73703,9 @@
     "hanja": "理",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -74399,11 +73749,9 @@
     "hanja": "琉",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -74803,11 +74151,9 @@
     "hanja": "琳",
     "readings_hangul": [
       "림",
-      "림,임",
       "임"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -75046,10 +74392,12 @@
   "瑊": {
     "hanja": "瑊",
     "readings_hangul": [
-      "감,함"
+      "감",
+      "함"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "0744a",
     "sources": [
@@ -75119,10 +74467,12 @@
   "瑒": {
     "hanja": "瑒",
     "readings_hangul": [
-      "창,탕"
+      "창",
+      "탕"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅊ",
+      "ㅌ"
     ],
     "unicode_hex": "07452",
     "sources": [
@@ -75295,11 +74645,9 @@
     "hanja": "瑠",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -75389,11 +74737,9 @@
     "hanja": "瑩",
     "readings_hangul": [
       "영",
-      "영,형",
       "형"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅎ"
     ],
@@ -75466,11 +74812,9 @@
     "hanja": "瑮",
     "readings_hangul": [
       "률",
-      "률,율",
       "율"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -75485,11 +74829,9 @@
     "hanja": "瑯",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -75624,11 +74966,9 @@
     "hanja": "璃",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -75703,11 +75043,9 @@
     "hanja": "璉",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -75812,11 +75150,9 @@
     "hanja": "璘",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -76156,11 +75492,9 @@
     "hanja": "璼",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -76265,11 +75599,9 @@
     "hanja": "瓏",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -76284,11 +75616,9 @@
     "hanja": "瓐",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -76303,11 +75633,9 @@
     "hanja": "瓓",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -76872,10 +76200,12 @@
   "甯": {
     "hanja": "甯",
     "readings_hangul": [
-      "녕,영"
+      "녕",
+      "영"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㅇ"
     ],
     "unicode_hex": "0752f",
     "sources": [
@@ -77124,10 +76454,12 @@
   "畐": {
     "hanja": "畐",
     "readings_hangul": [
-      "복,핍"
+      "복",
+      "핍"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅂ",
+      "ㅍ"
     ],
     "unicode_hex": "07550",
     "sources": [
@@ -77183,11 +76515,9 @@
     "hanja": "留",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -77247,11 +76577,9 @@
     "hanja": "畝",
     "readings_hangul": [
       "묘",
-      "묘,무",
       "무"
     ],
     "initial_consonants": [
-      "nan",
       "ㅁ"
     ],
     "unicode_hex": "0755d",
@@ -77295,11 +76623,9 @@
     "hanja": "略",
     "readings_hangul": [
       "략",
-      "략,약",
       "약"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -77329,11 +76655,9 @@
     "hanja": "畧",
     "readings_hangul": [
       "략",
-      "략,약",
       "약"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -77556,11 +76880,11 @@
   "疋": {
     "hanja": "疋",
     "readings_hangul": [
-      "아,필",
+      "아",
       "필"
     ],
     "initial_consonants": [
-      "nan",
+      "ㅇ",
       "ㅍ"
     ],
     "unicode_hex": "0758b",
@@ -78114,11 +77438,9 @@
     "hanja": "痢",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -78208,11 +77530,9 @@
     "hanja": "痳",
     "readings_hangul": [
       "림",
-      "림,임",
       "임"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -78512,11 +77832,9 @@
     "hanja": "瘤",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -78576,11 +77894,9 @@
     "hanja": "瘰",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -78639,11 +77955,9 @@
     "hanja": "瘻",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -78658,11 +77972,9 @@
     "hanja": "療",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -78677,11 +77989,9 @@
     "hanja": "癃",
     "readings_hangul": [
       "륭",
-      "륭,융",
       "융"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -78696,11 +78006,9 @@
     "hanja": "癆",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -78835,11 +78143,9 @@
     "hanja": "癘",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -78929,11 +78235,9 @@
     "hanja": "癧",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -78963,11 +78267,9 @@
     "hanja": "癩",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -79251,10 +78553,12 @@
   "皊": {
     "hanja": "皊",
     "readings_hangul": [
-      "령,영"
+      "령",
+      "영"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "0768a",
     "sources": [
@@ -79921,11 +79225,9 @@
     "hanja": "盧",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -80163,11 +79465,9 @@
     "hanja": "省",
     "readings_hangul": [
       "생",
-      "생,성",
       "성"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "07701",
@@ -80389,11 +79689,9 @@
     "hanja": "眠",
     "readings_hangul": [
       "면",
-      "면,민",
       "민"
     ],
     "initial_consonants": [
-      "nan",
       "ㅁ"
     ],
     "unicode_hex": "07720",
@@ -81209,11 +80507,9 @@
     "hanja": "瞭",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -81422,10 +80718,11 @@
   "矎": {
     "hanja": "矎",
     "readings_hangul": [
-      "현,형"
+      "현",
+      "형"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅎ"
     ],
     "unicode_hex": "077ce",
     "sources": [
@@ -81436,11 +80733,9 @@
     "hanja": "矑",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -81739,11 +81034,9 @@
     "hanja": "矸",
     "readings_hangul": [
       "간",
-      "간,안",
       "안"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅇ"
     ],
@@ -81907,11 +81200,9 @@
     "hanja": "砢",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -81971,11 +81262,9 @@
     "hanja": "砬",
     "readings_hangul": [
       "립",
-      "립,입",
       "입"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -82108,10 +81397,12 @@
   "硈": {
     "hanja": "硈",
     "readings_hangul": [
-      "갈,할"
+      "갈",
+      "할"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "07848",
     "sources": [
@@ -82195,11 +81486,9 @@
     "hanja": "硠",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -82257,10 +81546,11 @@
   "硩": {
     "hanja": "硩",
     "readings_hangul": [
-      "척,철"
+      "척",
+      "철"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅊ"
     ],
     "unicode_hex": "07869",
     "sources": [
@@ -82286,11 +81576,9 @@
     "hanja": "硫",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -82394,11 +81682,9 @@
     "hanja": "碄",
     "readings_hangul": [
       "림",
-      "림,임",
       "임"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -82441,11 +81727,9 @@
     "hanja": "碌",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -82757,11 +82041,9 @@
     "hanja": "碾",
     "readings_hangul": [
       "년",
-      "년,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -82835,11 +82117,9 @@
     "hanja": "磊",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -82884,11 +82164,9 @@
     "hanja": "磏",
     "readings_hangul": [
       "렴",
-      "렴,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -83112,11 +82390,9 @@
     "hanja": "磷",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -83146,11 +82422,9 @@
     "hanja": "磻",
     "readings_hangul": [
       "반",
-      "반,번",
       "번"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ"
     ],
     "unicode_hex": "078fb",
@@ -83209,11 +82483,9 @@
     "hanja": "礌",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -83332,11 +82604,9 @@
     "hanja": "礧",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -83351,11 +82621,9 @@
     "hanja": "礪",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -83370,11 +82638,9 @@
     "hanja": "礫",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -83419,11 +82685,9 @@
     "hanja": "礱",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -83453,11 +82717,9 @@
     "hanja": "礼",
     "readings_hangul": [
       "례",
-      "례,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -83562,11 +82824,11 @@
     "hanja": "祇",
     "readings_hangul": [
       "기",
-      "기,지"
+      "지"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄱ"
+      "ㄱ",
+      "ㅈ"
     ],
     "unicode_hex": "07947",
     "sources": [
@@ -83862,11 +83124,9 @@
     "hanja": "祢",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -83940,11 +83200,9 @@
     "hanja": "祭",
     "readings_hangul": [
       "제",
-      "제,채",
       "채"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ",
       "ㅊ"
     ],
@@ -84004,11 +83262,9 @@
     "hanja": "祿",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -84128,12 +83384,10 @@
     "hanja": "禔",
     "readings_hangul": [
       "시",
-      "시,제,지",
       "제",
       "지"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -84310,11 +83564,9 @@
     "hanja": "禮",
     "readings_hangul": [
       "례",
-      "례,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -84329,11 +83581,9 @@
     "hanja": "禰",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -84423,11 +83673,9 @@
     "hanja": "离",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -84592,11 +83840,9 @@
     "hanja": "秊",
     "readings_hangul": [
       "년",
-      "년,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -84744,11 +83990,11 @@
     "hanja": "秢",
     "readings_hangul": [
       "령",
-      "령,영"
+      "영"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄹ"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "079e2",
     "sources": [
@@ -84970,11 +84216,9 @@
     "hanja": "稂",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -85168,11 +84412,9 @@
     "hanja": "稜",
     "readings_hangul": [
       "능",
-      "능,릉",
       "릉"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -85885,11 +85127,9 @@
     "hanja": "窂",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -86293,11 +85533,9 @@
     "hanja": "窿",
     "readings_hangul": [
       "륭",
-      "륭,융",
       "융"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -86387,11 +85625,9 @@
     "hanja": "立",
     "readings_hangul": [
       "립",
-      "립,입",
       "입"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -86478,11 +85714,9 @@
     "hanja": "竜",
     "readings_hangul": [
       "룡",
-      "룡,용",
       "용"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -86660,10 +85894,12 @@
   "竱": {
     "hanja": "竱",
     "readings_hangul": [
-      "단,전"
+      "단",
+      "전"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄷ",
+      "ㅈ"
     ],
     "unicode_hex": "07af1",
     "sources": [
@@ -86972,11 +86208,9 @@
     "hanja": "笠",
     "readings_hangul": [
       "립",
-      "립,입",
       "입"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -87066,11 +86300,9 @@
     "hanja": "笭",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -88223,11 +87455,9 @@
     "hanja": "簏",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -88407,11 +87637,9 @@
     "hanja": "簾",
     "readings_hangul": [
       "렴",
-      "렴,염",
       "염"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -88441,11 +87669,9 @@
     "hanja": "籃",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -88565,11 +87791,9 @@
     "hanja": "籟",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -88584,11 +87808,9 @@
     "hanja": "籠",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -88676,11 +87898,9 @@
     "hanja": "籬",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -88769,11 +87989,9 @@
     "hanja": "粒",
     "readings_hangul": [
       "립",
-      "립,입",
       "입"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -88906,11 +88124,9 @@
     "hanja": "粦",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -88940,11 +88156,9 @@
     "hanja": "粮",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -88959,11 +88173,9 @@
     "hanja": "粱",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -89023,11 +88235,9 @@
     "hanja": "粼",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -89103,11 +88313,9 @@
     "hanja": "糖",
     "readings_hangul": [
       "당",
-      "당,탕",
       "탕"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ",
       "ㅌ"
     ],
@@ -89242,11 +88450,9 @@
     "hanja": "糧",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -89291,11 +88497,9 @@
     "hanja": "糲",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -89459,11 +88663,9 @@
     "hanja": "約",
     "readings_hangul": [
       "약",
-      "약,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "07d04",
@@ -89596,11 +88798,9 @@
     "hanja": "紐",
     "readings_hangul": [
       "뉴",
-      "뉴,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -89630,11 +88830,9 @@
     "hanja": "純",
     "readings_hangul": [
       "순",
-      "순,준",
       "준"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -89798,11 +88996,9 @@
     "hanja": "索",
     "readings_hangul": [
       "삭",
-      "삭,색",
       "색"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "07d22",
@@ -89861,11 +89057,9 @@
     "hanja": "累",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -90268,11 +89462,9 @@
     "hanja": "絡",
     "readings_hangul": [
       "낙",
-      "낙,락",
       "락"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -90674,11 +89866,9 @@
     "hanja": "綠",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -90903,11 +90093,9 @@
     "hanja": "綸",
     "readings_hangul": [
       "륜",
-      "륜,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -90967,11 +90155,9 @@
     "hanja": "綾",
     "readings_hangul": [
       "능",
-      "능,릉",
       "릉"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -91374,11 +90560,9 @@
     "hanja": "練",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -91796,11 +90980,9 @@
     "hanja": "縲",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -91845,11 +91027,9 @@
     "hanja": "縷",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -92103,11 +91283,9 @@
     "hanja": "繗",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -92137,11 +91315,9 @@
     "hanja": "繚",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -92437,11 +91613,9 @@
     "hanja": "纇",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -92501,11 +91675,9 @@
     "hanja": "纍",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -92627,11 +91799,9 @@
     "hanja": "纜",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -92810,11 +91980,9 @@
     "hanja": "罍",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -93128,11 +92296,9 @@
     "hanja": "罹",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -93207,11 +92373,9 @@
     "hanja": "羅",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -93417,11 +92581,9 @@
     "hanja": "羚",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -93466,11 +92628,9 @@
     "hanja": "羡",
     "readings_hangul": [
       "선",
-      "선,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅇ"
     ],
@@ -93590,11 +92750,11 @@
     "hanja": "羸",
     "readings_hangul": [
       "리",
-      "리,이"
+      "이"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄹ"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "07fb8",
     "sources": [
@@ -93739,11 +92899,9 @@
     "hanja": "翎",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -94131,11 +93289,9 @@
     "hanja": "老",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -94314,11 +93470,9 @@
     "hanja": "耒",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -94482,11 +93636,9 @@
     "hanja": "耬",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -94634,11 +93786,9 @@
     "hanja": "聆",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -94668,11 +93818,9 @@
     "hanja": "聊",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -94821,11 +93969,9 @@
     "hanja": "聯",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -94960,11 +94106,9 @@
     "hanja": "聾",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -95069,11 +94213,9 @@
     "hanja": "肋",
     "readings_hangul": [
       "늑",
-      "늑,륵",
       "륵"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -95221,10 +94363,12 @@
   "肣": {
     "hanja": "肣",
     "readings_hangul": [
-      "금,함"
+      "금",
+      "함"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "080a3",
     "sources": [
@@ -95504,11 +94648,9 @@
     "hanja": "胕",
     "readings_hangul": [
       "부",
-      "부,주",
       "주"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ",
       "ㅈ"
     ],
@@ -95611,11 +94753,9 @@
     "hanja": "胜",
     "readings_hangul": [
       "성",
-      "성,정",
       "정"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -96076,11 +95216,9 @@
     "hanja": "脫",
     "readings_hangul": [
       "탈",
-      "탈,태",
       "태"
     ],
     "initial_consonants": [
-      "nan",
       "ㅌ"
     ],
     "unicode_hex": "0812b",
@@ -96361,10 +95499,12 @@
   "腡": {
     "hanja": "腡",
     "readings_hangul": [
-      "나,라"
+      "나",
+      "라"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "08161",
     "sources": [
@@ -96599,11 +95739,9 @@
     "hanja": "膂",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -96693,11 +95831,9 @@
     "hanja": "膋",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -96832,11 +95968,9 @@
     "hanja": "膩",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -97104,11 +96238,9 @@
     "hanja": "臘",
     "readings_hangul": [
       "납",
-      "납,랍",
       "랍"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -97138,11 +96270,9 @@
     "hanja": "臚",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -97157,11 +96287,9 @@
     "hanja": "臝",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -97191,11 +96319,9 @@
     "hanja": "臠",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -97255,11 +96381,9 @@
     "hanja": "臨",
     "readings_hangul": [
       "림",
-      "림,임",
       "임"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -97482,11 +96606,9 @@
     "hanja": "舃",
     "readings_hangul": [
       "석",
-      "석,작",
       "작"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -98026,11 +97148,11 @@
     "hanja": "艪",
     "readings_hangul": [
       "노",
-      "노,로"
+      "로"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄴ"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "0826a",
     "sources": [
@@ -98043,11 +97165,9 @@
     "hanja": "艫",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -98077,11 +97197,9 @@
     "hanja": "良",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -98186,11 +97304,9 @@
     "hanja": "艾",
     "readings_hangul": [
       "애",
-      "애,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "0827e",
@@ -98248,11 +97364,9 @@
     "hanja": "芋",
     "readings_hangul": [
       "우",
-      "우,후",
       "후"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅎ"
     ],
@@ -98701,11 +97815,9 @@
     "hanja": "芸",
     "readings_hangul": [
       "예",
-      "운",
-      "운,예"
+      "운"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "082b8",
@@ -98853,11 +97965,9 @@
     "hanja": "苓",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -99036,11 +98146,9 @@
     "hanja": "若",
     "readings_hangul": [
       "야",
-      "야,약",
       "약"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "082e5",
@@ -99636,11 +98744,9 @@
     "hanja": "茶",
     "readings_hangul": [
       "다",
-      "다,차",
       "차"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ",
       "ㅊ"
     ],
@@ -100024,11 +99130,9 @@
     "hanja": "莅",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -100042,10 +99146,12 @@
   "莆": {
     "hanja": "莆",
     "readings_hangul": [
-      "보,포"
+      "보",
+      "포"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅂ",
+      "ㅍ"
     ],
     "unicode_hex": "08386",
     "sources": [
@@ -100056,11 +99162,9 @@
     "hanja": "莉",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -100284,11 +99388,9 @@
     "hanja": "莨",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -100452,11 +99554,9 @@
     "hanja": "菉",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -100514,10 +99614,12 @@
   "菏": {
     "hanja": "菏",
     "readings_hangul": [
-      "가,하"
+      "가",
+      "하"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "083cf",
     "sources": [
@@ -100723,11 +99825,9 @@
     "hanja": "菱",
     "readings_hangul": [
       "능",
-      "능,릉",
       "릉"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -100802,11 +99902,11 @@
     "hanja": "菻",
     "readings_hangul": [
       "늠",
-      "늠,름"
+      "름"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄴ"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "083fb",
     "sources": [
@@ -100907,11 +100007,9 @@
     "hanja": "萊",
     "readings_hangul": [
       "내",
-      "내,래",
       "래"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -101119,11 +100217,9 @@
     "hanja": "落",
     "readings_hangul": [
       "낙",
-      "낙,락",
       "락"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -101167,11 +100263,9 @@
     "hanja": "葉",
     "readings_hangul": [
       "섭",
-      "섭,엽",
       "엽"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅇ"
     ],
@@ -101961,11 +101055,9 @@
     "hanja": "蓏",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -102085,11 +101177,9 @@
     "hanja": "蓮",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -102163,11 +101253,11 @@
     "hanja": "蓼",
     "readings_hangul": [
       "료",
-      "료,요"
+      "요"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄹ"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "084fc",
     "sources": [
@@ -102210,11 +101300,9 @@
     "hanja": "蔆",
     "readings_hangul": [
       "능",
-      "능,릉",
       "릉"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -102349,11 +101437,9 @@
     "hanja": "蔞",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -102683,11 +101769,9 @@
     "hanja": "蕗",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -102881,11 +101965,9 @@
     "hanja": "蕾",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -103244,10 +102326,11 @@
   "薳": {
     "hanja": "薳",
     "readings_hangul": [
-      "원,위"
+      "원",
+      "위"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ"
     ],
     "unicode_hex": "085b3",
     "sources": [
@@ -103360,11 +102443,9 @@
     "hanja": "藍",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -103453,11 +102534,9 @@
     "hanja": "藜",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -103577,11 +102656,9 @@
     "hanja": "藺",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -103685,11 +102762,9 @@
     "hanja": "蘆",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -103853,11 +102928,9 @@
     "hanja": "蘢",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -103916,15 +102989,19 @@
   "蘭": {
     "hanja": "蘭",
     "readings_hangul": [
-      "난,란"
+      "난",
+      "란"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "0862d",
     "sources": [
-      "gov"
-    ]
+      "gov",
+      "naver"
+    ],
+    "meaning_ko": "난초 란(난)"
   },
   "蘯": {
     "hanja": "蘯",
@@ -103960,11 +103037,9 @@
     "hanja": "蘿",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -104098,11 +103173,9 @@
     "hanja": "虜",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -104549,11 +103622,9 @@
     "hanja": "蛉",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -104883,11 +103954,9 @@
     "hanja": "蜊",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -104902,11 +103971,9 @@
     "hanja": "蜋",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -105399,11 +104466,9 @@
     "hanja": "螂",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -105537,11 +104602,9 @@
     "hanja": "螭",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -105586,11 +104649,9 @@
     "hanja": "螺",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -105605,11 +104666,9 @@
     "hanja": "螻",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -105968,11 +105027,9 @@
     "hanja": "蠟",
     "readings_hangul": [
       "납",
-      "납,랍",
       "랍"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -105987,11 +105044,9 @@
     "hanja": "蠡",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -106021,11 +105076,9 @@
     "hanja": "蠣",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -106130,11 +105183,9 @@
     "hanja": "衄",
     "readings_hangul": [
       "뉵",
-      "뉵,육",
       "육"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -106179,11 +105230,9 @@
     "hanja": "行",
     "readings_hangul": [
       "항",
-      "항,행",
       "행"
     ],
     "initial_consonants": [
-      "nan",
       "ㅎ"
     ],
     "unicode_hex": "0884c",
@@ -106480,10 +105529,12 @@
   "衸": {
     "hanja": "衸",
     "readings_hangul": [
-      "개,해"
+      "개",
+      "해"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "08878",
     "sources": [
@@ -106864,11 +105915,9 @@
     "hanja": "裂",
     "readings_hangul": [
       "렬",
-      "렬,열",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -106898,11 +105947,9 @@
     "hanja": "裏",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -107051,11 +106098,9 @@
     "hanja": "裡",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -107160,11 +106205,9 @@
     "hanja": "裸",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -107252,10 +106295,11 @@
   "褈": {
     "hanja": "褈",
     "readings_hangul": [
-      "종,중"
+      "종",
+      "중"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅈ"
     ],
     "unicode_hex": "08908",
     "sources": [
@@ -107474,11 +106518,9 @@
     "hanja": "褯",
     "readings_hangul": [
       "석",
-      "석,자",
       "자"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -107523,11 +106565,9 @@
     "hanja": "褸",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -107722,11 +106762,9 @@
     "hanja": "襤",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -107801,11 +106839,9 @@
     "hanja": "襴",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -107924,11 +106960,9 @@
     "hanja": "見",
     "readings_hangul": [
       "견",
-      "견,현",
       "현"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅎ"
     ],
@@ -108180,11 +107214,9 @@
     "hanja": "覶",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -108243,11 +107275,9 @@
     "hanja": "覽",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -108904,10 +107934,12 @@
   "訬": {
     "hanja": "訬",
     "readings_hangul": [
-      "묘,초"
+      "묘",
+      "초"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅁ",
+      "ㅊ"
     ],
     "unicode_hex": "08a2c",
     "sources": [
@@ -109080,10 +108112,12 @@
   "詅": {
     "hanja": "詅",
     "readings_hangul": [
-      "령,영"
+      "령",
+      "영"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "08a45",
     "sources": [
@@ -109181,10 +108215,12 @@
   "詒": {
     "hanja": "詒",
     "readings_hangul": [
-      "이,태"
+      "이",
+      "태"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ",
+      "ㅌ"
     ],
     "unicode_hex": "08a52",
     "sources": [
@@ -109566,10 +108602,12 @@
   "詶": {
     "hanja": "詶",
     "readings_hangul": [
-      "수,주"
+      "수",
+      "주"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅈ"
     ],
     "unicode_hex": "08a76",
     "sources": [
@@ -109654,11 +108692,9 @@
     "hanja": "誄",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -110030,12 +109066,10 @@
     "hanja": "說",
     "readings_hangul": [
       "설",
-      "설,세,열",
       "세",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅇ"
     ],
@@ -110138,10 +109172,12 @@
   "誽": {
     "hanja": "誽",
     "readings_hangul": [
-      "나,예"
+      "나",
+      "예"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㅇ"
     ],
     "unicode_hex": "08abd",
     "sources": [
@@ -110167,11 +109203,9 @@
     "hanja": "調",
     "readings_hangul": [
       "조",
-      "조,주",
       "주"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ"
     ],
     "unicode_hex": "08abf",
@@ -110304,11 +109338,9 @@
     "hanja": "諒",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -110323,11 +109355,9 @@
     "hanja": "論",
     "readings_hangul": [
       "논",
-      "논,론",
       "론"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -110444,11 +109474,9 @@
     "hanja": "諟",
     "readings_hangul": [
       "시",
-      "시,체",
       "체"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅊ"
     ],
@@ -111175,11 +110203,9 @@
     "hanja": "謬",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -111436,11 +110462,9 @@
     "hanja": "識",
     "readings_hangul": [
       "식",
-      "식,지",
       "지"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -111708,11 +110732,9 @@
     "hanja": "讀",
     "readings_hangul": [
       "독",
-      "독,두",
       "두"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ"
     ],
     "unicode_hex": "08b80",
@@ -111889,10 +110911,11 @@
   "讙": {
     "hanja": "讙",
     "readings_hangul": [
-      "환,훤"
+      "환",
+      "훤"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅎ"
     ],
     "unicode_hex": "08b99",
     "sources": [
@@ -112023,11 +111046,9 @@
     "hanja": "豈",
     "readings_hangul": [
       "개",
-      "개,기",
       "기"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ"
     ],
     "unicode_hex": "08c48",
@@ -112221,11 +111242,9 @@
     "hanja": "豫",
     "readings_hangul": [
       "서",
-      "서,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅇ"
     ],
@@ -112240,11 +111259,9 @@
     "hanja": "豳",
     "readings_hangul": [
       "반",
-      "반,빈",
       "빈"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ"
     ],
     "unicode_hex": "08c73",
@@ -112363,11 +111380,9 @@
     "hanja": "貍",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -112427,11 +111442,9 @@
     "hanja": "貝",
     "readings_hangul": [
       "배",
-      "배,패",
       "패"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ",
       "ㅍ"
     ],
@@ -112625,11 +111638,9 @@
     "hanja": "責",
     "readings_hangul": [
       "채",
-      "채,책",
       "책"
     ],
     "initial_consonants": [
-      "nan",
       "ㅊ"
     ],
     "unicode_hex": "08cac",
@@ -112883,11 +111894,9 @@
     "hanja": "賂",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -112976,11 +111985,9 @@
     "hanja": "賈",
     "readings_hangul": [
       "가",
-      "가,고",
       "고"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ"
     ],
     "unicode_hex": "08cc8",
@@ -113082,11 +112089,9 @@
     "hanja": "賚",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -113368,11 +112373,9 @@
     "hanja": "賴",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -113462,11 +112465,9 @@
     "hanja": "贇",
     "readings_hangul": [
       "빈",
-      "빈,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ",
       "ㅇ"
     ],
@@ -113956,10 +112957,12 @@
   "趡": {
     "hanja": "趡",
     "readings_hangul": [
-      "유,추"
+      "유",
+      "추"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ",
+      "ㅊ"
     ],
     "unicode_hex": "08da1",
     "sources": [
@@ -114374,11 +113377,9 @@
     "hanja": "路",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -114453,11 +113454,9 @@
     "hanja": "踉",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -114531,10 +113530,12 @@
   "踚": {
     "hanja": "踚",
     "readings_hangul": [
-      "륜,윤"
+      "륜",
+      "윤"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "08e1a",
     "sources": [
@@ -115114,11 +114115,9 @@
     "hanja": "躐",
     "readings_hangul": [
       "렵",
-      "렵,엽",
       "엽"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -115178,11 +114177,9 @@
     "hanja": "躙",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -115227,11 +114224,9 @@
     "hanja": "躪",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -115336,11 +114331,9 @@
     "hanja": "車",
     "readings_hangul": [
       "거",
-      "거,차",
       "차"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅊ"
     ],
@@ -115445,11 +114438,9 @@
     "hanja": "軨",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -115598,11 +114589,9 @@
     "hanja": "輅",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -115751,11 +114740,9 @@
     "hanja": "輛",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -115830,11 +114817,9 @@
     "hanja": "輦",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -115894,11 +114879,9 @@
     "hanja": "輪",
     "readings_hangul": [
       "륜",
-      "륜,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -116002,11 +114985,9 @@
     "hanja": "輻",
     "readings_hangul": [
       "복",
-      "복,폭",
       "폭"
     ],
     "initial_consonants": [
-      "nan",
       "ㅂ",
       "ㅍ"
     ],
@@ -116126,11 +115107,9 @@
     "hanja": "轆",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -116205,11 +115184,9 @@
     "hanja": "轔",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -116314,11 +115291,9 @@
     "hanja": "轢",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -116333,11 +115308,9 @@
     "hanja": "轣",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -116352,11 +115325,9 @@
     "hanja": "轤",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -116416,11 +115387,9 @@
     "hanja": "辢",
     "readings_hangul": [
       "날",
-      "날,랄",
       "랄"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -116435,11 +115404,9 @@
     "hanja": "辣",
     "readings_hangul": [
       "날",
-      "날,랄",
       "랄"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -116529,11 +115496,9 @@
     "hanja": "辰",
     "readings_hangul": [
       "신",
-      "신,진",
       "진"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅈ"
     ],
@@ -117385,11 +116350,9 @@
     "hanja": "逞",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -117464,11 +116427,9 @@
     "hanja": "連",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -117871,11 +116832,11 @@
     "hanja": "遛",
     "readings_hangul": [
       "류",
-      "류,유"
+      "유"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄹ"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "0905b",
     "sources": [
@@ -118187,11 +117148,9 @@
     "hanja": "遼",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -118386,11 +117345,9 @@
     "hanja": "邌",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -118420,11 +117377,9 @@
     "hanja": "邏",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -118439,11 +117394,9 @@
     "hanja": "邐",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -118637,11 +117590,9 @@
     "hanja": "邯",
     "readings_hangul": [
       "감",
-      "감,한",
       "한"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅎ"
     ],
@@ -118920,11 +117871,9 @@
     "hanja": "郎",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -119025,11 +117974,9 @@
     "hanja": "郞",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -119479,11 +118426,9 @@
     "hanja": "鄗",
     "readings_hangul": [
       "교",
-      "교,호",
       "호"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅎ"
     ],
@@ -119714,11 +118659,9 @@
     "hanja": "鄰",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -119748,11 +118691,9 @@
     "hanja": "鄲",
     "readings_hangul": [
       "다",
-      "다,단",
       "단"
     ],
     "initial_consonants": [
-      "nan",
       "ㄷ"
     ],
     "unicode_hex": "09132",
@@ -119852,11 +118793,9 @@
     "hanja": "酈",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -120081,11 +119020,9 @@
     "hanja": "酪",
     "readings_hangul": [
       "낙",
-      "낙,락",
       "락"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -120205,11 +119142,9 @@
     "hanja": "酹",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -120374,11 +119309,9 @@
     "hanja": "醪",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -120482,11 +119415,9 @@
     "hanja": "醴",
     "readings_hangul": [
       "례",
-      "례,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -120635,11 +119566,9 @@
     "hanja": "里",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -120684,11 +119613,9 @@
     "hanja": "量",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -120703,11 +119630,9 @@
     "hanja": "釐",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -120721,24 +119646,26 @@
   "金": {
     "hanja": "金",
     "readings_hangul": [
-      "금,김"
+      "금",
+      "김"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ"
     ],
     "unicode_hex": "091d1",
     "sources": [
-      "gov"
-    ]
+      "gov",
+      "naver"
+    ],
+    "meaning_ko": "쇠 금, 성씨 김"
   },
   "釗": {
     "hanja": "釗",
     "readings_hangul": [
-      "소,쇠",
+      "소",
       "쇠"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ"
     ],
     "unicode_hex": "091d7",
@@ -121122,11 +120049,11 @@
     "hanja": "鈕",
     "readings_hangul": [
       "뉴",
-      "뉴,유"
+      "유"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄴ"
+      "ㄴ",
+      "ㅇ"
     ],
     "unicode_hex": "09215",
     "sources": [
@@ -121243,11 +120170,9 @@
     "hanja": "鈴",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -121559,10 +120484,12 @@
   "鉚": {
     "hanja": "鉚",
     "readings_hangul": [
-      "류,유"
+      "류",
+      "유"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "0925a",
     "sources": [
@@ -122370,11 +121297,9 @@
     "hanja": "鋺",
     "readings_hangul": [
       "완",
-      "완,원",
       "원"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "092fa",
@@ -122447,11 +121372,9 @@
     "hanja": "錀",
     "readings_hangul": [
       "륜",
-      "륜,윤",
       "윤"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -122466,11 +121389,9 @@
     "hanja": "錄",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -122885,11 +121806,9 @@
     "hanja": "鍊",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -123036,10 +121955,12 @@
   "鍠": {
     "hanja": "鍠",
     "readings_hangul": [
-      "굉,황"
+      "굉",
+      "황"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "09360",
     "sources": [
@@ -123299,10 +122220,12 @@
   "鎏": {
     "hanja": "鎏",
     "readings_hangul": [
-      "류,유"
+      "류",
+      "유"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "0938f",
     "sources": [
@@ -123568,11 +122491,9 @@
     "hanja": "鏈",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -123631,10 +122552,12 @@
   "鏐": {
     "hanja": "鏐",
     "readings_hangul": [
-      "류,유"
+      "류",
+      "유"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "093d0",
     "sources": [
@@ -123809,11 +122732,9 @@
     "hanja": "鏤",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -123934,11 +122855,9 @@
     "hanja": "鏻",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -123967,11 +122886,9 @@
     "hanja": "鐃",
     "readings_hangul": [
       "뇨",
-      "뇨,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -124045,11 +122962,9 @@
     "hanja": "鐐",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -124152,11 +123067,9 @@
     "hanja": "鐪",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -124380,11 +123293,9 @@
     "hanja": "鑞",
     "readings_hangul": [
       "납",
-      "납,랍",
       "랍"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -124414,11 +123325,9 @@
     "hanja": "鑢",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -124448,11 +123357,9 @@
     "hanja": "鑪",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -124585,11 +123492,9 @@
     "hanja": "鑼",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -124619,11 +123524,9 @@
     "hanja": "鑾",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -124997,11 +123900,9 @@
     "hanja": "閬",
     "readings_hangul": [
       "낭",
-      "낭,랑",
       "랑"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -125016,11 +123917,9 @@
     "hanja": "閭",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -125229,11 +124128,9 @@
     "hanja": "闌",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -125548,11 +124445,9 @@
     "hanja": "阮",
     "readings_hangul": [
       "완",
-      "완,원",
       "원"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ"
     ],
     "unicode_hex": "0962e",
@@ -125684,11 +124579,9 @@
     "hanja": "陋",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -125718,11 +124611,9 @@
     "hanja": "降",
     "readings_hangul": [
       "강",
-      "강,항",
       "항"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ",
       "ㅎ"
     ],
@@ -125736,10 +124627,12 @@
   "陏": {
     "hanja": "陏",
     "readings_hangul": [
-      "수,타"
+      "수",
+      "타"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅌ"
     ],
     "unicode_hex": "0964f",
     "sources": [
@@ -126077,11 +124970,9 @@
     "hanja": "陵",
     "readings_hangul": [
       "능",
-      "능,릉",
       "릉"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -126126,11 +125017,9 @@
     "hanja": "陸",
     "readings_hangul": [
       "륙",
-      "륙,육",
       "육"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -126220,11 +125109,9 @@
     "hanja": "隆",
     "readings_hangul": [
       "륭",
-      "륭,융",
       "융"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -126419,11 +125306,9 @@
     "hanja": "隣",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -126573,11 +125458,9 @@
     "hanja": "隴",
     "readings_hangul": [
       "농",
-      "농,롱",
       "롱"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -126607,11 +125490,9 @@
     "hanja": "隷",
     "readings_hangul": [
       "례",
-      "례,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -126626,11 +125507,9 @@
     "hanja": "隸",
     "readings_hangul": [
       "례",
-      "례,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -126659,10 +125538,12 @@
   "隺": {
     "hanja": "隺",
     "readings_hangul": [
-      "각,학"
+      "각",
+      "학"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ",
+      "ㅎ"
     ],
     "unicode_hex": "096ba",
     "sources": [
@@ -126808,11 +125689,9 @@
     "hanja": "雋",
     "readings_hangul": [
       "전",
-      "전,준",
       "준"
     ],
     "initial_consonants": [
-      "nan",
       "ㅈ"
     ],
     "unicode_hex": "096cb",
@@ -127006,11 +125885,9 @@
     "hanja": "離",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -127130,11 +126007,9 @@
     "hanja": "零",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -127149,11 +126024,9 @@
     "hanja": "雷",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -127213,11 +126086,9 @@
     "hanja": "需",
     "readings_hangul": [
       "수",
-      "수,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㅅ",
       "ㅇ"
     ],
@@ -127427,11 +126298,9 @@
     "hanja": "霖",
     "readings_hangul": [
       "림",
-      "림,임",
       "임"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -127566,11 +126435,9 @@
     "hanja": "霱",
     "readings_hangul": [
       "율",
-      "율,휼",
       "휼"
     ],
     "initial_consonants": [
-      "nan",
       "ㅇ",
       "ㅎ"
     ],
@@ -127585,11 +126452,9 @@
     "hanja": "露",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -127649,11 +126514,9 @@
     "hanja": "靂",
     "readings_hangul": [
       "력",
-      "력,역",
       "역"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -127698,11 +126561,9 @@
     "hanja": "靈",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -129018,11 +127879,9 @@
     "hanja": "領",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -129247,11 +128106,9 @@
     "hanja": "頼",
     "readings_hangul": [
       "뇌",
-      "뇌,뢰",
       "뢰"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -129520,11 +128377,9 @@
     "hanja": "類",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -129629,11 +128484,9 @@
     "hanja": "顱",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -129738,11 +128591,9 @@
     "hanja": "颲",
     "readings_hangul": [
       "렬",
-      "렬,열",
       "열"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -129817,11 +128668,9 @@
     "hanja": "飂",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -129881,11 +128730,9 @@
     "hanja": "飉",
     "readings_hangul": [
       "료",
-      "료,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -130780,11 +129627,9 @@
     "hanja": "馜",
     "readings_hangul": [
       "니",
-      "니,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -131364,11 +130209,9 @@
     "hanja": "駱",
     "readings_hangul": [
       "낙",
-      "낙,락",
       "락"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -131398,13 +130241,11 @@
     "hanja": "駺",
     "readings_hangul": [
       "낭",
-      "낭,랑,량,양",
       "랑",
       "량",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ",
       "ㅇ"
@@ -131554,11 +130395,9 @@
     "hanja": "騋",
     "readings_hangul": [
       "내",
-      "내,래",
       "래"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -131798,11 +130637,9 @@
     "hanja": "騾",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -131952,11 +130789,9 @@
     "hanja": "驎",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -132045,11 +130880,9 @@
     "hanja": "驘",
     "readings_hangul": [
       "나",
-      "나,라",
       "라"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -132109,11 +130942,9 @@
     "hanja": "驢",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -132173,11 +131004,9 @@
     "hanja": "驪",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -132326,11 +131155,9 @@
     "hanja": "髏",
     "readings_hangul": [
       "누",
-      "누,루",
       "루"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -132405,11 +131232,11 @@
     "hanja": "髗",
     "readings_hangul": [
       "노",
-      "노,로"
+      "로"
     ],
     "initial_consonants": [
-      "nan",
-      "ㄴ"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "09ad7",
     "sources": [
@@ -132857,11 +131684,9 @@
     "hanja": "鬣",
     "readings_hangul": [
       "렵",
-      "렵,엽",
       "엽"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -132876,11 +131701,9 @@
     "hanja": "鬧",
     "readings_hangul": [
       "뇨",
-      "뇨,요",
       "요"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -133163,11 +131986,9 @@
     "hanja": "魎",
     "readings_hangul": [
       "량",
-      "량,양",
       "양"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -133197,11 +132018,9 @@
     "hanja": "魑",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -133276,11 +132095,9 @@
     "hanja": "魯",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -133565,11 +132382,9 @@
     "hanja": "鯉",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -133719,11 +132534,9 @@
     "hanja": "鰊",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -133872,11 +132685,9 @@
     "hanja": "鰱",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -134040,11 +132851,9 @@
     "hanja": "鱗",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -134089,11 +132898,9 @@
     "hanja": "鱧",
     "readings_hangul": [
       "례",
-      "례,예",
       "예"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -134108,11 +132915,9 @@
     "hanja": "鱸",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -134379,11 +133184,9 @@
     "hanja": "鴒",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -134757,11 +133560,9 @@
     "hanja": "鵦",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -135118,11 +133919,9 @@
     "hanja": "鶹",
     "readings_hangul": [
       "류",
-      "류,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -135407,11 +134206,9 @@
     "hanja": "鷺",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -135514,11 +134311,9 @@
     "hanja": "鸕",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -135592,11 +134387,9 @@
     "hanja": "鸞",
     "readings_hangul": [
       "난",
-      "난,란",
       "란"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -135611,11 +134404,9 @@
     "hanja": "鹵",
     "readings_hangul": [
       "노",
-      "노,로",
       "로"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -135630,11 +134421,9 @@
     "hanja": "鹷",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -135709,11 +134498,9 @@
     "hanja": "鹿",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -135847,11 +134634,9 @@
     "hanja": "麓",
     "readings_hangul": [
       "녹",
-      "녹,록",
       "록"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -135880,11 +134665,9 @@
     "hanja": "麗",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -135944,11 +134727,9 @@
     "hanja": "麟",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -136173,11 +134954,9 @@
     "hanja": "黎",
     "readings_hangul": [
       "려",
-      "려,여",
       "여"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -136207,11 +134986,9 @@
     "hanja": "黐",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -137035,11 +135812,9 @@
     "hanja": "齡",
     "readings_hangul": [
       "령",
-      "령,영",
       "영"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -137188,11 +135963,9 @@
     "hanja": "龍",
     "readings_hangul": [
       "룡",
-      "룡,용",
       "용"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -137237,11 +136010,9 @@
     "hanja": "龒",
     "readings_hangul": [
       "룡",
-      "룡,용",
       "용"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -137286,12 +136057,10 @@
     "hanja": "龜",
     "readings_hangul": [
       "구",
-      "구,귀,균",
       "귀",
       "균"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ"
     ],
     "unicode_hex": "09f9c",
@@ -138437,11 +137206,9 @@
     "hanja": "𢱯",
     "readings_hangul": [
       "남",
-      "남,람",
       "람"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -138456,11 +137223,9 @@
     "hanja": "𢻠",
     "readings_hangul": [
       "리",
-      "리,이",
       "이"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -138670,11 +137435,9 @@
     "hanja": "𥠲",
     "readings_hangul": [
       "률",
-      "률,율",
       "율"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -138703,11 +137466,9 @@
   "𥡴": {
     "hanja": "𥡴",
     "readings_hangul": [
-      "nan",
       "계"
     ],
     "initial_consonants": [
-      "nan",
       "ㄱ"
     ],
     "unicode_hex": "25874",
@@ -138840,11 +137601,9 @@
     "hanja": "𧘥",
     "readings_hangul": [
       "뉴",
-      "뉴,유",
       "유"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㅇ"
     ],
@@ -138904,11 +137663,9 @@
     "hanja": "𧼛",
     "readings_hangul": [
       "내",
-      "내,래",
       "래"
     ],
     "initial_consonants": [
-      "nan",
       "ㄴ",
       "ㄹ"
     ],
@@ -138923,11 +137680,9 @@
     "hanja": "𨏶",
     "readings_hangul": [
       "련",
-      "련,연",
       "연"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -139061,11 +137816,9 @@
     "hanja": "𪊭",
     "readings_hangul": [
       "린",
-      "린,인",
       "인"
     ],
     "initial_consonants": [
-      "nan",
       "ㄹ",
       "ㅇ"
     ],
@@ -139593,10 +138346,12 @@
   "򠄈": {
     "hanja": "򠄈",
     "readings_hangul": [
-      "녹,록"
+      "녹",
+      "록"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0108",
     "sources": [
@@ -140204,10 +138959,12 @@
   "򠄸": {
     "hanja": "򠄸",
     "readings_hangul": [
-      "다,차"
+      "다",
+      "차"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄷ",
+      "ㅊ"
     ],
     "unicode_hex": "a0138",
     "sources": [
@@ -140295,10 +139052,12 @@
   "򠄿": {
     "hanja": "򠄿",
     "readings_hangul": [
-      "나,라"
+      "나",
+      "라"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a013f",
     "sources": [
@@ -140308,10 +139067,12 @@
   "򠅀": {
     "hanja": "򠅀",
     "readings_hangul": [
-      "낙,락"
+      "낙",
+      "락"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0140",
     "sources": [
@@ -140321,10 +139082,12 @@
   "򠅁": {
     "hanja": "򠅁",
     "readings_hangul": [
-      "난,란"
+      "난",
+      "란"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0141",
     "sources": [
@@ -140334,10 +139097,12 @@
   "򠅂": {
     "hanja": "򠅂",
     "readings_hangul": [
-      "남,람"
+      "남",
+      "람"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0142",
     "sources": [
@@ -140347,10 +139112,12 @@
   "򠅃": {
     "hanja": "򠅃",
     "readings_hangul": [
-      "내,래"
+      "내",
+      "래"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0143",
     "sources": [
@@ -140360,10 +139127,12 @@
   "򠅄": {
     "hanja": "򠅄",
     "readings_hangul": [
-      "려,여"
+      "려",
+      "여"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "a0144",
     "sources": [
@@ -140373,10 +139142,12 @@
   "򠅅": {
     "hanja": "򠅅",
     "readings_hangul": [
-      "련,연"
+      "련",
+      "연"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "a0145",
     "sources": [
@@ -140386,10 +139157,12 @@
   "򠅆": {
     "hanja": "򠅆",
     "readings_hangul": [
-      "노,로"
+      "노",
+      "로"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0146",
     "sources": [
@@ -140399,10 +139172,12 @@
   "򠅇": {
     "hanja": "򠅇",
     "readings_hangul": [
-      "녹,록"
+      "녹",
+      "록"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0147",
     "sources": [
@@ -140412,10 +139187,12 @@
   "򠅈": {
     "hanja": "򠅈",
     "readings_hangul": [
-      "료,요"
+      "료",
+      "요"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "a0148",
     "sources": [
@@ -140425,10 +139202,12 @@
   "򠅉": {
     "hanja": "򠅉",
     "readings_hangul": [
-      "누,루"
+      "누",
+      "루"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0149",
     "sources": [
@@ -140438,10 +139217,12 @@
   "򠅊": {
     "hanja": "򠅊",
     "readings_hangul": [
-      "능,릉"
+      "능",
+      "릉"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a014a",
     "sources": [
@@ -140451,10 +139232,12 @@
   "򠅋": {
     "hanja": "򠅋",
     "readings_hangul": [
-      "리,이"
+      "리",
+      "이"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "a014b",
     "sources": [
@@ -140464,10 +139247,12 @@
   "򠅌": {
     "hanja": "򠅌",
     "readings_hangul": [
-      "린,인"
+      "린",
+      "인"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "a014c",
     "sources": [
@@ -140477,10 +139262,12 @@
   "򠅍": {
     "hanja": "򠅍",
     "readings_hangul": [
-      "린,인"
+      "린",
+      "인"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "a014d",
     "sources": [
@@ -141218,10 +140005,12 @@
   "򠆇": {
     "hanja": "򠆇",
     "readings_hangul": [
-      "엽,섭"
+      "섭",
+      "엽"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅇ"
     ],
     "unicode_hex": "a0187",
     "sources": [
@@ -141504,10 +140293,11 @@
   "򠆝": {
     "hanja": "򠆝",
     "readings_hangul": [
-      "애,예"
+      "애",
+      "예"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ"
     ],
     "unicode_hex": "a019d",
     "sources": [
@@ -141530,10 +140320,11 @@
   "򠆟": {
     "hanja": "򠆟",
     "readings_hangul": [
-      "야,약"
+      "야",
+      "약"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ"
     ],
     "unicode_hex": "a019f",
     "sources": [
@@ -141816,10 +140607,12 @@
   "򠆵": {
     "hanja": "򠆵",
     "readings_hangul": [
-      "우,후"
+      "우",
+      "후"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ",
+      "ㅎ"
     ],
     "unicode_hex": "a01b5",
     "sources": [
@@ -143272,10 +142065,11 @@
   "򠈶": {
     "hanja": "򠈶",
     "readings_hangul": [
-      "애,예"
+      "애",
+      "예"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ"
     ],
     "unicode_hex": "a0236",
     "sources": [
@@ -143454,10 +142248,12 @@
   "򠉎": {
     "hanja": "򠉎",
     "readings_hangul": [
-      "능,릉"
+      "능",
+      "릉"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a024e",
     "sources": [
@@ -143493,10 +142289,12 @@
   "򠉒": {
     "hanja": "򠉒",
     "readings_hangul": [
-      "귀,균,구"
+      "구",
+      "귀",
+      "균"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄱ"
     ],
     "unicode_hex": "a0252",
     "sources": [
@@ -143766,10 +142564,12 @@
   "򠉧": {
     "hanja": "򠉧",
     "readings_hangul": [
-      "남,람"
+      "남",
+      "람"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0267",
     "sources": [
@@ -143779,10 +142579,11 @@
   "򠉨": {
     "hanja": "򠉨",
     "readings_hangul": [
-      "애,예"
+      "애",
+      "예"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅇ"
     ],
     "unicode_hex": "a0268",
     "sources": [
@@ -143896,10 +142697,12 @@
   "򠉱": {
     "hanja": "򠉱",
     "readings_hangul": [
-      "노,로"
+      "노",
+      "로"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a0271",
     "sources": [
@@ -144039,10 +142842,12 @@
   "򠊑": {
     "hanja": "򠊑",
     "readings_hangul": [
-      "례,예"
+      "례",
+      "예"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "a0291",
     "sources": [
@@ -144169,10 +142974,12 @@
   "򠋀": {
     "hanja": "򠋀",
     "readings_hangul": [
-      "리,이"
+      "리",
+      "이"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "a02c0",
     "sources": [
@@ -144195,10 +143002,12 @@
   "򠋏": {
     "hanja": "򠋏",
     "readings_hangul": [
-      "려,여"
+      "려",
+      "여"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "a02cf",
     "sources": [
@@ -144208,10 +143017,12 @@
   "򠋑": {
     "hanja": "򠋑",
     "readings_hangul": [
-      "노,로"
+      "노",
+      "로"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a02d1",
     "sources": [
@@ -144273,10 +143084,12 @@
   "򠋗": {
     "hanja": "򠋗",
     "readings_hangul": [
-      "늠,름"
+      "늠",
+      "름"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄴ",
+      "ㄹ"
     ],
     "unicode_hex": "a02d7",
     "sources": [
@@ -144364,10 +143177,12 @@
   "󰓄": {
     "hanja": "󰓄",
     "readings_hangul": [
-      "령,영"
+      "령",
+      "영"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "f04c4",
     "sources": [
@@ -144442,10 +143257,13 @@
   "󰪐": {
     "hanja": "󰪐",
     "readings_hangul": [
-      "시,제,지"
+      "시",
+      "제",
+      "지"
     ],
     "initial_consonants": [
-      "nan"
+      "ㅅ",
+      "ㅈ"
     ],
     "unicode_hex": "f0a90",
     "sources": [
@@ -144689,10 +143507,12 @@
   "󳒴": {
     "hanja": "󳒴",
     "readings_hangul": [
-      "례,예"
+      "례",
+      "예"
     ],
     "initial_consonants": [
-      "nan"
+      "ㄹ",
+      "ㅇ"
     ],
     "unicode_hex": "f34b4",
     "sources": [
