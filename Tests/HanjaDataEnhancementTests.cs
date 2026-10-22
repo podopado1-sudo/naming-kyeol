@@ -28,14 +28,20 @@ public class HanjaDataEnhancementTests
             $"획수 데이터 비율이 너무 낮습니다: {withStroke}/{allHanja.Count} ({ratio:P0})");
     }
 
-    // 획수 = data/hanja_strokes.json(kTotalStrokes — /hanja 와 같은 파일, 2026-10-22 S5c-2). 이 파일은 Unicode 18.0 이전 kTotalStrokes 첫 값이라
-    // 중국 대륙 자형으로 센 글자가 있다(花 7 — 한국 자전 8, 艹 3획). S5c-2 전 백엔드는 hanja_unihan.json(kRSAdobe_Japan1_6, 일본 자형)이라 海 9·韓 18
+    // 획수 = Unicode 18.0 kTotalStrokes(data/hanja_strokes.json — 2026-10-22 S5c-3). 기대값은 한국 자전 총획수와 같은 값이다.
+    // S5c-2 전 백엔드는 hanja_unihan.json(kRSAdobe_Japan1_6 부수+나머지, 일본 자형)이라 海 9·成 6·道 12·福 13·英 8·韓 18,
+    // S5c-3 전 파일(옛 /hanja)은 18.0 이전 kTotalStrokes 첫 값(중국 대륙 자형)이라 花 7·成 6·道 12·福 13·英 8·修 9 였다
     [Theory]
     [InlineData("春", 9)]   // 봄 춘
     [InlineData("海", 10)]  // 바다 해 — 氵3 + 每7 (S5c-2 전 9)
     [InlineData("山", 3)]   // 산 산
     [InlineData("金", 8)]   // 쇠 금
-    [InlineData("花", 7)]   // 꽃 화 — 파일 값(艹 3획, 한국 자전 8)
+    [InlineData("花", 8)]   // 꽃 화 — 艹4 + 化4 (S5c-3 전 7)
+    [InlineData("修", 10)]  // 닦을 수 (S5c-3 전 9)
+    [InlineData("成", 7)]   // 이룰 성 (S5c-3 전 6)
+    [InlineData("道", 13)]  // 길 도 (S5c-3 전 12)
+    [InlineData("福", 14)]  // 복 복 (S5c-3 전 13)
+    [InlineData("英", 9)]   // 꽃부리 영 (S5c-3 전 8)
     [InlineData("韓", 17)]  // 나라 한 (S5c-2 전 백엔드 18)
     public void StrokeCount_KnownCharacters_CorrectValues(string character, int expectedStrokes)
     {

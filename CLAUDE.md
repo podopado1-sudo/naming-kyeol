@@ -24,7 +24,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,462 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,467 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -48,7 +48,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,462개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,467개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -136,7 +136,7 @@ D:\MyDev\NameForm\
           │                               두 글자 합). 표 밖 성씨만 음절마다 독음 1순위 한자로 추정(옛 방식: 이 → 11획, 남궁 → '남'만)
           │                               ⚠️ S5b 자원오행 보완 30: 사주 과다 오행 감점(−10)에서 용신·희신은 뺀다(EV-5 — 옛 노트 '가점 일부 상쇄 (감점)' 없음)
           │                               ⚠️ S5c-1 음양 10 = 배정 한자 획수 홀짝(홀수 陽) 하나 — 옛 hanja_unihan.json 의 거꾸로 된 음양(짝수 陽)·Core 원획 홀짝 없음
-          │                               ⚠️ S5c-2 획수 조화 20·음양 10·수리 15 의 한자 획수 = data/hanja_strokes.json(kTotalStrokes) — /hanja 와 같은 파일·같은 값
+          │                               ⚠️ S5c-2 획수 조화 20·음양 10·수리 15 의 한자 획수 = data/hanja_strokes.json(Unicode 18.0 kTotalStrokes, S5c-3) — /hanja 와 같은 파일·같은 값
           │     RankerEngine            → 최종 점수 = aesthetic * 0.7 + harmony * 0.3
           │     ExplanationEngine       → 추천 이유 3줄 생성
           │     RarityScoringEngine     → 희귀도/독창성 점수
@@ -296,7 +296,7 @@ D:\MyDev\NameForm\
 - 기본: Character, Reading, Meaning, Unicode, Consonant
 - 오행: FiveElement (木/火/土/金/水 — **부수 기준 자원오행**, `data/hanja_resource_element.json` 의 e 하나만 쓴다, 2026-10-22 S4),
   ResourceGrade (R 확정/V 이견 있음/X 예외 적용/U 미상), RadicalNumber·RadicalChar·AltRadicalElements·AltCharElements, Rationale(부수 근거 한 줄 = 결과 파일 note),
-  YinYang (陽/陰 — StrokeCount 홀짝, 홀수 陽, 2026-10-22 S5c-1), StrokeCount (kTotalStrokes — `data/hanja_strokes.json`, /hanja 와 같은 파일, S5c-2),
+  YinYang (陽/陰 — StrokeCount 홀짝, 홀수 陽, 2026-10-22 S5c-1), StrokeCount (Unicode 18.0 kTotalStrokes — `data/hanja_strokes.json`, /hanja 와 같은 파일, S5c-2·3),
   KangxiStrokes(Core 강희 원획 — 보존·표시만, 원획법 수리·음양은 D10 별도 결정)
 - 옛 뜻 기반 오행(D4 — 보존만, 화면·점수에 안 씀): MeaningElement·MeaningRationale(core_v1 → radical_map, 옛 획수 대체값 D 는 없음),
   ConfidenceGrade(옛 S/C/D — FiveElement 와 무관). 옛 S 에 기대던 가중치(관련도 +100·획수 조화 감산)는 `IsCoreData`(Source == Core_v1, 옛 S 와 같은 집합)로 옮겼다
@@ -311,14 +311,15 @@ D:\MyDev\NameForm\
   `scripts/hanja_target_set.py`). 백엔드 `HanjaData.ApplyResourceElements`(호환 한자 병합 뒤 통합 키에만 — 호환 키 compat_of 는 적용 안 함)와
   `build_hanja_seo_data.py`(복사만, 계산 안 함)가 같은 파일을 읽는다. 대조: `dotnet run -- dump-hanja-elements OUT` →
   `python -I scripts/audit_hanja_elements.py --dump OUT`(백엔드 ↔ 결과 파일 ↔ hanja-seo 불일치 0, 전환 전 1,151자)
-- **data/hanja_strokes.json**: 9,190 키 총획수(kTotalStrokes).
+- **data/hanja_strokes.json**: 9,190 키 총획수 = Unicode 18.0 kTotalStrokes(`scripts/build_hanja_strokes.py`, `--check` 로 대조 — 입력 tmp/unihan-18.0).
   백엔드 `HanjaData.ApplyStrokeCounts`(StrokeCount 의 유일한 기록자 — 호환 병합 뒤 통합 키, 없으면 호환 키 값)·`ApplyYinYangFromStrokes`(YinYang = 획수 홀짝)와
   `build_hanja_seo_data.py`(/hanja s·y)가 같은 파일·같은 규칙이다(2026-10-22 S5c — 계획 §5 '획수 출처 통일 · 음양 홀짝 통일', D9 '프론트 kTotalStrokes 로 통일').
   S5c 전 백엔드는 hanja_unihan.json(kRSAdobe_Japan1_6 자형 획수, 음양은 수집 스크립트가 짝수를 陽 으로 거꾸로)·Core 원획 홀짝·하드코딩 수동 값이 섞여
   /hanja 와 획수 832·음양 6,821자 달랐다.
-  ⚠️ 이 파일은 Unicode 18.0 이전 kTotalStrokes 의 첫 값(중국 대륙 자형 — 艹 3·阝 2·辶 3획)이라 한국 자전 획수와 다른 글자가 있다:
-  修 9·成 6·道 12·福 13·英 8·花 7, 성씨 鄭 14·郭 10·陳 10·都 10·嚴 19·蔡 14(한국 자전 10·7·13·14·9·8, 15·11·11·12·20·15).
-  Unicode 18.0 kTotalStrokes 와는 296키가 다르다. 성씨만 따로 보정하는 표는 두지 않는다(획수 출처가 다시 둘이 된다) — 자형·원획법은 D10
+  S5c-3 전 파일은 18.0 이전 kTotalStrokes 첫 값(중국 대륙 자형 — 修 9·成 6·道 12·福 13, 성씨 鄭 14)이라 296키를 18.0 값(修 10·成 7·道 13·福 14·鄭 15)으로
+  바꿨다(/hanja 표시는 S6 재생성 때). ⚠️ 18.0 도 한국 자전과 다 같지는 않다 — 왼쪽 阝 2획(院 9·陳 10·陸 10), 艹 3획이 남은 글자(權 21·蘇 19),
+  그 밖 延 8·甄 13·郝 9(한국 자전 10·11·11, 22·20, 7·14·10). 성씨 수리에도 그대로 들어간다(진·육·권·소·연·견·학). 성씨만 따로 보정하는 표는
+  두지 않는다(획수 출처가 다시 둘이 된다) — 자형·원획법은 D10. 강희 원획 대조 근거는 스크립트 머리말
 - **hanja_dictionary_final.json**: 9,595자 (마스터 통합 사전). ⚠️ 이 중 405자는 대법원 목록의
   유니코드 미등재 글자가 법원 자체 코드(a01b1 등)로 변환된 가짜 코드포인트(U+A0xxx·U+F0xxx) —
   백엔드 로더(`HanjaData.IsHanCodePoint`)와 `build_hanja_seo_data.py`가 같은 영역 규칙으로 걸러낸다.

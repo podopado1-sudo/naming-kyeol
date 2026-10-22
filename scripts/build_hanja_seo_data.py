@@ -16,7 +16,7 @@ data/hanja_resource_element.json(scripts/build_resource_element.py — 부수 �
   (옛 w '오행 판정 근거'는 note 로 대체 — 화면 전환은 S7)
 대조: dotnet run -- dump-hanja-elements OUT → python -I scripts/audit_hanja_elements.py --dump OUT (불일치 0 이어야 한다)
 
-획수(s): data/hanja_strokes.json(kTotalStrokes)의 통합 키 값, 없으면 호환 키 값.
+획수(s): data/hanja_strokes.json(Unicode 18.0 kTotalStrokes — scripts/build_hanja_strokes.py)의 통합 키 값, 없으면 호환 키 값.
 음양(y): 획수 끝자리 홀수→陽, 짝수→陰. 백엔드 HanjaData.ApplyStrokeCounts·ApplyYinYangFromStrokes 가 같은 파일·같은 규칙으로 모든 글자의
 StrokeCount·YinYang 을 정한다(2026-10-22 S5c — 그 전 백엔드는 Adobe 자형 획수·거꾸로 된 음양이 섞여 획수 832·음양 6,821자 달랐다)
 
