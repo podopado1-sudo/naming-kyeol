@@ -25,7 +25,8 @@
   - 수집 원자료(tmp/radical-research/)와 Unihan(tmp/unihan-18.0/)은 저장소에 복사하지 않는다(gitignore, 로컬 전용).
 
 재현성:
-  기본 실행은 tmp 를 읽지 않는다 — 고정본 + data/hanja_radicals.json(글자 → 판정 부수) + hanja-seo.json(대상 글자)만 읽는다.
+  기본 실행은 tmp 를 읽지 않는다 — 고정본 + data/hanja_radicals.json(글자 → 판정 부수) + data/hanja_dictionary_final.json(대상 글자 —
+  scripts/hanja_target_set.py, 2026-10-22 S4 전까지는 hanja-seo.json 키였다)만 읽는다.
   --refresh 는 tmp 자료(조사 원자료·Unihan)와 name-seo.json(이름 빈도)으로 다시 집계해 고정본과 비교하고 차이를 보고한다
   (아무 파일도 쓰지 않는다. 다르면 exit 1). --refresh --freeze 는 다시 집계한 값으로 고정본을 덮어쓰고 출력도 만든다.
   출력은 어느 모드에서든 디스크의 고정본에서 만든다 — 같은 고정본이면 tmp 유무와 관계없이 같은 바이트.
@@ -49,13 +50,14 @@ sys.stderr.reconfigure(encoding="utf-8")  # 멈출 때(SystemExit) 메시지도 
 sys.dont_write_bytecode = True  # 공용 판정 모듈을 불러도 scripts/__pycache__ 를 만들지 않는다
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kangxi_radical_order  # noqa: E402  (부수 표준형 · --refresh 의 Unihan 판정: extract_hanja_radicals.py 와 같은 함수)
+import hanja_target_set  # noqa: E402  (세 S1 스크립트의 대상 글자 집합 — 사전 파일의 등재 한자 키)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNIHAN = os.path.join(ROOT, "tmp", "unihan-18.0", "Unihan_IRGSources.txt")
 UNIHAN_ZIP = os.path.join(ROOT, "tmp", "unihan-18.0", "Unihan.zip")  # kKangXi(Unihan_DictionaryIndices.txt)만 읽는다
 TRAD = os.path.join(ROOT, "tmp", "radical-research", "tradition", "sources")
 DB_FILES = (("src_hanname.json", "HN"), ("src_namechart.json", "NC"), ("src_ioreum.json", "IO"))
-SEO = os.path.join(ROOT, "frontend", "src", "data", "hanja-seo.json")
+DICTIONARY = hanja_target_set.DICTIONARY  # 대상 글자(등재 한자 키 9,190 = 통합 9,105 + 호환 85)
 NAME_SEO = os.path.join(ROOT, "frontend", "src", "data", "name-seo.json")  # --refresh 의 이름 빈도(亠)만
 HANJA_RAD = os.path.join(ROOT, "data", "hanja_radicals.json")
 FROZEN = os.path.join(ROOT, "data", "radical_resource_votes.json")
@@ -433,13 +435,14 @@ def make_ctx():
     c = Ctx()
     c.num2ch = kangxi_radical_order.radical_chars()
     c.ch2num = {ch: n for n, ch in c.num2ch.items()}
-    c.seo = load_json(SEO)
-    c.target = sorted({nfkc(ch) for ch in c.seo}, key=ord)  # 호환 한자 85자는 통합 한자로 붙는다(§2-1 ①)
+    c.keys = hanja_target_set.target_keys()  # 사전 파일의 등재 한자 키(호환 한자 포함)
+    c.target = sorted({nfkc(ch) for ch in c.keys}, key=ord)  # 호환 한자 85자는 통합 한자로 붙는다(§2-1 ①)
     c.tset = set(c.target)
+    c.seo_check = hanja_target_set.check_hanja_seo(c.keys)
     # 글자 → 판정 부수: data/hanja_radicals.json (extract_hanja_radicals.py 산출 — kangxi 필드 = kangxi_radical_order 판정)
     rad = load_json(HANJA_RAD)
-    if set(rad) != set(c.seo):
-        raise SystemExit("hanja_radicals.json 과 hanja-seo.json 키가 다르다 — extract_hanja_radicals.py 를 먼저 돌릴 것")
+    if set(rad) != set(c.keys):
+        raise SystemExit("hanja_radicals.json 과 사전 파일 등재 한자 키가 다르다 — extract_hanja_radicals.py 를 먼저 돌릴 것")
     c.krs, c.moved = {}, {}
     for ch in c.target:
         v = rad[ch]
@@ -1180,7 +1183,7 @@ def build_outputs(ctx, frozen):
     inputs = {
         "frozen": {"path": rel(FROZEN), "sha256": sha256(FROZEN)},
         "hanja_radicals": {"path": rel(HANJA_RAD), "sha256": sha256(HANJA_RAD)},
-        "hanja_seo": {"path": rel(SEO), "sha256": sha256(SEO)},
+        "dictionary": {"path": rel(DICTIONARY), "sha256": sha256(DICTIONARY)},
         "frozen_from": {k: {"path": v["path"], "sha256": v["sha256"]} for k, v in frozen["meta"]["inputs"].items()},
     }
 
@@ -1205,7 +1208,8 @@ def build_outputs(ctx, frozen):
                 "decided_by": "D2 = 계획 이견 부수 권고안(승인) · D2-single = 계획 단일 출처 부수 · P2 = 사용자 결정 값(弓) · P2-namefreq = 이름 빈도 가중 다수(亠 — 쓴 가중 단계는 note) · rule = 아래 vote_rule 계산 · JAUI = 자의 추정",
                 "split": "부수 다수값과 별개로 글자별로 값이 갈리는 DB(다수값 비율 2/3 미만 또는 과반 없음). 비어 있지 않으면 '이견' — 화면은 '이 부수 글자는 뜻에 따라 다르게 보기도 합니다' 류",
                 "votes": "출처별 부수 집계. KIM = 김만태 표 값, 그 밖은 [다수값, 다수값 글자 수, 그 부수 글자 수](간지·문헌 예외 후보 글자 제외 — B-2 로 확정하지 않은 후보도 제외, 실무 예외 글자는 포함, key 와 같은 부수 판정 — 고정본 votes)",
-                "chars": "대상 9,190자(hanja-seo.json)를 NFKC 로 묶은 %d자(호환 한자 85자는 통합 한자에 붙음) 가운데 이 부수 글자 수" % len(ctx.target),
+                "chars": "대상 %s자(hanja_dictionary_final.json 등재 한자 키)를 NFKC 로 묶은 %d자(호환 한자 %d자는 통합 한자에 붙음) 가운데 이 부수 글자 수" % (
+                    format(len(ctx.keys), ","), len(ctx.target), len(ctx.keys) - len(ctx.target)),
                 "note": "결정 근거",
             },
             "vote_rule": [
@@ -1413,7 +1417,7 @@ def build_outputs(ctx, frozen):
         }
 
     compat_forms = collections.defaultdict(list)
-    for c in ctx.seo:
+    for c in ctx.keys:
         if c != nfkc(c):
             compat_forms[nfkc(c)].append(cp_str(c))
 
@@ -1494,7 +1498,7 @@ def build_outputs(ctx, frozen):
     dump_json(OUT_EXC, exc_doc)
 
     # ---- 보고
-    print("대상 글자 %d자 (hanja-seo 키 %d, 호환 한자 NFKC 통합)" % (len(ctx.target), len(ctx.seo)))
+    print("대상 글자 %d자 (사전 등재 한자 키 %d, 호환 한자 NFKC 통합) · %s" % (len(ctx.target), len(ctx.keys), ctx.seo_check))
     print("부수표: %s" % dict(table_doc["meta"]["counts"]))
     c = exc_doc["meta"]["counts"]
     print("예외: 간지 %d(값이 바뀌는 것 %d) · 문헌 %d %s (후보 %d — B-2 로 확정 안 함 %s) · 실무 %d (B-1 로 예외 아님 %d) · 이견 글자 %d %s" % (

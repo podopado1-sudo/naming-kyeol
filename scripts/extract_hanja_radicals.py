@@ -5,9 +5,9 @@
 입력 (읽기만 한다)
   - tmp/unihan-18.0/Unihan_IRGSources.txt   kRSUnicode·kTotalStrokes (unicode.org 공식 18.0, 2026-07-31)
   - tmp/unihan-18.0/Unihan.zip              안의 Unihan_DictionaryIndices.txt kKangXi (강희자전 배열 확인용)
-  - frontend/src/data/hanja-seo.json         대상 글자 = 키 9,190자
-  - data/hanja_dictionary_final.json · data/hanja_core_v1.json · Application/Engines/Data/HanjaData.cs
-                                             백엔드 로드 집합을 재구성해 대상과 같은지 대조만 한다
+  - data/hanja_dictionary_final.json         대상 글자 = 등재 한자 키 9,190자(통합 9,105 + 호환 85 — scripts/hanja_target_set.py)
+  - Application/Engines/Data/HanjaData.cs    백엔드 로드 집합(하드코딩 + 사전, 호환 병합)을 재구성해 대상과 같은지 대조만 한다
+  - frontend/src/data/hanja-seo.json         있으면 키 대조만(옛 9,190 형식·새 9,105 형식 둘 다 통과 — 2026-10-22 S4 전까지는 대상이었다)
 
 출력
   - data/hanja_radicals.json   글자 → {radical, residual, simplified, alts, radical_char}
@@ -58,13 +58,12 @@ from pathlib import Path
 sys.dont_write_bytecode = True  # 공용 판정 모듈을 불러도 scripts/__pycache__ 를 만들지 않는다
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kangxi_radical_order  # noqa: E402  (scripts/kangxi_radical_order.py — 부수표 스크립트와 같은 판정)
+import hanja_target_set  # noqa: E402  (scripts/hanja_target_set.py — 세 S1 스크립트의 대상 글자 집합)
 
 ROOT = Path(__file__).resolve().parent.parent
 IRG = ROOT / "tmp" / "unihan-18.0" / "Unihan_IRGSources.txt"
 UNIHAN_ZIP = ROOT / "tmp" / "unihan-18.0" / "Unihan.zip"
-SEO = ROOT / "frontend" / "src" / "data" / "hanja-seo.json"
 DICT_FINAL = ROOT / "data" / "hanja_dictionary_final.json"
-CORE_V1 = ROOT / "data" / "hanja_core_v1.json"
 HANJA_DATA_CS = ROOT / "Application" / "Engines" / "Data" / "HanjaData.cs"
 OUT_CHARS = ROOT / "data" / "hanja_radicals.json"
 OUT_TABLE = ROOT / "data" / "kangxi_radicals.json"
@@ -203,18 +202,16 @@ def parse_rs(value: str) -> list[tuple[int, str, int]]:
     return out
 
 
-def backend_load_set() -> set[str]:
-    """HanjaData.LoadFromFinalJson 의 키 집합을 데이터 파일로 재구성한다(대조용)."""
+def backend_load_set(final: dict) -> set[str]:
+    """HanjaData.LoadFromFinalJson 의 키 집합을 데이터 파일로 재구성한다(대조용).
+    2026-10-22 S2 부터 수록 범위 = 사전(core_v1·Unihan 로더는 보강만)이고 호환 한자는 통합 한자에 병합된다 → 통합 집합."""
     keys: set[str] = set()
     src = HANJA_DATA_CS.read_text(encoding="utf-8")
     start = src.index("_detailedHanjaDictionary = new()")
     block = src[start:src.index("};", start)]
     keys.update(re.findall(r'\{\s*"([^"]+)",\s*new HanjaInfo', block))
-    final = json.loads(DICT_FINAL.read_text(encoding="utf-8"))
     keys.update(k for k in final if len(k) == 1 and is_han_code_point(ord(k)))
-    core = json.loads(CORE_V1.read_text(encoding="utf-8"))
-    keys.update(e["hanja"] for e in core if (e.get("hanja") or "").strip())
-    return keys
+    return {hanja_target_set.to_unified(k) for k in keys}
 
 
 def u(cp: int) -> str:
@@ -249,14 +246,13 @@ def main() -> int:
         rad_char[n] = ch
 
     # ── 대상 글자 ─────────────────────────────────────────────────
-    seo = json.loads(SEO.read_text(encoding="utf-8"))
-    targets = sorted(seo, key=ord)
-    bad = [k for k in targets if len(k) != 1 or not is_han_code_point(ord(k))]
-    if bad:
-        raise SystemExit(f"[중단] 한 글자 한자가 아닌 키: {bad[:10]}")
-    backend = backend_load_set()
-    only_seo = sorted(set(targets) - backend, key=ord)
-    only_be = sorted(backend - set(targets), key=ord)
+    final = json.loads(DICT_FINAL.read_text(encoding="utf-8"))
+    targets = hanja_target_set.target_keys(final)  # 사전 파일의 등재 한자 키(호환 한자 포함) — 코드포인트 순
+    unified = set(hanja_target_set.unified_keys(targets))
+    seo_check = hanja_target_set.check_hanja_seo(targets)
+    backend = backend_load_set(final)
+    only_seo = sorted(unified - backend, key=ord)
+    only_be = sorted(backend - unified, key=ord)
 
     # ── 글자별 부수 ───────────────────────────────────────────────
     chars: dict[str, dict] = {}
@@ -352,8 +348,8 @@ def main() -> int:
             "url": "https://www.unicode.org/Public/UCD/latest/ucd/Unihan.zip",
             "kangxi": {"file": "Unihan.zip → Unihan_DictionaryIndices.txt (kKangXi)", "sha256": sha_zip},
         },
-        "target": {"file": "frontend/src/data/hanja-seo.json", "count": len(targets),
-                   "with_radical": len(chars)},
+        "target": {"file": "data/hanja_dictionary_final.json (유니코드 등재 한자 키 — 호환 한자 포함, scripts/hanja_target_set.py)",
+                   "count": len(targets), "unified": len(unified), "with_radical": len(chars)},
         "conventions": {
             "radical": "kRSUnicode 첫 값(UAX #38: 표준 부수·획수). 둘째 이후는 alts.",
             "residual": "나머지 획수. 음수 가능(王 96.-1).",
@@ -388,9 +384,10 @@ def main() -> int:
 
     # ── 보고 ────────────────────────────────────────────────────
     print(f"Unihan {version} ({header.get('Date', '')}) sha256 {sha[:16]}…")
-    print(f"대상 {len(targets):,}자 (hanja-seo.json 키) · 백엔드 재구성 {len(backend):,}자 · "
-          f"seo 에만 {len(only_seo)} · 백엔드에만 {len(only_be)}")
-    for label, xs in (("seo 에만", only_seo), ("백엔드에만", only_be)):
+    print(f"대상 {len(targets):,}자 (사전 등재 한자 키, 통합 {len(unified):,}) · 백엔드 재구성 {len(backend):,}자(통합) · "
+          f"대상에만 {len(only_seo)} · 백엔드에만 {len(only_be)}")
+    print(seo_check)
+    for label, xs in (("대상에만", only_seo), ("백엔드에만", only_be)):
         if xs:
             print(f"  {label}: " + " ".join(f"{c}({u(ord(c))})" for c in xs[:40]))
     print(f"커버리지 {len(chars):,}/{len(targets):,}  누락 {len(missing)}"

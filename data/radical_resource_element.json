@@ -15,7 +15,7 @@
    "decided_by": "D2 = 계획 이견 부수 권고안(승인) · D2-single = 계획 단일 출처 부수 · P2 = 사용자 결정 값(弓) · P2-namefreq = 이름 빈도 가중 다수(亠 — 쓴 가중 단계는 note) · rule = 아래 vote_rule 계산 · JAUI = 자의 추정",
    "split": "부수 다수값과 별개로 글자별로 값이 갈리는 DB(다수값 비율 2/3 미만 또는 과반 없음). 비어 있지 않으면 '이견' — 화면은 '이 부수 글자는 뜻에 따라 다르게 보기도 합니다' 류",
    "votes": "출처별 부수 집계. KIM = 김만태 표 값, 그 밖은 [다수값, 다수값 글자 수, 그 부수 글자 수](간지·문헌 예외 후보 글자 제외 — B-2 로 확정하지 않은 후보도 제외, 실무 예외 글자는 포함, key 와 같은 부수 판정 — 고정본 votes)",
-   "chars": "대상 9,190자(hanja-seo.json)를 NFKC 로 묶은 9105자(호환 한자 85자는 통합 한자에 붙음) 가운데 이 부수 글자 수",
+   "chars": "대상 9,190자(hanja_dictionary_final.json 등재 한자 키)를 NFKC 로 묶은 9105자(호환 한자 85자는 통합 한자에 붙음) 가운데 이 부수 글자 수",
    "note": "결정 근거"
   },
   "vote_rule": [
@@ -304,9 +304,9 @@
     "path": "data/hanja_radicals.json",
     "sha256": "69b8049d26065598d904a1b3822a748e060520da0e8fb7464cabe85a7737609b"
    },
-   "hanja_seo": {
-    "path": "frontend/src/data/hanja-seo.json",
-    "sha256": "53e02d3ba9a9fafd108e7152cf9c550ef6517af46f7ac461ecb85cb8c6122ce5"
+   "dictionary": {
+    "path": "data/hanja_dictionary_final.json",
+    "sha256": "47b0d3bcfeccff93cfdfc266559da44d5143311b3f4310597821dce9bb2a5f32"
    },
    "frozen_from": {
     "unihan": {

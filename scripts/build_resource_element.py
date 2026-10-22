@@ -8,7 +8,10 @@
   data/resource_element_exceptions.json 간지·문헌·실무 예외 + 이견 글자(숫자·문헌 이견·확정 안 한 문헌 예외·실무 이견) (같은 스크립트 —
                                        실무 예외는 커밋된 고정본 data/radical_resource_votes.json 에서 온다)
   data/hanja_variants.json             이체자 묶음 (scripts/build_hanja_variants.py)
-  frontend/src/data/hanja-seo.json     대상 글자 집합 확인과 부수 글자의 훈(note 표기용)만 읽는다 — 오행 값(e·g)은 읽지 않는다
+  data/hanja_dictionary_final.json     대상 글자 집합(등재 한자 키 — scripts/hanja_target_set.py)과 부수 글자의 훈(note 표기용)
+  data/hanja-gloss-overrides.json      부수 글자 훈의 대표 훈 재배열(build_hanja_seo_data.py 의 m 과 같은 규칙)
+  frontend/src/data/hanja-seo.json     있으면 키 대조만(옛 9,190·새 9,105 형식 둘 다 통과). 2026-10-22 S4 전까지는 대상·훈 입력이었다 —
+                                       hanja-seo.json 이 이 파일을 복사해 만드는 산출물이 되어(S4) 입력에서 뺐다(순환 방지)
 
 출력 (아직 소비처 없음 — 백엔드·프론트 연결은 S4):
   data/hanja_resource_element.json     글자 → {e, g, radical, radical_char, alt_radical [, alt_char, v_reasons, number], basis, note
@@ -19,6 +22,8 @@
 판정 순서 (계획 §2-1):
   ① 정규화 — 호환 한자(U+F900~FAFF·U+2F800~)는 NFKC 로 통합 한자에 붙이고, 값은 통합 한자 쪽에서 정한다.
      호환 한자 키에도 같은 값을 싣고 compat_of 로 통합 한자를 가리킨다.
+     ⚠️ 소비처 규칙(S4): 값은 통합 한자 키에서만 읽는다 — compat_of 가 있는 키는 적용하지 않는다(백엔드 HanjaData 는
+     MergeCompatibilityIdeographs 뒤 통합 키에만 적용, build_hanja_seo_data.py 도 통합 키만 출력). 호환 키는 대조·안내용이다.
   ② 간지 예외 → ③ 문헌 예외(B-2: 실무 자료 2곳 이상의 반대가 없을 때) → ③' 실무 예외(B-1: 독립 근거 2곳 이상)
      (resource_element_exceptions.json exceptions) → 등급 X
   ④ 부수표 (radical_resource_element.json) — 부수 번호는 hanja_radicals.json 의 판정 부수(kangxi 가 있으면 그 값, 없으면
@@ -58,13 +63,17 @@ import unicodedata
 
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")  # 멈출 때(SystemExit) 메시지도 utf-8
+sys.dont_write_bytecode = True  # 공용 모듈을 불러도 scripts/__pycache__ 를 만들지 않는다
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import hanja_target_set  # noqa: E402  (세 S1 스크립트의 대상 글자 집합 — 사전 파일의 등재 한자 키)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IN_RAD = os.path.join(ROOT, "data", "hanja_radicals.json")
 IN_TABLE = os.path.join(ROOT, "data", "radical_resource_element.json")
 IN_EXC = os.path.join(ROOT, "data", "resource_element_exceptions.json")
 IN_VAR = os.path.join(ROOT, "data", "hanja_variants.json")
-SEO = os.path.join(ROOT, "frontend", "src", "data", "hanja-seo.json")
+DICTIONARY = hanja_target_set.DICTIONARY
+GLOSS_OVERRIDES = os.path.join(ROOT, "data", "hanja-gloss-overrides.json")
 OUT = os.path.join(ROOT, "data", "hanja_resource_element.json")
 
 EL = "木火土金水"
@@ -205,7 +214,8 @@ def main():
     tdoc = load_json(IN_TABLE)
     edoc = load_json(IN_EXC)
     vdoc = load_json(IN_VAR)
-    seo = load_json(SEO)
+    dictionary = load_json(DICTIONARY)
+    gloss_overrides = load_json(GLOSS_OVERRIDES) if os.path.exists(GLOSS_OVERRIDES) else {}
 
     table = tdoc["radicals"]
     adjusted = tdoc["meta"]["krs_kangxi_adjusted"]
@@ -214,9 +224,12 @@ def main():
     lit_ex = edoc["literature_examples"]
     kx = load_json(os.path.join(ROOT, "data", "kangxi_radicals.json"))["radicals"]
 
-    # ---- 대상 집합: hanja_radicals.json 키 = hanja-seo.json 키 (9,190자)
-    if set(rad) != set(seo):
-        raise SystemExit("hanja_radicals.json 과 hanja-seo.json 키가 다르다: 부수 %d · seo %d" % (len(rad), len(seo)))
+    # ---- 대상 집합: hanja_radicals.json 키 = 사전 파일의 등재 한자 키 (9,190자 = 통합 9,105 + 호환 85)
+    dict_keys = hanja_target_set.target_keys(dictionary)
+    if set(rad) != set(dict_keys):
+        raise SystemExit("hanja_radicals.json 과 사전 등재 한자 키가 다르다: 부수 %d · 사전 %d — extract_hanja_radicals.py 를 먼저 돌릴 것" % (
+            len(rad), len(dict_keys)))
+    seo_check = hanja_target_set.check_hanja_seo(dict_keys)
     keys = sorted(rad, key=ord)
     unified = sorted({nfkc(c) for c in keys}, key=ord)
     for c in keys:
@@ -248,18 +261,39 @@ def main():
         if chr(cp) not in kx[str(n)]["variants"]:
             raise SystemExit("표기용 변형 꼴이 부수표 변형 목록에 없다: %d %s" % (n, cp_str(chr(cp))))
 
-    # ---- 부수 글자의 훈 (hanja-seo m 의 첫 훈. 그 키에 없으면 NFKC 가 같은 호환 한자 키에서)
-    def first_gloss(c):
-        m = (seo[c].get("m") or "").split(",")[0].split("/")[0]  # '클 대/큰 대' → '클 대'
+    # ---- 부수 글자의 훈 — hanja-seo.json m 과 같은 규칙(build_hanja_seo_data.py): 통합 한자 항목 → 사전 순서의 호환 한자 항목 중
+    #      처음 나오는 meaning_ko, 대표 훈 오버라이드가 있으면 재배열. 그 첫 훈. (S1 은 hanja-seo m 을 읽었다 — 214부수 글자 훈 같음, 2026-10-22 대조)
+    def first_gloss(m):
+        m = (m or "").split(",")[0].split("/")[0]  # '클 대/큰 대' → '클 대'
         return re.sub(r"\([^)]*\)", "", m).strip()  # '힘 력(역)' → '힘 력' (note 괄호 안 괄호 방지)
 
+    def reorder_gloss(meaning, preferred):  # build_hanja_seo_data.reorder_gloss · HanjaData.ReorderGloss 와 같다
+        preferred = (preferred or "").strip()
+        if not preferred:
+            return meaning
+        if not meaning or not meaning.strip():
+            return preferred
+        tokens = [t.strip() for t in re.split(r"[,/;·]", meaning) if t.strip()]
+        if tokens and tokens[0] == preferred:
+            return meaning
+        if preferred in tokens:
+            tokens.remove(preferred)
+        tokens.insert(0, preferred)
+        return ", ".join(tokens)
+
+    overrides_u = {nfkc(k): v for k, v in gloss_overrides.items()}
+    forms_of = collections.defaultdict(list)  # 통합 한자 → [통합 자신(사전에 있으면), 사전 순서의 호환 한자 …]
+    for c in dictionary:
+        if c in rad:
+            forms_of[nfkc(c)].append(c)
     gloss_by_char = {}
-    for c in sorted(seo, key=ord):
-        if first_gloss(c):
-            gloss_by_char.setdefault(c, first_gloss(c))
-    for c in sorted(seo, key=ord):
-        if first_gloss(c) and nfkc(c) != c:
-            gloss_by_char.setdefault(nfkc(c), first_gloss(c))
+    for u_ch, forms in forms_of.items():
+        forms = sorted(forms, key=lambda x: x != u_ch)  # 통합 한자 항목 먼저(build_hanja_seo_data 의 sources 순서)
+        m = next((dictionary[x].get("meaning_ko") for x in forms if dictionary[x].get("meaning_ko")), None)
+        if u_ch in overrides_u:
+            m = reorder_gloss(m or "", overrides_u[u_ch]) or None
+        if first_gloss(m):
+            gloss_by_char[u_ch] = first_gloss(m)
 
     def radical_label(n):
         rc = table[str(n)]["radical"]
@@ -463,7 +497,7 @@ def main():
     elem_counts_u = collections.Counter(out_u[c]["e"] for c in unified)
 
     inputs = {}
-    for p in (IN_RAD, IN_TABLE, IN_EXC, IN_VAR, os.path.join(ROOT, "data", "kangxi_radicals.json"), SEO):
+    for p in (IN_RAD, IN_TABLE, IN_EXC, IN_VAR, os.path.join(ROOT, "data", "kangxi_radicals.json"), DICTIONARY, GLOSS_OVERRIDES):
         inputs[os.path.relpath(p, ROOT).replace(os.sep, "/")] = sha256(p)
 
     meta = {
@@ -508,7 +542,10 @@ def main():
                      "'이 부수를 X로 보는 실무 자료' 수준으로만 쓴다. 글자 단위 실무 근거는 PRACTICE 뿐이다 — 실무 예외(X), B-2 로 문헌 "
                      "예외를 확정하지 않은 글자(V, 실무 자료 다수가 이 부수값), alt_char PRACTICE. 그 글자에 다른 값을 적은 문헌 예시 "
                      "키는 부수 basis 에 있어도 뺀다",
-            "note": "사람이 읽을 근거 한 줄. 부수 훈은 hanja-seo.json m 의 첫 훈(없는 부수 글자는 꼴만)",
+            "note": "사람이 읽을 근거 한 줄. 부수 훈은 그 부수 글자의 hanja-seo.json m 과 같은 규칙(사전 meaning_ko + 대표 훈 오버라이드)의 첫 훈"
+                    "(없는 부수 글자는 꼴만)",
+            "consumer_rule": "값(e·g 등)은 통합 한자 키에서만 읽는다 — compat_of 가 있는 키는 적용하지 않는다(백엔드는 호환 한자 병합 뒤 "
+                             "통합 키에만, hanja-seo.json 은 통합 키만). 호환 키는 통합 한자와 같은 값을 실은 대조·안내용",
             "variant_of": "이체자면 정자 — hanja_variants.json confidence=high 묶음의 standard(정자 자신에게는 없음). "
                           "값은 쓴 꼴의 부수를 따른다(D6) — 정자 값은 이 파일의 variant_of 키에서 읽는다",
             "variant_tie": "variant_of 의 정자 판정이 약하다(standard_tie: 네이버 순서·코드포인트로 정함) — 화면(S7)은 이 글자에 "
@@ -557,7 +594,7 @@ def main():
     if list(back) != keys:
         raise SystemExit("출력 키가 입력과 다르다")
 
-    print("대상 %d자 (통합 %d · 호환 %d)" % (len(keys), len(unified), len(keys) - len(unified)))
+    print("대상 %d자 (통합 %d · 호환 %d) · %s" % (len(keys), len(unified), len(keys) - len(unified), seo_check))
     print("등급(키 기준) %s · 등급(통합 기준) %s" % (meta["counts"]["grade_keys"], meta["counts"]["grade_unified"]))
     print("종류(통합 기준) %s" % meta["counts"]["kind_unified"])
     print("오행(통합 기준) %s" % meta["counts"]["element_unified"])

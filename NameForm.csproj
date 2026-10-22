@@ -23,6 +23,13 @@
     <Content Remove="frontend\**" />
     <EmbeddedResource Remove="frontend\**" />
     <None Remove="frontend\**" />
+
+    <!-- tmp — 로컬 전용 조사·스크래치 자료(gitignore). 빌드 제외 (2026-10-22 S4) — Web SDK 의 기본 Content(**/*.json)로
+         tmp/radical-research 의 json 수백 MB 가 빌드 출력(bin/…/tmp)에 복사되고, 그 안의 하네스 *.cs 가 이 프로젝트에 컴파일될 수 있었다 -->
+    <Compile Remove="tmp\**" />
+    <Content Remove="tmp\**" />
+    <EmbeddedResource Remove="tmp\**" />
+    <None Remove="tmp\**" />
   </ItemGroup>
 
   <ItemGroup>

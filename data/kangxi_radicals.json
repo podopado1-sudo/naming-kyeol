@@ -14,8 +14,9 @@
       }
     },
     "target": {
-      "file": "frontend/src/data/hanja-seo.json",
+      "file": "data/hanja_dictionary_final.json (유니코드 등재 한자 키 — 호환 한자 포함, scripts/hanja_target_set.py)",
       "count": 9190,
+      "unified": 9105,
       "with_radical": 9190
     },
     "conventions": {
