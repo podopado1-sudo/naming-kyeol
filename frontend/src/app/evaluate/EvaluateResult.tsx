@@ -19,6 +19,7 @@ import {
   StrengthsCautions,
   type HanjaGroup,
 } from "@/components/design/EvalBody";
+import { toResourceGrade } from "@/components/design/resource-grade";
 import { toggleFavorite, useIsFavorite } from "@/lib/favorites";
 import type { GenerationFit, NameEvaluationResponse } from "@/lib/types";
 
@@ -35,7 +36,10 @@ function mapHanjaGroups(res: NameEvaluationResponse): HanjaGroup[] {
       meaning: c.meaning,
       fiveElement: c.fiveElement,
       strokeCount: c.strokeCount,
-      confidenceGrade: c.confidenceGrade,
+      // 자원오행 판정 등급(R·V·X·U) — 옛 confidenceGrade(S/C/D, 뜻 기반)는 자원오행과 무관해 읽지 않는다
+      resourceGrade: toResourceGrade(c.resourceGrade),
+      // V 를 '이견 있음'·'자료 적음'·'추정'으로 나누는 이유 목록(백엔드 S7 — 옛 백엔드면 없어 V 는 '이견 있음')
+      vReasons: c.vReasons ?? undefined,
     })),
   }));
 }
@@ -76,12 +80,14 @@ export function EvaluateResultView({
     { label: "감점", value: -data.aesthetic.penalty, max: 0, bonus: true },
   ].filter((r) => r.max > 0 || r.value !== 0);
 
-  // HarmonyEngine 산식 그대로 — 오행 30 + 자원오행 20 + 음양 10 + 발음오행 25 + 수리 15 (+성별 보정).
+  // HarmonyEngine 산식 그대로 — 자원오행 보완 30 + 획수 조화 20 + 음양 10 + 발음오행 25 + 수리 15 (+성별 보정).
+  // 축 이름은 2026-10-22 S4 백엔드와 같다: fiveElement = 자원오행 보완(배정 한자의 부수 기준 자원오행 ↔ 사주),
+  // resourceElement = 획수 조화(두 글자 획수 합 — 오행 무관, 옛 화면 이름 '자원오행'). 필드명은 호환으로 유지.
   // 예전 막대는 옛 만점 40/30/20/10에 폐기 필드 '성 조화'(항상 0)를 그려 합계(41)가 총점(75)과 안 맞았다(감사 EV-2).
   // 수리 표기는 백엔드 노트와 같은 '전통 81수리(참고)' (감사 EV-4).
   const harmonyRows = [
-    { label: "오행", value: data.harmony.fiveElement, max: 30 },
-    { label: "자원오행", value: data.harmony.resourceElement, max: 20 },
+    { label: "자원오행 보완", value: data.harmony.fiveElement, max: 30 },
+    { label: "획수 조화", value: data.harmony.resourceElement, max: 20 },
     { label: "음양", value: data.harmony.yinYang, max: 10 },
     { label: "발음오행", value: data.harmony.pronunciationElement, max: 25 },
     { label: "전통 81수리(참고)", value: data.harmony.suriSagyeok, max: 15 },
@@ -202,8 +208,8 @@ export function EvaluateResultView({
           >
             출생일을 입력하지 않아 <strong>사주 기반 조화 점수</strong>는
             산정하지 않았어요. 종합 점수는 미학 점수만으로 계산됩니다.
-            출생일을 넣으면 오행·자원오행·음양·발음오행·전통 81수리까지 함께
-            평가해 드려요.
+            출생일을 넣으면 자원오행 보완·획수 조화·음양·발음오행·전통 81수리까지
+            함께 평가해 드려요.
           </div>
         </section>
       ) : (
@@ -254,7 +260,7 @@ export function EvaluateResultView({
           {/* 후보 표는 음절별 목록이라 점수에 쓴 한자와 다를 수 있다 — 어느 쪽인지 밝혀 둔다 (감사 EV-3) */}
           <SectionHead
             title="한자 후보"
-            subtitle="음절마다 쓸 수 있는 한자와 신뢰도(S·A·B·D)예요. 점수 계산에 쓴 한자는 아래 '의미 메모'에 적어 두었어요."
+            subtitle="음절마다 쓸 수 있는 한자와 부수로 정한 자원오행, 그 판정 등급(확정·이견 있음·예외 적용)이에요. 점수 계산에 쓴 한자는 아래 '의미 메모'에 적어 두었어요."
           />
           <HanjaCandidatesTable groups={hanjaGroups} />
         </section>

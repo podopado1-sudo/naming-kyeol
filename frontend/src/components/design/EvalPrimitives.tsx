@@ -1,113 +1,16 @@
 /**
- * EvalPrimitives — Evaluate 공유 atoms (4축 뱃지, 5요소 chip, ScoreBar, BreakdownPanel, NotesList)
+ * EvalPrimitives — Evaluate 공유 atoms (5요소 chip, ScoreBar, BreakdownPanel, NotesList)
  * Source: NameForm_design/src/EvalPrimitives.jsx (Claude Design 산출물)
+ *
+ * 등급 뱃지(옛 ConfBadgeE — S/A/B/D 만 있어 백엔드 C 등급이 오면 빈 뱃지였다)는 2026-10-22 S7 에
+ * DetailHanja 의 ResourceGradeBadge(size="sm")로 합쳤다 — 자원오행 판정 등급 R·V·X·U.
  */
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { FIVE_EL } from "./DetailPrimitives";
 import { SectionHead } from "./DetailPrimitives";
 import { isCautionNote } from "@/lib/note-polarity";
-
-// ============================================================
-// ConfBadgeE — 4축 뱃지 (DetailHanja의 ConfidenceBadge와 동일 스펙, sm 사이즈)
-// ============================================================
-export type ConfidenceGrade = "S" | "A" | "B" | "D";
-
-export function ConfBadgeE({ grade }: { grade?: ConfidenceGrade }) {
-  const base: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 5,
-    height: 22,
-    padding: "0 9px",
-    borderRadius: 6,
-    fontFamily: 'Inter, "Pretendard Variable", sans-serif',
-    fontSize: 11.5,
-    fontWeight: 500,
-    fontVariantNumeric: "tabular-nums",
-    letterSpacing: "-0.005em",
-    whiteSpace: "nowrap",
-    boxSizing: "border-box",
-    lineHeight: 1,
-  };
-  const map: Record<ConfidenceGrade, React.CSSProperties> = {
-    S: { background: "#1F5A58", color: "#FFF", border: "1.5px solid #1F5A58" },
-    A: {
-      background: "var(--color-teal-50)",
-      color: "#1F5A58",
-      border: "1.5px solid var(--color-teal-500)",
-    },
-    B: {
-      background: "#F7EFDD",
-      color: "#7A5B22",
-      border: "1.5px solid var(--color-gold-600)",
-    },
-    D: {
-      background: "transparent",
-      color: "#6B6B6B",
-      border: "1.5px dashed #B7B1A7",
-    },
-  };
-  const names: Record<ConfidenceGrade, string> = {
-    S: "S 고신뢰",
-    A: "A 규칙기반",
-    B: "B 수동입력",
-    D: "D 획수자동",
-  };
-  const g = grade ?? "D";
-  const st = map[g];
-  const [hover, setHover] = useState(false);
-
-  return (
-    <span
-      style={{ position: "relative", display: "inline-flex" }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <span style={{ ...base, ...st, cursor: g === "D" ? "help" : "default" }}>
-        {g === "S" && (
-          <svg
-            viewBox="0 0 10 10"
-            width="10"
-            height="10"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M1.5 5.2 L4 7.5 L8.5 2.5"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        )}
-        {names[g]}
-      </span>
-      {g === "D" && hover && (
-        <span
-          role="tooltip"
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            zIndex: 5,
-            background: "var(--color-text)",
-            color: "var(--color-background)",
-            fontSize: 11,
-            padding: "5px 9px",
-            borderRadius: 6,
-            whiteSpace: "nowrap",
-            boxShadow: "var(--shadow-md)",
-          }}
-        >
-          획수 기반 자동 추정 — 참고용
-        </span>
-      )}
-    </span>
-  );
-}
 
 // ============================================================
 // ElementChip — 5요소 chip (FIVE_EL 토큰)

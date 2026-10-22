@@ -1,5 +1,5 @@
 /**
- * DetailHanja — HanjaBreakdown (음절별 한자 카드) + ConfidenceBadge (4축)
+ * DetailHanja — HanjaBreakdown (음절별 한자 카드) + ResourceGradeBadge (자원오행 판정 등급, 4축)
  * Source: NameForm_design/src/DetailHanja.jsx (Claude Design 산출물)
  *
  * Props는 PascalCase 그대로 (디자인 의도 보존).
@@ -7,93 +7,82 @@
  */
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { FIVE_EL } from "./DetailPrimitives";
+import { gradeBadgeKey } from "@/components/hanja/hanja-element-text";
+import { RESOURCE_GRADE_INFO, type ResourceBadgeKey, type ResourceGrade } from "./resource-grade";
 
 // ============================================================
-// ConfidenceBadge — 4축 디자인 (S/A/B/D)
+// ResourceGradeBadge — 자원오행 판정 등급 (R 확정 / V 이견 있음 / X 예외 적용 / U 미상)
+// 4축(Fill·Border·Color·Icon)은 옛 S/A/B/D 뱃지를 그대로 옮겼다(계획 §2-4):
+// R = solid teal ✓ · X = outline teal · V = outline gold · U = dashed neutral.
+// vReasons 를 넘기면 V 를 '이견 있음'·'자료 적음'·'추정'으로 나눈다(gradeBadgeKey — /hanja 와 같은 기준, 같은 gold 테두리).
+// /evaluate 표(EvalBody)는 size="sm". 설명은 hover·focus 툴팁 — 모든 등급에 있다.
 // ============================================================
-export type ConfidenceGrade = "S" | "A" | "B" | "D";
+const GRADE_STYLE: Record<ResourceGrade, React.CSSProperties> = {
+  R: { background: "#1F5A58", color: "#FFFFFF", border: "1.5px solid #1F5A58" },
+  X: {
+    background: "var(--color-teal-50)",
+    color: "#1F5A58",
+    border: "1.5px solid var(--color-teal-500)",
+  },
+  V: {
+    background: "#F7EFDD",
+    color: "#7A5B22",
+    border: "1.5px solid var(--color-gold-600)",
+  },
+  U: { background: "transparent", color: "#6B6B6B", border: "1.5px dashed #B7B1A7" },
+};
 
-export function ConfidenceBadge({ grade }: { grade?: ConfidenceGrade }) {
-  const base: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 5,
-    height: 24,
-    padding: "0 10px",
-    borderRadius: 6,
-    fontFamily: 'Inter, "Pretendard Variable", sans-serif',
-    fontSize: 12,
-    fontWeight: 500,
-    fontVariantNumeric: "tabular-nums",
-    letterSpacing: "-0.005em",
-    whiteSpace: "nowrap",
-    boxSizing: "border-box",
-    lineHeight: 1,
-  };
-
-  const map: Record<
-    ConfidenceGrade,
-    {
-      label: string;
-      style: React.CSSProperties;
-      icon: boolean;
-      tip?: string;
-    }
-  > = {
-    S: {
-      label: "S 고신뢰",
-      style: {
-        background: "#1F5A58",
-        color: "#FFFFFF",
-        border: "1.5px solid #1F5A58",
-      },
-      icon: true,
-    },
-    A: {
-      label: "A 규칙기반",
-      style: {
-        background: "var(--color-teal-50)",
-        color: "#1F5A58",
-        border: "1.5px solid var(--color-teal-500)",
-      },
-      icon: false,
-    },
-    B: {
-      label: "B 수동입력",
-      style: {
-        background: "#F7EFDD",
-        color: "#7A5B22",
-        border: "1.5px solid var(--color-gold-600)",
-      },
-      icon: false,
-    },
-    D: {
-      label: "D 획수자동",
-      style: {
-        background: "transparent",
-        color: "#6B6B6B",
-        border: "1.5px dashed #B7B1A7",
-      },
-      icon: false,
-      tip: "획수 기반 자동 추정 — 참고용",
-    },
-  };
-
-  const m = map[grade ?? "D"];
-  const [hover, setHover] = useState(false);
+export function ResourceGradeBadge({
+  grade,
+  vReasons,
+  size = "md",
+  tipAlign = "left",
+}: {
+  grade?: ResourceGrade;
+  /** V 등급의 이유(백엔드 vReasons) — 없으면 V 는 모두 '이견 있음' */
+  vReasons?: string[];
+  size?: "md" | "sm";
+  /** 툴팁을 배지 왼쪽 끝(left)·오른쪽 끝(right)에 맞춘다 — 오른쪽 열 배지는 right(화면 밖으로 안 나가게) */
+  tipAlign?: "left" | "right";
+}) {
+  const [open, setOpen] = useState(false);
+  const tipId = useId();
+  if (!grade) return null;
+  const info = RESOURCE_GRADE_INFO[(gradeBadgeKey(grade, vReasons) ?? grade) as ResourceBadgeKey];
+  const sm = size === "sm";
 
   return (
     <span
       style={{ position: "relative", display: "inline-flex" }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
     >
       <span
-        style={{ ...base, ...m.style, cursor: m.tip ? "help" : "default" }}
+        tabIndex={0}
+        aria-describedby={open ? tipId : undefined}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          height: sm ? 22 : 24,
+          padding: sm ? "0 9px" : "0 10px",
+          borderRadius: 6,
+          fontFamily: 'Inter, "Pretendard Variable", sans-serif',
+          fontSize: sm ? 11.5 : 12,
+          fontWeight: 500,
+          letterSpacing: "-0.005em",
+          whiteSpace: "nowrap",
+          boxSizing: "border-box",
+          lineHeight: 1,
+          cursor: "help",
+          ...GRADE_STYLE[grade],
+        }}
       >
-        {m.icon && (
+        {grade === "R" && (
           <svg
             viewBox="0 0 10 10"
             width="10"
@@ -111,27 +100,31 @@ export function ConfidenceBadge({ grade }: { grade?: ConfidenceGrade }) {
             />
           </svg>
         )}
-        {m.label}
+        {info.label}
       </span>
-      {m.tip && hover && (
+      {open && (
         <span
+          id={tipId}
           role="tooltip"
           style={{
             position: "absolute",
             top: "calc(100% + 6px)",
-            left: 0,
+            ...(tipAlign === "right" ? { right: 0 } : { left: 0 }),
             zIndex: 5,
+            width: "max-content",
+            maxWidth: 240,
             background: "var(--color-text)",
             color: "var(--color-background)",
-            fontSize: 11,
-            padding: "5px 9px",
+            fontSize: 11.5,
+            lineHeight: 1.5,
+            padding: "6px 10px",
             borderRadius: 6,
-            whiteSpace: "nowrap",
+            whiteSpace: "normal",
             boxShadow: "var(--shadow-md)",
             pointerEvents: "none",
           }}
         >
-          {m.tip}
+          {info.tip}
         </span>
       )}
     </span>
@@ -147,7 +140,11 @@ export interface HanjaOption {
   fiveElement?: string;
   strokeCount?: number;
   kangxiStrokes?: number;
-  confidenceGrade?: ConfidenceGrade;
+  /** 자원오행 판정 등급 — 없으면 배지 없음 */
+  resourceGrade?: ResourceGrade;
+  /** V 등급의 이유 — '자료 적음'·'추정' 배지 판정용 */
+  vReasons?: string[];
+  /** 자원오행 판정 근거 한 줄(부수 근거 — 예: "手·扌(손 수) 부수 → 木") */
   rationale?: string;
 }
 
@@ -280,7 +277,7 @@ function HanjaCard({ entry }: { entry: HanjaSyllableEntry }) {
                   : ""}
               </span>
             )}
-            <ConfidenceBadge grade={primary.confidenceGrade} />
+            <ResourceGradeBadge grade={primary.resourceGrade} vReasons={primary.vReasons} />
           </div>
           {primary.rationale && (
             <div
@@ -291,7 +288,8 @@ function HanjaCard({ entry }: { entry: HanjaSyllableEntry }) {
                 lineHeight: 1.5,
               }}
             >
-              {primary.rationale}
+              {/* 백엔드 Rationale = 결과 파일 note(부수 근거 한 줄 — S4 전에는 뜻 기반 문장이었다) */}
+              자원오행 근거 · {primary.rationale}
             </div>
           )}
         </div>
@@ -411,7 +409,7 @@ function HanjaCard({ entry }: { entry: HanjaSyllableEntry }) {
                           ·{oel.name}
                         </span>
                       )}
-                      <ConfidenceBadge grade={o.confidenceGrade} />
+                      <ResourceGradeBadge grade={o.resourceGrade} vReasons={o.vReasons} tipAlign="right" />
                     </div>
                   </div>
                 );

@@ -425,8 +425,16 @@ export interface AnalysisHanjaOption {
   strokeCount?: number | null;
   /** 강희자전 원획수 */
   kangxiStrokes?: number | null;
-  /** 오행 판정 신뢰도: S=검수완료, A=규칙기반, B=수동입력, D=획수자동 */
-  confidenceGrade: string;
+  /** 자원오행 판정 등급 R=확정·V=이견 있음·X=예외 적용·U=미상 (2026-10-22 S4 백엔드 추가 — 화면은 toResourceGrade 로 거른다) */
+  resourceGrade?: string | null;
+  /** V 등급의 이유(data/hanja_resource_element.json v_reasons — 2026-10-22 S7 백엔드 추가). radical_single 하나뿐이면 '자료 적음',
+   *  radical_unknown 하나뿐이면 '추정'(gradeBadgeKey — /hanja 와 같은 기준). 옛 백엔드면 없다 */
+  vReasons?: string[] | null;
+  /**
+   * @deprecated 옛 뜻 기반 판정 등급(S/C/D) — S4 부터 fiveElement(부수 기준)와 무관하다. 화면은 읽지 않는다(백엔드가 S7 뒤 뺀다).
+   */
+  confidenceGrade?: string;
+  /** 자원오행 판정 근거 한 줄(부수 근거 — 예: "手·扌(손 수) 부수 → 木") */
   rationale?: string | null;
 }
 
@@ -494,7 +502,9 @@ export interface AestheticBreakdown {
 }
 
 export interface HarmonyBreakdown {
+  /** 자원오행 보완 30 — 배정 한자의 부수 기준 자원오행 ↔ 사주 용신·부족/과다 오행 (필드명은 호환으로 유지) */
   fiveElement: number;
+  /** 획수 조화 20 — 이름 두 글자 획수 합의 구간, 오행 무관 (옛 화면 이름 '자원오행', 필드명은 호환으로 유지) */
   resourceElement: number;
   yinYang: number;
   pronunciationElement: number;
@@ -516,14 +526,18 @@ export interface HanjaCandidate {
   /** 강희획수 (원획법, 사주/작명학 기준) */
   kangxiStrokes?: number;
   /**
-   * 오행 판정 신뢰도 (백엔드 정렬 — 4종):
-   * - S = 검수완료
-   * - A = 규칙기반
-   * - B = 수동입력
-   * - D = 획수자동
+   * 자원오행 판정 등급 (2026-10-22 S4 백엔드 추가 — data/hanja_resource_element.json g):
+   * - R = 확정 · V = 이견 있음 · X = 예외 적용 · U = 미상
+   * 화면은 components/design/resource-grade.ts toResourceGrade 로 거른다(옛 백엔드면 필드가 없다).
    */
-  confidenceGrade?: "S" | "A" | "B" | "D";
-  /** 오행 판정 근거 (S등급에 주로 존재) */
+  resourceGrade?: string;
+  /** V 등급의 이유(v_reasons — 2026-10-22 S7 백엔드 추가). '자료 적음'·'추정' 배지 판정용(gradeBadgeKey). 옛 백엔드면 없다 */
+  vReasons?: string[];
+  /**
+   * @deprecated 옛 뜻 기반 판정 등급(S/C/D) — S4 부터 fiveElement(부수 기준)와 무관하다. 화면은 읽지 않는다(백엔드가 S7 뒤 뺀다).
+   */
+  confidenceGrade?: string;
+  /** 자원오행 판정 근거 한 줄(부수 근거 — 예: "手·扌(손 수) 부수 → 木") */
   rationale?: string;
 }
 

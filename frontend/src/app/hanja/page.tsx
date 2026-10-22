@@ -3,6 +3,7 @@ import { BASE_OPEN_GRAPH } from "@/lib/og";
 import Link from "next/link";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
+import { HanjaGradeBadge } from "@/components/hanja/HanjaBadges";
 import {
   getAllDetailChars,
   getAllReadings,
@@ -19,9 +20,10 @@ import {
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://namingkyeol.com";
 
 export const metadata: Metadata = {
+  // 제목은 바꾸지 않는다(계획 §7-1). 설명의 '오행 검수 등급'은 사실과 달라(옛 값은 뜻 기반 자동 판정) 고쳤다(계획 §4-2)
   title: "인명용 한자 사전 — 뜻·획수·오행 검색",
   description:
-    "이름에 쓰는 인명용 한자 9,000여 자의 뜻, 획수, 오행을 독음별로 찾아보세요. 대법원 인명용 한자 기준, 오행 검수 등급과 함께 제공합니다.",
+    "이름에 쓰는 인명용 한자 9,000여 자의 뜻, 획수, 오행을 독음별로 찾아보세요. 대법원 인명용 한자 기준, 부수 기준 자원오행과 판정 근거(확정·이견)를 함께 제공합니다.",
   alternates: { canonical: "/hanja" },
   openGraph: {
     ...BASE_OPEN_GRAPH,
@@ -53,11 +55,52 @@ export default function HanjaIndexPage() {
         <h1 className="mb-4 text-2xl font-bold leading-snug text-navy sm:text-3xl">
           인명용 한자 사전
         </h1>
-        <p className="mb-12 max-w-2xl text-[15px] leading-relaxed text-text-2">
+        <p className="mb-8 max-w-2xl text-[15px] leading-relaxed text-text-2">
           이름에 쓰는 한자 {totalChars.toLocaleString()}자를 독음{" "}
-          {totalReadings}개로 정리했습니다. 뜻·획수·오행과 함께 오행 판정의
-          신뢰 등급(검수완료 S ~ 획수자동 D)을 투명하게 표시합니다.
+          {totalReadings}개로 정리했습니다. 뜻·획수와 함께 부수 기준 자원오행과 그
+          판정 근거(확정·이견)를 표시합니다.
         </p>
+
+        {/* 자원오행 등급 읽는 법 — 뱃지 문구는 components/hanja/HanjaBadges.tsx 와 같다 */}
+        <section className="mb-12 max-w-2xl rounded-xl border border-paper-line bg-paper-card px-5 py-4">
+          <h2 className="mb-2 text-sm font-semibold text-navy">
+            자원오행 표시 읽는 법
+          </h2>
+          <p className="mb-3 text-sm leading-relaxed text-text-2">
+            자원오행은 한자의 부수로 오행을 정하는 작명 관행입니다. 이 사전은 부수마다 작명
+            실무에서 가장 많이 쓰는 값을 따르고, 자료가 서로 다르면 그 사실을 함께 적습니다.
+          </p>
+          <dl className="m-0 space-y-1.5 text-sm leading-relaxed">
+            {[
+              { grade: "R", text: "부수와 글자 모두 자료 사이 이견이 없습니다." },
+              {
+                grade: "X",
+                text: "천간·지지 글자와 일부 글자는 부수보다 간지·문헌·작명 실무 자료의 예외값을 따릅니다.",
+              },
+              {
+                grade: "V",
+                text: "부수나 글자를 다른 오행으로 보는 자료가 있거나, 같은 부수 글자끼리 값이 갈립니다. 다른 값이 있으면 상세 페이지에 함께 적었습니다.",
+              },
+              {
+                grade: "V",
+                vReasons: ["radical_single"],
+                text: "이 부수는 자원오행 자료가 적어 찾은 자료의 값을 따랐습니다. 다른 값이 있는 것은 아닙니다.",
+              },
+              {
+                grade: "V",
+                vReasons: ["radical_unknown"],
+                text: "어느 자료에도 이 부수의 값이 없어 부수의 뜻으로 정했습니다.",
+              },
+            ].map(({ grade, vReasons, text }) => (
+              <div key={`${grade}-${vReasons?.[0] ?? ""}`} className="flex items-start gap-2">
+                <dt className="shrink-0 pt-0.5">
+                  <HanjaGradeBadge grade={grade} vReasons={vReasons} />
+                </dt>
+                <dd className="m-0 text-text-2">{text}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
 
         {/* 인기 독음 */}
         <section className="mb-12">

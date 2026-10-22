@@ -20,8 +20,10 @@ import {
   ohaengRelation,
   syllablesOf,
   toAestheticBreakdown,
+  type NameScoreBreakdown,
   type NameSeoRecord,
 } from "@/lib/name-seo";
+import type { AestheticBreakdown } from "@/lib/types";
 
 /**
  * /name/[이름] — 이름 뜻 SEO 페이지.
@@ -55,6 +57,61 @@ const GENDER_LABEL: Record<string, string> = {
   neutral: "남녀 공용 이름",
 };
 
+/**
+ * 이름 갈래 — name-seo.json 의 플래그(2026-10-22 S7, build_name_seo_data.py ← dump-name-flags):
+ * - pure: pk = 한글 이름으로 쓰는 순우리말 이름(조합 유무 무관) — PureKoreanNameEngine 내장 사전에서 한자어 낱말(소망·미래·다정)과
+ *   한자 이름으로 흔한 이름(예린·하린·예나)을 빼고 사전에 없는 고유어 합성 이름(한별·은별)을 더한 것
+ *   (data/pure-korean-name-overrides.json). 대표 뜻은 한글 이름의 뜻이고, 조합은 '한자로 쓴다면(참고)'로 낮춘다
+ *   (ND-3: 하늘 荷乻·한별 漢莂이 '추천 1순위'로 보이던 것).
+ *   서사(story)는 음절별 한자 훈(dump-story-inputs 기계 글로스)으로 지은 문장이라, 대표 뜻을 한글 뜻으로 바꾼 이름 가운데 한자 훈을
+ *   되풀이하던 서사(해솔 '깊은 바다처럼'(海)·노을 '옥빛이 번지듯'(璐))는 data/name-stories.json 에서 손질했다(S7).
+ * - foreign: fx = 한자 조합이 없는 외래 이름(data/foreign-given-names.json). 뜻은 어원 문장
+ *   ('히브리어로 신이 더하신다는')이라 '발음이 주는 느낌·한자에 따라' 대신 '어원'으로 표기한다. 뜻이 없으면(유래가 갈리는 이름·
+ *   '-엘' 조어) 그 사실을 한 줄로 적는다. 서사(story)는 내지 않는다 — 한자 없는 이름인데 한자 훈으로 지은 문장이다
+ *   (다엘 '은은한 차 향처럼'(茶)·에린 '옥빛처럼'·시엘 '처음 켜진 불빛처럼').
+ * - hanja: 그 밖 — 대표 뜻은 발음이 주는 느낌, 정확한 뜻은 한자 조합에 따라.
+ * pk·fx 는 겹치지 않는다.
+ */
+type NameKind = "pure" | "foreign" | "hanja";
+
+function nameKind(rec: NameSeoRecord): NameKind {
+  if (rec.pk) return "pure";
+  if (rec.fx) return "foreign";
+  return "hanja";
+}
+
+/** 외래 이름(fx)인데 뜻이 없을 때 '이름 뜻' 아래 한 줄 — 어원이 갈리거나 원어 이름이 없어 비운 이름(S7 데이터 단계) */
+const FOREIGN_NO_MEAN_NOTE =
+  "한자 없이 한글로 쓰는 이름이라 한자 뜻이 따로 없습니다. 어원이 분명하지 않아 뜻풀이는 적지 않았습니다.";
+
+/**
+ * 미학 점수 노트 — 외래 이름(fx)에는 한자가 없으니 '한자 성별 선호도'를 '음절 성별 선호도'로 바꿔 보인다.
+ * 성별 보너스는 음절마다 그 소리로 읽는 한자의 성별 선호(AestheticEngine)로 매기므로, 한자 없는 이름에서는 음절 단위 경향이다.
+ */
+function scoreBreakdownFor(kind: NameKind, sc: NameScoreBreakdown): AestheticBreakdown {
+  const breakdown = toAestheticBreakdown(sc);
+  if (kind !== "foreign") return breakdown;
+  return {
+    ...breakdown,
+    notes: breakdown.notes.map((n) =>
+      n.replace("일부 한자의 성별 선호도", "일부 음절의 성별 선호도").replace("한자 성별 선호도", "음절 성별 선호도"),
+    ),
+  };
+}
+
+/** 대표 뜻 아래 한 줄 — 이름 갈래별 */
+function meanNote(kind: NameKind, hasCombos: boolean): string {
+  if (kind === "foreign") return "외래 이름이라 한자 뜻이 아니라 이름의 유래(어원)를 적었습니다.";
+  if (kind === "pure") {
+    return hasCombos
+      ? "이름이 주는 느낌을 풀어 쓴 것입니다. 한글 이름으로도 쓰는 이름이라, 아래 한자 조합은 한자로 쓸 때의 참고입니다."
+      : "이름이 주는 느낌을 풀어 쓴 것이며, 한글 그대로 쓰는 이름입니다.";
+  }
+  return hasCombos
+    ? "발음이 주는 느낌이며, 정확한 뜻은 아래 한자 조합에 따라 달라집니다."
+    : "발음이 주는 느낌이며, 정확한 뜻은 쓰는 한자에 따라 달라집니다.";
+}
+
 // ---------------------------------------------------------------
 // Metadata
 // ---------------------------------------------------------------
@@ -69,10 +126,19 @@ export async function generateMetadata({
   if (!rec) return {};
 
   const { gender } = genderSplit(rec);
-  const meanPart = rec.mean ? ` ${withJosa(name, "은/는")} '${rec.mean}' 뜻을 담습니다.` : "";
+  // 외래 이름(fx)의 뜻은 어원 문장('히브리어 야곱에서 이어진'·'셰익스피어 희곡에서 처음 쓰인')이라
+  // "'…' 뜻을 담습니다"가 어색하다 — "…이름입니다"로 쓰고, 한자 조합이 없으니 '한자를 확인하세요'도 뺀다
+  const foreign = nameKind(rec) === "foreign";
+  const meanPart = !rec.mean
+    ? ""
+    : foreign
+      ? ` ${withJosa(name, "은/는")} ${rec.mean} 이름입니다.`
+      : ` ${withJosa(name, "은/는")} '${rec.mean}' 뜻을 담습니다.`;
   const scorePart = rec.sc ? ` 발음·미학 점수 ${rec.sc.t}점.` : "";
   const title = `${name} 이름 뜻 — 인기 순위·한자·의미`;
-  const description = `${name}: ${GENDER_LABEL[gender]}.${meanPart} 출생신고 통계 기준 인기 순위와 남녀 비율, 이름에 쓰는 한자를 확인하세요.${scorePart}`;
+  const description = `${name}: ${GENDER_LABEL[gender]}.${meanPart} 출생신고 통계 기준 인기 순위와 남녀 비율${
+    foreign ? "을" : ", 이름에 쓰는 한자를"
+  } 확인하세요.${scorePart}`;
   const canonical = `/name/${encodeURIComponent(name)}`;
   return {
     title,
@@ -140,8 +206,10 @@ const OHAENG_CHIP: Record<string, string> = {
   unknown: "",
 };
 
-/** 한자 조합 카드 — 글자별 훈음/획수/오행/신뢰등급 + 오행 조화.
- * 훈음은 이름 음절의 독음에 맞춘다(乻은 하늘의 '늘' 자리에서 "음차 늘", "땅 이름 얼"이 아니라). */
+/** 한자 조합 카드 — 글자별 훈음/획수/자원오행/판정 등급 + 두 글자 자원오행 관계(상생·비화·상극).
+ * 오행은 부수 기준 자원오행(hanja-seo.json e — 2026-10-22 S4), 등급은 R 확정·V 이견 있음·X 예외 적용(g).
+ * 훈음은 이름 음절의 독음에 맞춘다(乻은 하늘의 '늘' 자리에서 "음차 늘", "땅 이름 얼"이 아니라).
+ * featured(1순위 강조·'추천 1순위' 라벨)는 한자 이름에만 — 순우리말 사전 이름(pk)의 조합은 참고라 강조하지 않는다(ND-3). */
 function ComboCard({
   combo,
   name,
@@ -196,7 +264,8 @@ function ComboCard({
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-2">
               <span className="font-tabular">{r.s}획</span>
               {r.e && <span>· {ELEMENT_KO[r.e] ?? r.e}</span>}
-              {r.g && <HanjaGradeBadge grade={r.g} />}
+              {/* vReasons 로 V 를 이견 있음·자료 적음·추정으로 나눈다(/hanja 글자 카드와 같은 배지) */}
+              {r.g && <HanjaGradeBadge grade={r.g} vReasons={r.v_reasons} />}
             </div>
           </div>
         ))}
@@ -205,7 +274,7 @@ function ComboCard({
         <span
           className={`inline-block rounded-md px-2.5 py-1 text-xs font-medium ${OHAENG_CHIP[rel.kind]}`}
         >
-          오행 {rel.label}
+          자원오행 {rel.label}
         </span>
       )}
     </div>
@@ -290,6 +359,8 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
   const syllables = syllablesOf(name);
   const siblings = getSiblingNames(name, 12);
   const related = relatedInsights(name, rec);
+  const kind = nameKind(rec);
+  const hasCombos = !!rec.combos?.length;
 
   // 음절별 /hanja/[독음] 링크 (해당 음절이 한자 독음으로 존재할 때만)
   const syllableLinks = syllables.map((syl) => ({
@@ -318,18 +389,21 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
           </h1>
           {rec.mean && (
             <p className="text-lg leading-relaxed text-navy">
+              {kind === "foreign" && (
+                <span className="mr-2 inline-block rounded-md bg-paper-tint px-2 py-0.5 align-middle text-xs font-medium text-text-2">
+                  어원
+                </span>
+              )}
               {rec.mean} 이름
             </p>
           )}
           {rec.mean && (
-            <p className="mt-2 text-sm text-text-2">
-              발음이 주는 느낌이며, 정확한 뜻은{" "}
-              {rec.combos?.length
-                ? "아래 한자 조합에 따라 달라집니다."
-                : "쓰는 한자에 따라 달라집니다."}
-            </p>
+            <p className="mt-2 text-sm text-text-2">{meanNote(kind, hasCombos)}</p>
           )}
-          {rec.story && (
+          {!rec.mean && kind === "foreign" && (
+            <p className="mt-2 text-sm text-text-2">{FOREIGN_NO_MEAN_NOTE}</p>
+          )}
+          {rec.story && kind !== "foreign" && (
             <p className="mt-3 border-l-2 border-gold pl-3 text-[15px] leading-relaxed text-navy">
               “{rec.story}”
             </p>
@@ -384,7 +458,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
               봅니다.
             </p>
             <ScoreBreakdownCard
-              aesthetic={toAestheticBreakdown(rec.sc)}
+              aesthetic={scoreBreakdownFor(kind, rec.sc)}
               totalScore={rec.sc.t}
             />
             <p className="mt-3 text-sm text-text-2">
@@ -402,16 +476,19 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
           </section>
         )}
 
-        {/* 한자 조합 */}
+        {/* 한자 조합 — 순서는 HanjaSelector.SelectCombos(빈출 한자 우선 + 두 글자 자원오행 상생 +20·비화 +8·상극 −12의
+            작은 가산, 계획 §3-3 문구). 순우리말 사전 이름(pk)은 '한자로 쓴다면(참고)'로 낮춘다(ND-3) */}
         {rec.combos && rec.combos.length > 0 && (
           <section className="mb-10">
             <h2 className="mb-2 text-base font-semibold text-navy">
-              {name}에 쓰는 한자 조합
+              {kind === "pure"
+                ? `${withJosa(name, "을/를")} 한자로 쓴다면(참고)`
+                : `${name}에 쓰는 한자 조합`}
             </h2>
             <p className="mb-4 text-sm leading-relaxed text-text-2">
-              발음은 같아도 한자에 따라 뜻이 달라집니다. 이름에 자주 쓰는 한자를
-              우선해 오행 조화까지 따져 고른 추천 순서이며, 출생신고에 실제로 쓰인
-              한자 통계는 아닙니다.
+              {kind === "pure"
+                ? "한글 이름으로도 쓰는 이름이라 한자가 꼭 필요하지는 않습니다. 아래는 한자로 쓴다면 소리에 맞는 한자 가운데 이름에 흔히 쓰는 글자를 우선해 고른 참고 조합이며, 한글 이름의 뜻과는 다를 수 있습니다."
+                : "발음은 같아도 한자에 따라 뜻이 달라집니다. 이름에 흔히 쓰는 한자를 우선하고, 비슷한 조합 사이에서는 두 글자의 자원오행(한자의 부수로 정하는 오행)이 상생하는 쪽을 앞에 둔 추천 순서이며, 출생신고에 실제로 쓰인 한자 통계는 아닙니다."}
             </p>
             <div className="grid gap-3">
               {rec.combos.map((combo, i) => (
@@ -419,7 +496,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
                   key={combo.join("")}
                   combo={combo}
                   name={name}
-                  featured={i === 0}
+                  featured={kind !== "pure" && i === 0}
                 />
               ))}
             </div>
@@ -447,7 +524,8 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
                   key={syl}
                   className="rounded-lg border border-paper-line px-4 py-2.5 text-sm text-text-2"
                 >
-                  &lsquo;{syl}&rsquo; (순우리말)
+                  {/* 외래 이름(fx)의 한자 없는 음절(요셉의 '셉')은 순우리말이 아니다 */}
+                  &lsquo;{syl}&rsquo; ({kind === "foreign" ? "한자 없음" : "순우리말"})
                 </span>
               ),
             )}

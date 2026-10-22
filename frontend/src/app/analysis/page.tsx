@@ -24,8 +24,8 @@ import {
 import {
   HanjaBreakdown,
   type HanjaSyllableEntry,
-  type ConfidenceGrade,
 } from "@/components/design/DetailHanja";
+import { toResourceGrade } from "@/components/design/resource-grade";
 
 import { nameAnalysis } from "@/lib/api";
 import type { NameAnalysisResponse, SajuChartData as ApiSajuChart } from "@/lib/types";
@@ -49,9 +49,9 @@ function mapHeroData(res: NameAnalysisResponse): DetailHeroData {
   };
 }
 
-const CONFIDENCE_GRADES: ReadonlySet<string> = new Set(["S", "A", "B", "D"]);
-
 // 음절별 한자 후보 (관련도순 상위 10개, 성씨 제외)
+// 등급은 자원오행 판정 등급(R·V·X·U) — 2026-10-22 S7 전에는 옛 confidenceGrade 를 S·A·B·D 밖이면
+// 모두 D 로 바꿔 그려, 뜻 키워드 판정(C)까지 획수로 자동 추정한 글자처럼 보였다
 function mapHanjaBreakdown(res: NameAnalysisResponse): HanjaSyllableEntry[] {
   return (res.hanjaBreakdown ?? []).map((b) => ({
     syllable: b.syllable,
@@ -61,9 +61,8 @@ function mapHanjaBreakdown(res: NameAnalysisResponse): HanjaSyllableEntry[] {
       fiveElement: h.fiveElement ?? undefined,
       strokeCount: h.strokeCount ?? undefined,
       kangxiStrokes: h.kangxiStrokes ?? undefined,
-      confidenceGrade: (CONFIDENCE_GRADES.has(h.confidenceGrade)
-        ? h.confidenceGrade
-        : "D") as ConfidenceGrade,
+      resourceGrade: toResourceGrade(h.resourceGrade),
+      vReasons: h.vReasons ?? undefined,
       rationale: h.rationale ?? undefined,
     })),
   }));
@@ -228,7 +227,7 @@ function AnalysisInner({
           <section style={{ marginTop: 48 }}>
             <SectionHead
               title="한자 분석"
-              subtitle="음절별로 쓸 수 있는 한자 후보와 의미·오행을 살펴봐요"
+              subtitle="음절별로 쓸 수 있는 한자 후보와 의미, 부수로 정한 자원오행을 살펴봐요"
             />
             <HanjaBreakdown breakdown={hanjaBreakdown} />
           </section>
@@ -453,8 +452,10 @@ function AnalysisIntro() {
         <p style={{ margin: "0 0 12px" }}>
           이미 정해 둔 이름이나 후보 이름을 넣으면, 성씨와 이어 부를 때의
           발음·리듬을 보는 미학 점수, 얼마나 흔한 이름인지 보여주는 유니크 지수,
-          음절마다 쓸 수 있는 한자 후보의 뜻·오행·획수, 초성으로 보는 음령오행
-          흐름을 한 화면에 정리해 드려요.
+          음절마다 쓸 수 있는 한자 후보의 뜻·자원오행·획수, 초성으로 보는
+          음령오행 흐름을 한 화면에 정리해 드려요. 자원오행은 한자의 부수로
+          정하고, 자료마다 다르게 보는 글자는 &lsquo;이견 있음&rsquo;, 부수
+          자료가 적은 글자는 &lsquo;자료 적음&rsquo;으로 표시해요.
         </p>
         <p style={{ margin: "0 0 12px" }}>
           생년월일을 넣으면 사주 원국과 용신(억부·조후)을 계산해 조화 점수를

@@ -33,6 +33,11 @@ export interface NameSeoRecord {
   sc?: NameScoreBreakdown;
   /** 주간 드립 개방일(ISO, KST 기준) — 없으면 상시 공개. 빌드 시각에 도래 전이면 미공개 (build_name_seo_data.py --baseline) */
   pa?: string;
+  /** 1 = 한글 이름으로 쓰는 순우리말 이름(2026-10-22 S7 ND-3 — dump-name-flags: PureKoreanNameEngine 사전 + data/pure-korean-name-overrides.json
+   *  가감). 조합은 '한자로 쓴다면(참고)'로만 보인다. 아니면 키 생략 */
+  pk?: 1;
+  /** 1 = 한자 조합이 없는 외래 이름(data/foreign-given-names.json). 뜻은 어원 문장이거나 없다. pk 와 겹치지 않는다. 아니면 키 생략 */
+  fx?: 1;
 }
 
 /**

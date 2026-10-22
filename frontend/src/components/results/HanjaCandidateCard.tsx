@@ -2,7 +2,12 @@ import { Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { HanjaCandidate, HanjaSyllable } from "@/lib/types";
+import type { HanjaSyllable } from "@/lib/types";
+import {
+  RESOURCE_GRADE_INFO,
+  toResourceGrade,
+  type ResourceGrade,
+} from "@/components/design/resource-grade";
 
 interface HanjaCandidateCardProps {
   hanjaCandidates: HanjaSyllable[];
@@ -17,70 +22,39 @@ const elementColorMap: Record<string, string> = {
   "水": "bg-paper-tint text-score-mid border-paper-line", // 水 — 물
 };
 
-// 등급 우선순위 — 정렬용 (낮을수록 상위, 백엔드 정렬 4종)
-const gradeRank: Record<string, number> = {
-  S: 0,
-  A: 1,
-  B: 2,
-  D: 3,
+// ============================================================
+// 자원오행 판정 등급 뱃지 — 4축 차별화 (Fill / Border / Color / Icon), 라벨·설명은 resource-grade.ts
+// R 확정 — solid teal + ✓ icon
+// X 예외 적용 — outline teal 1.5px solid border
+// V 이견 있음 — outline gold 1.5px solid border
+// U 미상 — outline neutral 1.5px dashed border (반투명 fill)
+// 옛 S/A/B/D(뜻 기반 판정 신뢰도) 정렬은 뺐다 — 등급은 판정 근거의 종류라 순서가 아니다(백엔드 순서 그대로).
+// ============================================================
+const GRADE_CLASS: Record<ResourceGrade, { className: string; showCheck: boolean }> = {
+  R: { className: "bg-teal text-white border-teal hover:bg-teal", showCheck: true },
+  X: {
+    className: "bg-transparent text-teal-700 border-[1.5px] border-teal hover:bg-teal-50",
+    showCheck: false,
+  },
+  V: {
+    className: "bg-transparent text-amber-warm border-[1.5px] border-gold-700 hover:bg-gold-50",
+    showCheck: false,
+  },
+  U: {
+    className:
+      "bg-paper-card/60 text-muted-foreground border-[1.5px] border-dashed border-paper-line hover:bg-paper-tint",
+    showCheck: false,
+  },
 };
 
-function sortCandidates(list: HanjaCandidate[]): HanjaCandidate[] {
-  return [...list].sort((a, b) => {
-    const ra = gradeRank[a.confidenceGrade ?? "D"] ?? 3;
-    const rb = gradeRank[b.confidenceGrade ?? "D"] ?? 3;
-    return ra - rb;
-  });
-}
-
-// ============================================================
-// Confidence Badge — 4축 차별화 (Fill / Border / Color / Icon)
-// S 검수완료 — solid teal + ✓ icon
-// A 규칙기반 — outline teal 1.5px solid border
-// B 수동입력 — outline gold 1.5px solid border
-// D 획수자동 — outline neutral 1.5px dashed border (반투명 fill)
-// ============================================================
-function ConfidenceBadge({ grade }: { grade?: "S" | "A" | "B" | "D" }) {
+function ResourceGradeBadge({ grade }: { grade?: ResourceGrade }) {
   if (!grade) return null;
-
-  const config = {
-    S: {
-      label: "검수완료",
-      title: "작명가 검수가 완료된 한자입니다.",
-      className: "bg-teal text-white border-teal hover:bg-teal",
-      showCheck: true,
-    },
-    A: {
-      label: "규칙기반",
-      title: "오행 규칙이 명확히 적용된 한자입니다.",
-      className:
-        "bg-transparent text-teal-700 border-[1.5px] border-teal hover:bg-teal-50",
-      showCheck: false,
-    },
-    B: {
-      label: "수동입력",
-      title: "수동으로 입력된 한자입니다.",
-      className:
-        "bg-transparent text-amber-warm border-[1.5px] border-gold-700 hover:bg-gold-50",
-      showCheck: false,
-    },
-    D: {
-      label: "자동추정",
-      title: "획수 기반 자동 추정 — 전문가 확인을 권장합니다.",
-      className:
-        "bg-paper-card/60 text-muted-foreground border-[1.5px] border-dashed border-paper-line hover:bg-paper-tint",
-      showCheck: false,
-    },
-  }[grade];
-
+  const { className, showCheck } = GRADE_CLASS[grade];
+  const { label, tip } = RESOURCE_GRADE_INFO[grade];
   return (
-    <Badge
-      variant="outline"
-      title={config.title}
-      className={cn("gap-0.5 text-xs", config.className)}
-    >
-      {config.showCheck && <Check className="size-3" />}
-      {config.label}
+    <Badge variant="outline" title={tip} className={cn("gap-0.5 text-xs", className)}>
+      {showCheck && <Check className="size-3" />}
+      {label}
     </Badge>
   );
 }
@@ -102,14 +76,14 @@ export function HanjaCandidateCard({
               &ldquo;{syllable.syllable}&rdquo;
             </p>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {sortCandidates(syllable.candidates).map((c) => {
-                const isD = c.confidenceGrade === "D";
+              {syllable.candidates.map((c) => {
+                const grade = toResourceGrade(c.resourceGrade);
                 return (
                   <div
                     key={`${c.character}-${c.reading}`}
                     className={cn(
                       "flex items-center gap-3 rounded-lg border border-paper-line bg-paper-card p-3 transition",
-                      isD && "opacity-75"
+                      grade === "U" && "opacity-75"
                     )}
                   >
                     <span className="font-hanja text-2xl font-medium text-navy">
@@ -120,7 +94,7 @@ export function HanjaCandidateCard({
                         {c.reading} &mdash; {c.meaning}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1">
-                        <ConfidenceBadge grade={c.confidenceGrade} />
+                        <ResourceGradeBadge grade={grade} />
                         {c.fiveElement && (
                           <Badge
                             variant="secondary"

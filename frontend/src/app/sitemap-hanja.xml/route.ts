@@ -1,7 +1,7 @@
 import { getAllDetailChars } from "@/lib/hanja-seo";
 
 /**
- * /sitemap-hanja.xml — 한자 글자 상세 9,096쪽 전용 사이트맵 (네이버 서치어드바이저에만 제출).
+ * /sitemap-hanja.xml — 한자 글자 상세 9,016쪽 전용 사이트맵 (네이버 서치어드바이저에만 제출 — 2026-10-22 호환 한자 85자 병합 전 9,096쪽).
  *
  * 글자 상세는 구글에만 noindex다(hanja/[slug] generateMetadata — googleBot noindex, robots index).
  * 공용 /sitemap.xml에 다시 넣으면 구글 서치콘솔이 "제출된 URL에 noindex" 경고를 띄우므로

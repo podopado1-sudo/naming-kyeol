@@ -4,7 +4,7 @@ import { BASE_OPEN_GRAPH } from "@/lib/og";
 export const metadata: Metadata = {
   title: "이름 평가",
   description:
-    "이미 정한 이름을 입력하면 발음·리듬·세대중립·오행·자원오행·수리사격을 모두 평가합니다. AI 서술형이 아닌 수치 기반 리포트로.",
+    "이미 정한 이름을 입력하면 발음·리듬·세대중립·자원오행·획수 조화·수리사격을 모두 평가합니다. AI 서술형이 아닌 수치 기반 리포트로.",
   alternates: { canonical: "/evaluate" },
   openGraph: {
     ...BASE_OPEN_GRAPH,

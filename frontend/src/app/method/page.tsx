@@ -1,14 +1,20 @@
 /**
  * /method — 작명 원리
  * "전문가 감수" 대신 시스템이 실제 사용하는 원칙을 솔직하게 설명하는 페이지.
+ *
+ * 2026-10-22 자원오행 전환(S7, docs/plan-radical-ohaeng-2026-10.md §4-2): 자원오행 = 부수 기준(Unihan 18.0 kRSUnicode)으로
+ * 정의를 다시 쓰고, 판정 순서·등급 4종(확정·이견 있음·예외 적용·미상)·학계의 '불명'을 '04 · 자원오행 기준'(#resource-element)에 둔다.
+ * 글자 수는 /hanja 데이터(hanja-seo.json)에서 빌드 때 센다 — 손으로 고치지 말 것.
  */
 import Link from "next/link";
 import {
   BarChart3,
   Bot,
+  Check,
   Compass,
   Database,
   FileText,
+  Info,
   Leaf,
   Music,
   ShieldCheck,
@@ -19,6 +25,30 @@ import {
 
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
+import rawHanja from "@/data/hanja-seo.json";
+
+// ============================================================
+// /hanja 데이터에서 센 수치 (빌드 타임)
+// ============================================================
+type GradeCode = "R" | "V" | "X" | "U";
+
+const HANJA_STATS = (() => {
+  const records = Object.values(
+    rawHanja as unknown as Record<string, { g?: string; c?: number }>,
+  );
+  const grade: Record<GradeCode, number> = { R: 0, V: 0, X: 0, U: 0 };
+  let core = 0;
+  for (const r of records) {
+    if (r.g === "R" || r.g === "V" || r.g === "X" || r.g === "U") grade[r.g]++;
+    if (r.c) core++;
+  }
+  return { total: records.length, core, grade };
+})();
+
+const fmt = (n: number) => n.toLocaleString("ko-KR");
+
+/** 데이터 리포트 '자원오행은 어떻게 정하나' (content/insights/resource-element-radicals.md) */
+const RESOURCE_ELEMENT_REPORT = "/guide/resource-element-radicals";
 
 // ============================================================
 // 데이터 구조
@@ -44,11 +74,23 @@ const AESTHETIC_ROWS: PillarRow[] = [
 ];
 
 const HARMONY_ROWS: PillarRow[] = [
-  { label: "오행", weight: 30, detail: "사주 오행과 이름 오행의 보완 관계" },
-  { label: "자원오행", weight: 20, detail: "한자 획수 기반 오행 분포" },
-  { label: "음양", weight: 10, detail: "陽·陰 균형" },
+  {
+    label: "자원오행 보완",
+    weight: 30,
+    detail: "이름 한자의 자원오행(부수 기준)이 사주에 필요한 오행(용신·희신)을 채우는지",
+  },
+  {
+    label: "획수 조화",
+    weight: 20,
+    detail: "이름 두 글자 획수 합이 어느 구간에 드는지 — 오행과는 무관",
+  },
+  { label: "음양", weight: 10, detail: "이름 한자 획수의 홀짝(홀수 陽·짝수 陰) 균형" },
   { label: "발음오행", weight: 25, detail: "성씨와 이름 첫소리의 오행 흐름" },
-  { label: "전통 81수리(참고)", weight: 15, detail: "획수 조합의 전통 길흉 — 참고 지표" },
+  {
+    label: "전통 81수리(참고)",
+    weight: 15,
+    detail: "성씨·이름 획수로 본 네 격의 전통 길흉 — 참고 지표",
+  },
 ];
 
 const TRADITION_CARDS: PrincipleCard[] = [
@@ -64,13 +106,61 @@ const TRADITION_CARDS: PrincipleCard[] = [
   },
   {
     icon: Leaf,
-    title: "오행 · 자원오행",
-    body: "木·火·土·金·水 5요소가 사주에서 부족하거나 과한지를 보고, 한자 획수에서 도출된 자원오행이 이를 보완하는 방향으로 추천합니다.",
+    title: "자원오행 보완",
+    body: "木·火·土·金·水 가운데 사주에서 부족하거나 과한 오행을 보고, 이름 한자의 자원오행이 필요한 오행을 채우는 쪽으로 점수를 줍니다. 자원오행은 한자의 부수로 정합니다(아래 04).",
   },
   {
     icon: Music,
     title: "음운 분석",
     body: "한국어 음운론 규칙으로 자음 동음 반복, 모음 단조로움, 받침 흐름을 평가합니다. 입에 잘 붙는 발음을 우선합니다.",
+  },
+];
+
+/** 자원오행 판정 순서 — 계획 §2-1 · data/hanja_resource_element.json meta.order */
+const RESOURCE_STEPS: { title: string; body: string }[] = [
+  {
+    title: "부수 찾기",
+    body: "Unicode Unihan 데이터베이스 18.0(2026-07-31)의 kRSUnicode 값으로 글자가 속한 강희 부수(214부수)를 찾습니다. 氵·扌·艹처럼 모양이 바뀐 부수는 원래 부수(水·手·艸)와 같게 보고, 이체자는 쓴 꼴의 부수를 따릅니다.",
+  },
+  {
+    title: "예외부터 확인",
+    body: "천간·지지 22자는 간지 오행(甲 木·申 金 등)을 씁니다. 문헌 예시가 부수와 다른 값을 적은 글자(光 火 등)와, 공개된 작명 실무 자료 가운데 서로 독립된 2곳 이상이 부수와 다른 같은 값을 준 글자(南 火·允 土 등)도 그 값을 먼저 씁니다. 문헌 예시는 실무 자료 2곳 이상이 다른 값으로 반대하면 예외로 두지 않습니다.",
+  },
+  {
+    title: "나머지는 부수표",
+    body: "214부수마다 오행 하나를 정한 표를 씁니다. 김만태의 공개 부수표와, 공개된 작명 실무 자료 3곳이 부수마다 가장 많이 쓰는 값을 모아 다수결로 정했습니다. 자료끼리 값이 다른 부수(示·石·車 등)의 글자는 '이견 있음'으로 둡니다.",
+  },
+  {
+    title: "숫자 한자",
+    body: "一~十·百·千·萬은 작명가마다 기준이 달라, 실무 자료 다수 예외가 있는 二·五·九를 빼고는 부수값에 '이견 있음'을 붙입니다.",
+  },
+  {
+    title: "자료가 없으면 미상",
+    body: "부수 자료가 없는 글자는 값을 지어내지 않고 '미상'으로 둡니다. 점수에서는 오행이 없는 글자로 계산합니다.",
+  },
+];
+
+/** 자원오행 등급 4종 — 계획 §2-4 (뱃지는 CLAUDE.md 디자인 시스템 '자원오행 등급 4축 뱃지') */
+const GRADE_ROWS: { code: GradeCode; label: string; body: string }[] = [
+  {
+    code: "R",
+    label: "확정",
+    body: "자료끼리 값이 갈리지 않는 글자입니다. 부수표의 합의 부수에 속하고, 그 글자에 다른 값을 준 자료 다수도 없습니다.",
+  },
+  {
+    code: "V",
+    label: "이견 있음",
+    body: "부수나 그 글자를 다르게 보는 자료가 있거나, 부수 자료가 적거나 추정한 글자입니다. 부수 기준 값을 쓰고, 다른 값이 있으면 함께 적습니다(자료가 적기만 한 글자는 한자 사전에서 '자료 적음'·'추정'으로 표시).",
+  },
+  {
+    code: "X",
+    label: "예외 적용",
+    body: "간지·문헌 예시·작명 실무 자료 다수를 따라 부수값 대신 다른 값을 쓴 글자입니다.",
+  },
+  {
+    code: "U",
+    label: "미상",
+    body: "부수 자료가 없어 값을 정하지 않은 글자입니다.",
   },
 ];
 
@@ -162,7 +252,7 @@ export default function MethodPage() {
             <AxisCard
               icon={BarChart3}
               title="데이터 기반"
-              body="검수 완료 2,060자 Core Dataset과 대법원·네이버 인명용 한자, Unihan 표준까지 총 9,190자 사전 위에서 모든 후보가 만들어집니다."
+              body={`대법원·네이버 인명용 한자 자료로 만든 ${fmt(HANJA_STATS.total)}자 사전 위에서 모든 후보가 만들어집니다. 부수·획수는 Unicode Unihan 18.0에서 가져오고, 강희자전 획수와 뜻을 직접 정리한 코어 ${fmt(HANJA_STATS.core)}자를 함께 씁니다.`}
             />
             <AxisCard
               icon={Compass}
@@ -237,9 +327,140 @@ export default function MethodPage() {
           </div>
         </section>
 
+        {/* ── 자원오행 기준 ─────────────────────────────────── */}
+        {/* id 는 다른 페이지에서 거는 앵커(/method#resource-element) — 바꾸지 말 것 */}
+        <section id="resource-element" style={{ marginBottom: 72, scrollMarginTop: 80 }}>
+          <SectionEyebrow>04 · 자원오행 기준</SectionEyebrow>
+          <SectionTitle>자원오행은 한자의 부수로 정합니다</SectionTitle>
+          <p
+            style={{
+              marginTop: 12,
+              fontSize: 14.5,
+              lineHeight: 1.7,
+              color: "var(--color-text-2)",
+            }}
+          >
+            자원오행(字源五行)은 한자가 어떤 부수에 속하는지를 보고 木·火·土·金·水 가운데
+            하나를 매긴 값입니다. 물 수(氵) 부수인 津(나루 진)은 水, 손 수(扌) 부수인
+            振(떨칠 진)은 木입니다. 작명 실무에서 널리 쓰는 방식이고, 이름의 결은 한자
+            사전·이름 추천·이름 평가에 이 값 하나만 씁니다. 예전에는 글자 뜻풀이나 획수
+            끝자리로 매긴 값이 섞여 있었는데, 작명 실무와 기준이 달라 부수 기준으로
+            바꿨습니다.
+          </p>
+
+          {/* 판정 순서 */}
+          <ol
+            style={{
+              marginTop: 28,
+              padding: 0,
+              listStyle: "none",
+              display: "grid",
+              gap: 12,
+            }}
+          >
+            {RESOURCE_STEPS.map((s, i) => (
+              <StepRow key={s.title} num={i + 1} title={s.title} body={s.body} />
+            ))}
+          </ol>
+
+          {/* 등급 4종 */}
+          <div
+            style={{
+              marginTop: 32,
+              fontSize: 15,
+              fontWeight: 700,
+              color: "var(--color-text)",
+            }}
+          >
+            판정의 확실성은 등급 넷으로 밝힙니다
+          </div>
+          <p
+            style={{
+              marginTop: 6,
+              fontSize: 13,
+              lineHeight: 1.6,
+              color: "var(--color-text-3)",
+            }}
+          >
+            한자 사전 {fmt(HANJA_STATS.total)}자 기준
+          </p>
+          <div
+            style={{
+              marginTop: 14,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {GRADE_ROWS.map((g) => (
+              <GradeBox
+                key={g.code}
+                code={g.code}
+                label={g.label}
+                body={g.body}
+                count={HANJA_STATS.grade[g.code]}
+                total={HANJA_STATS.total}
+              />
+            ))}
+          </div>
+
+          {/* 학계의 '불명' */}
+          <div
+            style={{
+              marginTop: 24,
+              display: "flex",
+              gap: 12,
+              padding: "16px 18px",
+              background: "var(--color-surface-2)",
+              borderRadius: "var(--radius-md)",
+            }}
+          >
+            <Info
+              size={18}
+              strokeWidth={1.5}
+              style={{ flexShrink: 0, color: "var(--color-text-2)", marginTop: 2 }}
+            />
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13.5,
+                lineHeight: 1.75,
+                color: "var(--color-text-2)",
+              }}
+            >
+              학계에서는 부수마다 오행 성격의 강약을 나누고, 오행을 정하기 어려운 부수는
+              &lsquo;불명&rsquo;으로 남깁니다(이재승·김만태 2018, 이재승 2024). 작명 실무
+              자료는 모든 글자에 값을 채우고, 이름의 결도 추천과 평가가 같은 기준으로 돌도록
+              값을 채웁니다. 그래서 &lsquo;확정&rsquo;은 자료끼리 값이 같다는 뜻이지 그
+              부수의 오행 성격이 뚜렷하다는 뜻은 아닙니다. 이 값은 작명소 기준과 같다는
+              보증이 아니라 작명 실무에서 가장 많이 쓰는 값이며, 작명가에 따라 다르게 볼 수
+              있습니다.
+            </p>
+          </div>
+
+          <p
+            style={{
+              marginTop: 18,
+              fontSize: 14,
+              lineHeight: 1.7,
+              color: "var(--color-text-2)",
+            }}
+          >
+            부수표·이견·예외를 수치로 정리한 글은{" "}
+            <Link href={RESOURCE_ELEMENT_REPORT} style={inlineLink}>
+              자원오행은 어떻게 정하나 — 부수표, 이견, 예외
+            </Link>
+            에, 글자마다 부수 근거는{" "}
+            <Link href="/hanja" style={inlineLink}>
+              한자 사전
+            </Link>
+            에 있습니다.
+          </p>
+        </section>
+
         {/* ── 리포트 방식 ───────────────────────────────────── */}
         <section style={{ marginBottom: 72 }}>
-          <SectionEyebrow>04 · 리포트 방식</SectionEyebrow>
+          <SectionEyebrow>05 · 리포트 방식</SectionEyebrow>
           <SectionTitle>AI는 이야기, 우리는 리포트</SectionTitle>
           <p
             style={{
@@ -361,7 +582,7 @@ export default function MethodPage() {
                 {[
                   "발음 87점 — 받침 0개 / 부드러운 자음 비율 100%",
                   "리듬 22점 — 2음절 약강 패턴 / 단조로움 없음",
-                  "오행 보완 — 사주 水 부족 → 이름 水·金 보강",
+                  "자원오행 보완 — 사주에 부족한 水 → 氵 부수 한자로 보강",
                   "세대 중립 — 연대 편향 이름 리스트 미포함",
                 ].map((line) => {
                   const [metric, detail] = line.split(" — ");
@@ -397,7 +618,7 @@ export default function MethodPage() {
 
         {/* ── 우리가 안 하는 것 (철학) ──────────────────────── */}
         <section style={{ marginBottom: 56 }}>
-          <SectionEyebrow>05 · 우리가 안 하는 것</SectionEyebrow>
+          <SectionEyebrow>06 · 우리가 안 하는 것</SectionEyebrow>
           <SectionTitle>좋은 이름을 만들기 위해 거르는 것</SectionTitle>
           <ul
             style={{
@@ -455,11 +676,13 @@ export default function MethodPage() {
               color: "var(--color-text-2)",
             }}
           >
-            <li>· Core Dataset v1 — 검수 완료 한자 2,060자 (NameForm 내부 큐레이션)</li>
-            <li>· 대법원·네이버 인명용 한자 사전</li>
-            <li>· Unicode Unihan 표준 (발음·획수·부수)</li>
+            <li>· 코어 데이터 — 강희자전 획수와 뜻을 정리한 {fmt(HANJA_STATS.core)}자 (이름의 결 내부 정리)</li>
+            <li>· 대법원·네이버 인명용 한자 자료</li>
+            <li>· Unicode Unihan 데이터베이스 18.0 — 부수(kRSUnicode)·총획수(kTotalStrokes)</li>
+            <li>· 자원오행 부수표 — 김만태 「이름의 음양오행 구성 원리」 부수표, 공개된 작명 실무 자료 3곳의 부수별 집계(2026-10)</li>
+            <li>· 자원오행 연구 — 이재승·김만태(2018) 「한국 성씨한자의 자원오행에 대한 고찰」, 이재승(2024) 「인명 한자 214 부수의 자원에 의한 성명학적 오행 배속」(초록)</li>
             <li>· 만세력 기반 사주 4기둥 계산 (출생지 보정 포함)</li>
-            <li>· 한국어 음운론 / 자원오행(획수) 이론</li>
+            <li>· 한국어 음운론</li>
           </ul>
         </section>
 
@@ -814,6 +1037,170 @@ function PrincipleBox({ card }: { card: PrincipleCard }) {
           {card.body}
         </p>
       </div>
+    </div>
+  );
+}
+
+const inlineLink: React.CSSProperties = {
+  color: "var(--color-teal)",
+  textDecoration: "underline",
+  textUnderlineOffset: 3,
+};
+
+function StepRow({ num, title, body }: { num: number; title: string; body: string }) {
+  return (
+    <li
+      style={{
+        display: "flex",
+        gap: 14,
+        padding: "16px 18px",
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-divider)",
+        borderRadius: "var(--radius-md)",
+      }}
+    >
+      <span
+        style={{
+          flexShrink: 0,
+          width: 26,
+          height: 26,
+          borderRadius: 999,
+          background: "var(--color-teal-50)",
+          color: "var(--color-teal)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "Inter, var(--font-sans)",
+          fontSize: 12.5,
+          fontWeight: 600,
+        }}
+      >
+        {num}
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 14.5,
+            fontWeight: 700,
+            color: "var(--color-text)",
+            marginBottom: 4,
+          }}
+        >
+          {title}
+        </div>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 13.5,
+            lineHeight: 1.7,
+            color: "var(--color-text-2)",
+          }}
+        >
+          {body}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+/** 등급 칩 — 4축(Fill·Border·Color·Icon)으로 구분: 확정 solid teal ✓ · 이견 outline gold · 예외 outline teal · 미상 dashed neutral */
+const GRADE_CHIP_STYLE: Record<GradeCode, React.CSSProperties> = {
+  R: {
+    background: "var(--color-teal)",
+    color: "var(--color-background)",
+    border: "1.5px solid var(--color-teal)",
+  },
+  V: {
+    background: "transparent",
+    color: "var(--color-gold-600)",
+    border: "1.5px solid var(--color-gold)",
+  },
+  X: {
+    background: "transparent",
+    color: "var(--color-teal)",
+    border: "1.5px solid var(--color-teal)",
+  },
+  U: {
+    background: "var(--color-surface-2)",
+    color: "var(--color-text-3)",
+    border: "1.5px dashed var(--color-text-3)",
+  },
+};
+
+function GradeBox({
+  code,
+  label,
+  body,
+  count,
+  total,
+}: {
+  code: GradeCode;
+  label: string;
+  body: string;
+  count: number;
+  total: number;
+}) {
+  const share = total ? `${((count * 100) / total).toFixed(1)}%` : "";
+  return (
+    <div
+      style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-divider)",
+        borderRadius: "var(--radius-md)",
+        padding: "16px 18px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: 8,
+        }}
+      >
+        <span
+          style={{
+            ...GRADE_CHIP_STYLE[code],
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "2px 9px",
+            borderRadius: "var(--radius-sm)",
+            fontSize: 12.5,
+            fontWeight: 600,
+          }}
+        >
+          {code === "R" && <Check size={13} strokeWidth={2.2} aria-hidden />}
+          {label}
+        </span>
+        <span
+          style={{
+            fontFamily: "Inter, var(--font-sans)",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "var(--color-text)",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {fmt(count)}자
+          {count > 0 && (
+            <span style={{ marginLeft: 6, fontWeight: 500, color: "var(--color-text-3)" }}>
+              {share}
+            </span>
+          )}
+        </span>
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 13,
+          lineHeight: 1.65,
+          color: "var(--color-text-2)",
+        }}
+      >
+        {body}
+      </p>
     </div>
   );
 }

@@ -10,8 +10,9 @@
 import { Sparkles, Info } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 
-import { ConfBadgeE, ElementChip } from "./EvalPrimitives";
-import type { ConfidenceGrade } from "./EvalPrimitives";
+import { ElementChip } from "./EvalPrimitives";
+import { ResourceGradeBadge } from "./DetailHanja";
+import type { ResourceGrade } from "./resource-grade";
 
 // ============================================================
 // HanjaCandidatesTable — 음절별 한자 후보 (2-col 카드)
@@ -23,7 +24,10 @@ export interface HanjaGroup {
     meaning: string;
     fiveElement?: string;
     strokeCount?: number;
-    confidenceGrade?: ConfidenceGrade;
+    /** 자원오행 판정 등급 — 없으면 배지 없음 */
+    resourceGrade?: ResourceGrade;
+    /** V 등급의 이유 — '자료 적음'·'추정' 배지 판정용 */
+    vReasons?: string[];
   }[];
 }
 
@@ -127,7 +131,7 @@ export function HanjaCandidatesTable({ groups }: { groups: HanjaGroup[] }) {
                     )}
                   </div>
                 </div>
-                <ConfBadgeE grade={c.confidenceGrade} />
+                <ResourceGradeBadge grade={c.resourceGrade} vReasons={c.vReasons} size="sm" tipAlign="right" />
               </div>
             ))}
           </div>

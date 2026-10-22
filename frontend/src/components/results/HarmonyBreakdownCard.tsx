@@ -49,9 +49,10 @@ export function HarmonyBreakdownCard({
   totalScore,
 }: HarmonyBreakdownCardProps) {
   const bars: BarItem[] = [
-    { label: "오행 (사주)", value: harmony.fiveElement, max: 30 },
+    // 축 이름은 HarmonyEngine(2026-10-22 S4)과 같다 — fiveElement = 자원오행 보완, resourceElement = 획수 조화
+    { label: "자원오행 보완", value: harmony.fiveElement, max: 30 },
     { label: "발음오행", value: harmony.pronunciationElement, max: 25 },
-    { label: "자원오행", value: harmony.resourceElement, max: 20 },
+    { label: "획수 조화", value: harmony.resourceElement, max: 20 },
     { label: "수리사격", value: harmony.suriSagyeok, max: 15 },
     { label: "음양", value: harmony.yinYang, max: 10 },
   ];
