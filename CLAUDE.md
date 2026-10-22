@@ -24,7 +24,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,482 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,521 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -48,7 +48,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,482개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,521개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -341,8 +341,30 @@ D:\MyDev\NameForm\
   상쇄되는데 惠만 바꾸면 여자 혜 이름 1순위가 慧로 넘어간다(`HanjaGenderOverrideTests`)
 - **data/combo-meanings.json**: 한자쌍 자연어 뜻 28,633쌍 (LLM 배치 윤문 + 소량 인라인, 런타임 비용 0. 2026-10-22 자원오행 전환 재생성 때 Sonnet 5.5 배치로 5,009쌍,
   두더지 검수 뒤 211쌍은 손으로 씀 — API 크레딧 소진).
-  ⚠️ `data/creative-name-meanings.json`(대표 뜻 원천)에는 손질 항목이 많다(외래 이름 어원 31·순우리말 16·潤·朗·蘭·西 손질 82, 2026-10-22) —
-  `build_creative_meanings.py`를 다시 돌리면 덮어써지므로 돌리기 전에 손질분을 따로 보존할 것
+  ⚠️ `data/creative-name-meanings.json`(대표 뜻 원천)에는 손질 항목이 많다(외래 이름 어원 71·순우리말 16+72·潤·朗·蘭·西 손질 82, 2026-10-22) —
+  `build_creative_meanings.py`를 다시 돌리면 덮어써지므로 돌리기 전에 손질분을 따로 보존할 것.
+  외래 이름 뜻은 **어원 문장**만 쓴다 — '{언어}로 {뜻}{이라는|라는|다는}'(히브리어로 신이 더하신다는·아일랜드어로 곱게 태어났다는). 이름 사전·성경 본문에
+  실린 표준 풀이만, 갈리거나 불확실하면 비운다(S7 — 하엘 '하늘처럼 넓고 포근한'·다엘 '차처럼…'·요셉 '세상을 환히 밝히는' 같은 한자 풀이식 뜻 23명을 비우고
+  14명을 어원으로 바꿈, 뜻이 없던 29명에 어원). 이름 사전이 '전해지는 풀이'로만 적는 어원은 '…라는 풀이가 전해지는/있는'(라이언·에스더).
+  `NameSeoFlagTests`가 어원 문장이 외래 목록 밖 이름에 붙는 것을 막는다.
+  순우리말(pk) 이름 뜻은 **한글 이름의 뜻**만 쓴다(S7 — 구름 '차갑게 빛나는 옥빛 기품'(玖凛)·노을 '옥빛처럼'(璐)·해솔 '바다처럼'(海)처럼 한자 조합 훈에서
+  온 뜻 72명을 PureKoreanNameEngine 사전 풀이 기준으로 바꿈. 발행 블로그가 인용한 다온·한결은 그대로). build 는 pk 이름을 조합 뜻으로 모순 교체·빈 뜻
+  폴백하지 않고, pk 뜻이 자기 조합 뜻과 같으면 실패한다
+- **data/foreign-given-names.json**: 조합 없는 /name 이름 중 외래 이름 125명(이름 → 갈래 성경·서양·일본·조어·갈래 여럿, 사람 검토 목록).
+  조어 = '-엘'처럼 외래 요소로 한국에서 지은 이름(하엘·라엘 — 원어 이름 없음, 블로그 12편 '한국 조어계'). 3음절은 `build_insight_three_syllable.py`의
+  '외래' 58명과 같다. `dump-name-flags`만 읽는다(런타임 미사용). 이레·그린·드림·나나·이든(순우리말 사전) 같은 이름은 넣지 않는다(고유어·기원 갈림)
+- **data/pure-korean-name-overrides.json**: /name `pk` 판정의 가감 목록(사람 검토, 2026-10-22 S7). exclude 14 = 순우리말 사전에 있지만 한자어 낱말
+  (소망·미래·다정·미소·수련·진솔·강해)이거나 한자 이름으로 흔한 이름(예린·하린·예나·한나·보미·가야·마리), include 15 = 사전에 없지만 '별'이 고유어라
+  한자 조합이 소리만 맞춘 이름(한별·은별·예별… — 別·莂·潎·炦에 별(星) 뜻이 없다). `dump-name-flags`만 읽는다(런타임 순우리말 추천 엔진은 사전 그대로)
+- **/hanja·/name 정적 데이터의 플래그 필드 (2026-10-22 S7)** — 값은 모두 1, 아니면 키 생략:
+  - hanja-seo.json `nf` = ForbiddenNameHanjaSet(불용 — 이름 생성·추천·/evaluate 배정에서 빠지는 글자, 850자), `wk` = WeakGivenNameHanjaSet(뜻이 약해
+    동음 대안이 있으면 양보 — 배제 아님, 714자, nf 글자에는 안 붙음). `dotnet run -- dump-hanja-quality`(루트 hanja-quality.json) → `build_hanja_seo_data.py`
+    (덤프 없으면 실패). 화면에서 '이름에 피하는 글자'는 nf 만 — wk 를 피하는 글자로 쓰지 말 것. 글자 단위 판정이라 독음마다 다른 훈(烋 휴·효)은 구분하지 않는다
+  - name-seo.json `pk` = 한글 이름으로 쓰는 순우리말 이름(120명, 조합 유무 무관 — ND-3 '한자로 쓴다면(참고)', '추천 1순위' 없음) =
+    PureKoreanNameEngine 내장 사전 − exclude + include(`data/pure-korean-name-overrides.json`, `PureKoreanNameEngine.IsPureKoreanSeoName`).
+    `fx` = 한자 조합이 없고 외래 목록에 있는 이름(125명 — 뜻 있는 71명은 어원 문장, 54명은 뜻 없음 — 화면은 '어원이 분명하지 않아 뜻풀이는 적지 않았습니다',
+    fx 서사(story)는 한자 훈으로 지은 문장이라 /name 이 내지 않는다). pk 와 fx 는 겹치지 않는다. `dotnet run -- dump-name-flags`(루트 name-flags.json — 갈래·영한 이름 지도 교차 확인 en 포함) →
+    `build_name_seo_data.py`(덤프 없는데 기존 출력에 플래그가 있으면 실패, fx 인데 조합이 있으면 실패)
 
 ### 글자 품질 세트 (HanjaData.cs 인라인, 2026-07-02 기준)
 - **ForbiddenNameHanjaSet 852자** — 명백 부정 훈 하드 배제 (생성 경로만, 평가/분석은 통과). /evaluate 배정(HanjaSelector)·후보 표에서도 빠진다 —
@@ -360,7 +382,7 @@ D:\MyDev\NameForm\
   게이트된다 — 혁 줄은 2026-10-22 赫 하나를 넣어 侐(고요할)·焱·焃 동점 경쟁을 끝냈다. 랑 줄은 S4 에 朗(밝을) 하나 — 廊(사랑채)·浪(물결)이
   1순위를 나눠 갖던 것. 浪을 같이 넣으면 Core 가점(+2100)으로 浪이 다시 1순위가 된다(朗은 Core 아님)
 - ⚠️ **감점 강도 계약**: 조합/글로스/풀 경로의 weak 감점은 **-3000** — Core_v1 검수 가점(+2000)을
-  지배해야 함 (코어셋은 오행 검수 커버리지라 약자도 포함, 신뢰도 점수가 품질 경쟁을 이기면 안 됨)
+  지배해야 함 (코어셋은 옛 뜻풀이 데이터 커버리지라 약자도 포함, 코어 가점이 품질 경쟁을 이기면 안 됨)
 
 ### 데이터 로딩
 - `HanjaData.cs`: static Dictionary + lock 기반 스레드 안전 싱글톤
@@ -397,9 +419,10 @@ D:\MyDev\NameForm\
   신규 쌍 윤문(소량 인라인 / 대량 `build_combo_meanings.py` Batch) → 재실행으로 C 100% 확인
 
 ### /name 데이터 재생성 순서
-`dotnet run -- dump-name-combos` → `dotnet run -- dump-name-scores` →
-`python scripts/build_name_seo_data.py`(combos·scores·stories 병합) → `dotnet run -- dump-combo-glosses`
+`dotnet run -- dump-name-combos` → `dotnet run -- dump-name-scores` → `dotnet run -- dump-name-flags`(pk·fx, S7) →
+`python scripts/build_name_seo_data.py`(combos·scores·stories·flags 병합) → `dotnet run -- dump-combo-glosses`
 (글로스가 name-seo.json을 읽음 — 중간 누락 시 stale). 수록 이름 목록 자체가 변하면 build 2회.
+/hanja 는 `dotnet run -- dump-hanja-quality`(nf·wk, S7) → `python scripts/build_hanja_seo_data.py` (이 순서가 /name 체인보다 먼저 — name 빌드가 hanja-seo 를 읽는다).
 감사: `audit_combo_regressions.py`(A~F) + `audit_mean_combo_mismatch.py --fail` +
 `audit_insights_tables.py`(데이터 리포트 표의 대표 한자·뜻 칸 대조 — 뜻 칸은 json 을 자동으로 따라가지 않는다.
 불일치면 `--fix`로 뜻 칸만 교체, 대표 한자가 바뀌면 본문 서술을 손으로 다시 읽을 것. `--fix`도 고치지 않은 불일치가 남으면 exit 1).
@@ -463,24 +486,31 @@ F 검사도 같은 회귀를 잡는다. 코호트 개방은 `.github/workflows/w
 - **Noto Serif KR** — 한자 (의미 한 줄과 가운뎃점으로 분리)
 - **Inter (tabular)** — 점수·라틴/숫자
 
-### Confidence Grade 4축 뱃지
-한자 오행 판정 신뢰도(S/A/B/D)를 Fill / Border / Color / Icon 4축으로 차별화:
-- **S** (검수완료) — solid teal + ✓ icon
-- **A** (규칙기반) — outline teal 1.5px solid border
-- **B** (수동입력) — outline gold 1.5px solid border
-- **D** (획수자동) — outline neutral 1.5px dashed border (반투명 fill)
+### 자원오행 등급 4축 뱃지 (옛 Confidence Grade — 2026-10-22 S7 교체)
+부수 기준 자원오행 판정의 확실성(R/V/X/U — `data/hanja_resource_element.json` g, hanja-seo `g`)을 Fill / Border / Color / Icon 4축으로 차별화
+(계획 `docs/plan-radical-ohaeng-2026-10.md` §2-4 — 옛 4축 스타일 재사용):
+- **R** (확정) — solid teal + ✓ icon — 합의 부수이고 글자 단위 이견(문헌·실무 자료 2곳 이상)이 없다
+- **V** (이견 있음) — outline gold 1.5px solid border — 이견·단일 출처·자의 추정 부수, 숫자 한자, 글자 단위 이견. 다른 값(alt_radical·alt_char)을 함께 적는다.
+  값은 늘 부수표 값. 이유가 단일 출처 하나뿐이면 '자료 적음', 자의 추정 하나뿐이면 '추정' 라벨(같은 gold 테두리 — `hanja-element-text.ts` gradeBadgeKey,
+  대체값이 없는데 '이견'이라 쓰지 않는다)
+- **X** (예외 적용) — outline teal 1.5px solid border — 간지 22·문헌 예시·작명 실무 자료 다수 예외(`data/resource_element_exceptions.json`)
+- **U** (미상) — outline neutral 1.5px dashed border (반투명 fill) — 부수 자료 없음(2026-10-22 0자), 엔진은 오행 없음
+- ⚠️ 옛 S(검수완료)·A(규칙기반)·B(수동입력)·C·D(획수자동) 라벨과 '작명가 검수 완료' 문구는 쓰지 않는다 — 옛 S 는 뜻풀이 기준이라 작명가 검수가
+  아니었다. 화면 문구는 '작명소 기준과 같다'가 아니라 '작명 실무에서 가장 많이 쓰는 값'. `/method#resource-element`가 판정 순서·등급·학계 '불명'을 설명하고,
+  수치는 데이터 리포트 `/guide/resource-element-radicals`(`scripts/build_insight_resource_element.py` 가 data/*.json 에서 산출 — 손 계산 금지)
 
 ### 디자인 캔버스 산출물
 14개 화면 디자인 완료 (Detail / Evaluate / Smart Result + 일반/Parent variant/Rare variant /
 Twin Result / Dual Result / Specialty Input 4종 / Evaluate Input / Coming Soon / 시스템 상태 4종 /
 Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 
-## 라우트 (정적 19,524유닛, 2026-07-22 기준)
+## 라우트 (정적 20,924쪽, 2026-10-22 next build 기준)
 
 ```
 /                  홈 (Hero + Categories + ProPaths + 데이터 리포트 카드 + WhyKyeol — 서버 컴포넌트)
-/hanja             인명용 한자 사전 인덱스 (독음 767개, 초성 ㄱ~ㅎ 탐색)
-/hanja/[독음|글자]  인명용 한자 사전 SEO (9,190자 수록·상세 9,096자, sitemap 전체 공개)
+/hanja             인명용 한자 사전 인덱스 (독음 489개, 초성 ㄱ~ㅎ 탐색)
+/hanja/[독음|글자]  인명용 한자 사전 SEO (9,105자 수록 — 호환 한자 85자는 통합 한자에 병합·상세 9,016자, 2026-10-22 S6 데이터.
+                   /sitemap.xml 에는 독음 489쪽만 — 글자 상세는 googleBot 전용 noindex(robots index 유지)라 네이버 전용 /sitemap-hanja.xml)
 /name              이름 뜻 사전 인덱스 (인기 이름 상위 1,000개 노출 — sitemap 등재 범위와 일치)
 /name/[이름]       이름 뜻 SEO (공개 3,795쪽 — 2026-10-21 빌드 기준, 주간 드립으로 증가. 전체 수록 5,340명 중
                    1,545명은 개방 대기 · 통계·미학 점수·한자 조합 + 이름별 OG/트위터 공유 카드도 공개 수만큼 정적 생성)
@@ -496,13 +526,16 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 /creative          창의적 작명
 /company           회사·가게 이름 (상호 작명)
 /three-syllable    3글자
-/guide             작명 가이드 (7 챕터, 사용자 교육)
-/method            작명 원리 (알고리즘 설명, "리포트 방식" 포함)
+/guide             작명 가이드 (7 챕터, 사용자 교육 + 상단 '데이터로 읽는 이름' 리포트 목록)
+/guide/[slug]      데이터 리포트 7편 (content/insights/*.md — 2026-10-22 '자원오행은 어떻게 정하나' 추가. 표 수치는 scripts/build_insight_*.py·
+                   name-seo.json 에서 산출, 손 계산 금지)
+/method            작명 원리 (알고리즘 설명, 자원오행 기준 #resource-element — 판정 순서·등급 4종·학계 '불명', "리포트 방식" 포함)
 /favorites         저장한 이름 (localStorage 즐겨찾기)
 /about             소개
 /contact           문의 (contact@namingkyeol.com)
 /robots.txt        robots.ts 자동 생성 (AI 봇 18종 차단)
 /sitemap.xml       sitemap.ts 자동 생성
+/sitemap-hanja.xml 한자 글자 상세 전용 사이트맵 (네이버 서치어드바이저에만 제출, robots.txt Sitemap 줄에는 넣지 않음)
 /_not-found        404
 ```
 
