@@ -1,0 +1,8606 @@
+{
+ "meta": {
+  "title": "부수 기준 자원오행 — 214부수표",
+  "plan": "docs/plan-radical-ohaeng-2026-10.md §2-1·§2-2 (단계 S1)",
+  "generated_by": "scripts/build_radical_resource_table.py (인자 없음, 결정적 — 고정본 data/radical_resource_votes.json 에서 만든다. tmp 불필요)",
+  "key": "강희 부수 번호(kRSUnicode 첫 값의 정수부, 1~214 — 첫 값이 강희자전 배열과 어긋나는 글자는 kRSUnicode 다른 값·원 코드 차트 배열 부수 중 kKangXi 쪽수에 맞는 값, meta.krs_kangxi_adjusted · scripts/kangxi_radical_order.py · data/hanja_radicals.json kangxi). 변형 부수(氵·忄·扌·亻·犭·礻·衤·⺼·⺮·艹·辶·阝·王·刂·灬·攵)는 원형과 같은 번호·같은 값",
+  "fields": {
+   "radical": "부수의 통합 한자 꼴(Kangxi Radicals 블록의 NFKC)",
+   "element": "부수 기본 자원오행 — 간지·문헌·실무 예외가 없는 글자는 이 값을 쓴다",
+   "status": "agreed | disputed | single | unknown (아래 status_rule)",
+   "alt": "다른 출처·문헌이 이 **부수**에 준 값(木火土金水 순). 부수 단위 이견이다 — 화면 문구는 '이 부수(X)를 Y로 보는 자료도 있습니다'. 글자 단위 견해로 쓰지 말 것(글자 단위 이견은 hanja_resource_element.json alt_char)",
+   "alt_by": "alt 값마다 낸 출처와 수준: level table(김만태 부수표) · majority(DB 다수값 2/3 이상, n≥3) · split(DB 다수값이나 2/3 미만, n≥3) · few(DB 자료 3자 미만 — n·of 를 보고 화면에 낼지 고른다) · text(김만태 본문). 모두 부수 단위다",
+   "overridden": "사용자 결정으로 이견에서 뺀 출처 값(P5 — 김만태 표 한 칸). alt 에는 없다",
+   "basis": "element 를 지지하는 출처 키(sources). UNIHAN 은 글자→부수 판정 근거. KIM = 김만태 부수표. HN·NC·IO = 그 DB 가 이 부수 글자들에 준 다수값(부수 단위 집계)이 element 와 같다는 뜻 — 이 부수의 어느 한 글자에 그 값을 줬다는 뜻이 아니다. KIM-EX·MISO = 이 부수의 문헌 예시 글자(확정한 문헌 예외 글자 제외 — B-2 로 확정하지 않은 후보는 반대 예시로 센다)가 모두 element 와 같고 김만태 부수표가 이 부수에 다른 값을 주지 않았다(예시는 글자 단위 값이다). [UNIHAN] 뿐이면 그 값을 지지하는 표·문헌이 없다(note 참고)",
+   "decided_by": "D2 = 계획 이견 부수 권고안(승인) · D2-single = 계획 단일 출처 부수 · P2 = 사용자 결정 값(弓) · P2-namefreq = 이름 빈도 가중 다수(亠 — 쓴 가중 단계는 note) · rule = 아래 vote_rule 계산 · JAUI = 자의 추정",
+   "split": "부수 다수값과 별개로 글자별로 값이 갈리는 DB(다수값 비율 2/3 미만 또는 과반 없음). 비어 있지 않으면 '이견' — 화면은 '이 부수 글자는 뜻에 따라 다르게 보기도 합니다' 류",
+   "votes": "출처별 부수 집계. KIM = 김만태 표 값, 그 밖은 [다수값, 다수값 글자 수, 그 부수 글자 수](간지·문헌 예외 후보 글자 제외 — B-2 로 확정하지 않은 후보도 제외, 실무 예외 글자는 포함, key 와 같은 부수 판정 — 고정본 votes)",
+   "chars": "대상 9,190자(hanja-seo.json)를 NFKC 로 묶은 9105자(호환 한자 85자는 통합 한자에 붙음) 가운데 이 부수 글자 수",
+   "note": "결정 근거"
+  },
+  "vote_rule": [
+   "1표 = 김만태 부수표에 실린 값, 또는 DB(HN·NC·IO) 하나가 그 부수 글자 3자 이상에서 과반으로 준 다수값",
+   "부수값 = 표의 다수결. 동률이면 HN → NC → KIM → IO 순(옥편 계열 우선, D2)",
+   "표가 하나도 없으면 IO → HN → NC 의 적은 자료 값, 그래도 없으면 자의 추정(JAUI)",
+   "계획 §2-2 에서 승인된 이견 부수 35개와 단일 출처 부수 14개는 승인값을 쓴다(재계산이 다르면 note 에 남김). 弓 은 P2 값 木, 亠 는 P2 이름 빈도 가중 다수",
+   "집계에서는 간지 글자를 빼고(1차) 문헌 예외 후보 글자도 뺀다(2차 — B-2 로 확정하지 않은 후보도 뺀 채 둔다). 실무 예외 글자는 빼지 않는다 — 부수 기본값을 바탕으로 고르는 예외라 빼면 부수값과 예외가 서로를 바꾸는 순환이 생긴다(亅·爪 에서 진동 확인)",
+   "철학캠프 개별 조회 118자(HN-S)는 예외를 확인하려고 골라 뽑은 표본이라 표를 주지 않는다"
+  ],
+  "status_rule": {
+   "agreed": "표가 2개 이상이고 모두 같으며, 표를 낸 DB 마다 다수값 비율이 2/3 이상. P5(人·广·頁·彡)는 김만태 표 한 칸의 반대를 이견으로 치지 않는다(overridden)",
+   "disputed": "표가 갈리거나, D2·P2 부수이거나, 문헌이 다른 배속을 적었거나(KIM-TXT), 적은 자료(n<3)라도 다른 값을 준 DB 가 있거나, DB 안에서 글자별로 갈린다(split)",
+   "single": "표가 하나뿐이거나 적은 자료만 있다(자료 적음)",
+   "unknown": "어느 출처에도 자료가 없어 자의로 추정했다(사람 검수 필요). 값은 채운다(D3)"
+  },
+  "grade_hint": "계획 §2-4: agreed → R(확정) 후보, disputed·single·unknown → V(이견 있음). 간지·문헌 예외·실무 예외 글자는 X(실무 예외는 독립 근거 2곳 이상 — B-1, 문헌 예외는 실무 자료 반대가 없을 때 — B-2). 등급 확정은 S1 결과 파일 빌드(build_resource_element)의 일",
+  "sources": {
+   "UNIHAN": {
+    "kind": "data",
+    "title": "Unicode Unihan Database 18.0 — kRSUnicode (Unihan_IRGSources.txt, 2026-07-31)",
+    "url": "https://www.unicode.org/Public/UCD/latest/ucd/Unihan.zip",
+    "use": "글자 → 강희 부수 번호(kRSUnicode 첫 값. 첫 값이 강희자전 배열과 어긋나면 kRSUnicode 다른 값·원 코드 차트 배열 부수 중 kKangXi 쪽수에 맞는 쪽 — scripts/kangxi_radical_order.py, 결과는 data/hanja_radicals.json). 변형 부수(氵·忄·扌 …)는 원형과 같은 번호다"
+   },
+   "KIM": {
+    "kind": "literature",
+    "title": "김만태, 「3-3. 이름의 음양오행 구성 원리」, '부수와 자의에 따른 자원오행의 예' 표의 부수 열 (김만태교수 사주작명원, 2012-03-22 게시)",
+    "url": "http://namestory.dsso.kr/m/bbs/board.php?bo_table=sub3_1&wr_id=19",
+    "use": "명시적 부수표. 부수당 1표"
+   },
+   "KIM-EX": {
+    "kind": "literature",
+    "title": "같은 글 같은 표의 '예' 열 — 오행별 예시 한자 90자",
+    "url": "http://namestory.dsso.kr/m/bbs/board.php?bo_table=sub3_1&wr_id=19",
+    "use": "글자 단위 문헌 값. 그 글자 자신의 근거(예외표 literature_examples), 문헌 예외 근거(실무 자료 지지 조건 없음 P1 — 실무 자료 2곳 이상이 다른 같은 값으로 반대하면 확정하지 않고 alt_char 로, B-2). 부수값 보강 근거로는 같은 부수 예시(확정한 문헌 예외 글자 제외)가 모두 부수값과 같고 김만태 부수표가 그 부수에 다른 값을 주지 않을 때만 쓴다(표 제목이 '부수와 자의에 따른 자원오행의 예'라 예시는 자의 값일 수 있다)"
+   },
+   "KIM-TXT": {
+    "kind": "literature",
+    "title": "같은 글 본문 서술 — 華·立·載·女·娟·谷·康의 오행이 관점에 따라 갈린다는 설명",
+    "url": "http://namestory.dsso.kr/m/bbs/board.php?bo_table=sub3_1&wr_id=19",
+    "use": "부수·글자 이견의 문헌 근거"
+   },
+   "MISO": {
+    "kind": "literature",
+    "title": "미소 한국작명원 「성명에 필요한 오행 - 자원오행」 — 작명소 설명 페이지의 예시 45자. 페이지 끝에서 참고서 『作名玉篇 五行漢字典』(동양서관, 권세준 편)을 권하지만 예시가 그 책에서 왔다고 밝히지는 않는다",
+    "url": "https://www.miso.co.kr/Resource/Theory/20253",
+    "use": "작명소 페이지의 글자 단위 값. 사용자 결정(P1 '문헌 예외는 문헌만으로')에 따라 문헌 예외 근거로 쓴다(B-2 반대 조건은 KIM-EX 와 같다) — 성격은 작명소 예시라 학술 문헌이 아니다. 그 글자 자신의 근거(예외표 literature_examples), 부수값 보강 근거는 KIM-EX 와 같은 조건"
+   },
+   "ERUMY": {
+    "kind": "practice",
+    "title": "이루미 작명시스템 「자원오행이란 무엇인가」 (작명 서비스의 설명 페이지)",
+    "url": "https://www.erumy.com/service/name_02.aspx",
+    "use": "작명 서비스의 규칙 서술 — 부수나 글자 뜻으로 구분, 간지·구성요소 해석(祥=示+羊→未土). 문헌이 아니고 실무 예외(PRACTICE) 집계에도 들지 않는다 — 글자 대체값(alt_char) 근거로만 쓴다"
+   },
+   "CRIT": {
+    "kind": "literature",
+    "title": "성민경(한국좋은이름연구소), 「자원오행 성명학으로 작명하는 사이비 작명가들」",
+    "url": "https://name114.com/sub10_1.php?code=consult&id=78957&type=read",
+    "use": "비판 근거 — 숫자 한자의 자원오행 기준이 없다는 지적"
+   },
+   "AC1": {
+    "kind": "literature",
+    "title": "이재승·김만태(2018), 「한국 성씨한자의 자원오행에 대한 고찰」, 『문화와융합』 40(3):339-368, doi:10.33645/cnc.2018.06.40.3.339",
+    "url": "https://doi.org/10.33645/cnc.2018.06.40.3.339",
+    "use": "초록만 확인 — 강·중·약·무의미·불명 등급. 학계는 '불명'을 인정한다(값은 채운다, D3)"
+   },
+   "AC2": {
+    "kind": "literature",
+    "title": "이재승(2024), 「인명 한자 214 부수의 자원에 의한 성명학적 오행 배속」, 『인문사회과학연구』 6(5):1-20, doi:10.62783/SHSS.6.5.1",
+    "url": "https://doi.org/10.62783/SHSS.6.5.1",
+    "use": "초록만 확인 — 부수별 강·중·약·불명. 214부수 배정표 본문은 유료라 못 봄"
+   },
+   "GANJI": {
+    "kind": "tradition",
+    "title": "천간·지지 오행 배속 — 甲乙 木 · 丙丁 火 · 戊己 土 · 庚辛 金 · 壬癸 水 / 寅卯 木 · 巳午 火 · 申酉 金 · 亥子 水 · 辰戌丑未 土",
+    "url": null,
+    "use": "간지 예외. 간지 글자는 부수보다 간지 오행이 먼저다"
+   },
+   "HN": {
+    "kind": "practice",
+    "title": "철학캠프 한네임 「대법원 인명용 한자사전」 (2026-10-21 수집, 독음 24개 전수)",
+    "url": "http://hanname.com/?p=32",
+    "use": "부수별 다수값(실무 관행)을 부수표 1표로, 글자값은 실무 예외(PRACTICE — 2곳 이상 같은 값)에 쓴다(D1 개정). 그 밖은 측정용"
+   },
+   "HN-S": {
+    "kind": "practice",
+    "title": "철학캠프 한네임 개별 조회 118자 (예외 확인용으로 골라 뽑은 표본)",
+    "url": "http://hanname.com/?p=32",
+    "use": "치우친 표본이라 부수표에 표를 주지 않는다(다른 DB 자료가 하나도 없는 부수에서만 basis 참고 근거). 글자 단위(실무 예외)에서는 HN 과 합쳐 철학캠프 한 곳으로 센다"
+   },
+   "NC": {
+    "kind": "practice",
+    "title": "네임차트 음절별 한자 표 (2026-10-21 수집)",
+    "url": "https://www.namechart.kr/name/",
+    "use": "부수별 다수값(실무 관행)을 부수표 1표로, 글자값은 실무 예외(PRACTICE)에 쓴다(D1 개정). 그 밖은 측정용"
+   },
+   "IO": {
+    "kind": "practice",
+    "title": "이오름 한자 사전 — '이오름 자원오행 룰셋', 방법론 '한자 부수 기반 오행 분류(214부수)' (2026-10-21 수집)",
+    "url": "https://www.ioreum.com/hanja/",
+    "use": "사실상 공개된 214부수 규칙표. 부수별 다수값을 1표로(동률 순위는 마지막), 글자값은 실무 예외(PRACTICE)에 쓴다 — 글자값이 이오름 자신의 그 부수 다수값과 같으면 부수 규칙값의 반복이라 실무 예외의 독립 근거로 세지 않는다(B-1)"
+   },
+   "PRACTICE": {
+    "kind": "practice",
+    "title": "작명 실무 자료 다수 — 철학캠프(HN, 개별 조회 포함)·네임차트(NC)·이오름(IO) 가운데 2곳 이상이 같은 값 (실무 예외는 독립 근거 2곳 이상 — 이오름 값이 이오름 자신의 부수 다수값과 같으면 독립으로 세지 않는다, B-1)",
+    "url": null,
+    "use": "실무 예외(등급 X)·글자 대체값(alt_char)·문헌 예외를 확정하지 않은 근거(B-2 — 그 글자 basis 에 들어간다). 어느 자료가 줬는지는 적지 않고 같은 값을 준 곳 수(n)·값이 있는 곳 수(of)·그중 독립 근거 수(n_indep)만 싣는다 (D1 개정·P7·B-1·B-2)"
+   },
+   "JAUI": {
+    "kind": "derived",
+    "title": "부수 자의(字意) 추정 — 이 저장소의 판단. 출처 없음",
+    "url": null,
+    "use": "어느 출처에도 자료가 없는 부수만. 사람 검수 필요"
+   }
+  },
+  "excluded_sources": {
+   "BR": "브런치 @name/34 '오행별 대표 부수' 표 — 玉을 土·金 양쪽에 두는 등 품질이 낮아 판정·근거에서 뺐다"
+  },
+  "decisions": {
+   "D1": "2026-10-22 사용자 결정(개정): 값은 kRSUnicode 부수 + 공개 문헌 부수표 + 간지 예외 + 문헌 예외 + 실무 예외. 실무 예외 = 작명 실무 자료(HN·NC·IO) 2곳 이상이 같은 값을 주고 그 값이 부수 기본값과 다른 글자(등급 X, basis PRACTICE — 곳 수는 B-1 대로 독립 근거로 센다). 150자를 넘으면 반영하지 않는다. 그 밖의 DB 글자값은 측정용",
+   "D2": "이견 부수 기본값은 계획 §2-2 권고표대로(4표 다수결, 동률은 HN→NC→KIM→IO). 2026-10-22 '그 밖의 D 항목은 권고안대로'로 승인. 弓·亠 값은 P2, 人·广·頁·彡 등급은 P5 로 고쳤다",
+   "D3": "숫자 한자(一~十·百·千·萬)·약한 부수는 부수값 + '이견' 표시. '불명'을 값으로 두지 않는다. 실무 예외가 덮는 숫자는 예외(X)",
+   "P1": "2026-10-22: 문헌 예외(KIM-EX·MISO)는 실무 자료 지지 조건 없이 문헌만으로 적용(조건 0) — 실무 자료 반대 조건은 B-2",
+   "P2": "2026-10-22: 弓 → 木(검토 권고). 亠 → 이름 빈도 가중 다수(실무 예외로 처리되는 京·亨 글자는 빼고 셈 — 같은 이유로 실무 예외인 亢 도 뺌. 근거는 부수표 note)",
+   "P3-P4-P6": "2026-10-22: 오방(南·北·中)·괘 이름(乾·巽)·R 인데 DB 2곳 반대(厦·叡)·숫자 五 에는 따로 규칙을 두지 않는다 — 실무 예외 규칙이 덮는 만큼만",
+   "P5": "2026-10-22: 人·广·頁·彡 부수는 합의(agreed) — 실무 자료 세 곳(HN·NC·IO)의 부수 다수값이 모두 같고 김만태 표 한 칸만 반대. 같은 글의 예시(人 儁·頁 顥 火)는 구성 요소(隹·日)도 김만태 표에서 火라 부수 반례로는 약하고, 본문의 康 서술은 글자 단위라 부수 근거로 치지 않는다 — 값은 실무 자료 다수만으로 선다",
+   "P7": "2026-10-22: 글자 대체값 alt_char 에 문헌 값과 실무 자료 값(2곳 이상이 준 다른 값)을 출처를 나눠 싣는다",
+   "B-1": "2026-10-22 통합 담당 결정(사용자 목표 '작명소와 같은 답' 기준): 이오름 글자값이 이오름 자신의 그 부수 다수값과 같으면 부수 규칙값의 반복이라 실무 예외를 세울 독립 근거로 세지 않는다(PRACTICE_RULE_ECHO_SOURCES). 같은 값을 준 곳은 2곳 이상이지만 독립 근거가 2곳 미만인 글자는 예외로 두지 않는다 — 값은 부수 기본값, 등급 '이견', 실무 값은 alt_char(PRACTICE, n/of/n_indep). 글자 목록은 두지 않고 규칙으로 고른다(고정본 practice_alt 의 under=rule_echo)",
+   "B-2": "2026-10-22 통합 담당 결정: 문헌 예외(후보 = 문헌 값이 부수값과 다른 글자)는 실무 자료 2곳 이상이 다른 같은 값으로 반대하면 확정하지 않는다. 그 실무 값이 부수 기본값이면 부수값 + '이견'(문헌 값은 alt_char, 문헌 출처), 다르면 실무 예외 규칙(B-1 포함)을 따른다. 부수값 쪽 반대에는 부수 규칙값의 반복도 센다(LIT_OVERRULE_COUNTS_RULE_ECHO — 결정의 宣 '木+이견'). 확정하지 않은 후보도 부수 집계에서는 뺀 채 둔다(집계 정의를 바꾸면 부수값 → 판정 → 집계가 서로를 바꿀 수 있다). 결과 목록은 고정본 literature_overruled",
+   "B-3": "2026-10-22 통합 담당 결정: 추가 수집 없음 — 中·耕 은 지금 자료 그대로"
+  },
+  "pending_decisions": {},
+  "counts": {
+   "agreed": 104,
+   "disputed": 71,
+   "single": 37,
+   "unknown": 2
+  },
+  "recompute_discrepancies": [
+   {
+    "num": 8,
+    "radical": "亠",
+    "approved": "火",
+    "decided_by": "P2-namefreq",
+    "recomputed": "水",
+    "votes": "철학캠프 火 1/1 · 네임차트 土 4/8 · 이오름 水 12/12 · 철학캠프 개별조회 火 3/6"
+   },
+   {
+    "num": 51,
+    "radical": "干",
+    "approved": "木",
+    "decided_by": "D2-single",
+    "recomputed": "火",
+    "votes": "철학캠프 木 1/1 · 네임차트 火 2/3 · 이오름 木 4/4 · 철학캠프 개별조회 木 2/2"
+   },
+   {
+    "num": 54,
+    "radical": "廴",
+    "approved": "木",
+    "decided_by": "D2",
+    "recomputed": "火",
+    "votes": "철학캠프 木 1/1 · 네임차트 木 2/4 · 이오름 火 4/4 · 철학캠프 개별조회 木 2/3"
+   },
+   {
+    "num": 57,
+    "radical": "弓",
+    "approved": "木",
+    "decided_by": "P2",
+    "recomputed": "金",
+    "votes": "철학캠프 木/火 2/4 · 네임차트 金 8/15 · 이오름 木 22/22 · 철학캠프 개별조회 火 3/7"
+   }
+  ],
+  "approved_without_support": [],
+  "krs_kangxi_adjusted": {
+   "卄": {
+    "cp": "U+5344",
+    "krs_first": 1,
+    "used": 24,
+    "kangxi_page": 155,
+    "basis": "krs_value",
+    "radicals": "一 → 十"
+   },
+   "墨": {
+    "cp": "U+58A8",
+    "krs_first": 203,
+    "used": 32,
+    "kangxi_page": 238,
+    "basis": "krs_value",
+    "radicals": "黑 → 土"
+   },
+   "壡": {
+    "cp": "U+58E1",
+    "krs_first": 29,
+    "used": 32,
+    "kangxi_page": 242,
+    "basis": "uro_order",
+    "radicals": "又 → 土"
+   },
+   "尹": {
+    "cp": "U+5C39",
+    "krs_first": 4,
+    "used": 44,
+    "kangxi_page": 299,
+    "basis": "krs_value",
+    "radicals": "丿 → 尸"
+   },
+   "巡": {
+    "cp": "U+5DE1",
+    "krs_first": 162,
+    "used": 47,
+    "kangxi_page": 324,
+    "basis": "krs_value",
+    "radicals": "辵 → 巛"
+   },
+   "彪": {
+    "cp": "U+5F6A",
+    "krs_first": 141,
+    "used": 59,
+    "kangxi_page": 363,
+    "basis": "krs_value",
+    "radicals": "虍 → 彡"
+   },
+   "最": {
+    "cp": "U+6700",
+    "krs_first": 13,
+    "used": 73,
+    "kangxi_page": 503,
+    "basis": "krs_value",
+    "radicals": "冂 → 曰"
+   },
+   "竟": {
+    "cp": "U+7ADF",
+    "krs_first": 180,
+    "used": 117,
+    "kangxi_page": 871,
+    "basis": "krs_value",
+    "radicals": "音 → 立"
+   },
+   "章": {
+    "cp": "U+7AE0",
+    "krs_first": 180,
+    "used": 117,
+    "kangxi_page": 871,
+    "basis": "krs_value",
+    "radicals": "音 → 立"
+   },
+   "萬": {
+    "cp": "U+842C",
+    "krs_first": 114,
+    "used": 140,
+    "kangxi_page": 1042,
+    "basis": "krs_value",
+    "radicals": "禸 → 艸"
+   },
+   "蒸": {
+    "cp": "U+84B8",
+    "krs_first": 86,
+    "used": 140,
+    "kangxi_page": 1050,
+    "basis": "krs_value",
+    "radicals": "火 → 艸"
+   },
+   "視": {
+    "cp": "U+8996",
+    "krs_first": 113,
+    "used": 147,
+    "kangxi_page": 1134,
+    "basis": "krs_value",
+    "radicals": "示 → 見"
+   },
+   "龐": {
+    "cp": "U+9F90",
+    "krs_first": 53,
+    "used": 212,
+    "kangxi_page": 1537,
+    "basis": "krs_value",
+    "radicals": "广 → 龍"
+   }
+  },
+  "inputs": {
+   "frozen": {
+    "path": "data/radical_resource_votes.json",
+    "sha256": "cc6bb8d8d6645808a02ad27207ce94277fa1a418fb27193a72f95686c614ea26"
+   },
+   "hanja_radicals": {
+    "path": "data/hanja_radicals.json",
+    "sha256": "69b8049d26065598d904a1b3822a748e060520da0e8fb7464cabe85a7737609b"
+   },
+   "hanja_seo": {
+    "path": "frontend/src/data/hanja-seo.json",
+    "sha256": "53e02d3ba9a9fafd108e7152cf9c550ef6517af46f7ac461ecb85cb8c6122ce5"
+   },
+   "frozen_from": {
+    "unihan": {
+     "path": "tmp/unihan-18.0/Unihan_IRGSources.txt",
+     "sha256": "e2c484cd22b54f7e0ce896ebb02f33e092b92325accf0fd55e0e14e3863869eb"
+    },
+    "unihan_zip": {
+     "path": "tmp/unihan-18.0/Unihan.zip (Unihan_DictionaryIndices.txt kKangXi)",
+     "sha256": "4c93ea9c1f636451729a840978f1667a53886af37ba854fdcce109721c63d43e"
+    },
+    "name_seo": {
+     "path": "frontend/src/data/name-seo.json",
+     "sha256": "1e341bbbc09e0d0354cd029e95bf429adee79907570d32ea582bfade448fdeab"
+    },
+    "src_hanname.json": {
+     "path": "tmp/radical-research/tradition/sources/src_hanname.json",
+     "sha256": "1a35c23b603bb19df250f4b2050ad6af82c1cb028fcb4bfd257bb841ff1c33a9"
+    },
+    "src_namechart.json": {
+     "path": "tmp/radical-research/tradition/sources/src_namechart.json",
+     "sha256": "b3e2536eb7d7bbd2a9dc51110f6871a65e9b1b1786b0f54498b6bbb291b722de"
+    },
+    "src_ioreum.json": {
+     "path": "tmp/radical-research/tradition/sources/src_ioreum.json",
+     "sha256": "c1221c00278917cc1a8bf684c491a6b2b0c59379155d7aad5b794372591c6eb0"
+    }
+   }
+  }
+ },
+ "radicals": {
+  "1": {
+   "radical": "一",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "土"
+   ],
+   "alt_by": {
+    "土": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 16,
+      "of": 16
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "木",
+     3,
+     3
+    ],
+    "NC": [
+     "木",
+     6,
+     14
+    ],
+    "IO": [
+     "土",
+     16,
+     16
+    ],
+    "HN-S": [
+     "木",
+     10,
+     10
+    ]
+   },
+   "chars": 19,
+   "note": "이견: 철학캠프 木 3/3 · 네임차트 木 6/14 · 이오름 土 16/16 · 철학캠프 개별조회 木 10/10 → 계획 §2-2 이견 부수 — D2 권고안 木; 글자별 갈림(다수값 비율 낮음: 네임차트 6/14)"
+  },
+  "2": {
+   "radical": "丨",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "土"
+   ],
+   "alt_by": {
+    "土": [
+     {
+      "src": "NC",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "土",
+     1,
+     1
+    ],
+    "IO": [
+     "木",
+     4,
+     4
+    ]
+   },
+   "chars": 6,
+   "note": "이견: 네임차트 土 1/1 · 이오름 木 4/4"
+  },
+  "3": {
+   "radical": "丶",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木/火/土",
+     1,
+     3
+    ],
+    "IO": [
+     "火",
+     3,
+     3
+    ]
+   },
+   "chars": 3,
+   "note": "이견: 철학캠프 木 1/1 · 네임차트 木/火/土 1/3 · 이오름 火 3/3 → 글자별 갈림(다수값 비율 낮음: 네임차트 1/3)"
+  },
+  "4": {
+   "radical": "丿",
+   "element": "金",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "HN",
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "火/土/金",
+     1,
+     3
+    ],
+    "NC": [
+     "金",
+     3,
+     6
+    ],
+    "IO": [
+     "金",
+     6,
+     6
+    ]
+   },
+   "chars": 9,
+   "note": "이견: 철학캠프 火/土/金 1/3 · 네임차트 金 3/6 · 이오름 金 6/6 → 글자별 갈림(다수값 비율 낮음: 철학캠프 1/3, 네임차트 3/6)"
+  },
+  "5": {
+   "radical": "乙",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "NC",
+      "level": "split",
+      "n": 2,
+      "of": 4
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "IO"
+   ],
+   "decided_by": "D2",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     2,
+     4
+    ],
+    "IO": [
+     "木",
+     6,
+     6
+    ],
+    "HN-S": [
+     "木/金/水",
+     1,
+     3
+    ]
+   },
+   "chars": 18,
+   "note": "이견: 김만태 표 木 · 철학캠프 木 1/1 · 네임차트 水 2/4 · 이오름 木 6/6 · 철학캠프 개별조회 木/金/水 1/3 → 계획 §2-2 이견 부수 — D2 권고안 木; 글자별 갈림(다수값 비율 낮음: 네임차트 2/4)"
+  },
+  "6": {
+   "radical": "亅",
+   "element": "金",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 3,
+      "of": 3
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "金",
+     2,
+     3
+    ],
+    "IO": [
+     "木",
+     3,
+     3
+    ]
+   },
+   "chars": 3,
+   "note": "이견: 네임차트 金 2/3 · 이오름 木 3/3"
+  },
+  "7": {
+   "radical": "二",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 2,
+      "of": 2
+     },
+     {
+      "src": "NC",
+      "level": "split",
+      "n": 4,
+      "of": 8
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "水",
+     2,
+     2
+    ],
+    "NC": [
+     "水",
+     4,
+     8
+    ],
+    "IO": [
+     "火",
+     11,
+     11
+    ],
+    "HN-S": [
+     "木/土",
+     1,
+     2
+    ]
+   },
+   "chars": 13,
+   "note": "이견: 철학캠프 水 2/2 · 네임차트 水 4/8 · 이오름 火 11/11 · 철학캠프 개별조회 木/土 1/2 → 글자별 갈림(다수값 비율 낮음: 네임차트 4/8)"
+  },
+  "8": {
+   "radical": "亠",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "土",
+    "水"
+   ],
+   "alt_by": {
+    "土": [
+     {
+      "src": "NC",
+      "level": "split",
+      "n": 4,
+      "of": 8
+     }
+    ],
+    "水": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 12,
+      "of": 12
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN"
+   ],
+   "decided_by": "P2-namefreq",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "NC": [
+     "土",
+     4,
+     8
+    ],
+    "IO": [
+     "水",
+     12,
+     12
+    ],
+    "HN-S": [
+     "火",
+     3,
+     6
+    ]
+   },
+   "chars": 15,
+   "note": "이견: 철학캠프 火 1/1 · 네임차트 土 4/8 · 이오름 水 12/12 · 철학캠프 개별조회 火 3/6 → 글자별 갈림(다수값 비율 낮음: 네임차트 4/8) / P2(2026-10-22): 이름 빈도 가중 다수 — 실무 예외로 따로 처리되는 글자(京·亨·亢)를 빼고 나머지 글자 6자의 철학캠프·네임차트 글자값을 글자의 이름 빈도(combos 출현 수)로 가중(이오름은 이 부수 글자 모두에 같은 규칙값을 줘서 뺌). 공개 이름 3666명(기준일 2026-10-22) 조합 가중 합 0 → 전체 수록 이름 5106명(공개 전 포함) 조합 가중 합 火 28 → 火 (참고: 같은 출처의 글자 수 火 7 · 土 2) / kRSUnicode 부수로 다시 세면 규칙상 水 — 사용자 결정값(火) 유지"
+  },
+  "9": {
+   "radical": "人",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "overridden": [
+    {
+     "src": "KIM",
+     "e": "土",
+     "level": "table",
+     "decision": "P5"
+    }
+   ],
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "火",
+     37,
+     37
+    ],
+    "NC": [
+     "火",
+     148,
+     148
+    ],
+    "IO": [
+     "火",
+     280,
+     280
+    ],
+    "HN-S": [
+     "火",
+     8,
+     8
+    ]
+   },
+   "chars": 351,
+   "note": "합의: 김만태 표 土 · 철학캠프 火 37/37 · 네임차트 火 148/148 · 이오름 火 280/280 · 철학캠프 개별조회 火 8/8 / P5(2026-10-22) 합의로 침: 실무 자료 세 곳의 부수 다수값이 모두 火이고 김만태 표만 반대(人 = 土) — 같은 글의 예시 儁은 火지만 구성 요소 隹도 김만태 표에서 火라 부수 반례로는 약하다. 값은 실무 자료 다수만으로 선다(계획 D2 이견 부수였음)"
+  },
+  "10": {
+   "radical": "儿",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 17,
+      "of": 17
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "KIM-EX"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     2,
+     3
+    ],
+    "NC": [
+     "木",
+     6,
+     9
+    ],
+    "IO": [
+     "火",
+     17,
+     17
+    ],
+    "HN-S": [
+     "木",
+     7,
+     8
+    ]
+   },
+   "chars": 24,
+   "note": "이견: 김만태 표 木 · 철학캠프 木 2/3 · 네임차트 木 6/9 · 이오름 火 17/17 · 철학캠프 개별조회 木 7/8 → 계획 §2-2 이견 부수 — D2 권고안 木 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "11": {
+   "radical": "入",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 3,
+      "of": 3
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "MISO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     1,
+     1
+    ],
+    "NC": [
+     "土",
+     2,
+     3
+    ],
+    "IO": [
+     "木",
+     3,
+     3
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 철학캠프 土 1/1 · 네임차트 土 2/3 · 이오름 木 3/3 → 계획 §2-2 이견 부수 — D2 권고안 土 / 문헌 예시 글자와 일치(MISO)"
+  },
+  "12": {
+   "radical": "八",
+   "element": "金",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 9,
+      "of": 9
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     1,
+     1
+    ],
+    "NC": [
+     "金",
+     7,
+     9
+    ],
+    "IO": [
+     "水",
+     9,
+     9
+    ],
+    "HN-S": [
+     "金",
+     3,
+     3
+    ]
+   },
+   "chars": 11,
+   "note": "이견: 김만태 표 金 · 철학캠프 金 1/1 · 네임차트 金 7/9 · 이오름 水 9/9 · 철학캠프 개별조회 金 3/3 → 계획 §2-2 이견 부수 — D2 권고안 金"
+  },
+  "13": {
+   "radical": "冂",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "水",
+     1,
+     1
+    ],
+    "NC": [
+     "木/火/水",
+     1,
+     3
+    ],
+    "IO": [
+     "木",
+     6,
+     6
+    ]
+   },
+   "chars": 11,
+   "note": "이견: 철학캠프 水 1/1 · 네임차트 木/火/水 1/3 · 이오름 木 6/6 → 글자별 갈림(다수값 비율 낮음: 네임차트 1/3)"
+  },
+  "14": {
+   "radical": "冖",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     },
+     {
+      "src": "NC",
+      "level": "few",
+      "n": 2,
+      "of": 2
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木",
+     2,
+     2
+    ],
+    "IO": [
+     "水",
+     5,
+     5
+    ]
+   },
+   "chars": 9,
+   "note": "이견: 철학캠프 木 1/1 · 네임차트 木 2/2 · 이오름 水 5/5 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "15": {
+   "radical": "冫",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     3,
+     3
+    ],
+    "NC": [
+     "水",
+     8,
+     8
+    ],
+    "IO": [
+     "水",
+     21,
+     21
+    ]
+   },
+   "chars": 28,
+   "note": "합의: 철학캠프 水 3/3 · 네임차트 水 8/8 · 이오름 水 21/21"
+  },
+  "16": {
+   "radical": "几",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木/水",
+     1,
+     2
+    ],
+    "IO": [
+     "木",
+     2,
+     2
+    ]
+   },
+   "chars": 7,
+   "note": "단일 출처(자료 적음): 네임차트 木/水 1/2 · 이오름 木 2/2"
+  },
+  "17": {
+   "radical": "凵",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "NC": [
+     "木/火/水",
+     1,
+     3
+    ],
+    "IO": [
+     "水",
+     3,
+     3
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 철학캠프 火 1/1 · 네임차트 木/火/水 1/3 · 이오름 水 3/3 → 글자별 갈림(다수값 비율 낮음: 네임차트 1/3)"
+  },
+  "18": {
+   "radical": "刀",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     5,
+     5
+    ],
+    "NC": [
+     "金",
+     26,
+     27
+    ],
+    "IO": [
+     "金",
+     49,
+     49
+    ],
+    "HN-S": [
+     "金",
+     2,
+     2
+    ]
+   },
+   "chars": 73,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 5/5 · 네임차트 金 26/27 · 이오름 金 49/49 · 철학캠프 개별조회 金 2/2 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "19": {
+   "radical": "力",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 35,
+      "of": 35
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     3,
+     3
+    ],
+    "NC": [
+     "土",
+     10,
+     21
+    ],
+    "IO": [
+     "火",
+     35,
+     35
+    ],
+    "HN-S": [
+     "土",
+     4,
+     10
+    ]
+   },
+   "chars": 50,
+   "note": "이견: 김만태 표 土 · 철학캠프 土 3/3 · 네임차트 土 10/21 · 이오름 火 35/35 · 철학캠프 개별조회 土 4/10 → 계획 §2-2 이견 부수 — D2 권고안 土; 글자별 갈림(다수값 비율 낮음: 네임차트 10/21)"
+  },
+  "20": {
+   "radical": "勹",
+   "element": "金",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 10,
+      "of": 10
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "KIM": "金",
+    "NC": [
+     "金",
+     3,
+     5
+    ],
+    "IO": [
+     "木",
+     10,
+     10
+    ],
+    "HN-S": [
+     "金",
+     2,
+     2
+    ]
+   },
+   "chars": 15,
+   "note": "이견: 김만태 표 金 · 네임차트 金 3/5 · 이오름 木 10/10 · 철학캠프 개별조회 金 2/2 → 계획 §2-2 이견 부수 — D2 권고안 金; 글자별 갈림(다수값 비율 낮음: 네임차트 3/5)"
+  },
+  "21": {
+   "radical": "匕",
+   "element": "金",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "KIM": "金",
+    "NC": [
+     "金",
+     2,
+     4
+    ],
+    "IO": [
+     "金",
+     3,
+     4
+    ],
+    "HN-S": [
+     "火/水",
+     1,
+     2
+    ]
+   },
+   "chars": 4,
+   "note": "이견: 김만태 표 金 · 네임차트 金 2/4 · 이오름 金 3/4 · 철학캠프 개별조회 火/水 1/2 → 글자별 갈림(다수값 비율 낮음: 네임차트 2/4)"
+  },
+  "22": {
+   "radical": "匚",
+   "element": "木",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "NC": [
+     "木/土",
+     2,
+     5
+    ],
+    "IO": [
+     "木",
+     7,
+     7
+    ]
+   },
+   "chars": 8,
+   "note": "이견: 네임차트 木/土 2/5 · 이오름 木 7/7 → 글자별 갈림(다수값 비율 낮음: 네임차트 2/5)"
+  },
+  "23": {
+   "radical": "匸",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     1,
+     1
+    ],
+    "NC": [
+     "土/水",
+     1,
+     2
+    ],
+    "IO": [
+     "水",
+     6,
+     6
+    ]
+   },
+   "chars": 7,
+   "note": "단일 출처(자료 적음): 철학캠프 水 1/1 · 네임차트 土/水 1/2 · 이오름 水 6/6"
+  },
+  "24": {
+   "radical": "十",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     4,
+     10
+    ],
+    "IO": [
+     "水",
+     10,
+     11
+    ],
+    "HN-S": [
+     "水",
+     4,
+     9
+    ]
+   },
+   "chars": 17,
+   "note": "이견: 철학캠프 木 1/1 · 네임차트 水 4/10 · 이오름 水 10/11 · 철학캠프 개별조회 水 4/9 → 글자별 갈림(다수값 비율 낮음: 네임차트 4/10)"
+  },
+  "25": {
+   "radical": "卜",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火",
+     2,
+     3
+    ],
+    "IO": [
+     "火",
+     3,
+     3
+    ]
+   },
+   "chars": 6,
+   "note": "합의: 네임차트 火 2/3 · 이오름 火 3/3"
+  },
+  "26": {
+   "radical": "卩",
+   "element": "木",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "NC": [
+     "木",
+     3,
+     5
+    ],
+    "IO": [
+     "木",
+     9,
+     9
+    ],
+    "HN-S": [
+     "火/水",
+     1,
+     2
+    ]
+   },
+   "chars": 16,
+   "note": "이견: 네임차트 木 3/5 · 이오름 木 9/9 · 철학캠프 개별조회 火/水 1/2 → 글자별 갈림(다수값 비율 낮음: 네임차트 3/5)"
+  },
+  "27": {
+   "radical": "厂",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "木/土",
+     1,
+     2
+    ],
+    "NC": [
+     "土",
+     4,
+     5
+    ],
+    "IO": [
+     "土",
+     10,
+     10
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 15,
+   "note": "합의: 김만태 표 土 · 철학캠프 木/土 1/2 · 네임차트 土 4/5 · 이오름 土 10/10 · 철학캠프 개별조회 土 1/1"
+  },
+  "28": {
+   "radical": "厶",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "NC",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 3,
+   "note": "이견: 네임차트 火 1/1 · 이오름 水 2/2"
+  },
+  "29": {
+   "radical": "又",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     4,
+     5
+    ],
+    "NC": [
+     "水",
+     8,
+     9
+    ],
+    "IO": [
+     "水",
+     10,
+     10
+    ],
+    "HN-S": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 14,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 4/5 · 네임차트 水 8/9 · 이오름 水 10/10 · 철학캠프 개별조회 火 1/1"
+  },
+  "30": {
+   "radical": "口",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     38,
+     38
+    ],
+    "NC": [
+     "水",
+     107,
+     108
+    ],
+    "IO": [
+     "水",
+     219,
+     219
+    ],
+    "HN-S": [
+     "水",
+     21,
+     21
+    ]
+   },
+   "chars": 301,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 38/38 · 네임차트 水 107/108 · 이오름 水 219/219 · 철학캠프 개별조회 水 21/21 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "31": {
+   "radical": "囗",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     7,
+     7
+    ],
+    "NC": [
+     "水",
+     15,
+     15
+    ],
+    "IO": [
+     "水",
+     27,
+     27
+    ],
+    "HN-S": [
+     "水",
+     7,
+     7
+    ]
+   },
+   "chars": 32,
+   "note": "합의: 철학캠프 水 7/7 · 네임차트 水 15/15 · 이오름 水 27/27 · 철학캠프 개별조회 水 7/7 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "32": {
+   "radical": "土",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     29,
+     29
+    ],
+    "NC": [
+     "土",
+     77,
+     77
+    ],
+    "IO": [
+     "土",
+     151,
+     151
+    ]
+   },
+   "chars": 204,
+   "note": "합의: 김만태 표 土 · 철학캠프 土 29/29 · 네임차트 土 77/77 · 이오름 土 151/151 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "33": {
+   "radical": "士",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 8,
+      "of": 8
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     2,
+     3
+    ],
+    "NC": [
+     "木",
+     5,
+     6
+    ],
+    "IO": [
+     "金",
+     8,
+     8
+    ]
+   },
+   "chars": 9,
+   "note": "이견: 철학캠프 木 2/3 · 네임차트 木 5/6 · 이오름 金 8/8"
+  },
+  "34": {
+   "radical": "夂",
+   "element": "火",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "IO": [
+     "火",
+     2,
+     2
+    ]
+   },
+   "chars": 2,
+   "note": "단일 출처(자료 적음): 이오름 火 2/2 / 문헌 표에 없는 부수 — 실무 자료만으로 정함"
+  },
+  "35": {
+   "radical": "夊",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "金",
+     1,
+     1
+    ],
+    "NC": [
+     "火/土",
+     1,
+     2
+    ],
+    "IO": [
+     "火",
+     4,
+     4
+    ]
+   },
+   "chars": 4,
+   "note": "이견: 철학캠프 金 1/1 · 네임차트 火/土 1/2 · 이오름 火 4/4"
+  },
+  "36": {
+   "radical": "夕",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     2,
+     3
+    ],
+    "IO": [
+     "水",
+     7,
+     7
+    ],
+    "HN-S": [
+     "水",
+     1,
+     1
+    ]
+   },
+   "chars": 11,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 1/1 · 네임차트 水 2/3 · 이오름 水 7/7 · 철학캠프 개별조회 水 1/1 / 문헌 예시 글자와 일치(MISO)"
+  },
+  "37": {
+   "radical": "大",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 35,
+      "of": 35
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     4,
+     4
+    ],
+    "NC": [
+     "木",
+     16,
+     23
+    ],
+    "IO": [
+     "火",
+     35,
+     35
+    ],
+    "HN-S": [
+     "木",
+     11,
+     11
+    ]
+   },
+   "chars": 43,
+   "note": "이견: 김만태 표 木 · 철학캠프 木 4/4 · 네임차트 木 16/23 · 이오름 火 35/35 · 철학캠프 개별조회 木 11/11 → 계획 §2-2 이견 부수 — D2 권고안 木"
+  },
+  "38": {
+   "radical": "女",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "KIM-TXT",
+      "level": "text"
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     26,
+     26
+    ],
+    "NC": [
+     "土",
+     69,
+     69
+    ],
+    "IO": [
+     "土",
+     205,
+     205
+    ]
+   },
+   "chars": 253,
+   "note": "이견: 김만태 표 土 · 철학캠프 土 26/26 · 네임차트 土 69/69 · 이오름 土 205/205 → 김만태 본문: 女는 한편 水, 한편 상극인 土에 배속한다 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "39": {
+   "radical": "子",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     13,
+     14
+    ],
+    "IO": [
+     "水",
+     21,
+     21
+    ],
+    "HN-S": [
+     "水",
+     8,
+     8
+    ]
+   },
+   "chars": 30,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 1/1 · 네임차트 水 13/14 · 이오름 水 21/21 · 철학캠프 개별조회 水 8/8"
+  },
+  "40": {
+   "radical": "宀",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     12,
+     12
+    ],
+    "NC": [
+     "木",
+     39,
+     42
+    ],
+    "IO": [
+     "木",
+     50,
+     50
+    ],
+    "HN-S": [
+     "木",
+     1,
+     1
+    ]
+   },
+   "chars": 71,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 12/12 · 네임차트 木 39/42 · 이오름 木 50/50 · 철학캠프 개별조회 木 1/1 / 문헌 예시 글자와 일치(MISO)"
+  },
+  "41": {
+   "radical": "寸",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 12,
+      "of": 13
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "土",
+     3,
+     3
+    ],
+    "NC": [
+     "土",
+     5,
+     10
+    ],
+    "IO": [
+     "金",
+     12,
+     13
+    ],
+    "HN-S": [
+     "土",
+     7,
+     7
+    ]
+   },
+   "chars": 16,
+   "note": "이견: 철학캠프 土 3/3 · 네임차트 土 5/10 · 이오름 金 12/13 · 철학캠프 개별조회 土 7/7 → 계획 §2-2 이견 부수 — D2 권고안 土; 글자별 갈림(다수값 비율 낮음: 네임차트 5/10)"
+  },
+  "42": {
+   "radical": "小",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 4,
+      "of": 4
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "NC": [
+     "水",
+     2,
+     2
+    ],
+    "IO": [
+     "金",
+     4,
+     4
+    ],
+    "HN-S": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 6,
+   "note": "이견: 네임차트 水 2/2 · 이오름 金 4/4 · 철학캠프 개별조회 水 2/2 → 계획 §2-2 이견 부수 — D2 권고안 水"
+  },
+  "43": {
+   "radical": "尢",
+   "element": "土",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     1,
+     1
+    ],
+    "NC": [
+     "土",
+     2,
+     2
+    ],
+    "IO": [
+     "土",
+     2,
+     2
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 철학캠프 土 1/1 · 네임차트 土 2/2 · 이오름 土 2/2"
+  },
+  "44": {
+   "radical": "尸",
+   "element": "水",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "水",
+     3,
+     3
+    ],
+    "NC": [
+     "水",
+     9,
+     14
+    ],
+    "IO": [
+     "水",
+     21,
+     21
+    ],
+    "HN-S": [
+     "木",
+     5,
+     7
+    ]
+   },
+   "chars": 28,
+   "note": "이견: 철학캠프 水 3/3 · 네임차트 水 9/14 · 이오름 水 21/21 · 철학캠프 개별조회 木 5/7 → 글자별 갈림(다수값 비율 낮음: 네임차트 9/14)"
+  },
+  "45": {
+   "radical": "屮",
+   "element": "木",
+   "status": "unknown",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "JAUI"
+   ],
+   "decided_by": "JAUI",
+   "split": [],
+   "votes": {},
+   "chars": 1,
+   "note": "출처 없음: 屮(싹날 철)은 풀의 싹이 돋는 모양 — 木으로 추정 — 사람 검수 필요"
+  },
+  "46": {
+   "radical": "山",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     20,
+     20
+    ],
+    "NC": [
+     "土",
+     32,
+     33
+    ],
+    "IO": [
+     "土",
+     101,
+     101
+    ]
+   },
+   "chars": 150,
+   "note": "합의: 김만태 표 土 · 철학캠프 土 20/20 · 네임차트 土 32/33 · 이오름 土 101/101 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "47": {
+   "radical": "巛",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     4,
+     4
+    ],
+    "IO": [
+     "水",
+     5,
+     5
+    ]
+   },
+   "chars": 5,
+   "note": "합의: 철학캠프 水 1/1 · 네임차트 水 4/4 · 이오름 水 5/5"
+  },
+  "48": {
+   "radical": "工",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 4,
+      "of": 5
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火",
+     4,
+     4
+    ],
+    "IO": [
+     "木",
+     4,
+     5
+    ],
+    "HN-S": [
+     "火",
+     3,
+     3
+    ]
+   },
+   "chars": 7,
+   "note": "이견: 네임차트 火 4/4 · 이오름 木 4/5 · 철학캠프 개별조회 火 3/3 → 계획 §2-2 이견 부수 — D2 권고안 火"
+  },
+  "49": {
+   "radical": "己",
+   "element": "土",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "KIM": "土",
+    "NC": [
+     "木/火/土",
+     1,
+     3
+    ],
+    "IO": [
+     "土",
+     6,
+     6
+    ],
+    "HN-S": [
+     "木",
+     1,
+     1
+    ]
+   },
+   "chars": 9,
+   "note": "이견: 김만태 표 土 · 네임차트 木/火/土 1/3 · 이오름 土 6/6 · 철학캠프 개별조회 木 1/1 → 글자별 갈림(다수값 비율 낮음: 네임차트 1/3)"
+  },
+  "50": {
+   "radical": "巾",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     4,
+     4
+    ],
+    "NC": [
+     "木",
+     18,
+     18
+    ],
+    "IO": [
+     "木",
+     30,
+     30
+    ]
+   },
+   "chars": 46,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 4/4 · 네임차트 木 18/18 · 이오름 木 30/30"
+  },
+  "51": {
+   "radical": "干",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "NC",
+      "level": "majority",
+      "n": 2,
+      "of": 3
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "IO"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "火",
+     2,
+     3
+    ],
+    "IO": [
+     "木",
+     4,
+     4
+    ],
+    "HN-S": [
+     "木",
+     2,
+     2
+    ]
+   },
+   "chars": 7,
+   "note": "이견: 철학캠프 木 1/1 · 네임차트 火 2/3 · 이오름 木 4/4 · 철학캠프 개별조회 木 2/2 / kRSUnicode 부수로 다시 세면 규칙상 火 — 계획 승인값(木) 유지, 재검토 후보 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "52": {
+   "radical": "幺",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     2,
+     2
+    ],
+    "NC": [
+     "火",
+     4,
+     4
+    ],
+    "IO": [
+     "火",
+     5,
+     5
+    ]
+   },
+   "chars": 5,
+   "note": "합의: 철학캠프 火 2/2 · 네임차트 火 4/4 · 이오름 火 5/5"
+  },
+  "53": {
+   "radical": "广",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "overridden": [
+    {
+     "src": "KIM",
+     "e": "土",
+     "level": "table",
+     "decision": "P5"
+    }
+   ],
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "木",
+     8,
+     8
+    ],
+    "NC": [
+     "木",
+     24,
+     25
+    ],
+    "IO": [
+     "木",
+     50,
+     50
+    ],
+    "HN-S": [
+     "木",
+     4,
+     4
+    ]
+   },
+   "chars": 64,
+   "note": "합의: 김만태 표 土 · 철학캠프 木 8/8 · 네임차트 木 24/25 · 이오름 木 50/50 · 철학캠프 개별조회 木 4/4 / P5(2026-10-22) 합의로 침: 실무 자료 세 곳의 부수 다수값이 모두 木이고 김만태 표만 반대(广 = 土) — 같은 글 본문의 康 서술(자원오행상 木이나 실제로는 庚처럼 金)은 글자 단위 서술이라 부수 근거로 치지 않는다. 값은 실무 자료 다수만으로 선다(계획 D2 이견 부수였음)"
+  },
+  "54": {
+   "radical": "廴",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 4,
+      "of": 4
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "KIM-EX"
+   ],
+   "decided_by": "D2",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木",
+     2,
+     4
+    ],
+    "IO": [
+     "火",
+     4,
+     4
+    ],
+    "HN-S": [
+     "木",
+     2,
+     3
+    ]
+   },
+   "chars": 4,
+   "note": "이견: 철학캠프 木 1/1 · 네임차트 木 2/4 · 이오름 火 4/4 · 철학캠프 개별조회 木 2/3 → 계획 §2-2 이견 부수 — D2 권고안 木; 글자별 갈림(다수값 비율 낮음: 네임차트 2/4) / kRSUnicode 부수로 다시 세면 규칙상 火 — 계획 승인값(木) 유지, 재검토 후보 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "55": {
+   "radical": "廾",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "IO": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 9,
+   "note": "단일 출처(자료 적음): 이오름 水 2/2 / 문헌 표에 없는 부수 — 실무 자료만으로 정함"
+  },
+  "56": {
+   "radical": "弋",
+   "element": "金",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "金",
+     1,
+     1
+    ],
+    "IO": [
+     "金",
+     2,
+     2
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 네임차트 金 1/1 · 이오름 金 2/2"
+  },
+  "57": {
+   "radical": "弓",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "NC",
+      "level": "split",
+      "n": 8,
+      "of": 15
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "P2",
+   "split": [
+    "HN",
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "木/火",
+     2,
+     4
+    ],
+    "NC": [
+     "金",
+     8,
+     15
+    ],
+    "IO": [
+     "木",
+     22,
+     22
+    ],
+    "HN-S": [
+     "火",
+     3,
+     7
+    ]
+   },
+   "chars": 28,
+   "note": "이견: 철학캠프 木/火 2/4 · 네임차트 金 8/15 · 이오름 木 22/22 · 철학캠프 개별조회 火 3/7 → 글자별 갈림(다수값 비율 낮음: 철학캠프 2/4, 네임차트 8/15) / P2(2026-10-22): 검토 권고 木 — 부수 단위 표는 이오름 규칙표의 木 하나이고, 글자 弦·弧는 실무 자료 3곳 모두 木. 그 밖의 弓 글자는 실무 자료 값이 火·金·土·水로 갈린다 — 실무 예외 7자: 弔 土(2) · 引 火(2) · 弘 火(2) · 弟 水(2) · 張 金(2) · 强 金(2) · 彎 火(2)(괄호 = 같은 값을 준 실무 자료 수). '활=나무' 재질 배속은 출처 없는 설명이라 근거로 치지 않는다. 계획 D2 권고 火는 동률 순위로 고른 값이었고 지지하는 표·문헌이 없었다 / kRSUnicode 부수로 다시 세면 규칙상 金 — 사용자 결정값(木) 유지"
+  },
+  "58": {
+   "radical": "彐",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "NC": [
+     "火",
+     6,
+     6
+    ],
+    "IO": [
+     "火",
+     6,
+     6
+    ]
+   },
+   "chars": 7,
+   "note": "합의: 철학캠프 火 1/1 · 네임차트 火 6/6 · 이오름 火 6/6"
+  },
+  "59": {
+   "radical": "彡",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "overridden": [
+    {
+     "src": "KIM",
+     "e": "木",
+     "level": "table",
+     "decision": "P5"
+    }
+   ],
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "火",
+     3,
+     3
+    ],
+    "NC": [
+     "火",
+     9,
+     9
+    ],
+    "IO": [
+     "火",
+     12,
+     12
+    ],
+    "HN-S": [
+     "火",
+     2,
+     2
+    ]
+   },
+   "chars": 13,
+   "note": "합의: 김만태 표 木 · 철학캠프 火 3/3 · 네임차트 火 9/9 · 이오름 火 12/12 · 철학캠프 개별조회 火 2/2 / P5(2026-10-22) 합의로 침: 실무 자료 세 곳의 부수 다수값이 모두 火이고 김만태 표만 반대(彡 = 木) — 계획 D2 표에서 頁과 한 줄로 묶인 부수(같은 글 안의 반례는 없다). 값은 실무 자료 다수만으로 선다(계획 D2 이견 부수였음)"
+  },
+  "60": {
+   "radical": "彳",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     5,
+     5
+    ],
+    "NC": [
+     "火",
+     20,
+     21
+    ],
+    "IO": [
+     "火",
+     39,
+     39
+    ],
+    "HN-S": [
+     "火",
+     4,
+     4
+    ]
+   },
+   "chars": 47,
+   "note": "합의: 김만태 표 火 · 철학캠프 火 5/5 · 네임차트 火 20/21 · 이오름 火 39/39 · 철학캠프 개별조회 火 4/4"
+  },
+  "61": {
+   "radical": "心",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     46,
+     46
+    ],
+    "NC": [
+     "火",
+     103,
+     103
+    ],
+    "IO": [
+     "火",
+     214,
+     214
+    ],
+    "HN-S": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 322,
+   "note": "합의: 김만태 표 火 · 철학캠프 火 46/46 · 네임차트 火 103/103 · 이오름 火 214/214 · 철학캠프 개별조회 火 1/1 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "62": {
+   "radical": "戈",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     2,
+     2
+    ],
+    "NC": [
+     "金",
+     6,
+     6
+    ],
+    "IO": [
+     "金",
+     16,
+     16
+    ],
+    "HN-S": [
+     "金",
+     1,
+     1
+    ]
+   },
+   "chars": 27,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 2/2 · 네임차트 金 6/6 · 이오름 金 16/16 · 철학캠프 개별조회 金 1/1"
+  },
+  "63": {
+   "radical": "戶",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     2,
+     2
+    ],
+    "NC": [
+     "木",
+     7,
+     7
+    ],
+    "IO": [
+     "木",
+     8,
+     8
+    ]
+   },
+   "chars": 11,
+   "note": "합의: 철학캠프 木 2/2 · 네임차트 木 7/7 · 이오름 木 8/8"
+  },
+  "64": {
+   "radical": "手",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     40,
+     40
+    ],
+    "NC": [
+     "木",
+     93,
+     93
+    ],
+    "IO": [
+     "木",
+     233,
+     233
+    ],
+    "HN-S": [
+     "木",
+     5,
+     5
+    ]
+   },
+   "chars": 343,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 40/40 · 네임차트 木 93/93 · 이오름 木 233/233 · 철학캠프 개별조회 木 5/5"
+  },
+  "65": {
+   "radical": "支",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "土"
+   ],
+   "alt_by": {
+    "土": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     },
+     {
+      "src": "NC",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     1,
+     1
+    ],
+    "NC": [
+     "土",
+     1,
+     1
+    ],
+    "IO": [
+     "木",
+     5,
+     5
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 철학캠프 土 1/1 · 네임차트 土 1/1 · 이오름 木 5/5"
+  },
+  "66": {
+   "radical": "攴",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "金",
+     8,
+     8
+    ],
+    "NC": [
+     "金",
+     22,
+     23
+    ],
+    "IO": [
+     "金",
+     35,
+     35
+    ],
+    "HN-S": [
+     "金",
+     4,
+     4
+    ]
+   },
+   "chars": 47,
+   "note": "합의: 철학캠프 金 8/8 · 네임차트 金 22/23 · 이오름 金 35/35 · 철학캠프 개별조회 金 4/4 / 문헌 예시 글자와 일치(MISO)"
+  },
+  "67": {
+   "radical": "文",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 5,
+      "of": 5
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木",
+     4,
+     4
+    ],
+    "IO": [
+     "水",
+     5,
+     5
+    ],
+    "HN-S": [
+     "木",
+     2,
+     2
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 철학캠프 木 1/1 · 네임차트 木 4/4 · 이오름 水 5/5 · 철학캠프 개별조회 木 2/2 → 계획 §2-2 이견 부수 — D2 권고안 木"
+  },
+  "68": {
+   "radical": "斗",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火",
+     3,
+     3
+    ],
+    "IO": [
+     "火",
+     4,
+     4
+    ]
+   },
+   "chars": 7,
+   "note": "합의: 네임차트 火 3/3 · 이오름 火 4/4"
+  },
+  "69": {
+   "radical": "斤",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "NC": [
+     "金",
+     5,
+     5
+    ],
+    "IO": [
+     "金",
+     7,
+     7
+    ],
+    "HN-S": [
+     "金",
+     1,
+     1
+    ]
+   },
+   "chars": 12,
+   "note": "합의: 김만태 표 金 · 네임차트 金 5/5 · 이오름 金 7/7 · 철학캠프 개별조회 金 1/1 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "70": {
+   "radical": "方",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     1,
+     1
+    ],
+    "NC": [
+     "土",
+     4,
+     6
+    ],
+    "IO": [
+     "土",
+     13,
+     13
+    ],
+    "HN-S": [
+     "土",
+     5,
+     5
+    ]
+   },
+   "chars": 16,
+   "note": "합의: 김만태 표 土 · 철학캠프 土 1/1 · 네임차트 土 4/6 · 이오름 土 13/13 · 철학캠프 개별조회 土 5/5"
+  },
+  "71": {
+   "radical": "无",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "NC",
+      "level": "few",
+      "n": 2,
+      "of": 2
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "水",
+     2,
+     2
+    ],
+    "IO": [
+     "火",
+     2,
+     2
+    ]
+   },
+   "chars": 2,
+   "note": "이견: 네임차트 水 2/2 · 이오름 火 2/2"
+  },
+  "72": {
+   "radical": "日",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     32,
+     32
+    ],
+    "NC": [
+     "火",
+     88,
+     89
+    ],
+    "IO": [
+     "火",
+     147,
+     147
+    ],
+    "HN-S": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 183,
+   "note": "합의: 김만태 표 火 · 철학캠프 火 32/32 · 네임차트 火 88/89 · 이오름 火 147/147 · 철학캠프 개별조회 火 1/1 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "73": {
+   "radical": "曰",
+   "element": "火",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "NC": [
+     "火",
+     3,
+     7
+    ],
+    "IO": [
+     "火",
+     9,
+     9
+    ],
+    "HN-S": [
+     "火",
+     6,
+     6
+    ]
+   },
+   "chars": 16,
+   "note": "이견: 김만태 표 火 · 철학캠프 火 1/1 · 네임차트 火 3/7 · 이오름 火 9/9 · 철학캠프 개별조회 火 6/6 → 계획 §2-2 이견 부수 — D2 권고안 火; 글자별 갈림(다수값 비율 낮음: 네임차트 3/7)"
+  },
+  "74": {
+   "radical": "月",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     2,
+     2
+    ],
+    "NC": [
+     "水",
+     5,
+     6
+    ],
+    "IO": [
+     "水",
+     13,
+     13
+    ],
+    "HN-S": [
+     "水",
+     5,
+     5
+    ]
+   },
+   "chars": 21,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 2/2 · 네임차트 水 5/6 · 이오름 水 13/13 · 철학캠프 개별조회 水 5/5 / 문헌 예시 글자와 일치(MISO)"
+  },
+  "75": {
+   "radical": "木",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     46,
+     46
+    ],
+    "NC": [
+     "木",
+     176,
+     176
+    ],
+    "IO": [
+     "木",
+     342,
+     342
+    ]
+   },
+   "chars": 466,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 46/46 · 네임차트 木 176/176 · 이오름 木 342/342 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "76": {
+   "radical": "欠",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 29,
+      "of": 29
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "火",
+     2,
+     2
+    ],
+    "NC": [
+     "火",
+     5,
+     9
+    ],
+    "IO": [
+     "金",
+     29,
+     29
+    ],
+    "HN-S": [
+     "火",
+     5,
+     5
+    ]
+   },
+   "chars": 41,
+   "note": "이견: 철학캠프 火 2/2 · 네임차트 火 5/9 · 이오름 金 29/29 · 철학캠프 개별조회 火 5/5 → 계획 §2-2 이견 부수 — D2 권고안 火; 글자별 갈림(다수값 비율 낮음: 네임차트 5/9)"
+  },
+  "77": {
+   "radical": "止",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     1,
+     1
+    ],
+    "NC": [
+     "土",
+     7,
+     7
+    ],
+    "IO": [
+     "土",
+     9,
+     9
+    ],
+    "HN-S": [
+     "土",
+     3,
+     3
+    ]
+   },
+   "chars": 13,
+   "note": "합의: 철학캠프 土 1/1 · 네임차트 土 7/7 · 이오름 土 9/9 · 철학캠프 개별조회 土 3/3 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "78": {
+   "radical": "歹",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     4,
+     4
+    ],
+    "NC": [
+     "水",
+     8,
+     8
+    ],
+    "IO": [
+     "水",
+     13,
+     13
+    ]
+   },
+   "chars": 21,
+   "note": "합의: 철학캠프 水 4/4 · 네임차트 水 8/8 · 이오름 水 13/13"
+  },
+  "79": {
+   "radical": "殳",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "金",
+     2,
+     2
+    ],
+    "NC": [
+     "金",
+     5,
+     5
+    ],
+    "IO": [
+     "金",
+     9,
+     9
+    ]
+   },
+   "chars": 14,
+   "note": "합의: 철학캠프 金 2/2 · 네임차트 金 5/5 · 이오름 金 9/9"
+  },
+  "80": {
+   "radical": "毋",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 3,
+      "of": 3
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "土",
+     3,
+     3
+    ],
+    "IO": [
+     "水",
+     3,
+     3
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 네임차트 土 3/3 · 이오름 水 3/3 · 철학캠프 개별조회 土 1/1"
+  },
+  "81": {
+   "radical": "比",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 3,
+      "of": 4
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火",
+     3,
+     3
+    ],
+    "IO": [
+     "水",
+     3,
+     4
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 네임차트 火 3/3 · 이오름 水 3/4"
+  },
+  "82": {
+   "radical": "毛",
+   "element": "火",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "NC": [
+     "木/火",
+     2,
+     4
+    ],
+    "IO": [
+     "火",
+     7,
+     7
+    ],
+    "HN-S": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 8,
+   "note": "이견: 철학캠프 火 1/1 · 네임차트 木/火 2/4 · 이오름 火 7/7 · 철학캠프 개별조회 火 1/1 → 글자별 갈림(다수값 비율 낮음: 네임차트 2/4)"
+  },
+  "83": {
+   "radical": "氏",
+   "element": "火",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "NC": [
+     "火",
+     1,
+     1
+    ],
+    "IO": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 4,
+   "note": "단일 출처(자료 적음): 철학캠프 火 1/1 · 네임차트 火 1/1 · 이오름 火 1/1"
+  },
+  "84": {
+   "radical": "气",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "NC": [
+     "水",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     3,
+     3
+    ]
+   },
+   "chars": 5,
+   "note": "합의: 김만태 표 水 · 네임차트 水 1/1 · 이오름 水 3/3 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "85": {
+   "radical": "水",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     94,
+     94
+    ],
+    "NC": [
+     "水",
+     229,
+     230
+    ],
+    "IO": [
+     "水",
+     469,
+     469
+    ],
+    "HN-S": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 616,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 94/94 · 네임차트 水 229/230 · 이오름 水 469/469 · 철학캠프 개별조회 水 2/2 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "86": {
+   "radical": "火",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     19,
+     19
+    ],
+    "NC": [
+     "火",
+     75,
+     75
+    ],
+    "IO": [
+     "火",
+     156,
+     156
+    ]
+   },
+   "chars": 203,
+   "note": "합의: 김만태 표 火 · 철학캠프 火 19/19 · 네임차트 火 75/75 · 이오름 火 156/156 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "87": {
+   "radical": "爪",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 3,
+      "of": 3
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木",
+     2,
+     3
+    ],
+    "IO": [
+     "金",
+     3,
+     3
+    ]
+   },
+   "chars": 6,
+   "note": "이견: 네임차트 木 2/3 · 이오름 金 3/3"
+  },
+  "88": {
+   "radical": "父",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木",
+     1,
+     1
+    ],
+    "IO": [
+     "木",
+     2,
+     2
+    ]
+   },
+   "chars": 4,
+   "note": "단일 출처(자료 적음): 네임차트 木 1/1 · 이오름 木 2/2"
+  },
+  "89": {
+   "radical": "爻",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火",
+     3,
+     3
+    ],
+    "IO": [
+     "火",
+     3,
+     3
+    ],
+    "HN-S": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 3,
+   "note": "합의: 네임차트 火 3/3 · 이오름 火 3/3 · 철학캠프 개별조회 火 1/1"
+  },
+  "90": {
+   "radical": "爿",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木/土",
+     1,
+     2
+    ],
+    "IO": [
+     "木",
+     4,
+     4
+    ]
+   },
+   "chars": 4,
+   "note": "단일 출처(자료 적음): 네임차트 木/土 1/2 · 이오름 木 4/4"
+  },
+  "91": {
+   "radical": "片",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木",
+     1,
+     1
+    ],
+    "IO": [
+     "木",
+     5,
+     5
+    ]
+   },
+   "chars": 9,
+   "note": "단일 출처(자료 적음): 철학캠프 木 1/1 · 네임차트 木 1/1 · 이오름 木 5/5"
+  },
+  "92": {
+   "radical": "牙",
+   "element": "金",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "金",
+     1,
+     1
+    ],
+    "IO": [
+     "金",
+     1,
+     1
+    ]
+   },
+   "chars": 2,
+   "note": "단일 출처(자료 적음): 네임차트 金 1/1 · 이오름 金 1/1"
+  },
+  "93": {
+   "radical": "牛",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     4,
+     4
+    ],
+    "NC": [
+     "土",
+     8,
+     8
+    ],
+    "IO": [
+     "土",
+     16,
+     16
+    ],
+    "HN-S": [
+     "土",
+     2,
+     2
+    ]
+   },
+   "chars": 25,
+   "note": "합의: 김만태 표 土 · 철학캠프 土 4/4 · 네임차트 土 8/8 · 이오름 土 16/16 · 철학캠프 개별조회 土 2/2 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "94": {
+   "radical": "犬",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "HN",
+      "level": "majority",
+      "n": 6,
+      "of": 8
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     6,
+     8
+    ],
+    "NC": [
+     "土",
+     24,
+     25
+    ],
+    "IO": [
+     "土",
+     46,
+     46
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 75,
+   "note": "이견: 철학캠프 水 6/8 · 네임차트 土 24/25 · 이오름 土 46/46 · 철학캠프 개별조회 土 1/1 → 계획 §2-2 이견 부수 — D2 권고안 土 / 철학캠프는 변형 犭 글자를 水, 원형 犬 글자를 土로 갈라 적는다. 계획 §2-1대로 변형을 따로 다루지 않고 土 하나"
+  },
+  "95": {
+   "radical": "玄",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     },
+     {
+      "src": "NC",
+      "level": "majority",
+      "n": 3,
+      "of": 3
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "IO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "NC": [
+     "火",
+     3,
+     3
+    ],
+    "IO": [
+     "水",
+     4,
+     4
+    ],
+    "HN-S": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 4,
+   "note": "이견: 김만태 표 水 · 철학캠프 火 1/1 · 네임차트 火 3/3 · 이오름 水 4/4 · 철학캠프 개별조회 火 1/1 → 계획 §2-2 이견 부수 — D2 권고안 水 / 실무 예외 2자: 玄 火(2) · 率 火(2)(괄호 = 같은 값을 준 실무 자료 수) — 글자값은 예외표(resource_element_exceptions.json)에서 정한다"
+  },
+  "96": {
+   "radical": "玉",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     41,
+     41
+    ],
+    "NC": [
+     "金",
+     106,
+     107
+    ],
+    "IO": [
+     "金",
+     185,
+     185
+    ],
+    "HN-S": [
+     "金",
+     2,
+     2
+    ]
+   },
+   "chars": 222,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 41/41 · 네임차트 金 106/107 · 이오름 金 185/185 · 철학캠프 개별조회 金 2/2 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "97": {
+   "radical": "瓜",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     2,
+     2
+    ],
+    "NC": [
+     "木",
+     3,
+     3
+    ],
+    "IO": [
+     "木",
+     3,
+     3
+    ]
+   },
+   "chars": 4,
+   "note": "합의: 철학캠프 木 2/2 · 네임차트 木 3/3 · 이오름 木 3/3"
+  },
+  "98": {
+   "radical": "瓦",
+   "element": "土",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     1,
+     1
+    ],
+    "NC": [
+     "土",
+     2,
+     2
+    ],
+    "IO": [
+     "土",
+     7,
+     7
+    ]
+   },
+   "chars": 13,
+   "note": "단일 출처(자료 적음): 철학캠프 土 1/1 · 네임차트 土 2/2 · 이오름 土 7/7"
+  },
+  "99": {
+   "radical": "甘",
+   "element": "土",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "土",
+     1,
+     1
+    ],
+    "IO": [
+     "土",
+     2,
+     2
+    ]
+   },
+   "chars": 5,
+   "note": "단일 출처(자료 적음): 네임차트 土 1/1 · 이오름 土 2/2"
+  },
+  "100": {
+   "radical": "生",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木/水",
+     1,
+     2
+    ],
+    "IO": [
+     "木",
+     5,
+     5
+    ]
+   },
+   "chars": 7,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 1/1 · 네임차트 木/水 1/2 · 이오름 木 5/5 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "101": {
+   "radical": "用",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "NC": [
+     "水",
+     3,
+     3
+    ],
+    "IO": [
+     "水",
+     5,
+     5
+    ],
+    "HN-S": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 5,
+   "note": "합의: 김만태 표 水 · 네임차트 水 3/3 · 이오름 水 5/5 · 철학캠프 개별조회 水 2/2 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "102": {
+   "radical": "田",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     5,
+     5
+    ],
+    "NC": [
+     "土",
+     20,
+     23
+    ],
+    "IO": [
+     "土",
+     31,
+     32
+    ],
+    "HN-S": [
+     "土",
+     5,
+     5
+    ]
+   },
+   "chars": 46,
+   "note": "합의: 김만태 표 土 · 철학캠프 土 5/5 · 네임차트 土 20/23 · 이오름 土 31/32 · 철학캠프 개별조회 土 5/5 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "103": {
+   "radical": "疋",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 4,
+      "of": 4
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "土",
+     3,
+     4
+    ],
+    "IO": [
+     "金",
+     4,
+     4
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 4,
+   "note": "이견: 네임차트 土 3/4 · 이오름 金 4/4 · 철학캠프 개별조회 土 1/1"
+  },
+  "104": {
+   "radical": "疒",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     12,
+     12
+    ],
+    "NC": [
+     "水",
+     27,
+     27
+    ],
+    "IO": [
+     "水",
+     67,
+     67
+    ]
+   },
+   "chars": 95,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 12/12 · 네임차트 水 27/27 · 이오름 水 67/67"
+  },
+  "105": {
+   "radical": "癶",
+   "element": "火",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN-S"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "HN-S": [
+     "火",
+     2,
+     2
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 철학캠프 개별조회 火 2/2 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2) / 문헌 표에 없는 부수 — 실무 자료만으로 정함"
+  },
+  "106": {
+   "radical": "白",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     4,
+     4
+    ],
+    "NC": [
+     "金",
+     4,
+     6
+    ],
+    "IO": [
+     "金",
+     21,
+     21
+    ],
+    "HN-S": [
+     "金",
+     4,
+     4
+    ]
+   },
+   "chars": 27,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 4/4 · 네임차트 金 4/6 · 이오름 金 21/21 · 철학캠프 개별조회 金 4/4 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "107": {
+   "radical": "皮",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     1,
+     1
+    ],
+    "NC": [
+     "金",
+     1,
+     1
+    ],
+    "IO": [
+     "金",
+     4,
+     4
+    ]
+   },
+   "chars": 5,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 1/1 · 네임차트 金 1/1 · 이오름 金 4/4"
+  },
+  "108": {
+   "radical": "皿",
+   "element": "金",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "金",
+     4,
+     5
+    ],
+    "NC": [
+     "金",
+     5,
+     10
+    ],
+    "IO": [
+     "金",
+     15,
+     15
+    ],
+    "HN-S": [
+     "金",
+     2,
+     4
+    ]
+   },
+   "chars": 26,
+   "note": "이견: 철학캠프 金 4/5 · 네임차트 金 5/10 · 이오름 金 15/15 · 철학캠프 개별조회 金 2/4 → 글자별 갈림(다수값 비율 낮음: 네임차트 5/10)"
+  },
+  "109": {
+   "radical": "目",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     19,
+     19
+    ],
+    "NC": [
+     "木",
+     26,
+     27
+    ],
+    "IO": [
+     "木",
+     83,
+     83
+    ],
+    "HN-S": [
+     "木",
+     2,
+     2
+    ]
+   },
+   "chars": 110,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 19/19 · 네임차트 木 26/27 · 이오름 木 83/83 · 철학캠프 개별조회 木 2/2 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "110": {
+   "radical": "矛",
+   "element": "金",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "NC": [
+     "金",
+     1,
+     1
+    ],
+    "IO": [
+     "金",
+     2,
+     2
+    ]
+   },
+   "chars": 4,
+   "note": "단일 출처(자료 적음): 김만태 표 金 · 네임차트 金 1/1 · 이오름 金 2/2"
+  },
+  "111": {
+   "radical": "矢",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     1,
+     1
+    ],
+    "NC": [
+     "金",
+     6,
+     6
+    ],
+    "IO": [
+     "金",
+     10,
+     10
+    ]
+   },
+   "chars": 12,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 1/1 · 네임차트 金 6/6 · 이오름 金 10/10"
+  },
+  "112": {
+   "radical": "石",
+   "element": "金",
+   "status": "disputed",
+   "alt": [
+    "土"
+   ],
+   "alt_by": {
+    "土": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 78,
+      "of": 78
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "KIM-EX"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     14,
+     14
+    ],
+    "NC": [
+     "金",
+     32,
+     32
+    ],
+    "IO": [
+     "土",
+     78,
+     78
+    ]
+   },
+   "chars": 115,
+   "note": "이견: 김만태 표 金 · 철학캠프 金 14/14 · 네임차트 金 32/32 · 이오름 土 78/78 → 계획 §2-2 이견 부수 — D2 권고안 金 / 문헌 예시 글자와 일치(KIM-EX) / 이오름 룰셋과 브런치 표(판정 제외)는 土"
+  },
+  "113": {
+   "radical": "示",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "火",
+    "金"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "KIM",
+      "level": "table"
+     }
+    ],
+    "金": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 60,
+      "of": 60
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "木",
+     11,
+     11
+    ],
+    "NC": [
+     "木",
+     23,
+     32
+    ],
+    "IO": [
+     "金",
+     60,
+     60
+    ],
+    "HN-S": [
+     "木",
+     5,
+     5
+    ]
+   },
+   "chars": 66,
+   "note": "이견: 김만태 표 火 · 철학캠프 木 11/11 · 네임차트 木 23/32 · 이오름 金 60/60 · 철학캠프 개별조회 木 5/5 → 계획 §2-2 이견 부수 — D2 권고안 木 / 祐 한 글자도 실무 자료마다 木·火·金으로 갈린다(김만태 표의 示 는 火)"
+  },
+  "114": {
+   "radical": "禸",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "土",
+    "水"
+   ],
+   "alt_by": {
+    "土": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ],
+    "水": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 4,
+      "of": 4
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     1,
+     1
+    ],
+    "NC": [
+     "火",
+     2,
+     3
+    ],
+    "IO": [
+     "水",
+     4,
+     4
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 철학캠프 土 1/1 · 네임차트 火 2/3 · 이오름 水 4/4"
+  },
+  "115": {
+   "radical": "禾",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     15,
+     15
+    ],
+    "NC": [
+     "木",
+     34,
+     34
+    ],
+    "IO": [
+     "木",
+     62,
+     62
+    ],
+    "HN-S": [
+     "木",
+     4,
+     4
+    ]
+   },
+   "chars": 88,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 15/15 · 네임차트 木 34/34 · 이오름 木 62/62 · 철학캠프 개별조회 木 4/4 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "116": {
+   "radical": "穴",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "土"
+   ],
+   "alt_by": {
+    "土": [
+     {
+      "src": "KIM",
+      "level": "table"
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "水",
+     2,
+     2
+    ],
+    "NC": [
+     "水",
+     12,
+     12
+    ],
+    "IO": [
+     "水",
+     31,
+     31
+    ],
+    "HN-S": [
+     "水",
+     1,
+     1
+    ]
+   },
+   "chars": 49,
+   "note": "이견: 김만태 표 土 · 철학캠프 水 2/2 · 네임차트 水 12/12 · 이오름 水 31/31 · 철학캠프 개별조회 水 1/1 → 계획 §2-2 이견 부수 — D2 권고안 水"
+  },
+  "117": {
+   "radical": "立",
+   "element": "金",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 17,
+      "of": 17
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     3,
+     3
+    ],
+    "NC": [
+     "金",
+     8,
+     9
+    ],
+    "IO": [
+     "火",
+     17,
+     17
+    ],
+    "HN-S": [
+     "金",
+     5,
+     5
+    ]
+   },
+   "chars": 22,
+   "note": "이견: 김만태 표 金 · 철학캠프 金 3/3 · 네임차트 金 8/9 · 이오름 火 17/17 · 철학캠프 개별조회 金 5/5 → 계획 §2-2 이견 부수 — D2 권고안 金 / 김만태 본문: 立은 자원(사람이 서 있는 모양)상 木이어야 하나 실제로는 金에 배속된다"
+  },
+  "118": {
+   "radical": "竹",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     9,
+     9
+    ],
+    "NC": [
+     "木",
+     36,
+     36
+    ],
+    "IO": [
+     "木",
+     84,
+     84
+    ]
+   },
+   "chars": 133,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 9/9 · 네임차트 木 36/36 · 이오름 木 84/84 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "119": {
+   "radical": "米",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     3,
+     3
+    ],
+    "NC": [
+     "木",
+     15,
+     15
+    ],
+    "IO": [
+     "木",
+     33,
+     33
+    ]
+   },
+   "chars": 44,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 3/3 · 네임차트 木 15/15 · 이오름 木 33/33"
+  },
+  "120": {
+   "radical": "糸",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     40,
+     40
+    ],
+    "NC": [
+     "木",
+     82,
+     82
+    ],
+    "IO": [
+     "木",
+     162,
+     162
+    ],
+    "HN-S": [
+     "木",
+     1,
+     1
+    ]
+   },
+   "chars": 221,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 40/40 · 네임차트 木 82/82 · 이오름 木 162/162 · 철학캠프 개별조회 木 1/1 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "121": {
+   "radical": "缶",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     2,
+     2
+    ],
+    "NC": [
+     "土",
+     3,
+     3
+    ],
+    "IO": [
+     "土",
+     9,
+     9
+    ]
+   },
+   "chars": 14,
+   "note": "합의: 철학캠프 土 2/2 · 네임차트 土 3/3 · 이오름 土 9/9"
+  },
+  "122": {
+   "radical": "网",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     2,
+     2
+    ],
+    "NC": [
+     "木",
+     5,
+     6
+    ],
+    "IO": [
+     "木",
+     16,
+     16
+    ]
+   },
+   "chars": 28,
+   "note": "합의: 철학캠프 木 2/2 · 네임차트 木 5/6 · 이오름 木 16/16"
+  },
+  "123": {
+   "radical": "羊",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     2,
+     2
+    ],
+    "NC": [
+     "土",
+     10,
+     10
+    ],
+    "IO": [
+     "土",
+     19,
+     19
+    ],
+    "HN-S": [
+     "土",
+     4,
+     4
+    ]
+   },
+   "chars": 23,
+   "note": "합의: 김만태 표 土 · 철학캠프 土 2/2 · 네임차트 土 10/10 · 이오름 土 19/19 · 철학캠프 개별조회 土 4/4 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "124": {
+   "radical": "羽",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     3,
+     3
+    ],
+    "NC": [
+     "火",
+     10,
+     11
+    ],
+    "IO": [
+     "火",
+     23,
+     23
+    ],
+    "HN-S": [
+     "火",
+     4,
+     4
+    ]
+   },
+   "chars": 35,
+   "note": "합의: 철학캠프 火 3/3 · 네임차트 火 10/11 · 이오름 火 23/23 · 철학캠프 개별조회 火 4/4 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "125": {
+   "radical": "老",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "土",
+     5,
+     5
+    ],
+    "IO": [
+     "土",
+     8,
+     8
+    ],
+    "HN-S": [
+     "水",
+     1,
+     1
+    ]
+   },
+   "chars": 8,
+   "note": "합의: 네임차트 土 5/5 · 이오름 土 8/8 · 철학캠프 개별조회 水 1/1"
+  },
+  "126": {
+   "radical": "而",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "水",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     3,
+     3
+    ]
+   },
+   "chars": 4,
+   "note": "단일 출처(자료 적음): 네임차트 水 1/1 · 이오름 水 3/3"
+  },
+  "127": {
+   "radical": "耒",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     3,
+     3
+    ],
+    "NC": [
+     "木",
+     3,
+     4
+    ],
+    "IO": [
+     "木",
+     10,
+     10
+    ]
+   },
+   "chars": 14,
+   "note": "합의: 철학캠프 木 3/3 · 네임차트 木 3/4 · 이오름 木 10/10"
+  },
+  "128": {
+   "radical": "耳",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 23,
+      "of": 23
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     6,
+     6
+    ],
+    "NC": [
+     "火",
+     10,
+     10
+    ],
+    "IO": [
+     "水",
+     23,
+     23
+    ],
+    "HN-S": [
+     "火",
+     2,
+     2
+    ]
+   },
+   "chars": 33,
+   "note": "이견: 철학캠프 火 6/6 · 네임차트 火 10/10 · 이오름 水 23/23 · 철학캠프 개별조회 火 2/2 → 계획 §2-2 이견 부수 — D2 권고안 火"
+  },
+  "129": {
+   "radical": "聿",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 5,
+      "of": 5
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火",
+     5,
+     5
+    ],
+    "IO": [
+     "木",
+     5,
+     5
+    ],
+    "HN-S": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 네임차트 火 5/5 · 이오름 木 5/5 · 철학캠프 개별조회 火 1/1 → 계획 §2-2 이견 부수 — D2 권고안 火"
+  },
+  "130": {
+   "radical": "肉",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     16,
+     17
+    ],
+    "NC": [
+     "水",
+     52,
+     54
+    ],
+    "IO": [
+     "水",
+     105,
+     105
+    ],
+    "HN-S": [
+     "水",
+     3,
+     3
+    ]
+   },
+   "chars": 147,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 16/17 · 네임차트 水 52/54 · 이오름 水 105/105 · 철학캠프 개별조회 水 3/3"
+  },
+  "131": {
+   "radical": "臣",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 4,
+      "of": 4
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "NC": [
+     "火",
+     3,
+     3
+    ],
+    "IO": [
+     "金",
+     4,
+     4
+    ],
+    "HN-S": [
+     "火",
+     2,
+     2
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 철학캠프 火 1/1 · 네임차트 火 3/3 · 이오름 金 4/4 · 철학캠프 개별조회 火 2/2 → 계획 §2-2 이견 부수 — D2 권고안 火"
+  },
+  "132": {
+   "radical": "自",
+   "element": "金",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "NC",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木",
+     1,
+     1
+    ],
+    "IO": [
+     "金",
+     1,
+     1
+    ]
+   },
+   "chars": 3,
+   "note": "이견: 네임차트 木 1/1 · 이오름 金 1/1"
+  },
+  "133": {
+   "radical": "至",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     2,
+     2
+    ],
+    "NC": [
+     "土",
+     4,
+     4
+    ],
+    "IO": [
+     "土",
+     7,
+     7
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 7,
+   "note": "합의: 철학캠프 土 2/2 · 네임차트 土 4/4 · 이오름 土 7/7 · 철학캠프 개별조회 土 1/1"
+  },
+  "134": {
+   "radical": "臼",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     2,
+     2
+    ],
+    "NC": [
+     "土",
+     6,
+     6
+    ],
+    "IO": [
+     "土",
+     9,
+     9
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 9,
+   "note": "합의: 철학캠프 土 2/2 · 네임차트 土 6/6 · 이오름 土 9/9 · 철학캠프 개별조회 土 1/1"
+  },
+  "135": {
+   "radical": "舌",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     2,
+     2
+    ],
+    "NC": [
+     "火",
+     3,
+     3
+    ],
+    "IO": [
+     "火",
+     4,
+     4
+    ]
+   },
+   "chars": 5,
+   "note": "합의: 철학캠프 火 2/2 · 네임차트 火 3/3 · 이오름 火 4/4"
+  },
+  "136": {
+   "radical": "舛",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 3,
+      "of": 3
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木",
+     3,
+     3
+    ],
+    "IO": [
+     "火",
+     3,
+     3
+    ],
+    "HN-S": [
+     "木",
+     1,
+     1
+    ]
+   },
+   "chars": 3,
+   "note": "이견: 네임차트 木 3/3 · 이오름 火 3/3 · 철학캠프 개별조회 木 1/1 → 계획 §2-2 이견 부수 — D2 권고안 木"
+  },
+  "137": {
+   "radical": "舟",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     2,
+     2
+    ],
+    "NC": [
+     "木",
+     14,
+     14
+    ],
+    "IO": [
+     "木",
+     22,
+     22
+    ]
+   },
+   "chars": 25,
+   "note": "합의: 철학캠프 木 2/2 · 네임차트 木 14/14 · 이오름 木 22/22"
+  },
+  "138": {
+   "radical": "艮",
+   "element": "土",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "NC": [
+     "土",
+     1,
+     1
+    ],
+    "IO": [
+     "土",
+     1,
+     1
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 김만태 표 土 · 네임차트 土 1/1 · 이오름 土 1/1 · 철학캠프 개별조회 土 1/1 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2) / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "139": {
+   "radical": "色",
+   "element": "火",
+   "status": "unknown",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "JAUI"
+   ],
+   "decided_by": "JAUI",
+   "split": [],
+   "votes": {},
+   "chars": 4,
+   "note": "출처 없음: 色(빛 색)은 낯빛·빛깔 — 빛을 火로 보는 관행에 따라 추정 — 사람 검수 필요"
+  },
+  "140": {
+   "radical": "艸",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     41,
+     41
+    ],
+    "NC": [
+     "木",
+     143,
+     143
+    ],
+    "IO": [
+     "木",
+     289,
+     289
+    ],
+    "HN-S": [
+     "木",
+     3,
+     3
+    ]
+   },
+   "chars": 388,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 41/41 · 네임차트 木 143/143 · 이오름 木 289/289 · 철학캠프 개별조회 木 3/3 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "141": {
+   "radical": "虍",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "木",
+     3,
+     3
+    ],
+    "NC": [
+     "木",
+     8,
+     8
+    ],
+    "IO": [
+     "木",
+     11,
+     11
+    ],
+    "HN-S": [
+     "木",
+     1,
+     1
+    ]
+   },
+   "chars": 12,
+   "note": "합의: 철학캠프 木 3/3 · 네임차트 木 8/8 · 이오름 木 11/11 · 철학캠프 개별조회 木 1/1"
+  },
+  "142": {
+   "radical": "虫",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     17,
+     17
+    ],
+    "NC": [
+     "水",
+     34,
+     35
+    ],
+    "IO": [
+     "水",
+     89,
+     89
+    ],
+    "HN-S": [
+     "水",
+     1,
+     1
+    ]
+   },
+   "chars": 128,
+   "note": "합의: 철학캠프 水 17/17 · 네임차트 水 34/35 · 이오름 水 89/89 · 철학캠프 개별조회 水 1/1"
+  },
+  "143": {
+   "radical": "血",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "NC": [
+     "水",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 4,
+   "note": "단일 출처(자료 적음): 김만태 표 水 · 네임차트 水 1/1 · 이오름 水 2/2 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "144": {
+   "radical": "行",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     2,
+     2
+    ],
+    "NC": [
+     "火",
+     11,
+     11
+    ],
+    "IO": [
+     "火",
+     14,
+     14
+    ],
+    "HN-S": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 15,
+   "note": "합의: 김만태 표 火 · 철학캠프 火 2/2 · 네임차트 火 11/11 · 이오름 火 14/14 · 철학캠프 개별조회 火 1/1"
+  },
+  "145": {
+   "radical": "衣",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     8,
+     8
+    ],
+    "NC": [
+     "木",
+     37,
+     37
+    ],
+    "IO": [
+     "木",
+     71,
+     71
+    ]
+   },
+   "chars": 97,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 8/8 · 네임차트 木 37/37 · 이오름 木 71/71 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "146": {
+   "radical": "襾",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "金",
+     1,
+     1
+    ],
+    "NC": [
+     "金",
+     4,
+     4
+    ],
+    "IO": [
+     "金",
+     5,
+     5
+    ],
+    "HN-S": [
+     "金",
+     1,
+     1
+    ]
+   },
+   "chars": 7,
+   "note": "합의: 철학캠프 金 1/1 · 네임차트 金 4/4 · 이오름 金 5/5 · 철학캠프 개별조회 金 1/1"
+  },
+  "147": {
+   "radical": "見",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 14,
+      "of": 14
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "MISO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     2,
+     2
+    ],
+    "NC": [
+     "火",
+     5,
+     5
+    ],
+    "IO": [
+     "木",
+     14,
+     14
+    ]
+   },
+   "chars": 25,
+   "note": "이견: 김만태 표 火 · 철학캠프 火 2/2 · 네임차트 火 5/5 · 이오름 木 14/14 → 계획 §2-2 이견 부수 — D2 권고안 火 / 문헌 예시 글자와 일치(MISO)"
+  },
+  "148": {
+   "radical": "角",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木",
+     2,
+     2
+    ],
+    "IO": [
+     "木",
+     10,
+     10
+    ]
+   },
+   "chars": 15,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 1/1 · 네임차트 木 2/2 · 이오름 木 10/10"
+  },
+  "149": {
+   "radical": "言",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     30,
+     30
+    ],
+    "NC": [
+     "金",
+     94,
+     94
+    ],
+    "IO": [
+     "金",
+     191,
+     191
+    ]
+   },
+   "chars": 247,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 30/30 · 네임차트 金 94/94 · 이오름 金 191/191 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "150": {
+   "radical": "谷",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "土"
+   ],
+   "alt_by": {
+    "土": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     },
+     {
+      "src": "KIM-TXT",
+      "level": "text"
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "土",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     4,
+     4
+    ]
+   },
+   "chars": 6,
+   "note": "이견: 김만태 표 水 · 철학캠프 土 1/1 · 네임차트 水 1/1 · 이오름 水 4/4 → 김만태 본문: 谷은 한편 土, 한편 水에 배속한다 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "151": {
+   "radical": "豆",
+   "element": "木",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木",
+     3,
+     5
+    ],
+    "IO": [
+     "木",
+     8,
+     8
+    ],
+    "HN-S": [
+     "木",
+     2,
+     2
+    ]
+   },
+   "chars": 8,
+   "note": "이견: 철학캠프 木 1/1 · 네임차트 木 3/5 · 이오름 木 8/8 · 철학캠프 개별조회 木 2/2 → 글자별 갈림(다수값 비율 낮음: 네임차트 3/5)"
+  },
+  "152": {
+   "radical": "豕",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     2,
+     2
+    ],
+    "NC": [
+     "水",
+     4,
+     4
+    ],
+    "IO": [
+     "水",
+     8,
+     8
+    ],
+    "HN-S": [
+     "水",
+     1,
+     1
+    ]
+   },
+   "chars": 9,
+   "note": "합의: 철학캠프 水 2/2 · 네임차트 水 4/4 · 이오름 水 8/8 · 철학캠프 개별조회 水 1/1"
+  },
+  "153": {
+   "radical": "豸",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     4,
+     4
+    ],
+    "IO": [
+     "水",
+     8,
+     8
+    ]
+   },
+   "chars": 11,
+   "note": "합의: 철학캠프 水 1/1 · 네임차트 水 4/4 · 이오름 水 8/8"
+  },
+  "154": {
+   "radical": "貝",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     12,
+     12
+    ],
+    "NC": [
+     "金",
+     36,
+     36
+    ],
+    "IO": [
+     "金",
+     59,
+     59
+    ]
+   },
+   "chars": 81,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 12/12 · 네임차트 金 36/36 · 이오름 金 59/59 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "155": {
+   "radical": "赤",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "NC": [
+     "火",
+     2,
+     2
+    ],
+    "IO": [
+     "火",
+     9,
+     9
+    ]
+   },
+   "chars": 11,
+   "note": "합의: 김만태 표 火 · 철학캠프 火 1/1 · 네임차트 火 2/2 · 이오름 火 9/9"
+  },
+  "156": {
+   "radical": "走",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     3,
+     3
+    ],
+    "NC": [
+     "火",
+     6,
+     8
+    ],
+    "IO": [
+     "火",
+     20,
+     20
+    ],
+    "HN-S": [
+     "火",
+     4,
+     4
+    ]
+   },
+   "chars": 23,
+   "note": "합의: 철학캠프 火 3/3 · 네임차트 火 6/8 · 이오름 火 20/20 · 철학캠프 개별조회 火 4/4"
+  },
+  "157": {
+   "radical": "足",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 54,
+      "of": 54
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     12,
+     12
+    ],
+    "NC": [
+     "土",
+     21,
+     21
+    ],
+    "IO": [
+     "水",
+     54,
+     54
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 81,
+   "note": "이견: 철학캠프 土 12/12 · 네임차트 土 21/21 · 이오름 水 54/54 · 철학캠프 개별조회 土 1/1 → 계획 §2-2 이견 부수 — D2 권고안 土"
+  },
+  "158": {
+   "radical": "身",
+   "element": "火",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火/水",
+     1,
+     2
+    ],
+    "IO": [
+     "火",
+     3,
+     3
+    ]
+   },
+   "chars": 6,
+   "note": "단일 출처(자료 적음): 네임차트 火/水 1/2 · 이오름 火 3/3"
+  },
+  "159": {
+   "radical": "車",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 52,
+      "of": 52
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     12,
+     12
+    ],
+    "NC": [
+     "火",
+     27,
+     29
+    ],
+    "IO": [
+     "金",
+     52,
+     52
+    ],
+    "HN-S": [
+     "火",
+     2,
+     2
+    ]
+   },
+   "chars": 68,
+   "note": "이견: 김만태 표 火 · 철학캠프 火 12/12 · 네임차트 火 27/29 · 이오름 金 52/52 · 철학캠프 개별조회 火 2/2 → 계획 §2-2 이견 부수 — D2 권고안 火 / 문헌 예시 글자와 일치(KIM-EX·MISO) / 김만태 본문: 載는 자원상 金이어야 하나 실제로는 火에 배속된다"
+  },
+  "160": {
+   "radical": "辛",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "NC": [
+     "金",
+     3,
+     3
+    ],
+    "IO": [
+     "金",
+     5,
+     5
+    ]
+   },
+   "chars": 11,
+   "note": "합의: 김만태 표 金 · 네임차트 金 3/3 · 이오름 金 5/5"
+  },
+  "161": {
+   "radical": "辰",
+   "element": "土",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN-S"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 김만태 표 土 · 철학캠프 개별조회 土 1/1 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "162": {
+   "radical": "辵",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     26,
+     26
+    ],
+    "NC": [
+     "土",
+     58,
+     58
+    ],
+    "IO": [
+     "土",
+     95,
+     95
+    ]
+   },
+   "chars": 128,
+   "note": "합의: 김만태 표 土 · 철학캠프 土 26/26 · 네임차트 土 58/58 · 이오름 土 95/95 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "163": {
+   "radical": "邑",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     8,
+     8
+    ],
+    "NC": [
+     "土",
+     18,
+     18
+    ],
+    "IO": [
+     "土",
+     75,
+     75
+    ]
+   },
+   "chars": 98,
+   "note": "합의: 김만태 표 土 · 철학캠프 土 8/8 · 네임차트 土 18/18 · 이오름 土 75/75 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "164": {
+   "radical": "酉",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     7,
+     7
+    ],
+    "NC": [
+     "金",
+     20,
+     20
+    ],
+    "IO": [
+     "金",
+     31,
+     31
+    ]
+   },
+   "chars": 46,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 7/7 · 네임차트 金 20/20 · 이오름 金 31/31"
+  },
+  "165": {
+   "radical": "釆",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 2,
+      "of": 2
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     2,
+     2
+    ],
+    "NC": [
+     "木",
+     2,
+     3
+    ],
+    "IO": [
+     "木",
+     3,
+     3
+    ]
+   },
+   "chars": 4,
+   "note": "이견: 철학캠프 火 2/2 · 네임차트 木 2/3 · 이오름 木 3/3"
+  },
+  "166": {
+   "radical": "里",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "NC": [
+     "土",
+     2,
+     3
+    ],
+    "IO": [
+     "土",
+     4,
+     4
+    ],
+    "HN-S": [
+     "土",
+     3,
+     3
+    ]
+   },
+   "chars": 5,
+   "note": "합의: 김만태 표 土 · 네임차트 土 2/3 · 이오름 土 4/4 · 철학캠프 개별조회 土 3/3"
+  },
+  "167": {
+   "radical": "金",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     40,
+     40
+    ],
+    "NC": [
+     "金",
+     87,
+     87
+    ],
+    "IO": [
+     "金",
+     207,
+     207
+    ]
+   },
+   "chars": 264,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 40/40 · 네임차트 金 87/87 · 이오름 金 207/207 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "168": {
+   "radical": "長",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木",
+     1,
+     1
+    ],
+    "IO": [
+     "木",
+     1,
+     1
+    ]
+   },
+   "chars": 1,
+   "note": "단일 출처(자료 적음): 네임차트 木 1/1 · 이오름 木 1/1 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "169": {
+   "radical": "門",
+   "element": "木",
+   "status": "disputed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [
+    "NC"
+   ],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     7,
+     7
+    ],
+    "NC": [
+     "木",
+     6,
+     10
+    ],
+    "IO": [
+     "木",
+     29,
+     29
+    ],
+    "HN-S": [
+     "木",
+     2,
+     2
+    ]
+   },
+   "chars": 53,
+   "note": "이견: 김만태 표 木 · 철학캠프 木 7/7 · 네임차트 木 6/10 · 이오름 木 29/29 · 철학캠프 개별조회 木 2/2 → 글자별 갈림(다수값 비율 낮음: 네임차트 6/10)"
+  },
+  "170": {
+   "radical": "阜",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "HN": [
+     "土",
+     16,
+     16
+    ],
+    "NC": [
+     "土",
+     33,
+     34
+    ],
+    "IO": [
+     "土",
+     57,
+     57
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 77,
+   "note": "합의: 김만태 표 土 · 철학캠프 土 16/16 · 네임차트 土 33/34 · 이오름 土 57/57 · 철학캠프 개별조회 土 1/1 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "171": {
+   "radical": "隶",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "水",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     3,
+     3
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 네임차트 水 1/1 · 이오름 水 3/3"
+  },
+  "172": {
+   "radical": "隹",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     3,
+     3
+    ],
+    "NC": [
+     "火",
+     13,
+     13
+    ],
+    "IO": [
+     "火",
+     17,
+     17
+    ],
+    "HN-S": [
+     "火",
+     3,
+     3
+    ]
+   },
+   "chars": 26,
+   "note": "합의: 김만태 표 火 · 철학캠프 火 3/3 · 네임차트 火 13/13 · 이오름 火 17/17 · 철학캠프 개별조회 火 3/3"
+  },
+  "173": {
+   "radical": "雨",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     12,
+     12
+    ],
+    "NC": [
+     "水",
+     24,
+     24
+    ],
+    "IO": [
+     "水",
+     36,
+     36
+    ]
+   },
+   "chars": 48,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 12/12 · 네임차트 水 24/24 · 이오름 水 36/36 / 문헌 예시 글자와 일치(MISO)"
+  },
+  "174": {
+   "radical": "靑",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木",
+     5,
+     5
+    ],
+    "IO": [
+     "木",
+     11,
+     11
+    ]
+   },
+   "chars": 12,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 1/1 · 네임차트 木 5/5 · 이오름 木 11/11"
+  },
+  "175": {
+   "radical": "非",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木/水",
+     1,
+     2
+    ],
+    "IO": [
+     "水",
+     3,
+     3
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 네임차트 木/水 1/2 · 이오름 水 3/3"
+  },
+  "176": {
+   "radical": "面",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "IO": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 이오름 水 2/2 / 문헌 표에 없는 부수 — 실무 자료만으로 정함"
+  },
+  "177": {
+   "radical": "革",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     4,
+     4
+    ],
+    "NC": [
+     "金",
+     9,
+     9
+    ],
+    "IO": [
+     "金",
+     21,
+     21
+    ],
+    "HN-S": [
+     "金",
+     2,
+     2
+    ]
+   },
+   "chars": 30,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 4/4 · 네임차트 金 9/9 · 이오름 金 21/21 · 철학캠프 개별조회 金 2/2"
+  },
+  "178": {
+   "radical": "韋",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "金",
+     1,
+     1
+    ],
+    "NC": [
+     "金",
+     3,
+     3
+    ],
+    "IO": [
+     "金",
+     8,
+     8
+    ],
+    "HN-S": [
+     "金",
+     1,
+     1
+    ]
+   },
+   "chars": 10,
+   "note": "합의: 철학캠프 金 1/1 · 네임차트 金 3/3 · 이오름 金 8/8 · 철학캠프 개별조회 金 1/1"
+  },
+  "179": {
+   "radical": "韭",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "IO": [
+     "木",
+     2,
+     2
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 이오름 木 2/2 / 문헌 표에 없는 부수 — 실무 자료만으로 정함"
+  },
+  "180": {
+   "radical": "音",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "金",
+     2,
+     2
+    ],
+    "NC": [
+     "金",
+     4,
+     4
+    ],
+    "IO": [
+     "金",
+     8,
+     8
+    ],
+    "HN-S": [
+     "金",
+     1,
+     1
+    ]
+   },
+   "chars": 10,
+   "note": "합의: 철학캠프 金 2/2 · 네임차트 金 4/4 · 이오름 金 8/8 · 철학캠프 개별조회 金 1/1"
+  },
+  "181": {
+   "radical": "頁",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "overridden": [
+    {
+     "src": "KIM",
+     "e": "木",
+     "level": "table",
+     "decision": "P5"
+    }
+   ],
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "火",
+     9,
+     9
+    ],
+    "NC": [
+     "火",
+     25,
+     26
+    ],
+    "IO": [
+     "火",
+     49,
+     50
+    ],
+    "HN-S": [
+     "火",
+     3,
+     3
+    ]
+   },
+   "chars": 65,
+   "note": "합의: 김만태 표 木 · 철학캠프 火 9/9 · 네임차트 火 25/26 · 이오름 火 49/50 · 철학캠프 개별조회 火 3/3 / P5(2026-10-22) 합의로 침: 실무 자료 세 곳의 부수 다수값이 모두 火이고 김만태 표만 반대(頁 = 木) — 같은 글의 예시 顥는 火지만 구성 요소 日도 김만태 표에서 火라 부수 반례로는 약하다. 값은 실무 자료 다수만으로 선다(계획 D2 이견 부수였음)"
+  },
+  "182": {
+   "radical": "風",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     4,
+     4
+    ],
+    "NC": [
+     "木",
+     4,
+     4
+    ],
+    "IO": [
+     "木",
+     15,
+     15
+    ]
+   },
+   "chars": 16,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 4/4 · 네임차트 木 4/4 · 이오름 木 15/15"
+  },
+  "183": {
+   "radical": "飛",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "水"
+   ],
+   "alt_by": {
+    "水": [
+     {
+      "src": "IO",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "NC": [
+     "火",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     1,
+     1
+    ]
+   },
+   "chars": 2,
+   "note": "이견: 김만태 표 火 · 네임차트 火 1/1 · 이오름 水 1/1 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "184": {
+   "radical": "食",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     6,
+     6
+    ],
+    "NC": [
+     "水",
+     21,
+     21
+    ],
+    "IO": [
+     "水",
+     39,
+     39
+    ]
+   },
+   "chars": 54,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 6/6 · 네임차트 水 21/21 · 이오름 水 39/39 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "185": {
+   "radical": "首",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 철학캠프 水 1/1 · 네임차트 水 1/1 · 이오름 水 2/2"
+  },
+  "186": {
+   "radical": "香",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     2,
+     2
+    ],
+    "NC": [
+     "木",
+     5,
+     5
+    ],
+    "IO": [
+     "木",
+     11,
+     11
+    ]
+   },
+   "chars": 14,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 2/2 · 네임차트 木 5/5 · 이오름 木 11/11"
+  },
+  "187": {
+   "radical": "馬",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     5,
+     5
+    ],
+    "NC": [
+     "火",
+     27,
+     27
+    ],
+    "IO": [
+     "火",
+     61,
+     61
+    ],
+    "HN-S": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 83,
+   "note": "합의: 김만태 표 火 · 철학캠프 火 5/5 · 네임차트 火 27/27 · 이오름 火 61/61 · 철학캠프 개별조회 火 1/1 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "188": {
+   "radical": "骨",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "金",
+    "HN": [
+     "金",
+     1,
+     1
+    ],
+    "NC": [
+     "金",
+     2,
+     2
+    ],
+    "IO": [
+     "金",
+     8,
+     8
+    ]
+   },
+   "chars": 15,
+   "note": "합의: 김만태 표 金 · 철학캠프 金 1/1 · 네임차트 金 2/2 · 이오름 金 8/8 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "189": {
+   "radical": "高",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "IO",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "NC": [
+     "火",
+     1,
+     1
+    ],
+    "IO": [
+     "木",
+     1,
+     1
+    ]
+   },
+   "chars": 1,
+   "note": "이견: 김만태 표 火 · 네임차트 火 1/1 · 이오름 木 1/1 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "190": {
+   "radical": "髟",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     6,
+     6
+    ],
+    "NC": [
+     "火",
+     1,
+     1
+    ],
+    "IO": [
+     "火",
+     22,
+     22
+    ]
+   },
+   "chars": 29,
+   "note": "합의: 철학캠프 火 6/6 · 네임차트 火 1/1 · 이오름 火 22/22"
+  },
+  "191": {
+   "radical": "鬥",
+   "element": "火",
+   "status": "disputed",
+   "alt": [
+    "金"
+   ],
+   "alt_by": {
+    "金": [
+     {
+      "src": "NC",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "金",
+     1,
+     1
+    ],
+    "IO": [
+     "火",
+     5,
+     5
+    ]
+   },
+   "chars": 5,
+   "note": "이견: 네임차트 金 1/1 · 이오름 火 5/5"
+  },
+  "192": {
+   "radical": "鬯",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "IO": [
+     "木",
+     1,
+     1
+    ]
+   },
+   "chars": 2,
+   "note": "단일 출처(자료 적음): 이오름 木 1/1 / 문헌 표에 없는 부수 — 실무 자료만으로 정함"
+  },
+  "193": {
+   "radical": "鬲",
+   "element": "火",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "IO": [
+     "火",
+     2,
+     2
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 이오름 火 2/2 / 문헌 표에 없는 부수 — 실무 자료만으로 정함"
+  },
+  "194": {
+   "radical": "鬼",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火",
+     5,
+     5
+    ],
+    "IO": [
+     "火",
+     9,
+     9
+    ]
+   },
+   "chars": 14,
+   "note": "합의: 네임차트 火 5/5 · 이오름 火 9/9"
+  },
+  "195": {
+   "radical": "魚",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX",
+    "MISO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     8,
+     8
+    ],
+    "NC": [
+     "水",
+     18,
+     18
+    ],
+    "IO": [
+     "水",
+     54,
+     54
+    ],
+    "HN-S": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 60,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 8/8 · 네임차트 水 18/18 · 이오름 水 54/54 · 철학캠프 개별조회 水 2/2 / 문헌 예시 글자와 일치(KIM-EX·MISO)"
+  },
+  "196": {
+   "radical": "鳥",
+   "element": "火",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "火",
+    "HN": [
+     "火",
+     5,
+     5
+    ],
+    "NC": [
+     "火",
+     18,
+     18
+    ],
+    "IO": [
+     "火",
+     76,
+     76
+    ],
+    "HN-S": [
+     "火",
+     3,
+     3
+    ]
+   },
+   "chars": 100,
+   "note": "합의: 김만태 표 火 · 철학캠프 火 5/5 · 네임차트 火 18/18 · 이오름 火 76/76 · 철학캠프 개별조회 火 3/3 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "197": {
+   "radical": "鹵",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     2,
+     2
+    ],
+    "IO": [
+     "水",
+     5,
+     5
+    ]
+   },
+   "chars": 7,
+   "note": "단일 출처(자료 적음): 철학캠프 水 1/1 · 네임차트 水 2/2 · 이오름 水 5/5"
+  },
+  "198": {
+   "radical": "鹿",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 16,
+      "of": 16
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC"
+   ],
+   "decided_by": "D2",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     2,
+     2
+    ],
+    "NC": [
+     "土",
+     6,
+     6
+    ],
+    "IO": [
+     "火",
+     16,
+     16
+    ],
+    "HN-S": [
+     "土",
+     1,
+     1
+    ]
+   },
+   "chars": 18,
+   "note": "이견: 철학캠프 土 2/2 · 네임차트 土 6/6 · 이오름 火 16/16 · 철학캠프 개별조회 土 1/1 → 계획 §2-2 이견 부수 — D2 권고안 土"
+  },
+  "199": {
+   "radical": "麥",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木",
+     1,
+     1
+    ],
+    "IO": [
+     "木",
+     3,
+     3
+    ]
+   },
+   "chars": 6,
+   "note": "단일 출처(자료 적음): 네임차트 木 1/1 · 이오름 木 3/3"
+  },
+  "200": {
+   "radical": "麻",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "木",
+     2,
+     2
+    ],
+    "IO": [
+     "木",
+     3,
+     3
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 네임차트 木 2/2 · 이오름 木 3/3"
+  },
+  "201": {
+   "radical": "黃",
+   "element": "土",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "NC": [
+     "土",
+     1,
+     1
+    ],
+    "IO": [
+     "土",
+     2,
+     2
+    ]
+   },
+   "chars": 3,
+   "note": "단일 출처(자료 적음): 김만태 표 土 · 네임차트 土 1/1 · 이오름 土 2/2 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "202": {
+   "radical": "黍",
+   "element": "木",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "木",
+    "HN": [
+     "木",
+     1,
+     1
+    ],
+    "NC": [
+     "木",
+     2,
+     2
+    ],
+    "IO": [
+     "木",
+     4,
+     4
+    ]
+   },
+   "chars": 4,
+   "note": "합의: 김만태 표 木 · 철학캠프 木 1/1 · 네임차트 木 2/2 · 이오름 木 4/4 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "203": {
+   "radical": "黑",
+   "element": "水",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "HN",
+    "NC",
+    "IO",
+    "KIM-EX"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "KIM": "水",
+    "HN": [
+     "水",
+     1,
+     1
+    ],
+    "NC": [
+     "水",
+     3,
+     3
+    ],
+    "IO": [
+     "水",
+     8,
+     8
+    ]
+   },
+   "chars": 19,
+   "note": "합의: 김만태 표 水 · 철학캠프 水 1/1 · 네임차트 水 3/3 · 이오름 水 8/8 / 문헌 예시 글자와 일치(KIM-EX)"
+  },
+  "204": {
+   "radical": "黹",
+   "element": "木",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "IO": [
+     "木",
+     2,
+     2
+    ]
+   },
+   "chars": 4,
+   "note": "단일 출처(자료 적음): 이오름 木 2/2 / 문헌 표에 없는 부수 — 실무 자료만으로 정함"
+  },
+  "205": {
+   "radical": "黽",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "土"
+   ],
+   "alt_by": {
+    "土": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 2,
+      "of": 2
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "土",
+     2,
+     2
+    ],
+    "NC": [
+     "水",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     8,
+     8
+    ]
+   },
+   "chars": 9,
+   "note": "이견: 철학캠프 土 2/2 · 네임차트 水 1/1 · 이오름 水 8/8"
+  },
+  "206": {
+   "radical": "鼎",
+   "element": "火",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "火",
+     1,
+     1
+    ],
+    "IO": [
+     "火",
+     1,
+     1
+    ]
+   },
+   "chars": 2,
+   "note": "단일 출처(자료 적음): 네임차트 火 1/1 · 이오름 火 1/1"
+  },
+  "207": {
+   "radical": "鼓",
+   "element": "金",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "金",
+     1,
+     1
+    ],
+    "NC": [
+     "金",
+     1,
+     1
+    ],
+    "IO": [
+     "金",
+     4,
+     4
+    ],
+    "HN-S": [
+     "金",
+     1,
+     1
+    ]
+   },
+   "chars": 4,
+   "note": "단일 출처(자료 적음): 철학캠프 金 1/1 · 네임차트 金 1/1 · 이오름 金 4/4 · 철학캠프 개별조회 金 1/1"
+  },
+  "208": {
+   "radical": "鼠",
+   "element": "水",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "NC",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "水",
+     3,
+     3
+    ],
+    "NC": [
+     "木",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     7,
+     7
+    ]
+   },
+   "chars": 8,
+   "note": "이견: 철학캠프 水 3/3 · 네임차트 木 1/1 · 이오름 水 7/7"
+  },
+  "209": {
+   "radical": "鼻",
+   "element": "金",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "金",
+     1,
+     1
+    ],
+    "IO": [
+     "金",
+     2,
+     2
+    ]
+   },
+   "chars": 2,
+   "note": "단일 출처(자료 적음): 네임차트 金 1/1 · 이오름 金 2/2"
+  },
+  "210": {
+   "radical": "齊",
+   "element": "土",
+   "status": "disputed",
+   "alt": [
+    "木"
+   ],
+   "alt_by": {
+    "木": [
+     {
+      "src": "IO",
+      "level": "majority",
+      "n": 3,
+      "of": 3
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "NC"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "土",
+     3,
+     3
+    ],
+    "IO": [
+     "木",
+     3,
+     3
+    ]
+   },
+   "chars": 3,
+   "note": "이견: 네임차트 土 3/3 · 이오름 木 3/3"
+  },
+  "211": {
+   "radical": "齒",
+   "element": "金",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "HN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "金",
+     3,
+     3
+    ],
+    "NC": [
+     "金",
+     3,
+     3
+    ],
+    "IO": [
+     "金",
+     9,
+     9
+    ]
+   },
+   "chars": 16,
+   "note": "합의: 철학캠프 金 3/3 · 네임차트 金 3/3 · 이오름 金 9/9"
+  },
+  "212": {
+   "radical": "龍",
+   "element": "土",
+   "status": "agreed",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "KIM",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "D2-single",
+   "split": [],
+   "votes": {
+    "KIM": "土",
+    "NC": [
+     "土",
+     2,
+     2
+    ],
+    "IO": [
+     "土",
+     3,
+     3
+    ]
+   },
+   "chars": 6,
+   "note": "합의: 김만태 표 土 · 네임차트 土 2/2 · 이오름 土 3/3 / 계획 §2-2 단일 출처 부수 — 그 값을 쓴다(D2)"
+  },
+  "213": {
+   "radical": "龜",
+   "element": "水",
+   "status": "single",
+   "alt": [],
+   "alt_by": {},
+   "basis": [
+    "UNIHAN",
+    "NC",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "NC": [
+     "水",
+     1,
+     1
+    ],
+    "IO": [
+     "水",
+     2,
+     2
+    ]
+   },
+   "chars": 2,
+   "note": "단일 출처(자료 적음): 네임차트 水 1/1 · 이오름 水 2/2"
+  },
+  "214": {
+   "radical": "龠",
+   "element": "木",
+   "status": "disputed",
+   "alt": [
+    "火"
+   ],
+   "alt_by": {
+    "火": [
+     {
+      "src": "HN",
+      "level": "few",
+      "n": 1,
+      "of": 1
+     }
+    ]
+   },
+   "basis": [
+    "UNIHAN",
+    "IO"
+   ],
+   "decided_by": "rule",
+   "split": [],
+   "votes": {
+    "HN": [
+     "火",
+     1,
+     1
+    ],
+    "IO": [
+     "木",
+     3,
+     3
+    ]
+   },
+   "chars": 4,
+   "note": "이견: 철학캠프 火 1/1 · 이오름 木 3/3"
+  }
+ }
+}

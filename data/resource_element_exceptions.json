@@ -1,0 +1,3058 @@
+{
+ "meta": {
+  "title": "부수 기준 자원오행 — 글자 예외표",
+  "plan": "docs/plan-radical-ohaeng-2026-10.md §2-1 ②③ (단계 S1)",
+  "generated_by": "scripts/build_radical_resource_table.py (인자 없음, 결정적 — 고정본 data/radical_resource_votes.json 에서 만든다. tmp 불필요)",
+  "order": "판정 순서: NFKC 정규화 → exceptions(간지 → 문헌 예외(B-2 반대 없음) → 실무 예외(B-1 독립 근거)) → 부수표(radical_resource_element.json)",
+  "keys": "실제 글자(통합 한자). 호환 한자는 NFKC 로 통합 한자에 붙여 찾는다 — compat_forms_in_target 참고",
+  "exceptions_rule": {
+   "ganji": "천간·지지 22자 중 인명용(대상 9,190자) 전부. 부수값과 같아도 싣는다(same_as_radical). 근거는 전통 배속 GANJI(+ 같은 값을 실은 문헌 예시)",
+   "literature": "문헌(김만태 예시 KIM-EX · 미소 한국작명원 예시 MISO — 작명소 페이지)이 부수값과 다른 값을 적은 글자. 실무 자료 지지 조건 없이 문헌만으로(P1 조건 0) — 단 실무 자료 2곳 이상이 다른 같은 값으로 반대하면 확정하지 않는다(B-2 → disputed_chars literature_overruled 또는 실무 예외)",
+   "practice": "작명 실무 자료(HN·NC·IO) 2곳 이상이 같은 값을 주고(독립 근거로 2곳 이상 — B-1: IO 값이 그 자료 자신의 부수 다수값과 같으면 독립으로 세지 않는다) 그 값이 부수 기본값과 다른 글자(D1 개정, basis PRACTICE). 간지·문헌 글자(문헌 값이 부수값과 같아도)는 그 값이 먼저라 넣지 않는다 — 확정하지 않은 문헌 예외 후보(B-2)는 이 규칙을 따른다. 숫자 한자·문헌 본문(KIM-TXT)·작명 서비스 서술(ERUMY) 이견 글자도 이 규칙이 덮으면 예외. 고정본 data/radical_resource_votes.json practice_exceptions 에서 온다(150자를 넘으면 반영하지 않는다)",
+   "not_included": "오방·괘 이름·R 반대·숫자는 따로 규칙을 두지 않았다 — 실무 예외 규칙이 덮는 만큼만(P3·P4·P6)"
+  },
+  "disputed_chars_rule": {
+   "meaning": "값은 바꾸지 않고(부수표 값 그대로) 등급만 '이견'으로 둔다. 예외가 아니다. 부수 단위 다른 값은 부수표 alt, 글자 단위 다른 값은 alt_char",
+   "number": "숫자 한자 一~十·百·千·萬 가운데 실무 예외가 아닌 글자(D3)",
+   "literature_dispute": "문헌 본문(KIM-TXT)·작명 서비스 서술(ERUMY)이 이견을 적은 글자 가운데 실무 예외가 아닌 글자",
+   "literature_overruled": "문헌 예외 후보(문헌 값 ≠ 부수값)인데 실무 자료 2곳 이상이 부수값으로 반대해 확정하지 않은 글자(B-2). 값은 부수값, 문헌 값은 alt_char(문헌 출처). practice = 반대한 실무 값·곳 수",
+   "practice_dispute": "실무 자료 2곳 이상이 다른 같은 값을 줬지만 예외를 두지 않은 글자 — (a) 문헌 값이 부수값과 같아 문헌이 먼저(decision P7) (b) 같은 값을 준 곳 가운데 독립 근거가 2곳 미만(decision B-1 — 한 곳이 그 자료 자신의 부수 규칙값을 되풀이). 문헌 본문 이견 글자에 겹치면 literature_dispute 항목에 실무 대체값을 더한다"
+  },
+  "fields": {
+   "cp": "코드포인트",
+   "element": "예외 값",
+   "kind": "ganji | literature | practice (disputed_chars: number | literature_dispute | literature_overruled | practice_dispute)",
+   "radical": "부수 번호(부수표 meta.key 와 같은 판정)",
+   "radical_element": "부수표 값",
+   "same_as_radical": "예외 값이 부수값과 같은가",
+   "basis": "exceptions: element 를 지지하는 출처 키(radical_resource_element.json meta.sources). 실무 예외는 PRACTICE(+ 같은 값을 적은 문헌 본문·작명 서비스 서술)",
+   "practice": "exceptions 실무 예외: n = 같은 값을 준 실무 자료 수, of = 이 글자에 단일값이 있는 실무 자료 수, n_indep = n 가운데 독립 근거 수(B-1 — 어느 자료인지는 싣지 않는다). disputed_chars literature_overruled: 반대한 실무 값 e 와 n·of·n_indep",
+   "number": "실무 예외가 된 숫자 한자(D3 대상)",
+   "alt_char": "이 **글자**에 다른 출처가 준 다른 값 [{e, basis[, n, of, n_indep]}] — 문헌 예시(KIM-EX·MISO — B-2 로 확정하지 않은 문헌 값)·문헌 본문(KIM-TXT)·작명 서비스 서술(ERUMY)과 실무 자료 다수(PRACTICE, n곳 ≥2, n_indep = 그중 독립 근거 수 — B-1)를 basis 로 나눈다(P7). 화면은 '김만태 예시는 이 글자를 水로 봅니다' · '이루미는 土로 봅니다' · '실무 자료 2곳은 金으로 봅니다'처럼 출처를 밝혀 쓴다",
+   "dispute_basis": "disputed_chars: '이견'으로 둔 근거 출처(값을 지지하는 출처가 아니다)",
+   "decision": "근거 결정 번호",
+   "note": "결정 근거",
+   "literature_examples": "문헌 예시 글자 전부(KIM-EX 90 · MISO 45 — 공개 페이지에서 손으로 옮긴 값, 스크립트 상수 KIM_EX·MISO_EX). {e, basis, role}. 글자별 결과(build_resource_element)가 그 글자 자신의 basis 에 이 문헌 키를 더한다(결과 e 가 같을 때만 — 부수 basis 는 예시를 부수 근거로 칠 수 있을 때만 문헌 키를 싣는다). role = ganji(간지 예외) · literature_exception(문헌 예외) · literature_overruled(문헌 예외 후보지만 실무 자료 반대로 확정 안 함, B-2) · same_as_radical(부수값과 같아 예외 없음)"
+  },
+  "counts": {
+   "exceptions": 78,
+   "ganji": 22,
+   "ganji_changing_value": 14,
+   "literature": 5,
+   "practice": 51,
+   "practice_by_n": {
+    "2/3": 45,
+    "3/3": 6
+   },
+   "practice_with_rule_echo": 4,
+   "literature_candidates": 7,
+   "literature_overruled": 2,
+   "with_alt_char": 0,
+   "disputed_chars": 39,
+   "disputed_by_kind": {
+    "literature_dispute": 5,
+    "literature_overruled": 2,
+    "number": 10,
+    "practice_dispute": 22
+   },
+   "practice_alt_rule_echo": 23,
+   "literature_examples": 126
+  },
+  "sources": "radical_resource_element.json 의 meta.sources 와 같은 키",
+  "decisions": {
+   "D1": "2026-10-22 사용자 결정(개정): 값은 kRSUnicode 부수 + 공개 문헌 부수표 + 간지 예외 + 문헌 예외 + 실무 예외. 실무 예외 = 작명 실무 자료(HN·NC·IO) 2곳 이상이 같은 값을 주고 그 값이 부수 기본값과 다른 글자(등급 X, basis PRACTICE — 곳 수는 B-1 대로 독립 근거로 센다). 150자를 넘으면 반영하지 않는다. 그 밖의 DB 글자값은 측정용",
+   "D2": "이견 부수 기본값은 계획 §2-2 권고표대로(4표 다수결, 동률은 HN→NC→KIM→IO). 2026-10-22 '그 밖의 D 항목은 권고안대로'로 승인. 弓·亠 값은 P2, 人·广·頁·彡 등급은 P5 로 고쳤다",
+   "D3": "숫자 한자(一~十·百·千·萬)·약한 부수는 부수값 + '이견' 표시. '불명'을 값으로 두지 않는다. 실무 예외가 덮는 숫자는 예외(X)",
+   "P1": "2026-10-22: 문헌 예외(KIM-EX·MISO)는 실무 자료 지지 조건 없이 문헌만으로 적용(조건 0) — 실무 자료 반대 조건은 B-2",
+   "P2": "2026-10-22: 弓 → 木(검토 권고). 亠 → 이름 빈도 가중 다수(실무 예외로 처리되는 京·亨 글자는 빼고 셈 — 같은 이유로 실무 예외인 亢 도 뺌. 근거는 부수표 note)",
+   "P3-P4-P6": "2026-10-22: 오방(南·北·中)·괘 이름(乾·巽)·R 인데 DB 2곳 반대(厦·叡)·숫자 五 에는 따로 규칙을 두지 않는다 — 실무 예외 규칙이 덮는 만큼만",
+   "P5": "2026-10-22: 人·广·頁·彡 부수는 합의(agreed) — 실무 자료 세 곳(HN·NC·IO)의 부수 다수값이 모두 같고 김만태 표 한 칸만 반대. 같은 글의 예시(人 儁·頁 顥 火)는 구성 요소(隹·日)도 김만태 표에서 火라 부수 반례로는 약하고, 본문의 康 서술은 글자 단위라 부수 근거로 치지 않는다 — 값은 실무 자료 다수만으로 선다",
+   "P7": "2026-10-22: 글자 대체값 alt_char 에 문헌 값과 실무 자료 값(2곳 이상이 준 다른 값)을 출처를 나눠 싣는다",
+   "B-1": "2026-10-22 통합 담당 결정(사용자 목표 '작명소와 같은 답' 기준): 이오름 글자값이 이오름 자신의 그 부수 다수값과 같으면 부수 규칙값의 반복이라 실무 예외를 세울 독립 근거로 세지 않는다(PRACTICE_RULE_ECHO_SOURCES). 같은 값을 준 곳은 2곳 이상이지만 독립 근거가 2곳 미만인 글자는 예외로 두지 않는다 — 값은 부수 기본값, 등급 '이견', 실무 값은 alt_char(PRACTICE, n/of/n_indep). 글자 목록은 두지 않고 규칙으로 고른다(고정본 practice_alt 의 under=rule_echo)",
+   "B-2": "2026-10-22 통합 담당 결정: 문헌 예외(후보 = 문헌 값이 부수값과 다른 글자)는 실무 자료 2곳 이상이 다른 같은 값으로 반대하면 확정하지 않는다. 그 실무 값이 부수 기본값이면 부수값 + '이견'(문헌 값은 alt_char, 문헌 출처), 다르면 실무 예외 규칙(B-1 포함)을 따른다. 부수값 쪽 반대에는 부수 규칙값의 반복도 센다(LIT_OVERRULE_COUNTS_RULE_ECHO — 결정의 宣 '木+이견'). 확정하지 않은 후보도 부수 집계에서는 뺀 채 둔다(집계 정의를 바꾸면 부수값 → 판정 → 집계가 서로를 바꿀 수 있다). 결과 목록은 고정본 literature_overruled",
+   "B-3": "2026-10-22 통합 담당 결정: 추가 수집 없음 — 中·耕 은 지금 자료 그대로"
+  },
+  "pending_decisions": {}
+ },
+ "exceptions": {
+  "丁": {
+   "cp": "U+4E01",
+   "element": "火",
+   "kind": "ganji",
+   "radical": 1,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "천간 丁 = 火 — 간지 오행을 부수보다 먼저 쓴다. 부수값 一(木)"
+  },
+  "丑": {
+   "cp": "U+4E11",
+   "element": "土",
+   "kind": "ganji",
+   "radical": 1,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 丑 = 土 — 간지 오행을 부수보다 먼저 쓴다. 부수값 一(木)"
+  },
+  "丙": {
+   "cp": "U+4E19",
+   "element": "火",
+   "kind": "ganji",
+   "radical": 1,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "천간 丙 = 火 — 간지 오행을 부수보다 먼저 쓴다. 부수값 一(木)"
+  },
+  "乙": {
+   "cp": "U+4E59",
+   "element": "木",
+   "kind": "ganji",
+   "radical": 5,
+   "radical_element": "木",
+   "same_as_radical": true,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "천간 乙 = 木 — 간지 오행을 부수보다 먼저 쓴다. 부수값 乙(木)도 같음"
+  },
+  "亥": {
+   "cp": "U+4EA5",
+   "element": "水",
+   "kind": "ganji",
+   "radical": 8,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 亥 = 水 — 간지 오행을 부수보다 먼저 쓴다. 부수값 亠(火)"
+  },
+  "午": {
+   "cp": "U+5348",
+   "element": "火",
+   "kind": "ganji",
+   "radical": 24,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 午 = 火 — 간지 오행을 부수보다 먼저 쓴다. 부수값 十(水)"
+  },
+  "卯": {
+   "cp": "U+536F",
+   "element": "木",
+   "kind": "ganji",
+   "radical": 26,
+   "radical_element": "木",
+   "same_as_radical": true,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 卯 = 木 — 간지 오행을 부수보다 먼저 쓴다. 부수값 卩(木)도 같음"
+  },
+  "壬": {
+   "cp": "U+58EC",
+   "element": "水",
+   "kind": "ganji",
+   "radical": 33,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "천간 壬 = 水 — 간지 오행을 부수보다 먼저 쓴다. 부수값 士(木)"
+  },
+  "子": {
+   "cp": "U+5B50",
+   "element": "水",
+   "kind": "ganji",
+   "radical": 39,
+   "radical_element": "水",
+   "same_as_radical": true,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 子 = 水 — 간지 오행을 부수보다 먼저 쓴다. 부수값 子(水)도 같음"
+  },
+  "寅": {
+   "cp": "U+5BC5",
+   "element": "木",
+   "kind": "ganji",
+   "radical": 40,
+   "radical_element": "木",
+   "same_as_radical": true,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 寅 = 木 — 간지 오행을 부수보다 먼저 쓴다. 부수값 宀(木)도 같음"
+  },
+  "己": {
+   "cp": "U+5DF1",
+   "element": "土",
+   "kind": "ganji",
+   "radical": 49,
+   "radical_element": "土",
+   "same_as_radical": true,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "천간 己 = 土 — 간지 오행을 부수보다 먼저 쓴다. 부수값 己(土)도 같음"
+  },
+  "巳": {
+   "cp": "U+5DF3",
+   "element": "火",
+   "kind": "ganji",
+   "radical": 49,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 巳 = 火 — 간지 오행을 부수보다 먼저 쓴다. 부수값 己(土)"
+  },
+  "庚": {
+   "cp": "U+5E9A",
+   "element": "金",
+   "kind": "ganji",
+   "radical": 53,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "천간 庚 = 金 — 간지 오행을 부수보다 먼저 쓴다. 부수값 广(木)"
+  },
+  "戊": {
+   "cp": "U+620A",
+   "element": "土",
+   "kind": "ganji",
+   "radical": 62,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "천간 戊 = 土 — 간지 오행을 부수보다 먼저 쓴다. 부수값 戈(金)"
+  },
+  "戌": {
+   "cp": "U+620C",
+   "element": "土",
+   "kind": "ganji",
+   "radical": 62,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 戌 = 土 — 간지 오행을 부수보다 먼저 쓴다. 부수값 戈(金)"
+  },
+  "未": {
+   "cp": "U+672A",
+   "element": "土",
+   "kind": "ganji",
+   "radical": 75,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 未 = 土 — 간지 오행을 부수보다 먼저 쓴다. 부수값 木(木)"
+  },
+  "甲": {
+   "cp": "U+7532",
+   "element": "木",
+   "kind": "ganji",
+   "radical": 102,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI",
+    "MISO"
+   ],
+   "note": "천간 甲 = 木 — 간지 오행을 부수보다 먼저 쓴다. 부수값 田(土)"
+  },
+  "申": {
+   "cp": "U+7533",
+   "element": "金",
+   "kind": "ganji",
+   "radical": 102,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 申 = 金 — 간지 오행을 부수보다 먼저 쓴다. 부수값 田(土)"
+  },
+  "癸": {
+   "cp": "U+7678",
+   "element": "水",
+   "kind": "ganji",
+   "radical": 105,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "천간 癸 = 水 — 간지 오행을 부수보다 먼저 쓴다. 부수값 癶(火)"
+  },
+  "辛": {
+   "cp": "U+8F9B",
+   "element": "金",
+   "kind": "ganji",
+   "radical": 160,
+   "radical_element": "金",
+   "same_as_radical": true,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "천간 辛 = 金 — 간지 오행을 부수보다 먼저 쓴다. 부수값 辛(金)도 같음"
+  },
+  "辰": {
+   "cp": "U+8FB0",
+   "element": "土",
+   "kind": "ganji",
+   "radical": 161,
+   "radical_element": "土",
+   "same_as_radical": true,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 辰 = 土 — 간지 오행을 부수보다 먼저 쓴다. 부수값 辰(土)도 같음"
+  },
+  "酉": {
+   "cp": "U+9149",
+   "element": "金",
+   "kind": "ganji",
+   "radical": 164,
+   "radical_element": "金",
+   "same_as_radical": true,
+   "basis": [
+    "GANJI"
+   ],
+   "note": "지지 酉 = 金 — 간지 오행을 부수보다 먼저 쓴다. 부수값 酉(金)도 같음"
+  },
+  "光": {
+   "cp": "U+5149",
+   "element": "火",
+   "kind": "literature",
+   "radical": 10,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "MISO"
+   ],
+   "note": "미소 한국작명원 예시 光=火, 부수값 儿(木) → 문헌 예외(실무 자료 지지 조건 없이 문헌만으로 — P1. 실무 자료 2곳 이상의 반대 없음 — B-2)"
+  },
+  "兌": {
+   "cp": "U+514C",
+   "element": "金",
+   "kind": "literature",
+   "radical": 10,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "KIM-EX"
+   ],
+   "note": "김만태 예시 兌=金, 부수값 儿(木) → 문헌 예외(실무 자료 지지 조건 없이 문헌만으로 — P1. 실무 자료 2곳 이상의 반대 없음 — B-2)"
+  },
+  "奎": {
+   "cp": "U+594E",
+   "element": "土",
+   "kind": "literature",
+   "radical": 37,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "KIM-EX"
+   ],
+   "note": "김만태 예시 奎=土, 부수값 大(木) → 문헌 예외(실무 자료 지지 조건 없이 문헌만으로 — P1. 실무 자료 2곳 이상의 반대 없음 — B-2)"
+  },
+  "尙": {
+   "cp": "U+5C19",
+   "element": "金",
+   "kind": "literature",
+   "radical": 42,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "KIM-EX"
+   ],
+   "note": "김만태 예시 尙=金, 부수값 小(水) → 문헌 예외(실무 자료 지지 조건 없이 문헌만으로 — P1. 실무 자료 2곳 이상의 반대 없음 — B-2)"
+  },
+  "益": {
+   "cp": "U+76CA",
+   "element": "水",
+   "kind": "literature",
+   "radical": 108,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "KIM-EX"
+   ],
+   "note": "김만태 예시 益=水, 부수값 皿(金) → 문헌 예외(실무 자료 지지 조건 없이 문헌만으로 — P1. 실무 자료 2곳 이상의 반대 없음 — B-2)"
+  },
+  "主": {
+   "cp": "U+4E3B",
+   "element": "木",
+   "kind": "practice",
+   "radical": 3,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 主=木, 부수값 丶(火) → 실무 예외(D1 개정)"
+  },
+  "之": {
+   "cp": "U+4E4B",
+   "element": "土",
+   "kind": "practice",
+   "radical": 4,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 之=土, 부수값 丿(金) → 실무 예외(D1 개정)"
+  },
+  "乘": {
+   "cp": "U+4E58",
+   "element": "火",
+   "kind": "practice",
+   "radical": 4,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 乘=火, 부수값 丿(金) → 실무 예외(D1 개정)"
+  },
+  "九": {
+   "cp": "U+4E5D",
+   "element": "水",
+   "kind": "practice",
+   "radical": 5,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "number": true,
+   "note": "숫자 한자 — 작명 실무 자료 3곳 가운데 2곳이 九=水, 부수값 乙(木) → 실무 예외(D1 개정). 숫자 한자는 D3 대로면 부수값 + '이견'이지만 실무 예외가 먼저다"
+  },
+  "乾": {
+   "cp": "U+4E7E",
+   "element": "金",
+   "kind": "practice",
+   "radical": 5,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 乾=金, 부수값 乙(木) → 실무 예외(D1 개정)"
+  },
+  "二": {
+   "cp": "U+4E8C",
+   "element": "木",
+   "kind": "practice",
+   "radical": 7,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "number": true,
+   "note": "숫자 한자 — 작명 실무 자료 3곳 가운데 2곳이 二=木, 부수값 二(火) → 실무 예외(D1 개정). 숫자 한자는 D3 대로면 부수값 + '이견'이지만 실무 예외가 먼저다"
+  },
+  "于": {
+   "cp": "U+4E8E",
+   "element": "水",
+   "kind": "practice",
+   "radical": 7,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 于=水, 부수값 二(火) → 실무 예외(D1 개정)"
+  },
+  "互": {
+   "cp": "U+4E92",
+   "element": "水",
+   "kind": "practice",
+   "radical": 7,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 互=水, 부수값 二(火) → 실무 예외(D1 개정)"
+  },
+  "五": {
+   "cp": "U+4E94",
+   "element": "土",
+   "kind": "practice",
+   "radical": 7,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "number": true,
+   "note": "숫자 한자 — 작명 실무 자료 3곳 가운데 2곳이 五=土, 부수값 二(火) → 실무 예외(D1 개정). 숫자 한자는 D3 대로면 부수값 + '이견'이지만 실무 예외가 먼저다"
+  },
+  "亢": {
+   "cp": "U+4EA2",
+   "element": "水",
+   "kind": "practice",
+   "radical": 8,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 3,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 3곳이 亢=水 (그중 1곳은 그 자료 자신의 부수 다수값과 같은 값 — 부수 규칙값의 반복이라 독립 근거는 2곳, B-1), 부수값 亠(火) → 실무 예외(D1 개정)"
+  },
+  "亨": {
+   "cp": "U+4EA8",
+   "element": "土",
+   "kind": "practice",
+   "radical": 8,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 亨=土, 부수값 亠(火) → 실무 예외(D1 개정)"
+  },
+  "京": {
+   "cp": "U+4EAC",
+   "element": "土",
+   "kind": "practice",
+   "radical": 8,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 京=土, 부수값 亠(火) → 실무 예외(D1 개정)"
+  },
+  "允": {
+   "cp": "U+5141",
+   "element": "土",
+   "kind": "practice",
+   "radical": 10,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 允=土, 부수값 儿(木) → 실무 예외(D1 개정)"
+  },
+  "兆": {
+   "cp": "U+5146",
+   "element": "火",
+   "kind": "practice",
+   "radical": 10,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 3,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 3곳이 兆=火 (그중 1곳은 그 자료 자신의 부수 다수값과 같은 값 — 부수 규칙값의 반복이라 독립 근거는 2곳, B-1), 부수값 儿(木) → 실무 예외(D1 개정)"
+  },
+  "効": {
+   "cp": "U+52B9",
+   "element": "金",
+   "kind": "practice",
+   "radical": 19,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 効=金, 부수값 力(土) → 실무 예외(D1 개정)"
+  },
+  "勁": {
+   "cp": "U+52C1",
+   "element": "金",
+   "kind": "practice",
+   "radical": 19,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 勁=金, 부수값 力(土) → 실무 예외(D1 개정)"
+  },
+  "動": {
+   "cp": "U+52D5",
+   "element": "水",
+   "kind": "practice",
+   "radical": 19,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 動=水, 부수값 力(土) → 실무 예외(D1 개정)"
+  },
+  "勛": {
+   "cp": "U+52DB",
+   "element": "火",
+   "kind": "practice",
+   "radical": 19,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 3,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 3곳이 勛=火 (그중 1곳은 그 자료 자신의 부수 다수값과 같은 값 — 부수 규칙값의 반복이라 독립 근거는 2곳, B-1), 부수값 力(土) → 실무 예외(D1 개정)"
+  },
+  "勳": {
+   "cp": "U+52F3",
+   "element": "火",
+   "kind": "practice",
+   "radical": 19,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 3,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 3곳이 勳=火 (그중 1곳은 그 자료 자신의 부수 다수값과 같은 값 — 부수 규칙값의 반복이라 독립 근거는 2곳, B-1), 부수값 力(土) → 실무 예외(D1 개정)"
+  },
+  "化": {
+   "cp": "U+5316",
+   "element": "火",
+   "kind": "practice",
+   "radical": 21,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 化=火, 부수값 匕(金) → 실무 예외(D1 개정)"
+  },
+  "北": {
+   "cp": "U+5317",
+   "element": "水",
+   "kind": "practice",
+   "radical": 21,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 3,
+    "of": 3,
+    "n_indep": 3
+   },
+   "note": "작명 실무 자료 3곳 가운데 3곳이 北=水, 부수값 匕(金) → 실무 예외(D1 개정)"
+  },
+  "升": {
+   "cp": "U+5347",
+   "element": "木",
+   "kind": "practice",
+   "radical": 24,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 升=木, 부수값 十(水) → 실무 예외(D1 개정)"
+  },
+  "半": {
+   "cp": "U+534A",
+   "element": "土",
+   "kind": "practice",
+   "radical": 24,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 半=土, 부수값 十(水) → 실무 예외(D1 개정)"
+  },
+  "卑": {
+   "cp": "U+5351",
+   "element": "土",
+   "kind": "practice",
+   "radical": 24,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 卑=土, 부수값 十(水) → 실무 예외(D1 개정)"
+  },
+  "卓": {
+   "cp": "U+5353",
+   "element": "木",
+   "kind": "practice",
+   "radical": 24,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 卓=木, 부수값 十(水) → 실무 예외(D1 개정)"
+  },
+  "南": {
+   "cp": "U+5357",
+   "element": "火",
+   "kind": "practice",
+   "radical": 24,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 3,
+    "of": 3,
+    "n_indep": 3
+   },
+   "note": "작명 실무 자료 3곳 가운데 3곳이 南=火, 부수값 十(水) → 실무 예외(D1 개정)"
+  },
+  "卵": {
+   "cp": "U+5375",
+   "element": "水",
+   "kind": "practice",
+   "radical": 26,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 卵=水, 부수값 卩(木) → 실무 예외(D1 개정)"
+  },
+  "厦": {
+   "cp": "U+53A6",
+   "element": "木",
+   "kind": "practice",
+   "radical": 27,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 厦=木, 부수값 厂(土) → 실무 예외(D1 개정)"
+  },
+  "叡": {
+   "cp": "U+53E1",
+   "element": "火",
+   "kind": "practice",
+   "radical": 29,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 叡=火, 부수값 又(水) → 실무 예외(D1 개정)"
+  },
+  "壽": {
+   "cp": "U+58FD",
+   "element": "水",
+   "kind": "practice",
+   "radical": 33,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 壽=水, 부수값 士(木) → 실무 예외(D1 개정)"
+  },
+  "局": {
+   "cp": "U+5C40",
+   "element": "木",
+   "kind": "practice",
+   "radical": 44,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 局=木, 부수값 尸(水) → 실무 예외(D1 개정)"
+  },
+  "屆": {
+   "cp": "U+5C46",
+   "element": "木",
+   "kind": "practice",
+   "radical": 44,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 屆=木, 부수값 尸(水) → 실무 예외(D1 개정)"
+  },
+  "屋": {
+   "cp": "U+5C4B",
+   "element": "木",
+   "kind": "practice",
+   "radical": 44,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 屋=木, 부수값 尸(水) → 실무 예외(D1 개정)"
+  },
+  "履": {
+   "cp": "U+5C65",
+   "element": "木",
+   "kind": "practice",
+   "radical": 44,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 履=木, 부수값 尸(水) → 실무 예외(D1 개정)"
+  },
+  "巽": {
+   "cp": "U+5DFD",
+   "element": "木",
+   "kind": "practice",
+   "radical": 49,
+   "radical_element": "土",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 巽=木, 부수값 己(土) → 실무 예외(D1 개정)"
+  },
+  "廻": {
+   "cp": "U+5EFB",
+   "element": "水",
+   "kind": "practice",
+   "radical": 54,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 廻=水, 부수값 廴(木) → 실무 예외(D1 개정)"
+  },
+  "弔": {
+   "cp": "U+5F14",
+   "element": "土",
+   "kind": "practice",
+   "radical": 57,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 弔=土, 부수값 弓(木) → 실무 예외(D1 개정)"
+  },
+  "引": {
+   "cp": "U+5F15",
+   "element": "火",
+   "kind": "practice",
+   "radical": 57,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 引=火, 부수값 弓(木) → 실무 예외(D1 개정)"
+  },
+  "弘": {
+   "cp": "U+5F18",
+   "element": "火",
+   "kind": "practice",
+   "radical": 57,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 弘=火, 부수값 弓(木) → 실무 예외(D1 개정)"
+  },
+  "弟": {
+   "cp": "U+5F1F",
+   "element": "水",
+   "kind": "practice",
+   "radical": 57,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 弟=水, 부수값 弓(木) → 실무 예외(D1 개정)"
+  },
+  "張": {
+   "cp": "U+5F35",
+   "element": "金",
+   "kind": "practice",
+   "radical": 57,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 張=金, 부수값 弓(木) → 실무 예외(D1 개정)"
+  },
+  "强": {
+   "cp": "U+5F3A",
+   "element": "金",
+   "kind": "practice",
+   "radical": 57,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 强=金, 부수값 弓(木) → 실무 예외(D1 개정)"
+  },
+  "彎": {
+   "cp": "U+5F4E",
+   "element": "火",
+   "kind": "practice",
+   "radical": 57,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 彎=火, 부수값 弓(木) → 실무 예외(D1 개정)"
+  },
+  "支": {
+   "cp": "U+652F",
+   "element": "土",
+   "kind": "practice",
+   "radical": 65,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 支=土, 부수값 支(木) → 실무 예외(D1 개정)"
+  },
+  "玄": {
+   "cp": "U+7384",
+   "element": "火",
+   "kind": "practice",
+   "radical": 95,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 玄=火, 부수값 玄(水) → 실무 예외(D1 개정)"
+  },
+  "率": {
+   "cp": "U+7387",
+   "element": "火",
+   "kind": "practice",
+   "radical": 95,
+   "radical_element": "水",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 率=火, 부수값 玄(水) → 실무 예외(D1 개정)"
+  },
+  "盈": {
+   "cp": "U+76C8",
+   "element": "水",
+   "kind": "practice",
+   "radical": 108,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 盈=水, 부수값 皿(金) → 실무 예외(D1 개정)"
+  },
+  "盛": {
+   "cp": "U+76DB",
+   "element": "火",
+   "kind": "practice",
+   "radical": 108,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 盛=火, 부수값 皿(金) → 실무 예외(D1 개정)",
+   "compat_forms_in_target": [
+    "U+FAA7"
+   ]
+  },
+  "盧": {
+   "cp": "U+76E7",
+   "element": "水",
+   "kind": "practice",
+   "radical": 108,
+   "radical_element": "金",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 盧=水, 부수값 皿(金) → 실무 예외(D1 개정)"
+  },
+  "禹": {
+   "cp": "U+79B9",
+   "element": "土",
+   "kind": "practice",
+   "radical": 114,
+   "radical_element": "火",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 禹=土, 부수값 禸(火) → 실무 예외(D1 개정)"
+  },
+  "釋": {
+   "cp": "U+91CB",
+   "element": "火",
+   "kind": "practice",
+   "radical": 165,
+   "radical_element": "木",
+   "same_as_radical": false,
+   "basis": [
+    "PRACTICE"
+   ],
+   "practice": {
+    "n": 2,
+    "of": 3,
+    "n_indep": 2
+   },
+   "note": "작명 실무 자료 3곳 가운데 2곳이 釋=火, 부수값 釆(木) → 실무 예외(D1 개정)"
+  }
+ },
+ "disputed_chars": {
+  "一": {
+   "cp": "U+4E00",
+   "kind": "number",
+   "radical": 1,
+   "radical_element": "木",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 一(木) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "七": {
+   "cp": "U+4E03",
+   "kind": "number",
+   "radical": 1,
+   "radical_element": "木",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 一(木) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "三": {
+   "cp": "U+4E09",
+   "kind": "number",
+   "radical": 1,
+   "radical_element": "木",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 一(木) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "八": {
+   "cp": "U+516B",
+   "kind": "number",
+   "radical": 12,
+   "radical_element": "金",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 八(金) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "六": {
+   "cp": "U+516D",
+   "kind": "number",
+   "radical": 12,
+   "radical_element": "金",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 八(金) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "十": {
+   "cp": "U+5341",
+   "kind": "number",
+   "radical": 24,
+   "radical_element": "水",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 十(水) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "千": {
+   "cp": "U+5343",
+   "kind": "number",
+   "radical": 24,
+   "radical_element": "水",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 十(水) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "四": {
+   "cp": "U+56DB",
+   "kind": "number",
+   "radical": 31,
+   "radical_element": "水",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 囗(水) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "百": {
+   "cp": "U+767E",
+   "kind": "number",
+   "radical": 106,
+   "radical_element": "金",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 白(金) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "萬": {
+   "cp": "U+842C",
+   "kind": "number",
+   "radical": 140,
+   "radical_element": "木",
+   "dispute_basis": [
+    "CRIT"
+   ],
+   "decision": "D3",
+   "note": "숫자 한자 — 성민경(CRIT)은 숫자 한자의 자원오행을 누가 어떤 기준으로 정하느냐고 묻는다(기준이 없다는 지적). 실무 자료 관찰(측정, 계획 §2-2): 하도 수 배속(一六水·二七火·三八木·四九金·五十土)을 일관되게 쓰는 곳이 없다. 부수값 艸(木) + '이견'(D3). 실무 자료 2곳 이상(독립 근거 — B-1)이 같은 다른 값을 준 숫자는 실무 예외로 갔다"
+  },
+  "丘": {
+   "cp": "U+4E18",
+   "kind": "practice_dispute",
+   "radical": 1,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "土",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 丘=土 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 一(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "事": {
+   "cp": "U+4E8B",
+   "kind": "practice_dispute",
+   "radical": 6,
+   "radical_element": "金",
+   "alt_char": [
+    {
+     "e": "木",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 2,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 2곳 가운데 2곳이 事=木 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 亅(金) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "勞": {
+   "cp": "U+52DE",
+   "kind": "practice_dispute",
+   "radical": 19,
+   "radical_element": "土",
+   "alt_char": [
+    {
+     "e": "火",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 勞=火 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 力(土) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "勲": {
+   "cp": "U+52F2",
+   "kind": "practice_dispute",
+   "radical": 19,
+   "radical_element": "土",
+   "alt_char": [
+    {
+     "e": "火",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 2,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 2곳 가운데 2곳이 勲=火 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 力(土) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "匍": {
+   "cp": "U+530D",
+   "kind": "practice_dispute",
+   "radical": 20,
+   "radical_element": "金",
+   "alt_char": [
+    {
+     "e": "木",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 匍=木 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 勹(金) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "匏": {
+   "cp": "U+530F",
+   "kind": "practice_dispute",
+   "radical": 20,
+   "radical_element": "金",
+   "alt_char": [
+    {
+     "e": "木",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 匏=木 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 勹(金) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "天": {
+   "cp": "U+5929",
+   "kind": "practice_dispute",
+   "radical": 37,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "火",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 天=火 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 大(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "奈": {
+   "cp": "U+5948",
+   "kind": "practice_dispute",
+   "radical": 37,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "火",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 奈=火 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 大(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "奭": {
+   "cp": "U+596D",
+   "kind": "practice_dispute",
+   "radical": 37,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "火",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 奭=火 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 大(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "娟": {
+   "cp": "U+5A1F",
+   "kind": "literature_dispute",
+   "radical": 38,
+   "radical_element": "土",
+   "alt_char": [
+    {
+     "e": "火",
+     "basis": [
+      "KIM-TXT"
+     ]
+    },
+    {
+     "e": "水",
+     "basis": [
+      "KIM-TXT"
+     ]
+    }
+   ],
+   "dispute_basis": [
+    "KIM-TXT"
+   ],
+   "note": "김만태 본문: 娟은 부수(女)로 보면 水나 土, 자의(예쁨)로 보면 火 → 부수값 女(土) + '이견'"
+  },
+  "宣": {
+   "cp": "U+5BA3",
+   "kind": "literature_overruled",
+   "radical": 40,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "水",
+     "basis": [
+      "KIM-EX"
+     ]
+    }
+   ],
+   "dispute_basis": [
+    "KIM-EX"
+   ],
+   "practice": {
+    "e": "木",
+    "n": 2,
+    "of": 2,
+    "n_indep": 1
+   },
+   "decision": "B-2",
+   "note": "김만태 예시 宣=水, 부수값 宀(木) — 작명 실무 자료 2곳 가운데 2곳이 宣=木 (그중 1곳은 그 자료 자신의 부수 다수값과 같은 값 — 부수 규칙값의 반복이라 독립 근거는 1곳, B-1) → 문헌 예외로 확정하지 않음(B-2): 부수값 + '이견', 문헌 값은 글자 대체값"
+  },
+  "尋": {
+   "cp": "U+5C0B",
+   "kind": "practice_dispute",
+   "radical": 41,
+   "radical_element": "土",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 尋=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 寸(土) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "康": {
+   "cp": "U+5EB7",
+   "kind": "literature_dispute",
+   "radical": 53,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "KIM-TXT"
+     ]
+    }
+   ],
+   "dispute_basis": [
+    "KIM-TXT"
+   ],
+   "note": "김만태 본문: 康은 자원오행상 木이나 실제로는 庚(金)과 같이 취급하는 경우가 많다 → 부수값 广(木) + '이견'"
+  },
+  "成": {
+   "cp": "U+6210",
+   "kind": "literature_overruled",
+   "radical": 62,
+   "radical_element": "金",
+   "alt_char": [
+    {
+     "e": "火",
+     "basis": [
+      "MISO"
+     ]
+    }
+   ],
+   "dispute_basis": [
+    "MISO"
+   ],
+   "practice": {
+    "e": "金",
+    "n": 2,
+    "of": 3,
+    "n_indep": 1
+   },
+   "decision": "B-2",
+   "note": "미소 한국작명원 예시 成=火, 부수값 戈(金) — 작명 실무 자료 3곳 가운데 2곳이 成=金 (그중 1곳은 그 자료 자신의 부수 다수값과 같은 값 — 부수 규칙값의 반복이라 독립 근거는 1곳, B-1) → 문헌 예외로 확정하지 않음(B-2): 부수값 + '이견', 문헌 값은 글자 대체값",
+   "compat_forms_in_target": [
+    "U+2F8B2"
+   ]
+  },
+  "欺": {
+   "cp": "U+6B3A",
+   "kind": "practice_dispute",
+   "radical": 76,
+   "radical_element": "火",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 欺=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 欠(火) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "欽": {
+   "cp": "U+6B3D",
+   "kind": "practice_dispute",
+   "radical": 76,
+   "radical_element": "火",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 欽=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 欠(火) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "歌": {
+   "cp": "U+6B4C",
+   "kind": "practice_dispute",
+   "radical": 76,
+   "radical_element": "火",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 歌=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 欠(火) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "歡": {
+   "cp": "U+6B61",
+   "kind": "practice_dispute",
+   "radical": 76,
+   "radical_element": "火",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 歡=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 欠(火) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "爲": {
+   "cp": "U+7232",
+   "kind": "practice_dispute",
+   "radical": 87,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 2,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 2곳 가운데 2곳이 爲=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 爪(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "祖": {
+   "cp": "U+7956",
+   "kind": "practice_dispute",
+   "radical": 113,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 祖=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 示(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "祗": {
+   "cp": "U+7957",
+   "kind": "practice_dispute",
+   "radical": 113,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 祗=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 示(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "祚": {
+   "cp": "U+795A",
+   "kind": "practice_dispute",
+   "radical": 113,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 祚=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 示(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "祜": {
+   "cp": "U+795C",
+   "kind": "practice_dispute",
+   "radical": 113,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 祜=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 示(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "祝": {
+   "cp": "U+795D",
+   "kind": "practice_dispute",
+   "radical": 113,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 祝=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 示(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1",
+   "compat_forms_in_target": [
+    "U+FA51"
+   ]
+  },
+  "祥": {
+   "cp": "U+7965",
+   "kind": "literature_dispute",
+   "radical": 113,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "土",
+     "basis": [
+      "ERUMY"
+     ]
+    },
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "ERUMY",
+    "PRACTICE"
+   ],
+   "note": "이루미: 祥은 示변 + 羊이고 羊이 未土라서 土 기운으로 본다 → 부수값 示(木) + '이견'; 작명 실무 자료 3곳 가운데 2곳이 祥=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 示(木) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1",
+   "compat_forms_in_target": [
+    "U+FA1A"
+   ]
+  },
+  "華": {
+   "cp": "U+83EF",
+   "kind": "literature_dispute",
+   "radical": 140,
+   "radical_element": "木",
+   "alt_char": [
+    {
+     "e": "火",
+     "basis": [
+      "KIM-TXT"
+     ]
+    }
+   ],
+   "dispute_basis": [
+    "KIM-TXT"
+   ],
+   "note": "김만태 본문: 華는 부수(艸)로는 木, 자의(꽃·빛남)로는 火 → 부수값 艸(木) + '이견'"
+  },
+  "載": {
+   "cp": "U+8F09",
+   "kind": "literature_dispute",
+   "radical": 159,
+   "radical_element": "火",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "KIM-TXT"
+     ]
+    }
+   ],
+   "dispute_basis": [
+    "KIM-TXT"
+   ],
+   "note": "김만태 본문: 載는 자원상 金이어야 하나 실제로는 火에 배속된다 → 부수값 車(火) + '이견'"
+  },
+  "輾": {
+   "cp": "U+8F3E",
+   "kind": "practice_dispute",
+   "radical": 159,
+   "radical_element": "火",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 輾=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 車(火) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  },
+  "轎": {
+   "cp": "U+8F4E",
+   "kind": "practice_dispute",
+   "radical": 159,
+   "radical_element": "火",
+   "alt_char": [
+    {
+     "e": "金",
+     "basis": [
+      "PRACTICE"
+     ],
+     "n": 2,
+     "of": 3,
+     "n_indep": 1
+    }
+   ],
+   "dispute_basis": [
+    "PRACTICE"
+   ],
+   "note": "작명 실무 자료 3곳 가운데 2곳이 轎=金 지만 그중 1곳은 그 자료 자신의 부수 다수값과 같은 값(부수 규칙값의 반복)이라 독립 근거는 1곳 — 실무 예외는 독립 근거 2곳 이상(B-1) → 부수값 車(火) + '이견', 실무 값은 글자 대체값",
+   "decision": "B-1"
+  }
+ },
+ "literature_examples": {
+  "儁": {
+   "cp": "U+5101",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "元": {
+   "cp": "U+5143",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "光": {
+   "cp": "U+5149",
+   "e": "火",
+   "basis": [
+    "MISO"
+   ],
+   "role": "literature_exception"
+  },
+  "兌": {
+   "cp": "U+514C",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "literature_exception"
+  },
+  "兩": {
+   "cp": "U+5169",
+   "e": "土",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "判": {
+   "cp": "U+5224",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "創": {
+   "cp": "U+5275",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "劉": {
+   "cp": "U+5289",
+   "e": "金",
+   "basis": [
+    "KIM-EX",
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "吉": {
+   "cp": "U+5409",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "呂": {
+   "cp": "U+5442",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "哲": {
+   "cp": "U+54F2",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "善": {
+   "cp": "U+5584",
+   "e": "水",
+   "basis": [
+    "KIM-EX",
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "喆": {
+   "cp": "U+5586",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "國": {
+   "cp": "U+570B",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "在": {
+   "cp": "U+5728",
+   "e": "土",
+   "basis": [
+    "KIM-EX",
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "均": {
+   "cp": "U+5747",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "埈": {
+   "cp": "U+57C8",
+   "e": "土",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "城": {
+   "cp": "U+57CE",
+   "e": "土",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "基": {
+   "cp": "U+57FA",
+   "e": "土",
+   "basis": [
+    "KIM-EX",
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "夕": {
+   "cp": "U+5915",
+   "e": "水",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "奎": {
+   "cp": "U+594E",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "literature_exception"
+  },
+  "娘": {
+   "cp": "U+5A18",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "娟": {
+   "cp": "U+5A1F",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "守": {
+   "cp": "U+5B88",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "宣": {
+   "cp": "U+5BA3",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "literature_overruled"
+  },
+  "家": {
+   "cp": "U+5BB6",
+   "e": "木",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "尙": {
+   "cp": "U+5C19",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "literature_exception"
+  },
+  "島": {
+   "cp": "U+5CF6",
+   "e": "土",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "崇": {
+   "cp": "U+5D07",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "崔": {
+   "cp": "U+5D14",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "康": {
+   "cp": "U+5EB7",
+   "e": "木",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "建": {
+   "cp": "U+5EFA",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "怡": {
+   "cp": "U+6021",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "恩": {
+   "cp": "U+6069",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "惠": {
+   "cp": "U+60E0",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "憬": {
+   "cp": "U+61AC",
+   "e": "火",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "成": {
+   "cp": "U+6210",
+   "e": "火",
+   "basis": [
+    "MISO"
+   ],
+   "role": "literature_overruled"
+  },
+  "敏": {
+   "cp": "U+654F",
+   "e": "金",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "新": {
+   "cp": "U+65B0",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "昌": {
+   "cp": "U+660C",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "明": {
+   "cp": "U+660E",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "昞": {
+   "cp": "U+661E",
+   "e": "火",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "昶": {
+   "cp": "U+6636",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "晟": {
+   "cp": "U+665F",
+   "e": "火",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "普": {
+   "cp": "U+666E",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "晳": {
+   "cp": "U+6673",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "智": {
+   "cp": "U+667A",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "月": {
+   "cp": "U+6708",
+   "e": "水",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "有": {
+   "cp": "U+6709",
+   "e": "水",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "朴": {
+   "cp": "U+6734",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "李": {
+   "cp": "U+674E",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "東": {
+   "cp": "U+6771",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "林": {
+   "cp": "U+6797",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "柱": {
+   "cp": "U+67F1",
+   "e": "木",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "柳": {
+   "cp": "U+67F3",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "桓": {
+   "cp": "U+6853",
+   "e": "木",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "正": {
+   "cp": "U+6B63",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "水": {
+   "cp": "U+6C34",
+   "e": "水",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "沈": {
+   "cp": "U+6C88",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "法": {
+   "cp": "U+6CD5",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "泳": {
+   "cp": "U+6CF3",
+   "e": "水",
+   "basis": [
+    "KIM-EX",
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "浩": {
+   "cp": "U+6D69",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "海": {
+   "cp": "U+6D77",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "渙": {
+   "cp": "U+6E19",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "炫": {
+   "cp": "U+70AB",
+   "e": "火",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "炳": {
+   "cp": "U+70B3",
+   "e": "火",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "煥": {
+   "cp": "U+7165",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "照": {
+   "cp": "U+7167",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "爀": {
+   "cp": "U+7200",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "牟": {
+   "cp": "U+725F",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "玟": {
+   "cp": "U+739F",
+   "e": "金",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "玩": {
+   "cp": "U+73A9",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "玲": {
+   "cp": "U+73B2",
+   "e": "金",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "珉": {
+   "cp": "U+73C9",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "珏": {
+   "cp": "U+73CF",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "現": {
+   "cp": "U+73FE",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "瑞": {
+   "cp": "U+745E",
+   "e": "金",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "璨": {
+   "cp": "U+74A8",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "産": {
+   "cp": "U+7523",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "甫": {
+   "cp": "U+752B",
+   "e": "水",
+   "basis": [
+    "KIM-EX",
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "甲": {
+   "cp": "U+7532",
+   "e": "木",
+   "basis": [
+    "MISO"
+   ],
+   "role": "ganji"
+  },
+  "男": {
+   "cp": "U+7537",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "白": {
+   "cp": "U+767D",
+   "e": "金",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "皓": {
+   "cp": "U+7693",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "益": {
+   "cp": "U+76CA",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "literature_exception"
+  },
+  "相": {
+   "cp": "U+76F8",
+   "e": "木",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "眞": {
+   "cp": "U+771E",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "碩": {
+   "cp": "U+78A9",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "秀": {
+   "cp": "U+79C0",
+   "e": "木",
+   "basis": [
+    "KIM-EX",
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "箕": {
+   "cp": "U+7B95",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "範": {
+   "cp": "U+7BC4",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "綠": {
+   "cp": "U+7DA0",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "綱": {
+   "cp": "U+7DB1",
+   "e": "木",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "美": {
+   "cp": "U+7F8E",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "翊": {
+   "cp": "U+7FCA",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "良": {
+   "cp": "U+826F",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "花": {
+   "cp": "U+82B1",
+   "e": "木",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "茂": {
+   "cp": "U+8302",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "華": {
+   "cp": "U+83EF",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "補": {
+   "cp": "U+88DC",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "見": {
+   "cp": "U+898B",
+   "e": "火",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "言": {
+   "cp": "U+8A00",
+   "e": "金",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "謙": {
+   "cp": "U+8B19",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "謨": {
+   "cp": "U+8B28",
+   "e": "金",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "貞": {
+   "cp": "U+8C9E",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "賢": {
+   "cp": "U+8CE2",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "車": {
+   "cp": "U+8ECA",
+   "e": "火",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "載": {
+   "cp": "U+8F09",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "進": {
+   "cp": "U+9032",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "道": {
+   "cp": "U+9053",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "達": {
+   "cp": "U+9054",
+   "e": "土",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "邑": {
+   "cp": "U+9091",
+   "e": "土",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "郁": {
+   "cp": "U+90C1",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "郞": {
+   "cp": "U+90DE",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "都": {
+   "cp": "U+90FD",
+   "e": "土",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "鉉": {
+   "cp": "U+9249",
+   "e": "金",
+   "basis": [
+    "KIM-EX",
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "鍾": {
+   "cp": "U+937E",
+   "e": "金",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "長": {
+   "cp": "U+9577",
+   "e": "木",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "隱": {
+   "cp": "U+96B1",
+   "e": "土",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "雨": {
+   "cp": "U+96E8",
+   "e": "水",
+   "basis": [
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "顥": {
+   "cp": "U+9865",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "餘": {
+   "cp": "U+9918",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "駿": {
+   "cp": "U+99FF",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "鮮": {
+   "cp": "U+9BAE",
+   "e": "水",
+   "basis": [
+    "KIM-EX",
+    "MISO"
+   ],
+   "role": "same_as_radical"
+  },
+  "鳳": {
+   "cp": "U+9CF3",
+   "e": "火",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  },
+  "點": {
+   "cp": "U+9EDE",
+   "e": "水",
+   "basis": [
+    "KIM-EX"
+   ],
+   "role": "same_as_radical"
+  }
+ }
+}
