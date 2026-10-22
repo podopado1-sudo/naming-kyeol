@@ -558,7 +558,7 @@ public class ToolAccuracyRegressionTests
 
     [Theory]
     [InlineData("아름", "최", "2021-07-02", "female", "soft", "菻")]    // 감사: 강점이 雅+菻(쑥 림) — 菻은 weak
-    [InlineData("영자", "박", "2023-01-01", "female", "neutral", "雌")] // 감사: 강점이 映+雌(암컷 자) — 雌은 2026-10-22 weak 등재
+    [InlineData("영자", "박", "2023-01-01", "female", "neutral", "雌")] // 감사: 강점이 映+雌(암컷 자) — 雌은 2026-10-22 S3 weak → S4 불용
     public async Task Evaluate_MeaningStrength_SkipsWeakOrUncommonAssignedHanja(
         string name, string lastName, string date, string gender, string tone, string reported)
     {

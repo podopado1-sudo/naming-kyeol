@@ -141,7 +141,8 @@ def main():
     # 이름 합치기
     all_names = set(male) | set(female)
     records = {}
-    for name in all_names:
+    # 이름 키 순서 = 가나다(코드포인트) — set 순회는 실행마다 해시 시드로 순서가 바뀌어 같은 입력에 다른 바이트가 나왔다(2026-10-22 S4)
+    for name in sorted(all_names):
         if not HANGUL_NAME.match(name):
             continue
         m = male.get(name, 0)

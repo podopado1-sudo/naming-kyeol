@@ -54,7 +54,6 @@ public class WeakGivenNameHanjaTests
     [InlineData("煂")] // 불태울 혁 — 준혁=俊煂 등 12쌍
     [InlineData("烋")] // 효 자리 훈 '거들먹거릴'(대법원 효·휴 겸용) — 효리=烋李가 1순위였음
     [InlineData("降")] // 항 자리 훈 '항복할'
-    [InlineData("雌")] // 암컷 자 — 2026-10-22 감사 EV-3 (/evaluate 박영자=映雌)
     public void LiveAudit20261007_IsWeak(string ch)
     {
         Assert.True(HanjaData.IsWeakGivenNameHanja(ch));
