@@ -28,12 +28,15 @@ public class HanjaDataEnhancementTests
             $"획수 데이터 비율이 너무 낮습니다: {withStroke}/{allHanja.Count} ({ratio:P0})");
     }
 
+    // 획수 = data/hanja_strokes.json(kTotalStrokes — /hanja 와 같은 파일, 2026-10-22 S5c-2). 이 파일은 Unicode 18.0 이전 kTotalStrokes 첫 값이라
+    // 중국 대륙 자형으로 센 글자가 있다(花 7 — 한국 자전 8, 艹 3획). S5c-2 전 백엔드는 hanja_unihan.json(kRSAdobe_Japan1_6, 일본 자형)이라 海 9·韓 18
     [Theory]
-    [InlineData("春", 9)]   // 봄 춘 = 9획
-    [InlineData("海", 9)]   // 바다 해 = 9획 (Unihan 기준 氵3+每6=9)
-    [InlineData("山", 3)]   // 산 산 = 3획
-    [InlineData("金", 8)]   // 쇠 금 = 8획
-    [InlineData("花", 7)]   // 꽃 화 = 7획 (하드코딩)
+    [InlineData("春", 9)]   // 봄 춘
+    [InlineData("海", 10)]  // 바다 해 — 氵3 + 每7 (S5c-2 전 9)
+    [InlineData("山", 3)]   // 산 산
+    [InlineData("金", 8)]   // 쇠 금
+    [InlineData("花", 7)]   // 꽃 화 — 파일 값(艹 3획, 한국 자전 8)
+    [InlineData("韓", 17)]  // 나라 한 (S5c-2 전 백엔드 18)
     public void StrokeCount_KnownCharacters_CorrectValues(string character, int expectedStrokes)
     {
         var info = HanjaData.FindByCharacter(character);
@@ -133,6 +136,28 @@ public class HanjaDataEnhancementTests
         Assert.Equal(strokes, h!.StrokeCount);
         Assert.Equal(kangxi, h.KangxiStrokes); // 원획은 보존(평가·분석 DTO 표시)
         Assert.Equal(yinYang, h.YinYang);
+    }
+
+    [Fact]
+    public void StrokeCount_EqualsStrokeFile_ForEveryHanja()
+    {
+        // 백엔드 획수 ↔ data/hanja_strokes.json 전수 — /hanja 의 s 도 같은 파일·같은 규칙(통합 키, 없으면 호환 키)이라
+        // 이것이 백엔드 ↔ /hanja 획수·음양 일치의 보증이다(S5c 전 획수 832자·음양 6,821자 불일치)
+        var map = HanjaData.ReadStrokeFile();
+        Assert.NotNull(map);
+        var compat = map!.Where(kv => HanjaData.ToUnifiedHanja(kv.Key) != kv.Key)
+            .GroupBy(kv => HanjaData.ToUnifiedHanja(kv.Key))
+            .ToDictionary(g => g.Key, g => g.First().Value);
+
+        var all = HanjaData.GetAllHanja();
+        var missing = all.Where(h => !map.ContainsKey(h.Character) && !compat.ContainsKey(h.Character)).Select(h => h.Character).ToList();
+        int Expected(string c) => map.TryGetValue(c, out var n) ? n : compat.GetValueOrDefault(c);
+        var diff = all.Where(h => Expected(h.Character) > 0 && h.StrokeCount != Expected(h.Character))
+            .Select(h => h.Character).ToList();
+
+        Assert.True(missing.Count == 0, $"획수 파일에 없는 글자 {missing.Count}: {string.Join(" ", missing.Take(10))}");
+        Assert.True(diff.Count == 0, $"획수 파일과 다른 글자 {diff.Count}: {string.Join(" ", diff.Take(10))}");
+        Assert.DoesNotContain(map.Values, v => v <= 0);
     }
 
     // ===== GenderPref 검증 =====

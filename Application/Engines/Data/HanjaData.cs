@@ -740,11 +740,11 @@ public static class HanjaData
         // ── Tier 1: Core Dataset (최고 우선순위 — 마지막에 덮어씀) ────────
         LoadCoreDataset();
 
-        // ── Unicode 획수 (수리사격용 — kTotalStrokes 95.8% 커버) ──────────
-        LoadStrokeData();
-
         // ── 호환 한자 → 통합 한자 병합 (데이터 파일 적재가 모두 끝난 뒤 — 파일마다 호환 코드 키에도 값을 실었으므로) ──
         MergeCompatibilityIdeographs();
+
+        // ── 획수 (StrokeCount 의 유일한 기록자 — data/hanja_strokes.json kTotalStrokes, /hanja 와 같은 파일 · 병합 뒤 통합 키에, 2026-10-22 S5c-2) ──
+        ApplyStrokeCounts();
 
         // ── 음양 (YinYang 의 유일한 기록자 — StrokeCount 홀짝, 홀수 陽 · 병합 뒤 통합 키에, 2026-10-22 S5c-1) ──
         ApplyYinYangFromStrokes();
@@ -881,50 +881,58 @@ public static class HanjaData
         }
     }
 
+    /// <summary>획수 파일 이름 (data/ 아래 — /hanja 를 만드는 scripts/build_hanja_seo_data.py 와 같은 파일)</summary>
+    public const string StrokeFileName = "hanja_strokes.json";
+
     /// <summary>
-    /// Unicode kTotalStrokes 기반 획수 데이터 로드 (hanja_strokes.json, 9,190자 95.8% 커버).
-    /// 수리사격 계산용. StrokeCount가 0인 항목만 채우고, 기존 값(하드코딩/Core)은 유지.
+    /// 획수 적용 (2026-10-22 S5c-2 — 계획 docs/plan-radical-ohaeng-2026-10.md §5 '획수 출처 통일', D9 '프론트 kTotalStrokes 로 통일').
+    /// StrokeCount 의 유일한 기록자다. 호환 한자 병합 뒤에 불러 사전에는 통합 키만 있다.
+    /// - StrokeCount = data/hanja_strokes.json(kTotalStrokes)의 통합 키 값, 없으면 그 글자로 병합된 호환 키 값
+    ///   (scripts/build_hanja_seo_data.py 가 /hanja 의 s 를 만드는 규칙과 같다). 파일에 없는 글자만 앞 로더 값을 남긴다(2026-10-22 0자).
+    /// - 음양은 뒤의 ApplyYinYangFromStrokes 가 이 획수 홀짝으로 정한다.
+    /// S5c-2 전에는 StrokeCount 가 hanja_unihan.json(kRSAdobe_Japan1_6 부수 획수 + 나머지 획수, 일본 자형)·하드코딩 값이었고 이 파일은
+    /// 빈 칸만 채워(옛 LoadStrokeData) 백엔드 ↔ /hanja 획수가 832자 달랐다. 원획법 획수는 별도 결정(D10)이라 KangxiStrokes 는 보존만 한다.
     /// </summary>
-    private static void LoadStrokeData()
+    private static void ApplyStrokeCounts()
     {
         var dict = _loadedDictionary;
         if (dict == null) return;
 
-        var execDir = AppContext.BaseDirectory;
-        var currentDir = Directory.GetCurrentDirectory();
-        var projectRoot = Path.GetFullPath(Path.Combine(execDir, "..", "..", "..", ".."));
+        var strokeMap = ReadStrokeFile();
+        if (strokeMap == null) return;
 
-        var paths = new[]
+        // 호환 키 값 — 통합 키에 값이 없을 때만 쓴다 (파일 순서 = 코드포인트 순에서 처음 나온 호환 키)
+        var compatValue = new Dictionary<string, int>();
+        foreach (var (key, n) in strokeMap)
         {
-            Path.Combine(execDir, "data", "hanja_strokes.json"),
-            Path.Combine(currentDir, "data", "hanja_strokes.json"),
-            Path.Combine(projectRoot, "data", "hanja_strokes.json"),
-        };
+            var unified = ToUnifiedHanja(key);
+            if (unified != key && n > 0) compatValue.TryAdd(unified, n);
+        }
+        int fromFile = 0, kept = 0;
+        foreach (var (key, h) in dict)
+        {
+            if (strokeMap.TryGetValue(key, out var n) && n > 0) { h.StrokeCount = n; fromFile++; }
+            else if (compatValue.TryGetValue(key, out var c)) { h.StrokeCount = c; fromFile++; }
+            else kept++;
+        }
+        System.Diagnostics.Debug.WriteLine($"[Strokes] {fromFile}자 획수 파일 적용 · 파일에 없음 {kept}자(앞 로더 값 유지)");
+    }
 
-        var filePath = paths.FirstOrDefault(File.Exists);
-        if (filePath == null) return;
-
+    /// <summary>
+    /// 획수 파일(data/hanja_strokes.json — 호환 한자 키 포함). 파일을 못 찾거나 읽지 못하면 null. 테스트가 백엔드 적용값과 대조할 때도 쓴다.
+    /// </summary>
+    public static Dictionary<string, int>? ReadStrokeFile()
+    {
+        var path = FindOverrideFile(StrokeFileName);
+        if (path == null) return null;
         try
         {
-            var json = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
-            var strokeMap = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
-            if (strokeMap == null) return;
-
-            int updated = 0;
-            foreach (var kvp in strokeMap)
-            {
-                if (dict.TryGetValue(kvp.Key, out var info) && info.StrokeCount == 0)
-                {
-                    info.StrokeCount = kvp.Value;
-                    updated++;
-                }
-            }
-
-            System.Diagnostics.Debug.WriteLine($"[StrokeData] {updated}개 항목 획수 보완 (hanja_strokes.json)");
+            return JsonSerializer.Deserialize<Dictionary<string, int>>(File.ReadAllText(path, System.Text.Encoding.UTF8));
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[StrokeData] 로드 실패: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[Strokes] 획수 파일 로드 실패: {ex.Message}");
+            return null;
         }
     }
 
@@ -1818,6 +1826,8 @@ public static class HanjaData
                                 // 오행(fiveElement — 획수 끝자리 값)은 읽지 않는다. 자원오행은 ApplyResourceElements 하나만 기록한다(2026-10-22 S4)
                                 // 음양(yinYang)도 읽지 않는다 — 수집 스크립트가 짝수를 陽 으로 거꾸로 셌다. 음양은
                                 // ApplyYinYangFromStrokes(StrokeCount 홀짝)가 마지막에 정한다(2026-10-22 S5c-1)
+                                // 획수도 중간값이다 — StrokeCount 는 ApplyStrokeCounts(data/hanja_strokes.json)가 마지막에 정한다(2026-10-22 S5c-2).
+                                // 여기 값은 그 파일에 없는 글자의 대체값일 뿐(2026-10-22 0자)
                             }
                             
                             // GenderPref/TonePref 업데이트 (기본값인 Neutral일 때만)
