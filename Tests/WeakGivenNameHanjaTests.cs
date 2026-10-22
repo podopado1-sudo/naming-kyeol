@@ -61,12 +61,41 @@ public class WeakGivenNameHanjaTests
     }
 
     [Theory]
+    [InlineData("帆")] // 돛 범 — 자원오행 전환 뒤 범준·경범 등 공개 16명 1순위 (2026-10-22 S6-2 두더지 1라운드)
+    [InlineData("柯")] // 가지 가 — 가온 1순위
+    [InlineData("豆")] // 콩 두 — 荳(콩 두)와 같은 곡물 훈
+    [InlineData("鹿")] // 사슴 록 — 초록 대표 뜻 '처음 마주한 순수한 사슴의'
+    [InlineData("必")] // 반드시 필 (허사) — 승필 '반드시 이기고야 마는'
+    [InlineData("復")] // 부 자리 '다시'
+    [InlineData("契")] // 설 자리 '사람 이름' — 은설=恩契가 계 자리 '맺을' 뜻으로 윤문됨
+    [InlineData("附")] // 붙을 부 — 2라운드(復 뒤 부겸·부영 1순위)
+    [InlineData("返")] // 돌이킬 반 — 2라운드(半 뒤 반희 1순위)
+    public void MoleAudit20261022_IsWeak(string ch)
+    {
+        Assert.True(HanjaData.IsWeakGivenNameHanja(ch));
+        Assert.False(HanjaData.IsForbiddenNameHanja(ch));
+    }
+
+    [Fact]
+    public void MoleAudit20261022_DrownIsForbidden()
+    {
+        // 溺(빠질 닉·오줌 뇨) — 2라운드에 라익 4순위 빈칸으로 승격된 명백 부정자. weak 가 아니라 불용.
+        Assert.True(HanjaData.IsForbiddenNameHanja("溺"));
+        Assert.False(HanjaData.IsWeakGivenNameHanja("溺"));
+    }
+
+    [Theory]
     [InlineData("이안", "male")]   // 李眼(눈 안)이 4칸 채우기로 노출되던 이름
     [InlineData("태휘", "none")]   // 胎輝(아이 밸 태)
     [InlineData("새라", "female")] // 鰓羅(아가미 새)·愢羅(마음 맞지 않을 새)
     [InlineData("해웅", "male")]   // 咳雄
     [InlineData("준혁", "male")]   // 俊煂
     [InlineData("효리", "female")] // 烋李
+    [InlineData("범준", "male")]   // 帆俊 (2026-10-22 S6-2)
+    [InlineData("은설", "female")] // 恩契
+    [InlineData("초록", "female")] // 初鹿
+    [InlineData("반희", "female")] // 半熙 → 返熙 (2라운드)
+    [InlineData("부겸", "male")]   // 附謙 (2라운드)
     public void SelectCombos_DropsWeakPairs_WhenCleanPairExists(string name, string gender)
     {
         var combos = HanjaSelector.SelectCombos(name, gender, 4);
