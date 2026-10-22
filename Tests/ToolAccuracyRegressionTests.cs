@@ -15,6 +15,7 @@ namespace NameForm.Tests;
 /// 인명 도구(필수 글자·이름 평가) 정확성 회귀 — 2026-10 감사 RC-3·EV-1·EV-3·EV-4·EV-5·UX-3.
 /// 감사 재현 케이스(이서연·김민준·남궁민·최아름·김치우 등)는 실제 사주·용신 서비스로 돌린다.
 /// 점수 산식은 바꾸지 않은 수정들이라, 점수를 직접 고정하는 단언은 문구 정리가 점수를 건드리지 않았다는 증거다.
+/// 예외(2026-10-22 S5 — 계획 D9): 수리 성씨 획수(BT-3, S5a)·용신·희신 과다 감점 제외(EV-5, S5b)는 점수를 바꾼 수정이다.
 /// </summary>
 public class ToolAccuracyRegressionTests
 {
@@ -618,7 +619,7 @@ public class ToolAccuracyRegressionTests
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // EV-4 — 81수리 문구 (점수 불변)
+    // EV-4 — 81수리 문구 (점수 불변) · BT-3 성씨 획수 (S5a — 수리 점수 변경)
     // ═══════════════════════════════════════════════════════════════
 
     [Theory]
@@ -675,7 +676,7 @@ public class ToolAccuracyRegressionTests
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // EV-5 — 같은 오행이 가점·감점에 함께 나올 때 문구 (점수 불변)
+    // EV-5 — 같은 오행이 가점·감점에 함께 나올 때 (S5b: 용신·희신은 과다 감점 제외 — 점수 변경)
     // ═══════════════════════════════════════════════════════════════
 
     // FakeSaju: 木3 火1 土1 金1 水0 → 과다 木, 부족 火·土·金·水
@@ -684,27 +685,67 @@ public class ToolAccuracyRegressionTests
         new FakeYongshinCalculationService { PrimaryYongshin = "木", Heeshin = "水", Gishin = "金" });
 
     [Fact]
-    public async Task Harmony_YongshinAlsoExcessive_NoteReadsAsPartialOffset()
+    public async Task Harmony_YongshinAlsoExcessive_NoExcessPenalty()
     {
-        // 東(木)+建(木): 용신 木 +30, 과다 木 −10 → 50+30−10 = 70 → 30점 환산 21
+        // 東(木)+建(木): 용신 木 +30, 과다 木 은 용신이라 감점 없음(S5b — EV-5) → 50+30 = 80 → 30점 환산 24
+        // (S5b 전: 과다 −10 → 70 → 21, 노트 "용신 '木' — 사주에 이미 많은 오행이라 가점 일부 상쇄 (감점)")
         var b = await CreateFakeHarmony().CalculateScoreWithBreakdownAsync("동건", "김", new DateTime(2024, 6, 15), "none");
 
         Assert.Contains("용신 '木' 보완", b.Notes);
-        Assert.Contains("용신 '木' — 사주에 이미 많은 오행이라 가점 일부 상쇄 (감점)", b.Notes);
-        Assert.DoesNotContain("과다한 오행 '木' 증가 (감점)", b.Notes);
-        Assert.Equal(21, b.FiveElementScore);
+        Assert.DoesNotContain(b.Notes, n => n.Contains("가점 일부 상쇄") || n.Contains("과다한 오행 '木'"));
+        Assert.Equal(24, b.FiveElementScore);
+    }
+
+    [Fact]
+    public async Task Harmony_HeeshinAlsoExcessive_NoExcessPenalty()
+    {
+        // 용신 土·희신 木·기신 水, 사주 木3 과다. 동·건 빈출 후보에 土 글자가 없어 배정은 희신 木(東·棟 / 建).
+        // 희신 木 +12, 과다 木 은 희신이라 감점 없음 → 62 → 18 (S5b 전: 과다 −10 → 52 → 15)
+        var harmony = new HarmonyEngine(new FakeSajuCalculationService(),
+            new FakeYongshinCalculationService { PrimaryYongshin = "土", Heeshin = "木", Gishin = "水" });
+        var b = await harmony.CalculateScoreWithBreakdownAsync("동건", "김", new DateTime(2024, 6, 15), "none");
+
+        Assert.All(b.SelectedHanja, h => Assert.Equal("木", h!.FiveElement));
+        Assert.Contains("희신 '木' 포함", b.Notes);
+        Assert.DoesNotContain(b.Notes, n => n.Contains("가점 일부 상쇄") || n.Contains("과다한 오행 '木'"));
+        Assert.Equal(18, b.FiveElementScore);
+    }
+
+    [Fact]
+    public async Task Harmony_ExcessPenalty_OnlyForElementsThatAreNotYongshinOrHeeshin()
+    {
+        // 스텁 사주의 과다 오행은 木 하나(木3 火1 土1 金1 水0). 배정 한자에 木 이 있으면 용신·희신이 木 이 아닐 때만 감점 노트가 붙는다.
+        // 배정은 용신에 따라 바뀌므로(HanjaSelector) 이름·용신 조합을 돌려 규칙만 본다 — 감점·면제 사례가 모두 나와야 의미가 있다.
+        int penalized = 0, exempted = 0;
+        foreach (var (primary, hee) in new[] { ("木", "水"), ("土", "木"), ("水", "金"), ("火", "土"), ("金", "水") })
+        {
+            var harmony = new HarmonyEngine(new FakeSajuCalculationService(),
+                new FakeYongshinCalculationService { PrimaryYongshin = primary, Heeshin = hee, Gishin = "土" == primary ? "水" : "土" });
+            foreach (var name in new[] { "동건", "서연", "민준", "하늘", "지우", "도윤", "수빈", "태림" })
+            {
+                var b = await harmony.CalculateScoreWithBreakdownAsync(name, "김", new DateTime(2024, 6, 15), "none");
+                bool hasWood = b.SelectedHanja.Any(h => h?.FiveElement == "木");
+                bool exempt = primary == "木" || hee == "木";
+                Assert.Equal(hasWood && !exempt, b.Notes.Contains("과다한 오행 '木' 증가 (감점)"));
+                Assert.DoesNotContain(b.Notes, n => n.Contains("가점 일부 상쇄"));
+                if (hasWood && exempt) exempted++;
+                if (hasWood && !exempt) penalized++;
+            }
+        }
+        Assert.True(penalized > 0 && exempted > 0, $"감점 {penalized} · 면제 {exempted}");
     }
 
     [Fact]
     public async Task Harmony_GishinAlsoLacking_NoteReadsAsPartialOffset()
     {
-        // 東(木)+玲(金): 50 +30(용신 木) −25(기신 金) +10(부족 金) −10(과다 木) +10(오행 2종) = 65 → 19
+        // 東(木)+玲(金): 50 +30(용신 木) −25(기신 金) +10(부족 金) +10(오행 2종) = 75 → 22
+        // (과다 木 은 용신이라 감점 없음 — S5b 전: −10 → 65 → 19)
         var b = await CreateFakeHarmony().CalculateScoreWithBreakdownAsync("동령", "김", new DateTime(2024, 6, 15), "none");
 
         Assert.Contains("기신 '金' 충돌 (감점)", b.Notes);
         Assert.Contains("기신 '金' — 사주에 부족한 오행이라 감점 일부 상쇄", b.Notes);
         Assert.DoesNotContain("부족한 오행 '金' 보완", b.Notes);
-        Assert.Equal(19, b.FiveElementScore);
+        Assert.Equal(22, b.FiveElementScore);
     }
 
     // ═══════════════════════════════════════════════════════════════

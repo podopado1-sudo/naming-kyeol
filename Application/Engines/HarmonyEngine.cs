@@ -184,7 +184,7 @@ public class HarmonyEngine : IHarmonyEngine
 
         int score = 50; // 기본 점수 (100점 만점 기준)
 
-        // 용신·희신·기신 — 아래 보조 부족/과다 노트가 같은 오행을 반대 방향으로 말할 때 문구를 맞추는 데만 쓴다.
+        // 용신·희신·기신 — 아래 보조 부족/과다 계산에서 용신·희신을 과다 감점에서 빼고(S5b), 기신이 부족한 오행일 때 문구를 맞춘다.
         string? yongPrimary = null, yongHee = null, yongGi = null;
 
         // ── 용신 기반 가산 (가장 정확한 보완 평가) ──────────────────
@@ -234,9 +234,10 @@ public class HarmonyEngine : IHarmonyEngine
 
         // ── 보조: 단순 부족/과다 보완 (용신 가산이 없는 케이스 보완) ──
         // 조후법 용신은 사주에 이미 많은 오행일 수 있어, 같은 오행이 "용신 보완"(가점)과
-        // "과다한 오행 증가"(감점)로 나란히 떠 모순처럼 읽혔다(이서연·제갈하늘·남궁민 실측).
-        // 점수는 그대로 두고 문구만 "가점 일부 상쇄"로 이어 읽히게 한다 — 감점 제외는 HarmonyScore와
-        // /name 점수 데이터가 바뀌는 일이라 별도 작업.
+        // "과다한 오행 증가"(감점)로 나란히 떠 모순처럼 읽혔다(이서연·제갈하늘·남궁민 실측 — 감사 EV-5).
+        // 2026-10-22 S5b(D9): 용신·희신은 과다 감점에서 뺀다 — 용신 판정이 이미 "이 사주에 필요한 오행"이라는 결론이라
+        // 단순 개수 기준 과다 감점이 그 판단을 뒤집으면 안 된다. 그 전에는 점수는 두고 문구만 "가점 일부 상쇄 (감점)"으로 이었다.
+        // 기신이 부족한 오행이면 +10 은 그대로 둔다(아래 문구 "감점 일부 상쇄").
         foreach (var el in lackingElements)
         {
             if (elements.ContainsKey(el) && elements[el] > 0)
@@ -250,12 +251,11 @@ public class HarmonyEngine : IHarmonyEngine
 
         foreach (var el in excessiveElements)
         {
+            if (el == yongPrimary || el == yongHee) continue; // 용신·희신은 과다 감점 제외 (S5b, EV-5)
             if (elements.ContainsKey(el) && elements[el] > 0)
             {
                 score -= 10; // 기존 15 → 10
-                notes.Add(el == yongPrimary ? $"용신 '{el}' — 사주에 이미 많은 오행이라 가점 일부 상쇄 (감점)"
-                    : el == yongHee ? $"희신 '{el}' — 사주에 이미 많은 오행이라 가점 일부 상쇄 (감점)"
-                    : $"과다한 오행 '{el}' 증가 (감점)");
+                notes.Add($"과다한 오행 '{el}' 증가 (감점)");
             }
         }
 
