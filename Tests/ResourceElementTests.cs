@@ -194,6 +194,30 @@ public class ResourceElementTests
         Assert.All(legacyD, h => Assert.True(h.MeaningElement.Length == 0 && h.MeaningRationale.Length == 0, h.Character));
     }
 
+    // ── V 이유(v_reasons): /evaluate·/analysis 가 '자료 적음'·'추정'을 /hanja 와 같은 기준으로 나눈다(S7) ──────
+
+    [Theory]
+    [InlineData(0x6C11, "radical_single")]  // 民 — 氏 부수, 자료 적음(이견 아님)
+    [InlineData(0x5C6F, "radical_unknown")] // 屯 — 屮 부수, 추정
+    public void VReasons_LoadedFromResultFile(int codepoint, string reason)
+    {
+        var ch = Cp(codepoint);
+        var h = HanjaData.FindByCharacter(ch)!;
+        var file = ReadResultFileChars()[ch];
+        var expected = file.GetProperty("v_reasons").EnumerateArray().Select(v => v.GetString()!).ToList();
+
+        Assert.Equal("V", h.ResourceGrade);
+        Assert.Equal(expected, h.VReasons);
+        Assert.Equal(new[] { reason }, h.VReasons);
+    }
+
+    [Fact]
+    public void VReasons_EmptyUnlessGradeV()
+    {
+        Assert.All(HanjaData.GetAllHanja().Where(h => h.ResourceGrade != "V"), h => Assert.Empty(h.VReasons));
+        Assert.All(HanjaData.GetAllHanja().Where(h => h.ResourceGrade == "V"), h => Assert.NotEmpty(h.VReasons));
+    }
+
     // ── 엔진 연결: 용신 배정·평가 DTO 가 부수 기준 값을 쓴다 ─────────────────────────────────
 
     [Fact]
@@ -215,6 +239,7 @@ public class ResourceElementTests
             Assert.Equal(h.ResourceGrade, c.ResourceGrade);
             Assert.Equal(h.Rationale, c.Rationale);
             Assert.Equal(h.ConfidenceGrade, c.ConfidenceGrade); // 옛 등급 필드는 화면 전환(S7)까지 이름·값 유지
+            Assert.Equal(h.VReasons, c.VReasons);
         }
         Assert.DoesNotContain(r.Harmony.Notes, n => n.Contains("자원오행 점수") || n.Contains("자원오행 신뢰도"));
     }

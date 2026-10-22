@@ -262,6 +262,7 @@ public class NameAnalysisService : INameAnalysisService
                     KangxiStrokes   = h.KangxiStrokes > 0 ? h.KangxiStrokes : null,
                     ConfidenceGrade = h.ConfidenceGrade,
                     ResourceGrade   = h.ResourceGrade,
+                    VReasons        = h.VReasons.ToList(),
                     Rationale       = string.IsNullOrEmpty(h.Rationale) ? null : h.Rationale,
                 }).ToList()
             });

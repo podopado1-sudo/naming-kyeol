@@ -115,3 +115,5 @@ __pycache__/
 /name-scores.json
 /story-inputs.json
 /hanja-elements.json
+/hanja-quality.json
+/name-flags.json

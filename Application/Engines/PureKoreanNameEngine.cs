@@ -16,6 +16,27 @@ public class PureKoreanNameEngine : IPureKoreanNameEngine
     /// <summary>순우리말 이름 내장 사전</summary>
     private static readonly List<PureKoreanEntry> NameDictionary = BuildDictionary();
 
+    private static readonly HashSet<string> DictionaryNameSet = new(NameDictionary.Select(e => e.Name), StringComparer.Ordinal);
+
+    /// <summary>이 사전에 실린 이름인지 — /name 정적 데이터의 순우리말 플래그(pk) 출발점(`dotnet run -- dump-name-flags`).
+    /// 사전 그대로라 소망·미래·다정처럼 한자어로도 쓰이는 낱말, 예린·하린처럼 한자 이름으로도 흔한 항목이 섞여 있다
+    /// — pk 는 이것을 그대로 쓰지 않고 <see cref="IsPureKoreanSeoName"/> 으로 가감한다.</summary>
+    public static bool IsDictionaryName(string name) => DictionaryNameSet.Contains(name);
+
+    /// <summary>/name 정적 데이터 pk 판정(2026-10-22 S7 ND-3) — 사전 이름 − exclude(한자어 낱말·한자 이름으로 흔한 이름) + include(사전에 없는
+    /// 고유어 합성 이름 — 한별·은별). 가감 목록은 data/pure-korean-name-overrides.json(<see cref="LoadSeoOverrides"/>). 런타임 추천에는 쓰지 않는다.</summary>
+    public static bool IsPureKoreanSeoName(string name, IReadOnlySet<string> include, IReadOnlySet<string> exclude)
+        => include.Contains(name) || (DictionaryNameSet.Contains(name) && !exclude.Contains(name));
+
+    /// <summary>data/pure-korean-name-overrides.json 의 include·exclude 키(이름 → 사유 문자열).</summary>
+    public static (HashSet<string> Include, HashSet<string> Exclude) LoadSeoOverrides(string json)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        HashSet<string> Keys(string prop) =>
+            new(doc.RootElement.GetProperty(prop).EnumerateObject().Select(p => p.Name), StringComparer.Ordinal);
+        return (Keys("include"), Keys("exclude"));
+    }
+
     public async Task<List<PureKoreanCandidate>> GenerateCandidatesAsync(
         string lastName, string gender, string tone, int count)
     {

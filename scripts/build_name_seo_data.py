@@ -28,6 +28,13 @@
   - creative-name-meanings의 뜻이 표시 combos와 모순이면(mean_combo_check: 페이지 어느 조합에도 없는
     한자의 구체 명사 훈 — 연꽃·비·별·으뜸) 1순위 조합 뜻(combo-meanings)으로 교체한다.
     weak 추가 등으로 combos가 바뀌어도 재생성만 하면 뜻이 따라온다. 감사: audit_mean_combo_mismatch.py
+이름 갈래 플래그 (2026-10-22 S7 — ND-3): `dotnet run -- dump-name-flags`(루트 name-flags.json, .gitignore)의 pk·fx 만 복사한다.
+  pk 1 = 한글 이름으로 쓰는 순우리말 이름(조합 유무 무관 — '한자로 쓴다면(참고)' 표시용) — PureKoreanNameEngine 내장 사전
+         − data/pure-korean-name-overrides.json exclude(한자어 낱말·한자 이름으로 흔한 이름) + include(한별·은별).
+         pk 의 대표 뜻은 creative-name-meanings 그대로(한글 이름의 뜻) — 조합 뜻으로 모순 교체·빈 뜻 폴백을 하지 않는다.
+         대표 뜻이 자기 조합 뜻과 같으면 실패한다.
+  fx 1 = 한자 조합이 없고 data/foreign-given-names.json(사람 검토 목록)에 실린 외래 이름(외국 인명 표기·'-엘' 같은 외래 요소로 지은 이름)
+  덤프가 없는데 기존 출력에 플래그가 있으면 실패한다(조용히 빠지지 않게). fx 인데 조합이 있으면 덤프가 낡은 것이라 실패한다.
 출력:    frontend/src/data/name-seo.json + 검증 리포트(stdout)
 """
 
@@ -42,6 +49,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mean_combo_check import HanjaIndex, stale_keywords  # noqa: E402
 
 HANGUL_NAME = re.compile(r"^[가-힣]{2,3}$")
+# 외래 이름의 어원 뜻 문장('히브리어로 신이 더하신다는'·'히브리어 야곱에서 이어진') — fx 가 아닌 이름에 붙으면 경고(손질 실수 탐지)
+ETYMOLOGY_MEAN = re.compile(r"^(?:고대 )?[가-힣]+어(?:로 | [가-힣]+에서 이어진$)")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
@@ -80,11 +89,13 @@ def main():
     prev_pa = {}
     prev_names = set()
     prev_min_total = None
+    prev_flagged = 0
     if os.path.exists(OUT_PATH):
         prev = json.load(open(OUT_PATH, encoding="utf-8"))
         prev_names = set(prev.get("names", {}).keys())
         prev_pa = {n: r["pa"] for n, r in prev.get("names", {}).items() if r.get("pa")}
         prev_min_total = prev.get("meta", {}).get("minTotal")
+        prev_flagged = sum(1 for r in prev.get("names", {}).values() if r.get("pk") or r.get("fx"))
         if prev_pa:
             print(f"[drip] 기존 출력 pa {len(prev_pa)}개 이월 (수록 {len(prev_names)}개)")
 
@@ -137,6 +148,18 @@ def main():
         if os.path.exists(stories_path)
         else {}
     )
+
+    # 이름 갈래 플래그 (dotnet run -- dump-name-flags 산출물, 루트) — pk 순우리말 사전·fx 조합 없는 외래 이름
+    flags_path = os.path.join(ROOT, "name-flags.json")
+    if os.path.exists(flags_path):
+        name_flags = json.load(open(flags_path, encoding="utf-8"))["names"]
+    elif prev_flagged:
+        print(f"[오류] {flags_path} 가 없는데 기존 출력에 pk·fx 플래그 {prev_flagged}개가 있습니다 — "
+              "dotnet run -- dump-name-flags 를 먼저 돌릴 것(플래그 소실 방지 중단)", file=sys.stderr)
+        return 1
+    else:
+        print("[경고] name-flags.json 없음 — pk·fx 플래그 없이 진행")
+        name_flags = {}
 
     # 이름 합치기
     all_names = set(male) | set(female)
@@ -228,17 +251,28 @@ def main():
     used_combo_means = {}  # 수록 이름의 조합에 실제로 등장하는 한자쌍만 (top-level 맵, 중복 저장 회피)
     mean_from_combo = 0
     mean_stale = []  # 창의 뜻이 표시 조합과 모순(mean_combo_check noun·strict)이라 조합 뜻으로 바꾼 이름
+    with_pk = 0
+    with_fx = 0
+    flag_conflicts = []  # fx 인데 조합이 있음(덤프 불일치)
+    fx_no_mean = []  # 외래 이름인데 뜻이 빈 이름(어원을 확정하지 않은 조어·갈래 여럿 등 — 보고용)
+    etymology_not_fx = []  # 어원 문장 뜻인데 fx 가 아닌 이름(손질 실수 의심 — 보고용)
+    pk_combo_mean = []  # pk 인데 대표 뜻이 자기 조합 뜻과 같다(한자 조합에서 온 뜻 — S7V-3) → 실패
+    pk_no_mean = []  # pk 인데 creative-name-meanings 에 뜻이 없다(조합 뜻으로 채우지 않으므로 빈 뜻 — 보고용)
     for name, rec in records.items():
         mean = meanings.get(name)
         combo = combos.get(name)
-        if mean and combo and stale_keywords(name, mean, combo, hanja_idx):
+        fl = name_flags.get(name) or {}
+        is_pk = bool(fl.get("pk"))
+        # pk(한글 이름으로 쓰는 순우리말 이름)의 대표 뜻은 한글 이름의 뜻이다 — 조합은 '한자로 쓴다면(참고)'라
+        # 조합과 어긋난다고 조합 뜻으로 바꾸거나(모순 교체) 비었다고 조합 뜻으로 채우지 않는다(구름 '차갑게 빛나는 옥빛 기품' 玖凛 — S7V-3)
+        if not is_pk and mean and combo and stale_keywords(name, mean, combo, hanja_idx):
             # 6월 윤문 당시 대표 한자(蓮 연꽃·雨 비 등)의 뜻이 지금 combos 어디에도 없다 →
             # 페이지가 스스로 모순되므로 1순위 조합 뜻으로 교체 (연우 "연꽃처럼…" 아래 然佑 등).
             fallback = combo_meanings.get("".join(combo[0]))
             if fallback:
                 mean_stale.append(name)
                 mean = None
-        if not mean:
+        if not mean and not is_pk:
             # 폴백: 1순위 한자 조합의 자연어 뜻을 이름 뜻으로 (NameSeoRecord.mean 정의
             # "대표 한자 기준의 일반적 느낌"과 일치 — 드립 신규 이름의 뜻 공백 방지)
             combo = combos.get(name)
@@ -265,6 +299,32 @@ def main():
         if sc:
             rec["sc"] = sc
             with_scores += 1
+        if is_pk:
+            rec["pk"] = 1
+            with_pk += 1
+            if mean and combo and any(combo_meanings.get("".join(c)) == mean for c in combo):
+                pk_combo_mean.append(name)
+            if not mean:
+                pk_no_mean.append(name)
+        elif fl.get("fx"):
+            if combo:
+                flag_conflicts.append(name)
+            else:
+                rec["fx"] = 1
+                with_fx += 1
+                if not rec.get("mean"):
+                    fx_no_mean.append(name)
+        if rec.get("mean") and ETYMOLOGY_MEAN.match(rec["mean"]) and not rec.get("fx"):
+            etymology_not_fx.append(name)
+
+    if pk_combo_mean:
+        print(f"[오류] pk(순우리말) 이름인데 대표 뜻이 한자 조합 뜻과 같은 이름 {len(pk_combo_mean)}개: {' '.join(pk_combo_mean[:10])} "
+              "— data/creative-name-meanings.json 에 한글 이름의 뜻을 넣을 것(pk 는 조합 뜻으로 채우지 않는다)", file=sys.stderr)
+        return 1
+    if flag_conflicts:
+        print(f"[오류] fx 플래그인데 한자 조합이 있는 이름 {len(flag_conflicts)}개: {' '.join(flag_conflicts[:10])} "
+              "— name-combos.json·name-flags.json 중 하나가 낡았다(dump-name-combos·dump-name-flags 재실행)", file=sys.stderr)
+        return 1
 
     # 음절 → 이름 인덱스 (비슷한 이름 내부링크용)
     first_syl = defaultdict(list)
@@ -303,6 +363,12 @@ def main():
     print(f"서사(story) 보유: {with_story} ({with_story*100//max(len(records),1)}%)")
     print(f"한자 조합 보유: {with_combos} ({with_combos*100//max(len(records),1)}%)")
     print(f"미학 점수 보유: {with_scores} ({with_scores*100//max(len(records),1)}%)")
+    print(f"이름 갈래: 순우리말(pk) {with_pk} · 조합 없는 외래(fx) {with_fx} (그중 뜻 없음 {len(fx_no_mean)}: "
+          f"{' '.join(fx_no_mean[:12])}{' …' if len(fx_no_mean) > 12 else ''})")
+    if pk_no_mean:
+        print(f"  [경고] pk 인데 대표 뜻이 없는 이름 {len(pk_no_mean)}: {' '.join(pk_no_mean[:10])} — creative-name-meanings 에 한글 이름의 뜻을 넣을 것")
+    if etymology_not_fx:
+        print(f"  [경고] 어원 문장 뜻인데 fx 가 아닌 이름 {len(etymology_not_fx)}: {' '.join(etymology_not_fx[:10])}")
     print(f"조합 뜻(comboMeans) 등재: {len(used_combo_means)}쌍 (combo-meanings.json {len(combo_meanings)}쌍 중)")
     print(f"출력 크기: {size_mb:.2f} MB → {OUT_PATH}")
     print("--- 임계값별 이름 수(스코프 참고) ---")

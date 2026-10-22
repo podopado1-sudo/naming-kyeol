@@ -346,9 +346,10 @@ def main():
         rlab = radical_label(n)
         adj_clause = None
         if adj_basis == "krs_value":
-            adj_clause = "강희자전 배열 부수(kRSUnicode 첫 값 %s)" % table[str(krs_first)]["radical"]
+            # 화면 문구(note → /hanja 자원오행 근거·/evaluate 근거 줄) — 원자료 필드 이름(kRSUnicode·kKangXi)은 쓰지 않는다(S7 검증 S7V-9)
+            adj_clause = "강희자전 배열 부수(유니코드 부수 값은 %s)" % table[str(krs_first)]["radical"]
         elif adj_basis == "uro_order":
-            adj_clause = "강희자전 배열 부수(kRSUnicode 는 %s 하나 — 원 코드 차트 배열·kKangXi 쪽수는 %s)" % (
+            adj_clause = "강희자전 배열 부수(유니코드 부수 값은 %s 하나, 유니코드 코드 차트 배열과 강희자전 쪽수는 %s)" % (
                 table[str(krs_first)]["radical"], t["radical"])
         rec = {"radical": n, "radical_char": t["radical"]}
         if ch in exc:
@@ -421,8 +422,9 @@ def main():
                         if p["e"] != e or lit_ex.get(ch, {}).get("role") != "literature_overruled":
                             raise SystemExit("확정하지 않은 문헌 예외 후보(B-2)의 실무 값이 부수값과 다르다: %s" % ch)
                         echo = p["n"] - p["n_indep"]
-                        clauses.append("문헌 예외로 두지 않음(작명 실무 자료 %d곳 중 %d곳이 %s%s — B-2)" % (
-                            p["of"], p["n"], e, (" — 그중 %d곳은 그 자료의 부수 규칙값" % echo) if echo else ""))
+                        # 화면 문구 — 판정 규칙 번호(B-2)는 note 에 싣지 않는다(S7V-9). 규칙은 meta.method 에 있다
+                        clauses.append("문헌 예외로 두지 않음(작명 실무 자료 %d곳 중 %d곳이 %s%s)" % (
+                            p["of"], p["n"], e, (" — 그중 %d곳은 그 자료의 부수 기본값" % echo) if echo else ""))
                         basis = list(dict.fromkeys(basis + ["PRACTICE"]))
                     if any(a["basis"] != ["PRACTICE"] for a in alt_char):
                         reasons.append("char_literature")

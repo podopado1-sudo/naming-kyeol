@@ -20,12 +20,18 @@ data/hanja_resource_element.json(scripts/build_resource_element.py — 부수 �
 음양(y): 획수 끝자리 홀수→陽, 짝수→陰. 백엔드 HanjaData.ApplyStrokeCounts·ApplyYinYangFromStrokes 가 같은 파일·같은 규칙으로 모든 글자의
 StrokeCount·YinYang 을 정한다(2026-10-22 S5c — 그 전 백엔드는 Adobe 자형 획수·거꾸로 된 음양이 섞여 획수 832·음양 6,821자 달랐다)
 
+이름 글자 품질(nf·wk, 2026-10-22 S7 — ND-5 '이름에 피하는 글자' 표시용): `dotnet run -- dump-hanja-quality`(루트 hanja-quality.json,
+.gitignore)가 엔진 판정(HanjaData.IsForbiddenNameHanja·IsWeakGivenNameHanja)을 덤프하고 이 스크립트가 복사만 한다(세트를 다시 파싱하지 않는다).
+  nf 1 = ForbiddenNameHanjaSet(불용 — 이름 생성·추천·/evaluate 배정에서 빠지는 부정 훈 글자)
+  wk 1 = WeakGivenNameHanjaSet(뜻이 약해 동음 대안이 있으면 양보하는 글자 — 배제 아님). nf 글자에는 싣지 않는다
+  덤프가 없으면 실패한다(플래그가 조용히 빠지지 않게). 순서: dump-hanja-quality → 이 스크립트
+
 호환 한자(U+F900~FAFF·U+2F800~ 중 NFKC 로 통합 한자에 대응하는 85자)는 통합 한자 항목에 병합하고
 출력에서 뺀다 — HanjaData.MergeCompatibilityIdeographs(C#)와 같은 규칙(통합 쪽 값 우선, 빈 칸만 호환 쪽으로).
 같은 글자가 두 코드로 실려 독음 페이지에 같은 모양 카드가 2장 뜨던 것(79쪽)과, 뜻이 호환 쪽에만 있던
 金·蘭·朗·廊 의 통합 글자 상세 페이지가 없던 것(404)을 함께 없앤다.
 
-사용법:  python scripts/build_hanja_seo_data.py [--out PATH]
+사용법:  python scripts/build_hanja_seo_data.py [--out PATH] [--quality PATH]
 출력:    frontend/src/data/hanja-seo.json(기본) + 검증 리포트(stdout)
 """
 
@@ -69,6 +75,7 @@ def to_unified(char):
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 OUT_PATH = os.path.join(ROOT, "frontend", "src", "data", "hanja-seo.json")
+QUALITY_PATH = os.path.join(ROOT, "hanja-quality.json")  # dotnet run -- dump-hanja-quality 산출물(.gitignore)
 
 
 
@@ -120,7 +127,17 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8")  # Windows cp949 콘솔 대응
     parser = argparse.ArgumentParser(description="hanja-seo.json 빌드")
     parser.add_argument("--out", default=OUT_PATH, help=f"출력 경로 (기본 {OUT_PATH})")
-    out_path = parser.parse_args().out
+    parser.add_argument("--quality", default=QUALITY_PATH,
+                        help=f"dotnet run -- dump-hanja-quality 출력 (기본 {QUALITY_PATH})")
+    cli = parser.parse_args()
+    out_path = cli.out
+    if not os.path.exists(cli.quality):
+        print(f"[오류] 이름 글자 품질 덤프가 없습니다: {cli.quality} — 먼저 dotnet run -- dump-hanja-quality 를 돌릴 것")
+        return 1
+    with open(cli.quality, encoding="utf-8") as f:
+        quality = json.load(f)
+    forbidden = set(quality["nf"])  # 불용 (ForbiddenNameHanjaSet)
+    weak = set(quality["wk"]) - forbidden  # weak (불용 아닌 글자만 — 덤프도 그렇게 싣는다)
     dictionary = load("hanja_dictionary_final.json")
     strokes_map = load("hanja_strokes.json")
     radical_map = load("hanja_radical_element_map.json")  # 옛 뜻 기반 판정 문장(mw)만 — 오행 값은 쓰지 않는다
@@ -214,6 +231,10 @@ def main():
             record["y"] = yinyang
         if is_gov:
             record["gov"] = 1
+        if char in forbidden:
+            record["nf"] = 1
+        elif char in weak:
+            record["wk"] = 1
         out[char] = record
 
         grade_counter[res["g"]] += 1
@@ -225,6 +246,12 @@ def main():
     if missing_resource:
         print(f"[오류] 자원오행 결과 파일에 없는 글자 {len(missing_resource)}자: {' '.join(missing_resource[:10])} "
               f"— scripts/build_resource_element.py 를 먼저 돌릴 것")
+        return 1
+
+    # 품질 덤프의 글자 집합 = 백엔드 적재 글자(호환 병합 뒤) — 출력 키와 어긋나면 낡은 덤프다
+    stray = sorted((forbidden | weak) - set(out), key=ord)
+    if stray:
+        print(f"[오류] 품질 덤프에만 있는 글자 {len(stray)}자: {' '.join(stray[:10])} — dump-hanja-quality 를 다시 돌릴 것")
         return 1
 
     # 독음 페이지 중복 카드 검사 — 같은 독음 아래 NFKC 로 같은 글자가 둘이면 실패
@@ -256,6 +283,8 @@ def main():
         codes = " ".join(f"U+{ord(c):05X}" for c in skipped_non_han[:5])
         print(f"제외 (유니코드 미등재 코드포인트): {len(skipped_non_han)}자 — {codes} ...")
     print(f"인명용(gov): {sum(1 for v in out.values() if v.get('gov'))}")
+    print(f"이름 글자 품질: 불용(nf) {sum(1 for v in out.values() if v.get('nf'))} · weak(wk) "
+          f"{sum(1 for v in out.values() if v.get('wk'))} (덤프 {quality.get('count')}자 기준)")
 
     core_missing = [c for c in core_map if c not in dictionary]
     if core_missing:

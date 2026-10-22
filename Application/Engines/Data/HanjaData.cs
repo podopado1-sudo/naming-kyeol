@@ -231,6 +231,9 @@ public static class HanjaData
         public List<string> AltRadicalElements { get; set; } = new();
         /// <summary>글자 단위 다른 값(문헌·실무 자료가 이 글자에 준 값)</summary>
         public List<string> AltCharElements { get; set; } = new();
+        /// <summary>V 등급의 이유(결과 파일 v_reasons — radical_alt·radical_single·radical_unknown·char_practice 등, 2026-10-22 S7).
+        /// 이유가 radical_single 하나뿐이면 '자료 적음', radical_unknown 하나뿐이면 '추정' — 대체값이 없어 '이견 있음'이라 쓰지 않는다</summary>
+        public List<string> VReasons { get; set; } = new();
         /// <summary>자원오행 판정 근거 한 줄 (결과 파일 note — 예: "手·扌(손 수) 부수 → 木")</summary>
         public string Rationale { get; set; } = string.Empty;
 
@@ -1248,6 +1251,7 @@ public static class HanjaData
             h.RadicalChar = string.Empty;
             h.AltRadicalElements = new List<string>();
             h.AltCharElements = new List<string>();
+            h.VReasons = new List<string>();
             h.Rationale = string.Empty;
 
             if (records == null || !records.TryGetValue(key, out var r) || r.CompatOf != null)
@@ -1266,6 +1270,7 @@ public static class HanjaData
             h.AltRadicalElements = r.AltRadical?.Where(ValidElements.Contains).ToList() ?? new List<string>();
             h.AltCharElements = r.AltChar?.Select(a => a.Element ?? "").Where(ValidElements.Contains).Distinct().ToList()
                                 ?? new List<string>();
+            h.VReasons = grade == "V" ? r.VReasons?.Where(v => !string.IsNullOrEmpty(v)).ToList() ?? new List<string>() : new List<string>();
             h.Rationale = r.Note ?? string.Empty;
             applied++;
         }
@@ -1302,6 +1307,7 @@ public static class HanjaData
         [JsonPropertyName("radical_char")] public string? RadicalChar { get; set; }
         [JsonPropertyName("alt_radical")] public List<string>? AltRadical { get; set; }
         [JsonPropertyName("alt_char")] public List<ResourceAltChar>? AltChar { get; set; }
+        [JsonPropertyName("v_reasons")] public List<string>? VReasons { get; set; }
         [JsonPropertyName("note")] public string? Note { get; set; }
         [JsonPropertyName("variant_of")] public string? VariantOf { get; set; }
         [JsonPropertyName("compat_of")] public string? CompatOf { get; set; }

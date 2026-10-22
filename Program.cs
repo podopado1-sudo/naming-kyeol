@@ -41,6 +41,138 @@ if (args.Length >= 1 && args[0] == "dump-hanja-elements")
     return;
 }
 
+// /hanja 정적 데이터용 CLI: 엔진이 이름 글자로 쓰지 않는 불용 한자·뜻이 약해 양보하는 weak 한자를 덤프한다(2026-10-22 S7, ND-5).
+//   dotnet run -- dump-hanja-quality [outfile]        (기본 hanja-quality.json — .gitignore, build_hanja_seo_data.py 입력)
+// 출력 {"count": N, "nf": [불용 글자…], "wk": [weak 글자…]} — 코드포인트 순. 대상 = 엔진이 적재한 글자 전부(호환 한자 병합 뒤 통합 키 = /hanja 키).
+// 판정은 생성 경로와 같은 함수(HanjaData.IsForbiddenNameHanja·IsWeakGivenNameHanja — 호환 코드포인트 NFKC 폴백 포함).
+// wk 는 불용이 아닌 글자만 싣는다(불용이면 weak 여부는 의미가 없다). 글자 단위 판정이라 독음마다 다른 훈은 보지 않는다.
+if (args.Length >= 1 && args[0] == "dump-hanja-quality")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+    var chars = NameForm.Application.Engines.Data.HanjaData.GetAllHanja()
+        .Select(h => h.Character)
+        .OrderBy(c => char.ConvertToUtf32(c, 0))
+        .ToList();
+    var nf = chars.Where(NameForm.Application.Engines.Data.HanjaData.IsForbiddenNameHanja).ToList();
+    var wk = chars.Where(c => !NameForm.Application.Engines.Data.HanjaData.IsForbiddenNameHanja(c)
+                              && NameForm.Application.Engines.Data.HanjaData.IsWeakGivenNameHanja(c)).ToList();
+    var outPath = args.Length >= 2 ? args[1] : "hanja-quality.json";
+    var json = System.Text.Json.JsonSerializer.Serialize(
+        new Dictionary<string, object> { ["count"] = chars.Count, ["nf"] = nf, ["wk"] = wk },
+        new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+    File.WriteAllText(outPath, json);
+    Console.WriteLine($"[dump-hanja-quality] {chars.Count}자 중 불용 {nf.Count} · weak {wk.Count} → {outPath}");
+    return;
+}
+
+// /name 정적 데이터용 CLI: 이름별 순우리말(pk)·외래(fx) 플래그를 덤프한다(2026-10-22 S7, ND-3).
+//   dotnet run -- dump-name-flags [names-json] [outfile]   (기본 frontend/src/data/name-seo.json → name-flags.json — .gitignore)
+// 출력 {"meta": {...}, "names": {이름: {"pk": 1} | {"fx": 1, "kind": 갈래, "en": 영어 원형(있으면)}}} — 플래그가 있는 이름만, 가나다(Ordinal) 순.
+//   pk = 한글 이름으로 쓰는 순우리말 이름(조합 유무와 무관 — '한자로 쓴다면(참고)' 표시용) =
+//        PureKoreanNameEngine 내장 사전 이름 − data/pure-korean-name-overrides.json exclude(한자어 낱말·한자 이름으로 흔한 이름)
+//        + include(사전에 없는 고유어 합성 이름 — 한별·은별). 판정은 PureKoreanNameEngine.IsPureKoreanSeoName(테스트와 같은 함수)
+//   fx = 한자 조합이 없고(dump-name-combos 와 같은 SelectCombos 결과 0 또는 2음절·비반복이 아님) pk 가 아니며
+//        data/foreign-given-names.json(사람 검토 목록 — 외국 인명을 옮겨 적은 이름·외래 요소로 지은 이름)에 있는 이름.
+//        en 은 EnglishKoreanNameMap(영한 이중 이름 엔진 자료)의 교차 확인 — 목록에 없는데 지도에 있는 조합 없는 이름은 경고로 알린다.
+// 다음 단계: python scripts/build_name_seo_data.py 가 이 파일의 pk·fx 만 name-seo.json 레코드에 싣는다.
+if (args.Length >= 1 && args[0] == "dump-name-flags")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+    NameForm.Application.Engines.Data.NameGenderData.LoadExternalData();
+
+    var namesPath = args.Length >= 2 ? args[1] : Path.Combine("frontend", "src", "data", "name-seo.json");
+    var foreignPath = Path.Combine("data", "foreign-given-names.json");
+    if (!File.Exists(namesPath) || !File.Exists(foreignPath))
+    {
+        Console.Error.WriteLine($"[dump-name-flags] 입력 파일 없음: {(File.Exists(namesPath) ? foreignPath : namesPath)}");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    var foreign = new Dictionary<string, string>(StringComparer.Ordinal);
+    using (var fdoc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(foreignPath)))
+        foreach (var p in fdoc.RootElement.GetProperty("names").EnumerateObject())
+            foreign[p.Name] = p.Value.GetString() ?? "";
+
+    // 순우리말(pk) 가감 목록 — 없으면 실패(사전 그대로 돌아가 한자 이름 예린·하린에 pk 가 붙지 않게)
+    var pkOverridesPath = Path.Combine("data", "pure-korean-name-overrides.json");
+    if (!File.Exists(pkOverridesPath))
+    {
+        Console.Error.WriteLine($"[dump-name-flags] 입력 파일 없음: {pkOverridesPath}");
+        Environment.ExitCode = 1;
+        return;
+    }
+    var (pkInclude, pkExclude) = NameForm.Application.Engines.PureKoreanNameEngine.LoadSeoOverrides(File.ReadAllText(pkOverridesPath));
+
+    // 한글 표기 → 영어 원형(첫 매핑). 같은 표기가 두 영어 이름에 걸리면 먼저 실린 쪽.
+    var english = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (var mapping in NameForm.Application.Engines.Data.EnglishKoreanNameMap.GetMappings())
+        foreach (var k in mapping.Korean)
+            english.TryAdd(k, mapping.English);
+
+    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(namesPath));
+    var flags = new SortedDictionary<string, Dictionary<string, object>>(StringComparer.Ordinal);
+    var warnings = new List<string>();
+    int pkCount = 0, fxCount = 0;
+    foreach (var prop in doc.RootElement.GetProperty("names").EnumerateObject())
+    {
+        var name = prop.Name;
+        bool pk = NameForm.Application.Engines.PureKoreanNameEngine.IsPureKoreanSeoName(name, pkInclude, pkExclude);
+
+        // 조합 유무 — dump-name-combos 와 같은 조건·성별 분기(60/40)
+        bool hasCombos = false;
+        if (name.Length == 2 && name[0] != name[1])
+        {
+            int m = prop.Value.TryGetProperty("m", out var mv) ? mv.GetInt32() : 0;
+            int f = prop.Value.TryGetProperty("f", out var fv) ? fv.GetInt32() : 0;
+            int total = m + f;
+            string gender = total > 0 && m * 100 / total >= 60 ? "male"
+                          : total > 0 && f * 100 / total >= 60 ? "female" : "none";
+            hasCombos = NameForm.Application.Engines.Utils.HanjaSelector.SelectCombos(name, gender, 4).Count > 0;
+        }
+
+        bool listed = foreign.TryGetValue(name, out var kind);
+        english.TryGetValue(name, out var en);
+        if (listed && pk) warnings.Add($"{name}: 외래 목록과 순우리말 사전에 함께 있음 → pk 만");
+        if (listed && hasCombos) warnings.Add($"{name}: 외래 목록에 있지만 한자 조합이 있음 → fx 아님");
+        if (!listed && !pk && !hasCombos && en != null) warnings.Add($"{name}: 조합 없고 영한 이름 지도({en})에 있지만 외래 목록에 없음 → 검토");
+
+        if (pk)
+        {
+            flags[name] = new Dictionary<string, object> { ["pk"] = 1 };
+            pkCount++;
+        }
+        else if (listed && !hasCombos)
+        {
+            var rec = new Dictionary<string, object> { ["fx"] = 1, ["kind"] = kind! };
+            if (en != null) rec["en"] = en;
+            flags[name] = rec;
+            fxCount++;
+        }
+    }
+    var notInNames = foreign.Keys.Where(n => !doc.RootElement.GetProperty("names").TryGetProperty(n, out _)).OrderBy(n => n, StringComparer.Ordinal).ToList();
+    if (notInNames.Count > 0) warnings.Add($"외래 목록에만 있고 수록 이름에 없음: {string.Join(" ", notInNames)}");
+    foreach (var n in pkExclude.Where(n => !NameForm.Application.Engines.PureKoreanNameEngine.IsDictionaryName(n)).OrderBy(n => n, StringComparer.Ordinal))
+        warnings.Add($"{n}: pk exclude 인데 순우리말 사전에 없음 → 목록 정리");
+    foreach (var n in pkInclude.Where(n => NameForm.Application.Engines.PureKoreanNameEngine.IsDictionaryName(n) || foreign.ContainsKey(n)).OrderBy(n => n, StringComparer.Ordinal))
+        warnings.Add($"{n}: pk include 인데 이미 사전에 있거나 외래 목록에 있음 → 목록 정리");
+
+    var outPath = args.Length >= 3 ? args[2] : "name-flags.json";
+    var json = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object>
+    {
+        ["meta"] = new Dictionary<string, object> { ["pk"] = pkCount, ["fx"] = fxCount, ["foreignListed"] = foreign.Count, ["pkInclude"] = pkInclude.Count, ["pkExclude"] = pkExclude.Count },
+        ["names"] = flags,
+    }, new System.Text.Json.JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    });
+    File.WriteAllText(outPath, json);
+    foreach (var w in warnings) Console.Error.WriteLine($"[dump-name-flags] 경고: {w}");
+    Console.WriteLine($"[dump-name-flags] pk {pkCount} · fx {fxCount} (외래 목록 {foreign.Count}) → {outPath}");
+    return;
+}
+
 // 1회성 CLI: 창의 실명 풀의 기계적 글로스를 덤프(LLM 폴리시 파이프라인 1단계).
 //   dotnet run -- dump-creative-glosses [outfile]
 // 엔진의 BuildMechanicalMeaning을 그대로 재사용해 HanjaData·CommonNameHanja·불용한자

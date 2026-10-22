@@ -126,6 +126,9 @@ public class HanjaCandidateDto
     public string ConfidenceGrade { get; set; } = "D";
     /// <summary>자원오행 등급 R=확정 · V=이견 있음 · X=예외 적용 · U=미상 (2026-10-22 S4 추가)</summary>
     public string ResourceGrade { get; set; } = "U";
+    /// <summary>V 등급의 이유(data/hanja_resource_element.json v_reasons — V 가 아니면 빈 목록, 2026-10-22 S7).
+    /// 화면이 radical_single 하나뿐인 V 를 '자료 적음', radical_unknown 하나뿐인 V 를 '추정'으로 나눈다(/hanja 와 같은 기준)</summary>
+    public List<string> VReasons { get; set; } = new();
     /// <summary>자원오행 판정 근거 한 줄 (부수 근거 — 예: "手·扌(손 수) 부수 → 木". S4 전에는 뜻 기반 문장이었다)</summary>
     public string? Rationale { get; set; }
 }
