@@ -24,7 +24,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,467 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,482 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -48,7 +48,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,467개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,482개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -339,13 +339,16 @@ D:\MyDev\NameForm\
   키워드 전면 재분류 대신 영향이 큰 글자만 여기서 고친다(赫 Female 때문에 남자 혁 이름 1순위를 侐 '고요할'이 차지했다).
   恩·秀는 하드코딩 Female 도 뺐다(恩은 다른 출처가 Neutral 이라 그것으로 충분). 惠는 둔다 — 혜 줄 빈출 惠·慧·蕙가 모두 Female 이라
   상쇄되는데 惠만 바꾸면 여자 혜 이름 1순위가 慧로 넘어간다(`HanjaGenderOverrideTests`)
-- **data/combo-meanings.json**: 한자쌍 자연어 뜻 23,552쌍 (LLM 배치 윤문 + 소량 인라인, 런타임 비용 0)
+- **data/combo-meanings.json**: 한자쌍 자연어 뜻 28,633쌍 (LLM 배치 윤문 + 소량 인라인, 런타임 비용 0. 2026-10-22 자원오행 전환 재생성 때 Sonnet 5.5 배치로 5,009쌍,
+  두더지 검수 뒤 211쌍은 손으로 씀 — API 크레딧 소진).
+  ⚠️ `data/creative-name-meanings.json`(대표 뜻 원천)에는 손질 항목이 많다(외래 이름 어원 31·순우리말 16·潤·朗·蘭·西 손질 82, 2026-10-22) —
+  `build_creative_meanings.py`를 다시 돌리면 덮어써지므로 돌리기 전에 손질분을 따로 보존할 것
 
 ### 글자 품질 세트 (HanjaData.cs 인라인, 2026-07-02 기준)
-- **ForbiddenNameHanjaSet 851자** — 명백 부정 훈 하드 배제 (생성 경로만, 평가/분석은 통과). /evaluate 배정(HanjaSelector)·후보 표에서도 빠진다 —
+- **ForbiddenNameHanjaSet 852자** — 명백 부정 훈 하드 배제 (생성 경로만, 평가/분석은 통과). /evaluate 배정(HanjaSelector)·후보 표에서도 빠진다 —
   雌(암컷 자)는 2026-10-22 S3 weak 로는 박영자(여)=映雌 배정이 남아(weak 는 양보) S4 에 여기로 옮겼다(대체 배정 慈 — 姿→紫 는 S4 자원오행 전환 효과).
   호환 코드포인트는 NFKC 정규형 조회로 자동 차단 (리터럴 등재 금지 — NFC 정규화 회귀 전력). `IsWeakGivenNameHanja`도 같은 폴백
-- **WeakGivenNameHanjaSet 667자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
+- **WeakGivenNameHanjaSet 714자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
   감점. 배제가 아니라 동음 대안 있을 때만 양보 → combos 소실 없음.
   `SelectCombos`(/name 조합)는 약자 없는 조합이 하나라도 있으면 약자 쌍을 **빈칸 채우기로도 쓰지 않는다**
   — 4칸을 채우려 李眼·胎輝·鰓羅가 97명에 노출되던 것(2026-10-07). 전원 약자일 때만 약자 쌍 유지
