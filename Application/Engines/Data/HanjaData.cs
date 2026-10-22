@@ -45,6 +45,9 @@ public static class HanjaData
         "民", "敏", "珉", "旼", "玟",
         // 현
         "賢", "玄", "顯", "炫", "弦",
+        // 혁 — 2026-10-22 추가. 혁 줄에 빈출 글자가 없어 풀이 게이트되지 않았고, 赫(빛날 혁)이 성별 오분류(−400)로
+        // 밀린 자리를 侐(고요할 혁, D등급)이 차지했다(준혁·민혁 등 남자 혁 이름 54명 1순위). 赫 하나만 둔다
+        "赫",
         // 준
         "俊", "準", "峻", "浚", "駿",
         // 지
@@ -280,8 +283,12 @@ public static class HanjaData
         // 여성 선호
         { "美", new HanjaInfo { Character = "美", Reading = "미", Meaning = "아름다움", FiveElement = "水", YinYang = "陰", StrokeCount = 9, Category = "개념", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
         { "雅", new HanjaInfo { Character = "雅", Reading = "아", Meaning = "우아함", FiveElement = "木", YinYang = "陰", StrokeCount = 12, Category = "개념", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
-        { "秀", new HanjaInfo { Character = "秀", Reading = "수", Meaning = "빼어남", FiveElement = "金", YinYang = "陰", StrokeCount = 7, Category = "개념", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
-        { "恩", new HanjaInfo { Character = "恩", Reading = "은", Meaning = "은혜", FiveElement = "土", YinYang = "陰", StrokeCount = 10, Category = "덕목", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
+        // 秀·恩은 2026-10-22 Female 지정을 뺐다 — 남자 이름에도 흔한 글자인데 −400 감점으로 남자 수·은 이름 1순위가
+        // 樹(나무)·銀(은)으로 밀렸다. 秀는 unihan 값과 의미 분류기('빼어날')가 다시 Female 로 찍으므로
+        // data/hanja-gender-overrides.json 에서 Neutral 로 고정한다(恩은 두 출처 모두 Neutral 이라 여기서 빼는 것으로 충분).
+        // 惠는 그대로 둔다 — 혜 줄 빈출 惠·慧·蕙가 모두 Female 이라 상쇄되는데, 惠만 빼면 여자 혜 이름 52명의 1순위가 慧로 넘어간다.
+        { "秀", new HanjaInfo { Character = "秀", Reading = "수", Meaning = "빼어남", FiveElement = "金", YinYang = "陰", StrokeCount = 7, Category = "개념", TonePref = TonePreference.Soft } },
+        { "恩", new HanjaInfo { Character = "恩", Reading = "은", Meaning = "은혜", FiveElement = "土", YinYang = "陰", StrokeCount = 10, Category = "덕목", TonePref = TonePreference.Soft } },
         { "惠", new HanjaInfo { Character = "惠", Reading = "혜", Meaning = "은혜", FiveElement = "水", YinYang = "陰", StrokeCount = 12, Category = "덕목", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
 
         // ⚠️ 키는 반드시 한자 1글자. 초기 커밋의 "중립/인기" 블록은 우·진·서·하·윤·민·지·현·연·채
@@ -760,6 +767,9 @@ public static class HanjaData
 
         // ── 대표 훈 오버라이드 (모든 Meaning 기록자 이후 — LoadMeaningsFromJson이 덮어쓰고, 병합이 빈 뜻을 채우므로) ──
         ApplyGlossOverrides();
+
+        // ── 성별 선호 오버라이드 (모든 GenderPref 기록자 이후 — unihan·의미 분류기·호환 병합이 Neutral 칸만 채우므로) ──
+        ApplyGenderOverrides();
     }
 
     /// <summary>
@@ -1363,6 +1373,8 @@ public static class HanjaData
     /// </summary>
     private static readonly HashSet<string> WeakGivenNameHanjaSet = new(StringComparer.Ordinal)
     {
+        // ── 2026-10-22 감사 EV-3 — 雌(암컷 자): 자 줄에 빈출 글자가 없어 /evaluate 박영자(여)=映雌 로 배정됐다 ──
+        "雌",
         // ── 2026-10-07 /name 라이브 실측 — 대표 훈이 이름 뜻으로 부적절한데 동점 풀에 들어와 조합에 노출 ──
         // 咳(기침 — 7/02 대표 훈 교정 뒤 해웅=咳雄) 煂(불태울 — 준혁=俊煂 등 12쌍, 혁은 爀·奕 대안 있음)
         // 烋·降은 독음별 훈이 갈리는 글자 — 烋 효 자리 '거들먹거릴'(휴 자리 '아름다울'은 休 대안, 효리=烋李 등 97쌍),
@@ -1807,37 +1819,69 @@ public static class HanjaData
         var dict = _loadedDictionary;
         if (dict == null) return;
 
+        var path = FindOverrideFile("hanja-gloss-overrides.json");
+        if (path == null) return;
+        try
+        {
+            var overrides = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path));
+            if (overrides == null) return;
+            foreach (var (ch, preferred) in overrides)
+            {
+                if (dict.TryGetValue(ToUnifiedHanja(ch), out var h)) // 사전은 통합 한자 키만 둔다
+                    h.Meaning = ReorderGloss(h.Meaning, preferred);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"대표 훈 오버라이드 로드 실패: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 성별 선호 오버라이드(data/hanja-gender-overrides.json — {"赫": "Neutral"}) 적용.
+    /// GenderPref 기록자(하드코딩 → unihan → 의미 분류기 → 호환 병합)는 모두 'Neutral 칸만 채운다'라서
+    /// 한 번 잘못 찍힌 성별(赫 '빛날'이 키워드 분류로 Female)은 뒤에서 되돌릴 수 없다 — 그래서 맨 마지막에 덮는다.
+    /// 키워드 전면 재분류 대신 영향이 큰 글자만 좁게 고치는 자리다(2026-10-22 ND-2).
+    /// </summary>
+    private static void ApplyGenderOverrides()
+    {
+        var dict = _loadedDictionary;
+        if (dict == null) return;
+
+        var path = FindOverrideFile("hanja-gender-overrides.json");
+        if (path == null) return;
+        try
+        {
+            var overrides = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path));
+            if (overrides == null) return;
+            foreach (var (ch, value) in overrides)
+            {
+                if (!Enum.TryParse<GenderPreference>(value, ignoreCase: false, out var pref) || !Enum.IsDefined(pref)) continue;
+                if (dict.TryGetValue(ToUnifiedHanja(ch), out var h)) // 사전은 통합 한자 키만 둔다
+                    h.GenderPref = pref;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"성별 선호 오버라이드 로드 실패: {ex.Message}");
+        }
+    }
+
+    /// <summary>오버라이드 데이터 파일 경로 — 실행 폴더 → 현재 폴더 → 프로젝트 루트 순, 각 폴더의 data/ 를 먼저 본다.</summary>
+    private static string? FindOverrideFile(string fileName)
+    {
         var execDir = AppContext.BaseDirectory;
         var currentDir = Directory.GetCurrentDirectory();
         var projectRoot = Path.GetFullPath(Path.Combine(execDir, "..", "..", "..", ".."));
 
         foreach (var basePath in new[] { execDir, currentDir, projectRoot })
         {
-            foreach (var path in new[]
-                     {
-                         Path.Combine(basePath, "data", "hanja-gloss-overrides.json"),
-                         Path.Combine(basePath, "hanja-gloss-overrides.json")
-                     })
+            foreach (var path in new[] { Path.Combine(basePath, "data", fileName), Path.Combine(basePath, fileName) })
             {
-                if (!File.Exists(path)) continue;
-                try
-                {
-                    var overrides = JsonSerializer.Deserialize<Dictionary<string, string>>(
-                        File.ReadAllText(path));
-                    if (overrides == null) return;
-                    foreach (var (ch, preferred) in overrides)
-                    {
-                        if (dict.TryGetValue(ToUnifiedHanja(ch), out var h)) // 사전은 통합 한자 키만 둔다
-                            h.Meaning = ReorderGloss(h.Meaning, preferred);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"대표 훈 오버라이드 로드 실패: {ex.Message}");
-                }
-                return;
+                if (File.Exists(path)) return path;
             }
         }
+        return null;
     }
 
     /// <summary>

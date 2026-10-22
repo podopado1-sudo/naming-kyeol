@@ -24,7 +24,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,365 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,382 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -48,7 +48,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,365개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,382개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -304,14 +304,22 @@ D:\MyDev\NameForm\
 - **data-gov.csv / data-naver.csv**: 대법원/네이버 인명용 한자. ⚠️ CSV 는 Web SDK 의 Content 가 아니라서
   `NameForm.csproj`의 `None Update="data\**\*.csv"`로 산출물에 넣는다(2026-10-22 전까지 publish 에 빠져 운영 `IsGovernmentListed` 전부 false)
 - **Unihan_*.txt**: Unicode 표준 발음/획수/부수 데이터
-- **data/hanja-gloss-overrides.json**: 대표 훈 오버라이드 95자 (然 불탈→그럴 연 등,
-  로드 시 Meaning 재배열 — 원 훈 보존·멱등, 소비처는 첫 훈만 취하므로 무수정 전파)
+- **data/hanja-gloss-overrides.json**: 대표 훈 오버라이드 97자 (然 불탈→그럴 연, 潤 불을→윤택할 윤·荷 멜→연꽃 하(2026-10-22) 등,
+  로드 시 Meaning 재배열 — 원 훈 보존·멱등, 소비처는 첫 훈만 취하므로 무수정 전파).
+  ⚠️ 재배열이라 옛 첫 훈도 남는다 — `mean_combo_check`는 그 조각(潤 '불을 윤'의 어간 '불')을 계속 그 글자의 키워드로 봐서
+  옛 훈으로 윤문된 문장(潤 1순위 이름의 '불꽃처럼…')을 모순으로 잡지 못한다. 대표 훈을 바꾼 글자는 뜻·서사를 손으로 대조할 것
+  — 潤·荷는 `scripts/audit_gloss_override_text.py --json OUT`이 고칠 문장 목록(파일·키·현재 문장)을 뽑는다(/name 재생성 직후)
+- **data/hanja-gender-overrides.json**: 성별 선호 오버라이드 4자 (赫·焃·焱·秀 → Neutral, 2026-10-22). GenderPref 기록자
+  (하드코딩 → unihan → 의미 분류기 → 호환 병합)는 모두 Neutral 칸만 채워 잘못 찍힌 값을 뒤에서 못 고치므로 맨 마지막(`ApplyGenderOverrides`)에 덮는다.
+  키워드 전면 재분류 대신 영향이 큰 글자만 여기서 고친다(赫 Female 때문에 남자 혁 이름 1순위를 侐 '고요할'이 차지했다).
+  恩·秀는 하드코딩 Female 도 뺐다(恩은 다른 출처가 Neutral 이라 그것으로 충분). 惠는 둔다 — 혜 줄 빈출 惠·慧·蕙가 모두 Female 이라
+  상쇄되는데 惠만 바꾸면 여자 혜 이름 1순위가 慧로 넘어간다(`HanjaGenderOverrideTests`)
 - **data/combo-meanings.json**: 한자쌍 자연어 뜻 23,552쌍 (LLM 배치 윤문 + 소량 인라인, 런타임 비용 0)
 
 ### 글자 품질 세트 (HanjaData.cs 인라인, 2026-07-02 기준)
 - **ForbiddenNameHanjaSet 850자** — 명백 부정 훈 하드 배제 (생성 경로만, 평가/분석은 통과).
   호환 코드포인트는 NFKC 정규형 조회로 자동 차단 (리터럴 등재 금지 — NFC 정규화 회귀 전력). `IsWeakGivenNameHanja`도 같은 폴백
-- **WeakGivenNameHanjaSet 667자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
+- **WeakGivenNameHanjaSet 668자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
   감점. 배제가 아니라 동음 대안 있을 때만 양보 → combos 소실 없음.
   `SelectCombos`(/name 조합)는 약자 없는 조합이 하나라도 있으면 약자 쌍을 **빈칸 채우기로도 쓰지 않는다**
   — 4칸을 채우려 李眼·胎輝·鰓羅가 97명에 노출되던 것(2026-10-07). 전원 약자일 때만 약자 쌍 유지
@@ -319,7 +327,8 @@ D:\MyDev\NameForm\
   '거들먹거릴', 乻는 얼 자리 '땅 이름'이지만 늘 자리 '음차'. 다중 독음 글자를 검수할 땐 그 글자가
   실제로 쓰이는 독음의 훈으로 판단할 것. /name 조합 카드(`glossForReading`)와 `dump-combo-glosses`는
   이름 음절의 독음에 맞는 훈을 고른다(첫 훈 고정 시 하늘=乻 "땅 이름 얼" 노출)
-- **CommonNameHanja 320자** — 인명 빈출 가점(+300)
+- **CommonNameHanja 321자** — 인명 빈출 가점(+300). 한 독음에 빈출 글자가 하나라도 있으면 /name 조합·라이브 선택 풀이 그 글자들로
+  게이트된다 — 혁 줄은 2026-10-22 赫 하나를 넣어 侐(고요할)·焱·焃 동점 경쟁을 끝냈다
 - ⚠️ **감점 강도 계약**: 조합/글로스/풀 경로의 weak 감점은 **-3000** — Core_v1 검수 가점(+2000)을
   지배해야 함 (코어셋은 오행 검수 커버리지라 약자도 포함, 신뢰도 점수가 품질 경쟁을 이기면 안 됨)
 
@@ -350,6 +359,9 @@ D:\MyDev\NameForm\
 - `audit_mean_combo_mismatch.py` — **대표 뜻·서사 ↔ 조합 모순 감사** (판정은 `mean_combo_check.py`,
   빌드와 공용): 문장에 나온 구체 명사 훈(연꽃·비·별·으뜸·아이)이 페이지 어느 조합에도 없는 한자의 것이면
   모순. `--fail`은 mean 모순 1건 이상이면 exit 1. 형용사(맑·밝·빛나)는 동음 한자가 공유해 참고 수치만
+- `audit_gloss_override_text.py` — **대표 훈을 바꾼 글자의 옛 훈 문장 목록** (2026-10-22 潤 '불을'·荷 '멜'):
+  `mean_combo_check`가 옛 첫 훈 조각을 자기 키워드로 봐서 통과시키는 문장(潤 '불꽃·타오르', 荷 '짊어지·무게·나르·사명')을
+  섹션별로 뽑는다. 읽기만 하고 exit 0 — `--json`으로 받은 목록을 손으로 고친다. 미러 검사는 `--name-seo`·`--hanja-seo`·`--today`
 - weak 추가 시 절차: 재생성 → `audit_combo_regressions.py`로 A~D 통과 확인 →
   E 목록 두더지 검수(2~4라운드 수렴, 필요시 점유 감사 TSV 병행) →
   신규 쌍 윤문(소량 인라인 / 대량 `build_combo_meanings.py` Batch) → 재실행으로 C 100% 확인

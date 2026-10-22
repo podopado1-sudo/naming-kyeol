@@ -57,6 +57,18 @@ public class HanjaGlossOverrideTests
         Assert.Contains("불탈", info.Meaning);
     }
 
+    [Theory]
+    [InlineData("潤", "윤택할 윤", "불을 윤")] // 원문 첫 훈 '불을'(붇다) — 서윤·하윤 1순위 카드에 '불을 윤'으로 보였다(감사 ND-1)
+    [InlineData("荷", "연꽃 하", "멜 하")]     // 원문에 '연꽃' 훈이 없었다 — 하윤 荷潤 카드 '멜 하'에 뜻은 "연잎 같은"
+    public void Override_RepresentativeGloss_2026_10_22(string ch, string expectedFirst, string preserved)
+    {
+        var info = HanjaData.FindByCharacter(ch);
+        Assert.NotNull(info);
+        var first = info!.Meaning.Split(',', '/', ';', '·')[0].Trim();
+        Assert.Equal(expectedFirst, first);
+        Assert.Contains(preserved, info.Meaning); // 원 훈 보존
+    }
+
     [Fact]
     public void Override_Ul_NewGlossInserted()
     {
