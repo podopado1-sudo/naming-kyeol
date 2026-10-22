@@ -56,14 +56,16 @@ public class HanjaDataEnhancementTests
     }
 
     [Theory]
-    [InlineData("春", "木")]  // 9획 → 水가 아닌 하드코딩 木
-    [InlineData("山", "土")]  // 3획 → 火가 아닌 하드코딩 土
-    public void FiveElement_HardcodedCharacters_PreservedValue(string character, string expectedElement)
+    [InlineData("春", "火", "木")]  // 日(날 일) 부수 → 火. 뜻 기반(하드코딩·core_v1) 木 은 MeaningElement 로 보존
+    [InlineData("山", "土", "土")]  // 山 부수 → 土 (획수 3 끝자리면 火 — 획수 대체값은 쓰지 않는다)
+    public void FiveElement_HardcodedCharacters_RadicalBased_MeaningPreserved(string character, string expectedElement, string meaningElement)
     {
+        // 2026-10-22 S4: FiveElement 는 부수 기준 자원오행(data/hanja_resource_element.json) 하나 — 하드코딩 값은 뜻 기반 보존 칸으로
         var info = HanjaData.FindByCharacter(character);
 
         Assert.NotNull(info);
-        Assert.Equal(expectedElement, info.FiveElement);
+        Assert.Equal(expectedElement, info!.FiveElement);
+        Assert.Equal(meaningElement, info.MeaningElement);
     }
 
     [Fact]

@@ -13,15 +13,18 @@ public class HanjaSelectorTests
     public void Select_DifferentYongshin_PicksDifferentHanja()
     {
         // 같은 음절도 용신 오행이 다르면 그 오행에 맞는 한자가 선택돼야 한다(사주→한자 배정).
-        var water = HanjaSelector.Select("우", "none", "水", null, null);
-        var earth = HanjaSelector.Select("우", "none", "土", null, null);
+        // 2026-10-22 S4 부수 기준: 우 빈출 宇(宀)=木·佑(亻)=火 — 옛 뜻 기반 값(佑·宇 모두 土)에선 水/土 로 갈랐다
+        var wood = HanjaSelector.Select("우", "none", "木", null, null);
+        var fire = HanjaSelector.Select("우", "none", "火", null, null);
 
-        Assert.NotEmpty(water);
-        Assert.NotEmpty(earth);
-        Assert.NotEqual(water[0]?.Character, earth[0]?.Character);
+        Assert.NotEmpty(wood);
+        Assert.NotEmpty(fire);
+        Assert.NotEqual(wood[0]?.Character, fire[0]?.Character);
         // 선택된 한자의 오행이 요청한 용신과 일치(해당 오행 인명 한자가 존재할 때)
-        Assert.Equal("水", water[0]?.FiveElement);
-        Assert.Equal("土", earth[0]?.FiveElement);
+        Assert.Equal("木", wood[0]?.FiveElement);
+        Assert.Equal("火", fire[0]?.FiveElement);
+        Assert.Equal("宇", wood[0]?.Character);
+        Assert.Equal("佑", fire[0]?.Character);
     }
 
     [Fact]

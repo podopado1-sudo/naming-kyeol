@@ -86,8 +86,8 @@ public class AestheticBreakdownDto
 /// </summary>
 public class HarmonyBreakdownDto
 {
-    public int FiveElement { get; set; }          // /30 (사주 오행)
-    public int ResourceElement { get; set; }      // /20 (자원오행)
+    public int FiveElement { get; set; }          // /30 자원오행 보완 (부수 기준 자원오행 ↔ 사주 — 필드명 유지)
+    public int ResourceElement { get; set; }      // /20 획수 조화 (두 글자 획수 합 구간 — 필드명은 프론트 호환으로 유지, 2026-10-22 S4·D7)
     public int YinYang { get; set; }              // /10 (음양)
     public int PronunciationElement { get; set; } // /25 (발음오행)
     public int SuriSagyeok { get; set; }          // /15 (수리사격)
@@ -119,8 +119,14 @@ public class HanjaCandidateDto
     public string YinYang { get; set; } = "";
     public int StrokeCount { get; set; }
     public int? KangxiStrokes { get; set; }
-    /// <summary>오행 판정 신뢰도: S=검수완료, A=규칙기반, B=수동입력, D=획수자동</summary>
+    /// <summary>
+    /// 옛 뜻 기반 오행 판정 등급(S=Core_v1, C=뜻 키워드, D=판정 없음) — 2026-10-22 S4 부터 FiveElement(부수 기준)와 무관하다.
+    /// 지금 화면(배지)이 읽는 필드라 이름·값을 유지한다. 화면 전환(S7)은 <see cref="ResourceGrade"/> 를 쓰고 이 필드는 그 뒤 뺀다.
+    /// </summary>
     public string ConfidenceGrade { get; set; } = "D";
+    /// <summary>자원오행 등급 R=확정 · V=이견 있음 · X=예외 적용 · U=미상 (2026-10-22 S4 추가)</summary>
+    public string ResourceGrade { get; set; } = "U";
+    /// <summary>자원오행 판정 근거 한 줄 (부수 근거 — 예: "手·扌(손 수) 부수 → 木". S4 전에는 뜻 기반 문장이었다)</summary>
     public string? Rationale { get; set; }
 }
 

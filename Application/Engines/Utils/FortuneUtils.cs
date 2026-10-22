@@ -104,7 +104,8 @@ public static class FortuneUtils
     }
 
     /// <summary>
-    /// 자원오행 (획수 기반) 평가
+    /// 획수 조화 평가 — 이름 두 글자 획수 합의 구간 점수(오행은 쓰지 않는다). HarmonyEngine 의 '획수 조화 20' 축
+    /// (2026-10-22 S4 전 이름은 '자원오행' — 계획 §3-1·D7: 산식은 그대로, 이름만 실제 계산에 맞춤)
     /// </summary>
     public static int EvaluateStrokeCount(int stroke1, int stroke2)
     {

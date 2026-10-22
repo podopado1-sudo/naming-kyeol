@@ -7,8 +7,10 @@ namespace NameForm.Application.Engines;
 
 /// <summary>
 /// 조화 점수 계산 엔진 (실제 구현)
-/// 오행, 자원오행, 음양 균형 평가
+/// 자원오행 보완 30 + 획수 조화 20 + 음양 10 + 발음오행 25 + 전통 81수리 15 (+ 성별 보정)
 /// gender/tone 반영, fallback 정책 명확화
+/// 축 이름(2026-10-22 S4, 계획 §3-1·D7): 옛 '오행 30'은 배정 한자의 부수 기준 자원오행으로 사주를 보완하는 축이라 '자원오행 보완',
+/// 옛 '자원오행 20'은 실제로 두 글자 획수 합의 구간 점수(오행 무관)라 '획수 조화'. 산식·DTO 필드명(fiveElement·resourceElement)은 그대로다.
 /// </summary>
 public class HarmonyEngine : IHarmonyEngine
 {
@@ -32,15 +34,8 @@ public class HarmonyEngine : IHarmonyEngine
         _yongshinCalculationService = yongshinCalculationService;
     }
 
-    // 획수 끝자리 → 오행 매핑 (자원오행)
-    private static readonly Dictionary<int, string> StrokeToElement = new()
-    {
-        { 1, "木" }, { 2, "木" },
-        { 3, "火" }, { 4, "火" },
-        { 5, "土" }, { 6, "土" },
-        { 7, "金" }, { 8, "金" },
-        { 9, "水" }, { 0, "水" }
-    };
+    // [2026-10-22 S4 삭제] StrokeToElement — 획수 끝자리 → 오행 대체값(자원오행 보완 30 에서 FiveElement 가 비었을 때). 계획 §3-1:
+    // 자원오행이 없으면(등급 U) 오행 없음으로 둔다. 2026-10-22 결과 파일 기준 U 0자라 점수 영향 없음.
 
     public async Task<int> CalculateScoreAsync(
         string name,
@@ -99,10 +94,10 @@ public class HarmonyEngine : IHarmonyEngine
             return Task.FromResult(breakdown);
         }
 
-        // 1. 오행 조화 평가 (30점 만점)
+        // 1. 자원오행 보완 (30점 만점) — 배정 한자의 부수 기준 자원오행 ↔ 사주 용신·부족/과다 오행
         breakdown.FiveElementScore = CalculateFiveElementScore(selectedHanja, birthDate, birthTime, breakdown.Notes);
 
-        // 2. 자원오행 (획수) 평가 (20점 만점)
+        // 2. 획수 조화 (20점 만점) — 이름 두 글자 획수 합의 구간 (필드명 ResourceElementScore 는 호환으로 유지)
         breakdown.ResourceElementScore = CalculateResourceElementScore(selectedHanja, name, breakdown.Notes);
 
         // 3. 음양 균형 평가 (10점 만점)
@@ -151,7 +146,7 @@ public class HarmonyEngine : IHarmonyEngine
         _ => GenderPreference.Neutral
     };
 
-    // ===== 오행 점수 (40점 만점) =====
+    // ===== 자원오행 보완 점수 (30점 만점 — 내부 100점 기준을 0.3 배) =====
 
     private int CalculateFiveElementScore(
         List<HanjaInfo?> selectedHanja,
@@ -276,26 +271,11 @@ public class HarmonyEngine : IHarmonyEngine
     }
 
     /// <summary>
-    /// 한자의 오행을 가져온다. 없으면 획수 기반으로 추정.
+    /// 한자의 자원오행(부수 기준 — HanjaData.FiveElement). 미상(U)이면 빈 문자열 — 획수 끝자리 대체값은 쓰지 않는다(2026-10-22 S4).
     /// </summary>
-    private static string GetFiveElement(HanjaInfo? hanja)
-    {
-        if (hanja == null) return string.Empty;
+    private static string GetFiveElement(HanjaInfo? hanja) => hanja?.FiveElement ?? string.Empty;
 
-        if (!string.IsNullOrEmpty(hanja.FiveElement))
-            return hanja.FiveElement;
-
-        // fallback: 획수 기반 자원오행
-        if (hanja.StrokeCount > 0)
-        {
-            int lastDigit = hanja.StrokeCount % 10;
-            return StrokeToElement[lastDigit];
-        }
-
-        return string.Empty;
-    }
-
-    // ===== 자원오행 (획수) 점수 (30점 만점) =====
+    // ===== 획수 조화 점수 (20점 만점 — 옛 이름 '자원오행', 오행은 쓰지 않는다) =====
 
     private int CalculateResourceElementScore(
         List<HanjaInfo?> selectedHanja,
@@ -312,8 +292,9 @@ public class HarmonyEngine : IHarmonyEngine
             if (hanja != null && hanja.StrokeCount > 0)
             {
                 strokeCounts.Add(hanja.StrokeCount);
-                // ConfidenceGrade D = 획수 자동 추정, 신뢰도 낮음
-                if (hanja.ConfidenceGrade == "D" || hanja.ConfidenceGrade == "C")
+                // Core 데이터(강희 획수를 정리한 코어 글자)가 아니면 획수 자료 미검수 — 보수적으로 감산.
+                // 2026-10-22 S4 전에는 옛 등급 C·D 로 판정했다(옛 C·D ⇔ Core 아님, 옛 B 0자 — 같은 동작)
+                if (!hanja.IsCoreData)
                     hasLowConfidence = true;
             }
             else
@@ -331,21 +312,20 @@ public class HarmonyEngine : IHarmonyEngine
         int rawScore = FortuneUtils.EvaluateStrokeCount(strokeCounts[0], strokeCounts[1]);
         int score = (int)(rawScore * 0.2); // 20점 만점으로 환산
 
-        // ConfidenceGrade 신뢰도 가중치 — 낮은 신뢰도 한자가 섞이면 점수를 보수적으로 조정
-        // S/A: 1.0 (영향 없음)
-        // B: 0.95
-        // C: 0.85
-        // D 또는 획수 미상: 0.75 (큰 감산)
+        // 획수 자료 신뢰도 가중치 — 미검수 획수가 섞이면 점수를 보수적으로 조정
+        // Core 데이터: 1.0 (영향 없음)
+        // Core 아님(획수 자료 미검수): 0.85
+        // 획수 미상: 0.75 (큰 감산)
         if (hasUnknownStroke)
         {
             score = (int)Math.Round(score * 0.75);
-            notes.Add("일부 한자 획수 정보 부족 — 자원오행 신뢰도 감산");
+            notes.Add("일부 한자 획수 정보 부족 — 획수 조화 신뢰도 감산");
         }
         else if (hasLowConfidence)
         {
             score = (int)Math.Round(score * 0.85);
-            // 사용자 노트 — 내부 등급 코드(ConfidenceGrade C/D)는 화면에 그대로 나가므로 한국어 문장으로 쓴다.
-            notes.Add("일부 한자의 오행 판정 신뢰도가 낮음 — 자원오행 점수 보수적 산출");
+            // 사용자 노트 — 내부 코드 대신 한국어 문장으로 쓴다.
+            notes.Add("획수 자료 미검수 글자 포함 — 획수 조화 점수 보수적 산출");
         }
 
         return score;

@@ -261,6 +261,7 @@ public class NameAnalysisService : INameAnalysisService
                     StrokeCount     = h.StrokeCount > 0 ? h.StrokeCount : null,
                     KangxiStrokes   = h.KangxiStrokes > 0 ? h.KangxiStrokes : null,
                     ConfidenceGrade = h.ConfidenceGrade,
+                    ResourceGrade   = h.ResourceGrade,
                     Rationale       = string.IsNullOrEmpty(h.Rationale) ? null : h.Rationale,
                 }).ToList()
             });

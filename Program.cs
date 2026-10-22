@@ -15,6 +15,32 @@ using NameForm.Infrastructure.Repositories;
 // (코드 전체에서 DateTime.SpecifyKind(d, Utc)를 채워 넣는 대안보다 안전)
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
+// 감사 CLI: 백엔드가 실제로 쓰는 글자별 자원오행을 덤프한다(2026-10-22 S4 — 계획 §2-6 보증 장치).
+//   dotnet run -- dump-hanja-elements [outfile]       (기본 hanja-elements.json)
+// 출력 {"count": N, "chars": {글자: {"e": 木火土金水|"", "g": R|V|X|U, "radical": 부수 번호, "c": 1(Core 데이터일 때만)}}}
+// — 코드포인트 순. scripts/audit_hanja_elements.py 가 data/hanja_resource_element.json·hanja-seo.json 과 전수 대조한다.
+if (args.Length >= 1 && args[0] == "dump-hanja-elements")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+    var rows = NameForm.Application.Engines.Data.HanjaData.GetAllHanja()
+        .OrderBy(h => char.ConvertToUtf32(h.Character, 0))
+        .ToList();
+    var chars = new Dictionary<string, Dictionary<string, object>>();
+    foreach (var h in rows)
+    {
+        var rec = new Dictionary<string, object> { ["e"] = h.FiveElement, ["g"] = h.ResourceGrade, ["radical"] = h.RadicalNumber };
+        if (h.IsCoreData) rec["c"] = 1;
+        chars[h.Character] = rec;
+    }
+    var outPath = args.Length >= 2 ? args[1] : "hanja-elements.json";
+    var json = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object> { ["count"] = chars.Count, ["chars"] = chars },
+        new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+    File.WriteAllText(outPath, json);
+    var byGrade = rows.GroupBy(h => h.ResourceGrade).OrderBy(g => g.Key).Select(g => $"{g.Key} {g.Count()}");
+    Console.WriteLine($"[dump-hanja-elements] {chars.Count}자 → {outPath} ({string.Join(" · ", byGrade)} · Core {rows.Count(h => h.IsCoreData)})");
+    return;
+}
+
 // 1회성 CLI: 창의 실명 풀의 기계적 글로스를 덤프(LLM 폴리시 파이프라인 1단계).
 //   dotnet run -- dump-creative-glosses [outfile]
 // 엔진의 BuildMechanicalMeaning을 그대로 재사용해 HanjaData·CommonNameHanja·불용한자

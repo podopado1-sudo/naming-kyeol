@@ -97,6 +97,13 @@ def appears(kw, kind, text):
     return False
 
 
+def is_core(rec):
+    """hanja-seo.json 레코드가 Core 데이터(코어 2,054자)인지 — 새 형식은 c == 1, 옛 형식은 옛 등급 g ∈ {S, A}.
+    2026-10-22 S4: g 가 부수 기준 자원오행 등급(R·V·X·U)이 되어 옛 'S=검수' 판정을 c 로 옮겼다(옛 S ⇔ Core, 같은 집합).
+    새 형식에서 g 는 S·A 가 될 수 없으므로 두 형식을 한 줄로 받는다."""
+    return rec.get("c") == 1 or rec.get("g") in ("S", "A")
+
+
 class HanjaIndex:
     """hanja-seo.json(frontend/src/data) 위의 독음 색인 + 훈 키워드 캐시."""
 
@@ -128,7 +135,7 @@ class HanjaIndex:
     def candidates(self, syl, shown):
         out = set(shown)
         for ch in self.by_reading.get(syl, []):
-            if self.hanja[ch].get("g") in ("S", "A"):
+            if is_core(self.hanja[ch]):
                 out.add(ch)
         return out
 

@@ -381,7 +381,10 @@ public class RecommendationQualityTests
     // ============================================================
 
     /// <summary>
-    /// 표준 카테고리의 Names는 score 내림차순으로 정렬돼야 한다.
+    /// 표준 카테고리의 Names는 score 내림차순으로 정렬돼야 한다 — 단 반대 성별로 기우는 이름(GenderNote)은
+    /// SmartRecommendationService 가 점수와 무관하게 목록 하단으로 보내므로(안정 정렬) 두 묶음 안에서 각각 내림차순이다.
+    /// (2026-10-22 S4: 자원오행 전환으로 조화 점수가 바뀌며 노트 묶음 1위 92가 노트 없는 묶음 끝 85보다 높아져 드러났다 —
+    ///  묶음을 가르지 않던 예전 단언은 이 경계를 우연히 통과하고 있었다)
     /// </summary>
     [Fact]
     public async Task Quality_StandardCategory_ScoresDescending()
@@ -398,15 +401,21 @@ public class RecommendationQualityTests
         var standardCategory = result.Categories.FirstOrDefault(c => c.Type == "standard");
         Assert.NotNull(standardCategory);
 
-        var scores = standardCategory!.Names
-            .Where(n => n.Score.HasValue)
-            .Select(n => n.Score!.Value)
-            .ToList();
+        var names = standardCategory!.Names.Where(n => n.Score.HasValue).ToList();
 
-        for (int i = 1; i < scores.Count; i++)
+        // 노트 없는 이름이 노트 있는 이름보다 모두 앞선다
+        int firstNoted = names.FindIndex(n => !string.IsNullOrEmpty(n.GenderNote));
+        if (firstNoted >= 0)
+            Assert.All(names.Skip(firstNoted), n => Assert.False(string.IsNullOrEmpty(n.GenderNote), $"노트 없는 {n.Name}이 노트 묶음 뒤에 있음"));
+
+        foreach (var group in new[] { names.Where(n => string.IsNullOrEmpty(n.GenderNote)), names.Where(n => !string.IsNullOrEmpty(n.GenderNote)) })
         {
-            Assert.True(scores[i] <= scores[i - 1],
-                $"점수 정렬 오류: [{i - 1}]={scores[i - 1]} > [{i}]={scores[i]}");
+            var scores = group.Select(n => n.Score!.Value).ToList();
+            for (int i = 1; i < scores.Count; i++)
+            {
+                Assert.True(scores[i] <= scores[i - 1],
+                    $"점수 정렬 오류: [{i - 1}]={scores[i - 1]} > [{i}]={scores[i]}");
+            }
         }
     }
 

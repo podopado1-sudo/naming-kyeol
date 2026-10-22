@@ -162,6 +162,7 @@ public class NameEvaluationService : INameEvaluationService
                     StrokeCount     = h.StrokeCount,
                     KangxiStrokes   = h.KangxiStrokes > 0 ? h.KangxiStrokes : null,
                     ConfidenceGrade = h.ConfidenceGrade,
+                    ResourceGrade   = h.ResourceGrade,
                     Rationale       = string.IsNullOrEmpty(h.Rationale) ? null : h.Rationale,
                 })
                 .ToList();

@@ -191,12 +191,13 @@ public class HanjaDataTests
     [Fact]
     public void CoreDataset_NoEnglishFiveElement()
     {
-        // 영문 오행 값(Wood/Fire/Earth/Metal/Water/Gold)이 Core Dataset에 섞여 있으면 안 됨
+        // 영문 오행 값(Wood/Fire/Earth/Metal/Water/Gold)이 Core Dataset에 섞여 있으면 안 됨.
+        // core_v1 의 오행은 2026-10-22 S4 부터 MeaningElement(뜻 기반, 보존용)로 싣는다 — FiveElement 는 부수 기준
         var english = new HashSet<string> { "Wood", "Fire", "Earth", "Metal", "Water", "Gold" };
 
         var violations = HanjaData.GetAllHanja()
-            .Where(h => h.Source == "Core_v1" && english.Contains(h.FiveElement))
-            .Select(h => $"{h.Character}={h.FiveElement}")
+            .Where(h => h.Source == "Core_v1" && english.Contains(h.MeaningElement))
+            .Select(h => $"{h.Character}={h.MeaningElement}")
             .ToList();
 
         Assert.Empty(violations);
@@ -208,8 +209,8 @@ public class HanjaDataTests
         var valid = new HashSet<string> { "木", "火", "土", "金", "水" };
 
         var invalid = HanjaData.GetAllHanja()
-            .Where(h => h.Source == "Core_v1" && !valid.Contains(h.FiveElement))
-            .Select(h => $"{h.Character}={h.FiveElement}")
+            .Where(h => h.Source == "Core_v1" && (!valid.Contains(h.MeaningElement) || !valid.Contains(h.FiveElement)))
+            .Select(h => $"{h.Character}={h.MeaningElement}/{h.FiveElement}")
             .ToList();
 
         Assert.Empty(invalid);
@@ -218,9 +219,9 @@ public class HanjaDataTests
     [Fact]
     public void CoreDataset_RationalePopulated()
     {
-        // Core_v1로 로드된 엔트리는 rationale(판정 근거)가 반드시 있어야 함
+        // Core_v1로 로드된 엔트리는 rationale(뜻 기반 판정 근거 — S4 부터 MeaningRationale)가 반드시 있어야 함
         var missingRationale = HanjaData.GetAllHanja()
-            .Where(h => h.Source == "Core_v1" && string.IsNullOrWhiteSpace(h.Rationale))
+            .Where(h => h.Source == "Core_v1" && string.IsNullOrWhiteSpace(h.MeaningRationale))
             .Select(h => h.Character)
             .ToList();
 
@@ -252,7 +253,7 @@ public class HanjaDataTests
             var info = HanjaData.FindByCharacter(ch);
             Assert.NotNull(info);
             Assert.Equal("Core_v1", info!.Source);
-            Assert.False(string.IsNullOrWhiteSpace(info.Rationale),
+            Assert.False(string.IsNullOrWhiteSpace(info.MeaningRationale),
                 $"{ch}의 rationale이 비어있음");
         }
     }

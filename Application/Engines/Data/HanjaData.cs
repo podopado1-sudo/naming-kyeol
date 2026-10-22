@@ -197,7 +197,11 @@ public static class HanjaData
         public string Character { get; set; } = string.Empty;
         public string Reading { get; set; } = string.Empty; // 한글 발음
         public string Meaning { get; set; } = string.Empty; // 의미
-        public string FiveElement { get; set; } = string.Empty; // 오행: 木, 火, 土, 金, 水
+        /// <summary>
+        /// 자원오행 木·火·土·金·水 — 부수 기준(data/hanja_resource_element.json 의 e) 하나만 쓴다 (2026-10-22 S4).
+        /// 등급 미상(U)이면 빈 문자열이다(획수 끝자리 대체값 없음). 옛 뜻 기반 값은 <see cref="MeaningElement"/>.
+        /// </summary>
+        public string FiveElement { get; set; } = string.Empty;
         public string YinYang { get; set; } = string.Empty; // 음양: 陰, 陽
         public int StrokeCount { get; set; } // 획수
         public string Category { get; set; } = string.Empty; // 자연, 덕목, 개념 등 (하위 호환성)
@@ -216,15 +220,45 @@ public static class HanjaData
         public List<string> AlternateReadings { get; set; } = new(); // 대체 발음 (예: "률" → ["율"])
         public bool IsGovernmentListed { get; set; } = false; // 대법원 인명용 한자 목록 포함 여부
 
+        // ── 부수 기준 자원오행 (2026-10-22 S4 — data/hanja_resource_element.json, 호환 한자 병합 뒤 통합 키에만 적용) ──
+        /// <summary>자원오행 등급: R=확정, V=이견 있음, X=예외 적용(간지·문헌·실무 자료), U=미상(FiveElement 빈 값)</summary>
+        public string ResourceGrade { get; set; } = "U";
+        /// <summary>판정 부수 — 강희 부수 번호 1~214 (미상이면 0)</summary>
+        public int RadicalNumber { get; set; }
+        /// <summary>판정 부수의 통합 한자 꼴 (水·手 — 변형 氵·扌 가 아니라 원형)</summary>
+        public string RadicalChar { get; set; } = string.Empty;
+        /// <summary>부수 단위 다른 값(木火土金水 순) — '이 부수(X)를 Y로 보는 자료도 있습니다'. 글자 견해로 쓰지 말 것</summary>
+        public List<string> AltRadicalElements { get; set; } = new();
+        /// <summary>글자 단위 다른 값(문헌·실무 자료가 이 글자에 준 값)</summary>
+        public List<string> AltCharElements { get; set; } = new();
+        /// <summary>자원오행 판정 근거 한 줄 (결과 파일 note — 예: "手·扌(손 수) 부수 → 木")</summary>
+        public string Rationale { get; set; } = string.Empty;
+
+        // ── 옛 뜻 기반 오행 (D4 — 보존만, 화면·점수에 쓰지 않는다) ────────────
+        /// <summary>
+        /// 2026-10-22 S4 전까지 FiveElement 였던 뜻 기반 값 — Core_v1(五常·뜻 해석, 옛 S) 또는 radical_map(뜻 키워드, 옛 C).
+        /// 옛 획수 끝자리 대체값(옛 D)은 뜻 기반이 아니라 싣지 않는다(빈 문자열).
+        /// </summary>
+        public string MeaningElement { get; set; } = string.Empty;
+        /// <summary>뜻 기반 판정 문장 (Core_v1·radical_map rationale — 옛 Rationale. 예: "仁: 어질다 …")</summary>
+        public string MeaningRationale { get; set; } = string.Empty;
+
         // ── 다층 판정 레이어 (Tiered Resolution) ──────────────────────────
         /// <summary>강희자전 원획법 획수 (표시 획수와 다를 수 있음)</summary>
         public int KangxiStrokes { get; set; }
-        /// <summary>오행 판정 신뢰도: S=검수완료, A=규칙기반확인, B=자동추정, D=획수fallback</summary>
+        /// <summary>
+        /// 옛 뜻 기반 오행(MeaningElement)의 판정 등급: S=Core_v1, B=하드코딩, C=radical_map 뜻 키워드, D=획수 대체(값 없음).
+        /// 2026-10-22 S4 부터 자원오행(FiveElement)과 무관하다 — 새 등급은 <see cref="ResourceGrade"/>, 옛 S 에 기대던
+        /// 가중치(관련도 +100·획수 조화 감산)는 <see cref="IsCoreData"/> 로 옮겼다(옛 S ⇔ Core_v1, 같은 동작).
+        /// </summary>
         public string ConfidenceGrade { get; set; } = "D";
-        /// <summary>오행 판정 근거 (예: "仁=木(동방/생명/인자함)")</summary>
-        public string Rationale { get; set; } = string.Empty;
-        /// <summary>데이터 출처: Core_v1, Manual, Auto_Radical, Auto_Fallback</summary>
+        /// <summary>데이터 출처: Core_v1, Manual, Auto_Radical, Auto_Fallback (옛 뜻 기반 오행 판정의 출처)</summary>
         public string Source { get; set; } = "Auto_Fallback";
+        /// <summary>
+        /// Core 데이터(hanja_core_v1.json — 강희 획수·뜻을 정리한 코어 글자) 여부. 관련도 +2000·+100, 획수 조화 감산 면제,
+        /// 3글자 Tier 1 의 기준이다. 옛 ConfidenceGrade S 와 같은 집합(2026-10-22 2,054자).
+        /// </summary>
+        public bool IsCoreData => Source == "Core_v1";
     }
 
     public enum GenderPreference
@@ -247,53 +281,53 @@ public static class HanjaData
     private static readonly Dictionary<string, HanjaInfo> _detailedHanjaDictionary = new()
     {
         // 자연 계열
-        { "春", new HanjaInfo { Character = "春", Reading = "춘", Meaning = "봄", FiveElement = "木", YinYang = "陽", StrokeCount = 9, Category = "자연", TonePref = TonePreference.Soft } },
-        { "秋", new HanjaInfo { Character = "秋", Reading = "추", Meaning = "가을", FiveElement = "金", YinYang = "陰", StrokeCount = 9, Category = "자연", TonePref = TonePreference.Soft } },
-        { "天", new HanjaInfo { Character = "天", Reading = "천", Meaning = "하늘", FiveElement = "火", YinYang = "陽", StrokeCount = 4, Category = "자연", TonePref = TonePreference.Neutral } },
-        { "海", new HanjaInfo { Character = "海", Reading = "해", Meaning = "바다", FiveElement = "水", YinYang = "陰", StrokeCount = 10, Category = "자연", TonePref = TonePreference.Strong } },
-        { "雲", new HanjaInfo { Character = "雲", Reading = "운", Meaning = "구름", FiveElement = "水", YinYang = "陰", StrokeCount = 12, Category = "자연", TonePref = TonePreference.Soft } },
-        { "山", new HanjaInfo { Character = "山", Reading = "산", Meaning = "산", FiveElement = "土", YinYang = "陽", StrokeCount = 3, Category = "자연", TonePref = TonePreference.Strong } },
-        { "林", new HanjaInfo { Character = "林", Reading = "림", Meaning = "숲", FiveElement = "木", YinYang = "陽", StrokeCount = 8, Category = "자연", TonePref = TonePreference.Neutral } },
-        { "月", new HanjaInfo { Character = "月", Reading = "월", Meaning = "달", FiveElement = "水", YinYang = "陰", StrokeCount = 4, Category = "자연", TonePref = TonePreference.Soft } },
-        { "星", new HanjaInfo { Character = "星", Reading = "성", Meaning = "별", FiveElement = "火", YinYang = "陽", StrokeCount = 9, Category = "자연", TonePref = TonePreference.Soft } },
-        { "花", new HanjaInfo { Character = "花", Reading = "화", Meaning = "꽃", FiveElement = "木", YinYang = "陰", StrokeCount = 7, Category = "자연", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
+        { "春", new HanjaInfo { Character = "春", Reading = "춘", Meaning = "봄", MeaningElement = "木", YinYang = "陽", StrokeCount = 9, Category = "자연", TonePref = TonePreference.Soft } },
+        { "秋", new HanjaInfo { Character = "秋", Reading = "추", Meaning = "가을", MeaningElement = "金", YinYang = "陰", StrokeCount = 9, Category = "자연", TonePref = TonePreference.Soft } },
+        { "天", new HanjaInfo { Character = "天", Reading = "천", Meaning = "하늘", MeaningElement = "火", YinYang = "陽", StrokeCount = 4, Category = "자연", TonePref = TonePreference.Neutral } },
+        { "海", new HanjaInfo { Character = "海", Reading = "해", Meaning = "바다", MeaningElement = "水", YinYang = "陰", StrokeCount = 10, Category = "자연", TonePref = TonePreference.Strong } },
+        { "雲", new HanjaInfo { Character = "雲", Reading = "운", Meaning = "구름", MeaningElement = "水", YinYang = "陰", StrokeCount = 12, Category = "자연", TonePref = TonePreference.Soft } },
+        { "山", new HanjaInfo { Character = "山", Reading = "산", Meaning = "산", MeaningElement = "土", YinYang = "陽", StrokeCount = 3, Category = "자연", TonePref = TonePreference.Strong } },
+        { "林", new HanjaInfo { Character = "林", Reading = "림", Meaning = "숲", MeaningElement = "木", YinYang = "陽", StrokeCount = 8, Category = "자연", TonePref = TonePreference.Neutral } },
+        { "月", new HanjaInfo { Character = "月", Reading = "월", Meaning = "달", MeaningElement = "水", YinYang = "陰", StrokeCount = 4, Category = "자연", TonePref = TonePreference.Soft } },
+        { "星", new HanjaInfo { Character = "星", Reading = "성", Meaning = "별", MeaningElement = "火", YinYang = "陽", StrokeCount = 9, Category = "자연", TonePref = TonePreference.Soft } },
+        { "花", new HanjaInfo { Character = "花", Reading = "화", Meaning = "꽃", MeaningElement = "木", YinYang = "陰", StrokeCount = 7, Category = "자연", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
 
         // 덕목 계열
-        { "和", new HanjaInfo { Character = "和", Reading = "화", Meaning = "화목", FiveElement = "火", YinYang = "陽", StrokeCount = 8, Category = "덕목", TonePref = TonePreference.Soft } },
-        { "正", new HanjaInfo { Character = "正", Reading = "정", Meaning = "바름", FiveElement = "金", YinYang = "陽", StrokeCount = 5, Category = "덕목", TonePref = TonePreference.Strong } },
-        { "道", new HanjaInfo { Character = "道", Reading = "도", Meaning = "길", FiveElement = "火", YinYang = "陽", StrokeCount = 12, Category = "덕목", TonePref = TonePreference.Neutral } },
-        { "均", new HanjaInfo { Character = "均", Reading = "균", Meaning = "고름", FiveElement = "土", YinYang = "陽", StrokeCount = 7, Category = "덕목", TonePref = TonePreference.Neutral } },
-        { "明", new HanjaInfo { Character = "明", Reading = "명", Meaning = "밝음", FiveElement = "火", YinYang = "陽", StrokeCount = 8, Category = "덕목", TonePref = TonePreference.Neutral } },
-        { "德", new HanjaInfo { Character = "德", Reading = "덕", Meaning = "덕", FiveElement = "火", YinYang = "陽", StrokeCount = 15, Category = "덕목", TonePref = TonePreference.Neutral } },
-        { "善", new HanjaInfo { Character = "善", Reading = "선", Meaning = "착함", FiveElement = "金", YinYang = "陽", StrokeCount = 12, Category = "덕목", TonePref = TonePreference.Soft } },
-        { "仁", new HanjaInfo { Character = "仁", Reading = "인", Meaning = "어짐", FiveElement = "金", YinYang = "陽", StrokeCount = 4, Category = "덕목", TonePref = TonePreference.Soft } },
+        { "和", new HanjaInfo { Character = "和", Reading = "화", Meaning = "화목", MeaningElement = "火", YinYang = "陽", StrokeCount = 8, Category = "덕목", TonePref = TonePreference.Soft } },
+        { "正", new HanjaInfo { Character = "正", Reading = "정", Meaning = "바름", MeaningElement = "金", YinYang = "陽", StrokeCount = 5, Category = "덕목", TonePref = TonePreference.Strong } },
+        { "道", new HanjaInfo { Character = "道", Reading = "도", Meaning = "길", MeaningElement = "火", YinYang = "陽", StrokeCount = 12, Category = "덕목", TonePref = TonePreference.Neutral } },
+        { "均", new HanjaInfo { Character = "均", Reading = "균", Meaning = "고름", MeaningElement = "土", YinYang = "陽", StrokeCount = 7, Category = "덕목", TonePref = TonePreference.Neutral } },
+        { "明", new HanjaInfo { Character = "明", Reading = "명", Meaning = "밝음", MeaningElement = "火", YinYang = "陽", StrokeCount = 8, Category = "덕목", TonePref = TonePreference.Neutral } },
+        { "德", new HanjaInfo { Character = "德", Reading = "덕", Meaning = "덕", MeaningElement = "火", YinYang = "陽", StrokeCount = 15, Category = "덕목", TonePref = TonePreference.Neutral } },
+        { "善", new HanjaInfo { Character = "善", Reading = "선", Meaning = "착함", MeaningElement = "金", YinYang = "陽", StrokeCount = 12, Category = "덕목", TonePref = TonePreference.Soft } },
+        { "仁", new HanjaInfo { Character = "仁", Reading = "인", Meaning = "어짐", MeaningElement = "金", YinYang = "陽", StrokeCount = 4, Category = "덕목", TonePref = TonePreference.Soft } },
 
         // 개념 계열
-        { "永", new HanjaInfo { Character = "永", Reading = "영", Meaning = "길이", FiveElement = "土", YinYang = "陽", StrokeCount = 5, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "流", new HanjaInfo { Character = "流", Reading = "류", Meaning = "흐름", FiveElement = "水", YinYang = "陰", StrokeCount = 10, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "恒", new HanjaInfo { Character = "恒", Reading = "항", Meaning = "항상", FiveElement = "火", YinYang = "陽", StrokeCount = 9, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "光", new HanjaInfo { Character = "光", Reading = "광", Meaning = "빛", FiveElement = "火", YinYang = "陽", StrokeCount = 6, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "智", new HanjaInfo { Character = "智", Reading = "지", Meaning = "지혜", FiveElement = "火", YinYang = "陽", StrokeCount = 12, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "勇", new HanjaInfo { Character = "勇", Reading = "용", Meaning = "용기", FiveElement = "土", YinYang = "陽", StrokeCount = 9, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Strong } },
-        { "信", new HanjaInfo { Character = "信", Reading = "신", Meaning = "믿음", FiveElement = "金", YinYang = "陽", StrokeCount = 9, Category = "개념", TonePref = TonePreference.Neutral } },
-        { "誠", new HanjaInfo { Character = "誠", Reading = "성", Meaning = "정성", FiveElement = "金", YinYang = "陽", StrokeCount = 13, Category = "개념", TonePref = TonePreference.Neutral } },
+        { "永", new HanjaInfo { Character = "永", Reading = "영", Meaning = "길이", MeaningElement = "土", YinYang = "陽", StrokeCount = 5, Category = "개념", TonePref = TonePreference.Neutral } },
+        { "流", new HanjaInfo { Character = "流", Reading = "류", Meaning = "흐름", MeaningElement = "水", YinYang = "陰", StrokeCount = 10, Category = "개념", TonePref = TonePreference.Neutral } },
+        { "恒", new HanjaInfo { Character = "恒", Reading = "항", Meaning = "항상", MeaningElement = "火", YinYang = "陽", StrokeCount = 9, Category = "개념", TonePref = TonePreference.Neutral } },
+        { "光", new HanjaInfo { Character = "光", Reading = "광", Meaning = "빛", MeaningElement = "火", YinYang = "陽", StrokeCount = 6, Category = "개념", TonePref = TonePreference.Neutral } },
+        { "智", new HanjaInfo { Character = "智", Reading = "지", Meaning = "지혜", MeaningElement = "火", YinYang = "陽", StrokeCount = 12, Category = "개념", TonePref = TonePreference.Neutral } },
+        { "勇", new HanjaInfo { Character = "勇", Reading = "용", Meaning = "용기", MeaningElement = "土", YinYang = "陽", StrokeCount = 9, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Strong } },
+        { "信", new HanjaInfo { Character = "信", Reading = "신", Meaning = "믿음", MeaningElement = "金", YinYang = "陽", StrokeCount = 9, Category = "개념", TonePref = TonePreference.Neutral } },
+        { "誠", new HanjaInfo { Character = "誠", Reading = "성", Meaning = "정성", MeaningElement = "金", YinYang = "陽", StrokeCount = 13, Category = "개념", TonePref = TonePreference.Neutral } },
 
         // 남성 선호
-        { "俊", new HanjaInfo { Character = "俊", Reading = "준", Meaning = "준수함", FiveElement = "火", YinYang = "陽", StrokeCount = 9, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Neutral } },
-        { "建", new HanjaInfo { Character = "建", Reading = "건", Meaning = "세움", FiveElement = "木", YinYang = "陽", StrokeCount = 8, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Strong } },
-        { "雄", new HanjaInfo { Character = "雄", Reading = "웅", Meaning = "웅대함", FiveElement = "水", YinYang = "陽", StrokeCount = 12, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Strong } },
-        { "豪", new HanjaInfo { Character = "豪", Reading = "호", Meaning = "호걸", FiveElement = "水", YinYang = "陽", StrokeCount = 14, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Strong } },
+        { "俊", new HanjaInfo { Character = "俊", Reading = "준", Meaning = "준수함", MeaningElement = "火", YinYang = "陽", StrokeCount = 9, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Neutral } },
+        { "建", new HanjaInfo { Character = "建", Reading = "건", Meaning = "세움", MeaningElement = "木", YinYang = "陽", StrokeCount = 8, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Strong } },
+        { "雄", new HanjaInfo { Character = "雄", Reading = "웅", Meaning = "웅대함", MeaningElement = "水", YinYang = "陽", StrokeCount = 12, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Strong } },
+        { "豪", new HanjaInfo { Character = "豪", Reading = "호", Meaning = "호걸", MeaningElement = "水", YinYang = "陽", StrokeCount = 14, Category = "개념", GenderPref = GenderPreference.Male, TonePref = TonePreference.Strong } },
 
         // 여성 선호
-        { "美", new HanjaInfo { Character = "美", Reading = "미", Meaning = "아름다움", FiveElement = "水", YinYang = "陰", StrokeCount = 9, Category = "개념", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
-        { "雅", new HanjaInfo { Character = "雅", Reading = "아", Meaning = "우아함", FiveElement = "木", YinYang = "陰", StrokeCount = 12, Category = "개념", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
+        { "美", new HanjaInfo { Character = "美", Reading = "미", Meaning = "아름다움", MeaningElement = "水", YinYang = "陰", StrokeCount = 9, Category = "개념", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
+        { "雅", new HanjaInfo { Character = "雅", Reading = "아", Meaning = "우아함", MeaningElement = "木", YinYang = "陰", StrokeCount = 12, Category = "개념", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
         // 秀·恩은 2026-10-22 Female 지정을 뺐다 — 남자 이름에도 흔한 글자인데 −400 감점으로 남자 수·은 이름 1순위가
         // 樹(나무)·銀(은)으로 밀렸다. 秀는 unihan 값과 의미 분류기('빼어날')가 다시 Female 로 찍으므로
         // data/hanja-gender-overrides.json 에서 Neutral 로 고정한다(恩은 두 출처 모두 Neutral 이라 여기서 빼는 것으로 충분).
         // 惠는 그대로 둔다 — 혜 줄 빈출 惠·慧·蕙가 모두 Female 이라 상쇄되는데, 惠만 빼면 여자 혜 이름 52명의 1순위가 慧로 넘어간다.
-        { "秀", new HanjaInfo { Character = "秀", Reading = "수", Meaning = "빼어남", FiveElement = "金", YinYang = "陰", StrokeCount = 7, Category = "개념", TonePref = TonePreference.Soft } },
-        { "恩", new HanjaInfo { Character = "恩", Reading = "은", Meaning = "은혜", FiveElement = "土", YinYang = "陰", StrokeCount = 10, Category = "덕목", TonePref = TonePreference.Soft } },
-        { "惠", new HanjaInfo { Character = "惠", Reading = "혜", Meaning = "은혜", FiveElement = "水", YinYang = "陰", StrokeCount = 12, Category = "덕목", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
+        { "秀", new HanjaInfo { Character = "秀", Reading = "수", Meaning = "빼어남", MeaningElement = "金", YinYang = "陰", StrokeCount = 7, Category = "개념", TonePref = TonePreference.Soft } },
+        { "恩", new HanjaInfo { Character = "恩", Reading = "은", Meaning = "은혜", MeaningElement = "土", YinYang = "陰", StrokeCount = 10, Category = "덕목", TonePref = TonePreference.Soft } },
+        { "惠", new HanjaInfo { Character = "惠", Reading = "혜", Meaning = "은혜", MeaningElement = "水", YinYang = "陰", StrokeCount = 12, Category = "덕목", GenderPref = GenderPreference.Female, TonePref = TonePreference.Soft } },
 
         // ⚠️ 키는 반드시 한자 1글자. 초기 커밋의 "중립/인기" 블록은 우·진·서·하·윤·민·지·현·연·채
         // 한글 음절을 키로 쓴 가짜 항목 10건이었고(뜻도 "하=아래"·"채=채소"처럼 틀림), 사전 삽입 순서를
@@ -349,36 +383,8 @@ public static class HanjaData
         }
     }
 
-    /// <summary>
-    /// 총획수로부터 오행 계산 (원획법 기준)
-    /// 총획수가 10 이상이면 끝자리(일의 자리)만 사용
-    /// </summary>
-    /// <param name="totalStrokes">총획수</param>
-    /// <returns>오행: 木, 火, 土, 金, 水 중 하나</returns>
-    private static string CalculateFiveElementFromStrokes(int totalStrokes)
-    {
-        if (totalStrokes <= 0)
-            return string.Empty;
-
-        // 총획수가 10 이상이면 끝자리만 사용
-        int lastDigit = totalStrokes >= 10 ? totalStrokes % 10 : totalStrokes;
-
-        // 오행 매핑 규칙
-        // 1,2 → 목(木)
-        // 3,4 → 화(火)
-        // 5,6 → 토(土)
-        // 7,8 → 금(金)
-        // 9,0 → 수(水)
-        return lastDigit switch
-        {
-            1 or 2 => "木",
-            3 or 4 => "火",
-            5 or 6 => "土",
-            7 or 8 => "金",
-            9 or 0 => "水",
-            _ => string.Empty
-        };
-    }
+    // [2026-10-22 S4 삭제] CalculateFiveElementFromStrokes — 획수 끝자리(1·2木 3·4火 5·6土 7·8金 9·0水) 오행 대체값.
+    // 옛 D등급 5,582자의 FiveElement 가 이 값이었다. 자원오행은 부수 기준 결과 파일(ApplyResourceElements) 하나만 쓴다.
 
     /// <summary>
     /// 총획수로부터 음양 계산 (원획법 기준)
@@ -401,30 +407,16 @@ public static class HanjaData
     }
 
     /// <summary>
-    /// 총획수가 있으면 자동으로 오행과 음양을 계산하여 설정
+    /// 총획수가 있고 음양이 비어 있으면 획수로 음양을 채운다 (이미 있으면 그대로 — 처음 채운 값이 남는다).
+    /// 2026-10-22 S4 전에는 오행도 획수 끝자리로 채웠다(AutoCalculateFiveElementAndYinYang, 옛 D등급) — 음양은 그대로 둔다
+    /// (hanja_unihan.json 음양값·프론트와의 홀짝 규칙 통일은 계획 S5·D9).
     /// </summary>
     /// <param name="hanjaInfo">한자 정보</param>
-    private static void AutoCalculateFiveElementAndYinYang(HanjaInfo hanjaInfo)
+    private static void AutoCalculateYinYang(HanjaInfo hanjaInfo)
     {
-        if (hanjaInfo.StrokeCount > 0)
+        if (hanjaInfo.StrokeCount > 0 && string.IsNullOrEmpty(hanjaInfo.YinYang))
         {
-            // 오행이 없으면 자동 계산 (Tier 4 fallback)
-            if (string.IsNullOrEmpty(hanjaInfo.FiveElement))
-            {
-                hanjaInfo.FiveElement = CalculateFiveElementFromStrokes(hanjaInfo.StrokeCount);
-                // 획수 기반 자동 계산 = 최저 신뢰도
-                if (hanjaInfo.Source == "Auto_Fallback" || string.IsNullOrEmpty(hanjaInfo.Source))
-                {
-                    hanjaInfo.Source = "Auto_Fallback";
-                    hanjaInfo.ConfidenceGrade = "D";
-                }
-            }
-
-            // 음양이 없으면 자동 계산
-            if (string.IsNullOrEmpty(hanjaInfo.YinYang))
-            {
-                hanjaInfo.YinYang = CalculateYinYangFromStrokes(hanjaInfo.StrokeCount);
-            }
+            hanjaInfo.YinYang = CalculateYinYangFromStrokes(hanjaInfo.StrokeCount);
         }
     }
 
@@ -502,6 +494,8 @@ public static class HanjaData
                 info.Source = "Manual";
                 info.ConfidenceGrade = "B"; // 수동 작성이나 전문 검수 미완
             }
+            // 이 객체들은 정적 사전이라 Reload() 뒤에도 같은 인스턴스다 — 앞 로드의 자원오행을 지우고 다시 적용받는다
+            info.FiveElement = string.Empty;
             dict[kvp.Key] = info;
         }
 
@@ -588,15 +582,13 @@ public static class HanjaData
                                   string.Empty;
                     
                     // 획수 추출 (여러 필드명 지원)
-                    var strokeCount = entry.total_strokes ?? 
-                                     entry.strokeCount ?? 
+                    var strokeCount = entry.total_strokes ??
+                                     entry.strokeCount ??
                                      0;
-                    
-                    // 오행 추출 (여러 필드명 지원)
-                    var fiveElement = entry.five_element ?? 
-                                     entry.fiveElement ?? 
-                                     string.Empty;
-                    
+
+                    // 오행은 사전 파일에서 읽지 않는다 — 자원오행은 ApplyResourceElements 하나만 기록한다(2026-10-22 S4).
+                    // (five_element 필드는 사전 파일에 없다 — 2026-10-22 확인 0건)
+
                     // 음양 추출 (여러 필드명 지원)
                     var yinYang = entry.yin_yang ?? 
                                  entry.yinYang ?? 
@@ -626,7 +618,6 @@ public static class HanjaData
                         Unicode = entry.unicode_hex ?? string.Empty,
                         Consonant = firstConsonant,
                         Meaning = meaning,
-                        FiveElement = fiveElement,
                         YinYang = yinYang,
                         StrokeCount = strokeCount,
                         Category = category,
@@ -634,8 +625,8 @@ public static class HanjaData
                         TonePref = TonePreference.Neutral
                     };
 
-                    // 총획수가 있으면 자동으로 오행과 음양 계산
-                    AutoCalculateFiveElementAndYinYang(newHanjaInfo);
+                    // 총획수가 있으면 음양 계산
+                    AutoCalculateYinYang(newHanjaInfo);
 
                     dict[hanja] = newHanjaInfo;
                 }
@@ -678,21 +669,18 @@ public static class HanjaData
                     
                     // 획수 정보 업데이트 (없는 경우만, 상세 데이터가 우선, 여러 필드명 지원)
                     // total_strokes 필드를 우선적으로 읽고, 없으면 strokeCount 필드 사용
-                    bool strokeCountUpdated = false;
                     if (existing.StrokeCount == 0)
                     {
                         var strokeCount = entry.total_strokes ?? entry.strokeCount ?? 0;
                         if (strokeCount > 0)
                         {
                             existing.StrokeCount = strokeCount;
-                            strokeCountUpdated = true;
                         }
                     }
                     else if (entry.total_strokes.HasValue && entry.total_strokes.Value > 0 && existing.StrokeCount != entry.total_strokes.Value)
                     {
                         // 기존 획수가 있지만 total_strokes가 다르면 업데이트 (더 정확한 데이터)
                         existing.StrokeCount = entry.total_strokes.Value;
-                        strokeCountUpdated = true;
                     }
                     
                     // 카테고리 정보 업데이트 (없거나 "기타"인 경우만)
@@ -714,16 +702,8 @@ public static class HanjaData
                         }
                     }
                     
-                    // 오행 정보 업데이트 (없는 경우만, 여러 필드명 지원)
-                    if (string.IsNullOrEmpty(existing.FiveElement))
-                    {
-                        var fiveElement = entry.five_element ?? entry.fiveElement ?? string.Empty;
-                        if (!string.IsNullOrEmpty(fiveElement))
-                        {
-                            existing.FiveElement = fiveElement;
-                        }
-                    }
-                    
+                    // 오행은 사전 파일에서 읽지 않는다(ApplyResourceElements 하나만 기록 — 2026-10-22 S4)
+
                     // 음양 정보 업데이트 (없는 경우만, 여러 필드명 지원)
                     if (string.IsNullOrEmpty(existing.YinYang))
                     {
@@ -734,11 +714,8 @@ public static class HanjaData
                         }
                     }
 
-                    // 획수가 업데이트되었거나, 오행/음양이 없는 경우 자동 계산
-                    if (strokeCountUpdated || string.IsNullOrEmpty(existing.FiveElement) || string.IsNullOrEmpty(existing.YinYang))
-                    {
-                        AutoCalculateFiveElementAndYinYang(existing);
-                    }
+                    // 음양이 없으면 획수로 계산 (있으면 그대로 — 획수가 바뀌어도 다시 계산하지 않는 것은 S4 전과 같다)
+                    AutoCalculateYinYang(existing);
                 }
             }
         }
@@ -768,6 +745,9 @@ public static class HanjaData
 
         // ── 호환 한자 → 통합 한자 병합 (데이터 파일 적재가 모두 끝난 뒤 — 파일마다 호환 코드 키에도 값을 실었으므로) ──
         MergeCompatibilityIdeographs();
+
+        // ── 부수 기준 자원오행 (FiveElement 의 유일한 기록자 — 병합 뒤 통합 키에만, 2026-10-22 S4) ──
+        ApplyResourceElements();
 
         // ── 대표 훈 오버라이드 (모든 Meaning 기록자 이후 — LoadMeaningsFromJson이 덮어쓰고, 병합이 빈 뜻을 채우므로) ──
         ApplyGlossOverrides();
@@ -862,13 +842,15 @@ public static class HanjaData
 
                 if (dict.TryGetValue(entry.Hanja, out var existing))
                 {
-                    // 기존 항목에 Core Dataset 정보 덮어씀 (Tier 1 우선)
+                    // 기존 항목에 Core Dataset 정보 덮어씀 (Tier 1 우선).
+                    // core_v1 의 오행·근거는 뜻(五常) 해석이라 MeaningElement·MeaningRationale 로만 싣는다(D4, 2026-10-22 S4) —
+                    // 자원오행(FiveElement)은 부수 기준 결과 파일이 정한다(ApplyResourceElements).
                     if (!string.IsNullOrEmpty(entry.FiveElement))
-                        existing.FiveElement = entry.FiveElement;
+                        existing.MeaningElement = entry.FiveElement;
                     if (entry.KangxiStrokes > 0)
                         existing.KangxiStrokes = entry.KangxiStrokes;
                     if (!string.IsNullOrEmpty(entry.Rationale))
-                        existing.Rationale = entry.Rationale;
+                        existing.MeaningRationale = entry.Rationale;
                     existing.ConfidenceGrade = entry.Confidence ?? "S";
                     existing.Source = "Core_v1";
 
@@ -982,7 +964,7 @@ public static class HanjaData
             if (h.Source != "Core_v1") continue;
             if (h.Category != "기타" && !string.IsNullOrEmpty(h.Category)) continue;
 
-            var haystack = (h.Rationale ?? string.Empty) + " " + (h.Meaning ?? string.Empty);
+            var haystack = (h.MeaningRationale ?? string.Empty) + " " + (h.Meaning ?? string.Empty);
             if (string.IsNullOrWhiteSpace(haystack)) continue;
 
             string? newCategory = null;
@@ -1013,7 +995,8 @@ public static class HanjaData
     /// <summary>
     /// Tier 3: hanja_radical_element_map.json 로드 — 의미 기반 오행 추정 (grade=C).
     /// Tier 1(Core Dataset)보다 먼저 적용되며, Core Dataset이 덮어씁니다.
-    /// FiveElement가 이미 B등급 이상이면 덮어쓰지 않습니다.
+    /// 이미 B등급 이상이면 덮어쓰지 않습니다.
+    /// ⚠️ 파일 이름과 달리 부수를 보지 않는다(뜻 키워드) — 2026-10-22 S4 부터 MeaningElement 로만 싣는다(자원오행 아님).
     /// </summary>
     private static void LoadRadicalElementMap()
     {
@@ -1055,13 +1038,13 @@ public static class HanjaData
                         existing.ConfidenceGrade == "B")
                         continue;
 
-                    // 이미 오행이 있고 Auto_Fallback이 아닌 경우도 스킵
-                    if (!string.IsNullOrEmpty(existing.FiveElement) &&
+                    // 이미 뜻 기반 오행이 있고 Auto_Fallback이 아닌 경우도 스킵
+                    if (!string.IsNullOrEmpty(existing.MeaningElement) &&
                         existing.Source != "Auto_Fallback" && existing.Source != "Auto_Radical")
                         continue;
 
-                    existing.FiveElement    = entry.FiveElement;
-                    existing.Rationale      = entry.Rationale ?? string.Empty;
+                    existing.MeaningElement   = entry.FiveElement;
+                    existing.MeaningRationale = entry.Rationale ?? string.Empty;
                     existing.ConfidenceGrade = "C";
                     existing.Source         = "Auto_Radical";
                     applied++;
@@ -1147,7 +1130,8 @@ public static class HanjaData
     /// 사전·뜻·Unihan·카테고리 파일이 같은 글자를 호환 코드(金 U+F90A)와 통합 코드(金 U+91D1)로 따로 실어,
     /// 독음 조회에 같은 모양 글자가 둘 나오고, 뜻이 호환 쪽에만 있던 金·蘭·朗·廊·剆 은 후보에서 빠졌다.
     /// 규칙: 통합 쪽 값이 있으면 통합 쪽이 이기고 빈 칸만 호환 쪽 값으로 채운다. 뜻을 호환 쪽에서 받으면
-    /// 뜻에서 나온 값(카테고리·성별·톤)도 함께 받는다. 오행은 통합 쪽이 획수 대체값뿐일 때만 호환 쪽 판정을 쓴다.
+    /// 뜻에서 나온 값(카테고리·성별·톤)도 함께 받는다. 옛 뜻 기반 오행(MeaningElement·등급·근거·출처)은 통합 쪽에 판정이 없을 때만
+    /// 호환 쪽 판정을 쓴다. 자원오행(FiveElement)은 여기서 다루지 않는다 — 병합 뒤 ApplyResourceElements 가 통합 키에만 적용한다.
     /// scripts/build_hanja_seo_data.py 가 같은 규칙으로 병합한다(/hanja 독음 페이지 중복 카드 제거).
     /// </summary>
     private static void MergeCompatibilityIdeographs()
@@ -1198,16 +1182,111 @@ public static class HanjaData
             if (string.IsNullOrEmpty(dst.Consonant)) dst.Consonant = src.Consonant;
             dst.IsGovernmentListed |= src.IsGovernmentListed;
 
-            bool dstFallbackOnly = string.IsNullOrEmpty(dst.FiveElement) || dst.Source == "Auto_Fallback";
-            bool srcJudged = !string.IsNullOrEmpty(src.FiveElement) && src.Source != "Auto_Fallback";
-            if (dstFallbackOnly && (srcJudged || string.IsNullOrEmpty(dst.FiveElement)))
+            // 통합 쪽이 판정 없음(Auto_Fallback = 옛 D)이고 호환 쪽에 뜻 기반 판정(Core_v1·radical_map·하드코딩)이 있으면 그 판정을 받는다.
+            // (S4 전 규칙 '통합 쪽이 획수 대체값뿐이면 호환 쪽 판정'과 같은 결과 — 옛 D 의 값·근거는 비어 있으므로 나머지 경우는 바뀌는 것이 없다)
+            if (dst.Source == "Auto_Fallback" && src.Source != "Auto_Fallback" && !string.IsNullOrEmpty(src.MeaningElement))
             {
-                dst.FiveElement = src.FiveElement;
+                dst.MeaningElement = src.MeaningElement;
                 dst.ConfidenceGrade = src.ConfidenceGrade;
-                dst.Rationale = src.Rationale;
+                dst.MeaningRationale = src.MeaningRationale;
                 dst.Source = src.Source;
             }
         }
+    }
+
+    /// <summary>자원오행 결과 파일 이름 (scripts/build_resource_element.py 산출, data/ 아래)</summary>
+    public const string ResourceElementFileName = "hanja_resource_element.json";
+
+    private static readonly HashSet<string> ValidElements = new(StringComparer.Ordinal) { "木", "火", "土", "金", "水" };
+    private static readonly HashSet<string> ValidResourceGrades = new(StringComparer.Ordinal) { "R", "V", "X", "U" };
+
+    /// <summary>
+    /// 부수 기준 자원오행 적용 (2026-10-22 S4 — 계획 docs/plan-radical-ohaeng-2026-10.md §2-6).
+    /// data/hanja_resource_element.json(scripts/build_resource_element.py)의 글자별 e·g·부수·대체값·근거를 싣는다.
+    /// FiveElement 의 유일한 기록자다 — 뜻 기반 값(core_v1·radical_map)은 MeaningElement 에, 획수 끝자리 대체값은 없다.
+    /// 호환 한자 병합(MergeCompatibilityIdeographs) 뒤에 부르므로 사전에는 통합 한자 키만 있고, 결과 파일의 호환 한자 키
+    /// (compat_of — 통합 한자와 같은 값)는 적용하지 않는다. 결과 파일에 없는 글자·파일이 없을 때는 미상(U, FiveElement 빈 값).
+    /// build_hanja_seo_data.py 가 같은 파일을 복사하므로 백엔드와 /hanja 의 오행이 한 원천이다(dump-hanja-elements 로 대조).
+    /// </summary>
+    private static void ApplyResourceElements()
+    {
+        var dict = _loadedDictionary;
+        if (dict == null) return;
+
+        var records = ReadResourceElementFile();
+        int applied = 0, missing = 0;
+        foreach (var (key, h) in dict)
+        {
+            h.FiveElement = string.Empty;
+            h.ResourceGrade = "U";
+            h.RadicalNumber = 0;
+            h.RadicalChar = string.Empty;
+            h.AltRadicalElements = new List<string>();
+            h.AltCharElements = new List<string>();
+            h.Rationale = string.Empty;
+
+            if (records == null || !records.TryGetValue(key, out var r) || r.CompatOf != null)
+            {
+                missing++;
+                continue;
+            }
+            var grade = r.Grade != null && ValidResourceGrades.Contains(r.Grade) ? r.Grade : "U";
+            var element = r.Element != null && ValidElements.Contains(r.Element) ? r.Element : string.Empty;
+            if (grade == "U" || element.Length == 0) { grade = "U"; element = string.Empty; }
+
+            h.FiveElement = element;
+            h.ResourceGrade = grade;
+            h.RadicalNumber = r.Radical ?? 0;
+            h.RadicalChar = r.RadicalChar ?? string.Empty;
+            h.AltRadicalElements = r.AltRadical?.Where(ValidElements.Contains).ToList() ?? new List<string>();
+            h.AltCharElements = r.AltChar?.Select(a => a.Element ?? "").Where(ValidElements.Contains).Distinct().ToList()
+                                ?? new List<string>();
+            h.Rationale = r.Note ?? string.Empty;
+            applied++;
+        }
+        System.Diagnostics.Debug.WriteLine($"[ResourceElement] {applied}자 적용 · 결과 파일에 없음 {missing}자(미상)");
+    }
+
+    /// <summary>
+    /// 자원오행 결과 파일의 글자별 기록(호환 한자 키 포함 — compat_of 로 구분). 파일을 못 찾거나 읽지 못하면 null.
+    /// 테스트·덤프가 백엔드 적용값과 파일을 대조할 때도 쓴다.
+    /// </summary>
+    public static Dictionary<string, ResourceElementRecord>? ReadResourceElementFile()
+    {
+        var path = FindOverrideFile(ResourceElementFileName);
+        if (path == null) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(path, System.Text.Encoding.UTF8));
+            if (!doc.RootElement.TryGetProperty("chars", out var chars)) return null;
+            return JsonSerializer.Deserialize<Dictionary<string, ResourceElementRecord>>(chars.GetRawText());
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ResourceElement] 결과 파일 로드 실패: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>data/hanja_resource_element.json 의 chars 항목 하나 (필드 뜻은 그 파일 meta.fields)</summary>
+    public class ResourceElementRecord
+    {
+        [JsonPropertyName("e")] public string? Element { get; set; }
+        [JsonPropertyName("g")] public string? Grade { get; set; }
+        [JsonPropertyName("radical")] public int? Radical { get; set; }
+        [JsonPropertyName("radical_char")] public string? RadicalChar { get; set; }
+        [JsonPropertyName("alt_radical")] public List<string>? AltRadical { get; set; }
+        [JsonPropertyName("alt_char")] public List<ResourceAltChar>? AltChar { get; set; }
+        [JsonPropertyName("note")] public string? Note { get; set; }
+        [JsonPropertyName("variant_of")] public string? VariantOf { get; set; }
+        [JsonPropertyName("compat_of")] public string? CompatOf { get; set; }
+    }
+
+    /// <summary>alt_char 항목 — 이 글자에 다른 출처가 준 다른 값</summary>
+    public class ResourceAltChar
+    {
+        [JsonPropertyName("e")] public string? Element { get; set; }
+        [JsonPropertyName("basis")] public List<string>? Basis { get; set; }
     }
 
     /// <summary>
@@ -1489,12 +1568,13 @@ public static class HanjaData
     {
         int score = 0;
 
-        // Core Dataset v1 — 五常 원칙/자원오행 전문 검수 완료자 (최우선)
-        if (hanja.Source == "Core_v1")
+        // Core Dataset v1 — 강희 획수·뜻을 정리한 코어 글자 (최우선)
+        if (hanja.IsCoreData)
             score += 2000;
 
-        // S등급 (검수 완료) 추가 가점 — Core_v1 내 품질 정렬용
-        if (hanja.ConfidenceGrade == "S")
+        // 옛 'S등급' 가점 — 2026-10-22 S4 에 등급(ConfidenceGrade S)에서 Core 여부로 옮겼다(옛 S ⇔ Core_v1 이라 점수 불변).
+        // Core +2000 과 겹치지만 생성 경로의 가감(약자 −3000·용신 가산 등)과 더해지는 절대값이라 그대로 둔다.
+        if (hanja.IsCoreData)
             score += 100;
 
         // CJK 영역 기준 (가장 중요)
@@ -1627,8 +1707,9 @@ public static class HanjaData
     }
 
     /// <summary>
-    /// Unihan 데이터로부터 획수, 오행, 음양 정보 업데이트
-    /// 향후 Unihan 데이터 통합 시 사용
+    /// Unihan 데이터로부터 획수, 음양 정보 업데이트
+    /// 향후 Unihan 데이터 통합 시 사용. fiveElement 인자는 받지만 쓰지 않는다 — 자원오행은 부수 기준 결과 파일
+    /// (ApplyResourceElements) 하나만 기록한다(2026-10-22 S4).
     /// </summary>
     public static void UpdateFromUnihan(string character, int strokeCount, string fiveElement, string yinYang)
     {
@@ -1637,26 +1718,17 @@ public static class HanjaData
 
         lock (_lockObject)
         {
-            bool strokeCountUpdated = false;
             if (strokeCount > 0 && hanja.StrokeCount == 0)
             {
                 hanja.StrokeCount = strokeCount;
-                strokeCountUpdated = true;
-            }
-            if (!string.IsNullOrEmpty(fiveElement) && string.IsNullOrEmpty(hanja.FiveElement))
-            {
-                hanja.FiveElement = fiveElement;
             }
             if (!string.IsNullOrEmpty(yinYang) && string.IsNullOrEmpty(hanja.YinYang))
             {
                 hanja.YinYang = yinYang;
             }
-            
-            // 획수가 업데이트되었거나, 오행/음양이 없는 경우 자동 계산
-            if (strokeCountUpdated || string.IsNullOrEmpty(hanja.FiveElement) || string.IsNullOrEmpty(hanja.YinYang))
-            {
-                AutoCalculateFiveElementAndYinYang(hanja);
-            }
+
+            // 음양이 없으면 획수로 계산
+            AutoCalculateYinYang(hanja);
         }
     }
 
@@ -1716,9 +1788,7 @@ public static class HanjaData
                     {
                         lock (_lockObject)
                         {
-                            bool strokeCountUpdated = false;
-                            
-                            // Unihan 데이터 업데이트 (획수, 오행, 음양)
+                            // Unihan 데이터 업데이트 (획수, 음양)
                             if (data.strokeCount.HasValue && data.strokeCount.Value > 0)
                             {
                                 // 기존 값이 없거나 0인 경우에만 업데이트
@@ -1726,17 +1796,9 @@ public static class HanjaData
                                 if (hanjaInfo.StrokeCount == 0 || hanjaInfo.StrokeCount != data.strokeCount.Value)
                                 {
                                     hanjaInfo.StrokeCount = data.strokeCount.Value;
-                                    strokeCountUpdated = true;
                                 }
                                 
-                                // 오행 정보 업데이트 (JSON에 있는 경우 우선, 없으면 자동 계산)
-                                if (string.IsNullOrEmpty(hanjaInfo.FiveElement))
-                                {
-                                    if (!string.IsNullOrEmpty(data.fiveElement))
-                                    {
-                                        hanjaInfo.FiveElement = data.fiveElement;
-                                    }
-                                }
+                                // 오행(fiveElement — 획수 끝자리 값)은 읽지 않는다. 자원오행은 ApplyResourceElements 하나만 기록한다(2026-10-22 S4)
                                 
                                 // 음양 정보 업데이트 (JSON에 있는 경우 우선, 없으면 자동 계산)
                                 if (string.IsNullOrEmpty(hanjaInfo.YinYang))
@@ -1748,12 +1810,8 @@ public static class HanjaData
                                 }
                             }
                             
-                            // 획수가 업데이트되었거나, 오행/음양이 없는 경우 자동 계산
-                            // total_strokes로 오행과 음양을 계산하고 저장
-                            if (strokeCountUpdated || string.IsNullOrEmpty(hanjaInfo.FiveElement) || string.IsNullOrEmpty(hanjaInfo.YinYang))
-                            {
-                                AutoCalculateFiveElementAndYinYang(hanjaInfo);
-                            }
+                            // 음양이 없으면 획수로 계산 (있으면 그대로)
+                            AutoCalculateYinYang(hanjaInfo);
                             
                             // GenderPref/TonePref 업데이트 (기본값인 Neutral일 때만)
                             if (hanjaInfo.GenderPref == GenderPreference.Neutral && !string.IsNullOrEmpty(data.genderPref))
