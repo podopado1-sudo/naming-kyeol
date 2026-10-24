@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatSignedPoints, signedPointsClass } from "@/lib/signed-points";
 import { cn } from "@/lib/utils";
 import type { AestheticBreakdown } from "@/lib/types";
 
@@ -45,27 +46,17 @@ function ScoreBar({ label, value, max }: BarItem) {
   );
 }
 
-function BonusLine({
-  label,
-  value,
-  type,
-}: {
-  label: string;
-  value: number;
-  type: "bonus" | "penalty";
-}) {
+// 부호·색은 값으로 정한다(lib/signed-points.ts — /evaluate ScoreBar bonus 행과 같은 규칙). 감점은 -penalty 로 넘긴다.
+// 옛 코드는 행 종류(type="bonus")로 '+'·청록을 붙여 음수 성별 보너스가 '+-2'로 나왔다(2026-10-23 운영 검증 NAME-2)
+function BonusLine({ label, value }: { label: string; value: number }) {
   if (value === 0) return null;
-  const isPositive = type === "bonus";
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
       <span
-        className={cn(
-          "font-tabular font-medium",
-          isPositive ? "text-teal" : "text-amber-warm"
-        )}
+        className={cn("font-tabular font-medium", signedPointsClass(value))}
       >
-        {isPositive ? `+${value}` : `${value}`}
+        {formatSignedPoints(value)}
       </span>
     </div>
   );
@@ -102,13 +93,9 @@ export function ScoreBreakdownCard({
         ))}
 
         <div className="space-y-1.5 border-t border-paper-line pt-3">
-          <BonusLine label="톤 보너스" value={aesthetic.toneBonus} type="bonus" />
-          <BonusLine
-            label="성별 보너스"
-            value={aesthetic.genderBonus}
-            type="bonus"
-          />
-          <BonusLine label="감점" value={aesthetic.penalty} type="penalty" />
+          <BonusLine label="톤 보너스" value={aesthetic.toneBonus} />
+          <BonusLine label="성별 보너스" value={aesthetic.genderBonus} />
+          <BonusLine label="감점" value={-aesthetic.penalty} />
         </div>
 
         {aesthetic.notes.length > 0 && (

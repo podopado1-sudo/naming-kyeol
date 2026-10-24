@@ -173,7 +173,7 @@ export default function TwinPage() {
   // 입력 폼
   return (
     <>
-      <Header />
+      <Header current="search" />
       <main
         style={{
           maxWidth: 720,

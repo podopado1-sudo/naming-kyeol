@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatSignedPoints, signedPointsClass } from "@/lib/signed-points";
 import { cn } from "@/lib/utils";
 import type { HarmonyBreakdown } from "@/lib/types";
 
@@ -75,12 +76,18 @@ export function HarmonyBreakdownCard({
           <ScoreBar key={bar.label} {...bar} />
         ))}
 
+        {/* 부호·색은 값으로(lib/signed-points.ts) — 옛 '+{값}'·청록 고정은 음수에서 '+-2'가 됐다(2026-10-23 NAME-2와 같은 꼴) */}
         {harmony.genderBonus !== 0 && (
           <div className="border-t border-paper-line pt-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">성별 보너스</span>
-              <span className="font-tabular font-medium text-teal">
-                +{harmony.genderBonus}
+              <span
+                className={cn(
+                  "font-tabular font-medium",
+                  signedPointsClass(harmony.genderBonus)
+                )}
+              >
+                {formatSignedPoints(harmony.genderBonus)}
               </span>
             </div>
           </div>

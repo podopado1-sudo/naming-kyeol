@@ -13,6 +13,7 @@ import type { ComponentType, SVGProps } from "react";
 import { ElementChip } from "./EvalPrimitives";
 import { ResourceGradeBadge } from "./DetailHanja";
 import type { ResourceGrade } from "./resource-grade";
+import { keepFilledBlocks, twoColTemplate } from "./eval-layout";
 
 // ============================================================
 // HanjaCandidatesTable — 음절별 한자 후보 (2-col 카드)
@@ -298,6 +299,8 @@ function Block({
   );
 }
 
+// 빈 목록 상자는 그리지 않고, 한쪽만 남으면 1열(eval-layout.ts — 2026-10-23 운영 검증 BR-1: 빈 '참고할 점' 상자).
+// 둘 다 비면 아무것도 그리지 않는다
 export function StrengthsCautions({
   strengths,
   cautions,
@@ -305,29 +308,38 @@ export function StrengthsCautions({
   strengths: string[];
   cautions: string[];
 }) {
+  const blocks = keepFilledBlocks([
+    {
+      key: "strengths",
+      Icon: Sparkles,
+      title: "이 이름의 강점",
+      items: strengths,
+      tintBg: "rgba(74,124,89,0.08)",
+      accent: "var(--color-score-high)",
+    },
+    {
+      key: "cautions",
+      Icon: Info,
+      title: "참고할 점",
+      items: cautions,
+      tintBg: "rgba(201,169,110,0.12)",
+      accent: "#7A5B22",
+    },
+  ]);
+  if (blocks.length === 0) return null;
+
   return (
     <div
       className="eval-2col"
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(2, 1fr)",
+        gridTemplateColumns: twoColTemplate(blocks.length),
         gap: 16,
       }}
     >
-      <Block
-        Icon={Sparkles}
-        title="이 이름의 강점"
-        items={strengths}
-        tintBg="rgba(74,124,89,0.08)"
-        accent="var(--color-score-high)"
-      />
-      <Block
-        Icon={Info}
-        title="참고할 점"
-        items={cautions}
-        tintBg="rgba(201,169,110,0.12)"
-        accent="#7A5B22"
-      />
+      {blocks.map(({ key, ...block }) => (
+        <Block key={key} {...block} />
+      ))}
     </div>
   );
 }

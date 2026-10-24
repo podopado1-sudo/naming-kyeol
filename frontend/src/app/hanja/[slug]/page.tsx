@@ -612,7 +612,11 @@ function CharPage({ char }: { char: string }) {
               자원오행은 한자의 부수로 오행을 정하는 작명 관행입니다. 이 사전은 부수마다 작명
               실무에서 가장 많이 쓰는 값을 따르고, 간지와 일부 글자는 예외표로 정하며, 자료가
               갈리면 &lsquo;이견 있음&rsquo;으로 표시합니다.{" "}
-              <Link href="/method" className="text-teal-700 no-underline hover:underline">
+              {/* 판정 순서·등급을 설명하는 절로 바로 간다 — 앵커 id 는 method/page.tsx '04 · 자원오행 기준' (2026-10-23 운영 검증 CONTENT-4) */}
+              <Link
+                href="/method#resource-element"
+                className="text-teal-700 no-underline hover:underline"
+              >
                 작명 원리 보기
               </Link>
             </p>

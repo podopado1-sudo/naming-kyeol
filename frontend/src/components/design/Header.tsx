@@ -13,20 +13,16 @@ import Link from "next/link";
 import { useEffect, useState, type CSSProperties } from "react";
 import { Mark } from "./Mark";
 import { Heart, Menu, X } from "lucide-react";
+import {
+  HEADER_DEFAULT_CURRENT,
+  NAV_ITEMS,
+  type CurrentKey,
+  type NavKey,
+} from "./header-nav";
 
-type NavKey = "home" | "search" | "guide" | "method";
-/** 메뉴에 없는 화면(/company 등)은 "none" — 어떤 메뉴도 켜지 않는다 (메뉴 항목은 늘리지 않음) */
-type CurrentKey = NavKey | "none";
-
-const NAV_ITEMS: { key: NavKey; label: string; href: string }[] = [
-  { key: "home", label: "홈", href: "/" },
-  { key: "search", label: "이름 찾기", href: "/search" },
-  { key: "guide", label: "작명 가이드", href: "/guide" },
-  { key: "method", label: "작명 원리", href: "/method" },
-];
-
+// 메뉴에 없는 화면(/company·/hanja·/name·/analysis 등)은 "none" — 어떤 메뉴도 켜지 않는다(기본값, header-nav.ts)
 export function Header({
-  current = "home",
+  current = HEADER_DEFAULT_CURRENT,
   onNav,
 }: {
   current?: CurrentKey;
@@ -141,6 +137,7 @@ export function Header({
               key={item.key}
               href={item.href}
               onClick={() => onNav?.(item.key)}
+              aria-current={current === item.key ? "page" : undefined}
               style={linkStyle(current === item.key)}
             >
               {item.label}
@@ -207,6 +204,7 @@ export function Header({
               onNav?.(item.key);
               setMenuOpen(false);
             }}
+            aria-current={current === item.key ? "page" : undefined}
             style={{
               color:
                 current === item.key

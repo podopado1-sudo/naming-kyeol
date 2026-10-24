@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { FIVE_EL } from "./DetailPrimitives";
 import { SectionHead } from "./DetailPrimitives";
 import { isCautionNote } from "@/lib/note-polarity";
+import { formatSignedPoints } from "@/lib/signed-points";
 
 // ============================================================
 // ElementChip — 5요소 chip (FIVE_EL 토큰)
@@ -147,10 +148,9 @@ export function ScoreBar({
           letterSpacing: "-0.01em",
         }}
       >
+        {/* 가점·감점 행 부호는 값으로 — /name 미학 점수 카드와 같은 규칙(lib/signed-points.ts) */}
         {bonus
-          ? value >= 0
-            ? `+${value}`
-            : `${value}`
+          ? formatSignedPoints(value)
           : max > 0
             ? `${value}/${max}`
             : `${value}`}

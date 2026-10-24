@@ -155,7 +155,9 @@ const GRADE_ROWS: { code: GradeCode; label: string; body: string }[] = [
   {
     code: "X",
     label: "예외 적용",
-    body: "간지·문헌 예시·작명 실무 자료 다수를 따라 부수값 대신 다른 값을 쓴 글자입니다.",
+    // 간지 22자는 값이 부수값과 같아도(乙·子·辛 등) 이 등급이다 — '부수와 다른 값을 쓴 글자'로 쓰지 말 것(2026-10-23 운영 검증 CONTENT-1).
+    // 부수값과 다른 글자 수가 필요하면 scripts/build_insight_resource_element.py facts 의 exceptions.differs_from_radical
+    body: "부수표보다 간지·문헌 예시·작명 실무 자료 다수의 값을 먼저 쓴 글자입니다. 천간·지지는 값이 부수값과 같아도 간지 오행을 따르므로 이 등급입니다.",
   },
   {
     code: "U",

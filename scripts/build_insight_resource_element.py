@@ -219,6 +219,14 @@ def main():
     exc = ex["exceptions"]
     exc_kind = Counter(v["kind"] for v in exc.values())
     ganji_changing = sum(1 for v in exc.values() if v["kind"] == "ganji" and not v["same_as_radical"])
+    # 예외 적용(X) 가운데 값이 부수값과 실제로 다른 글자. 간지 22자는 값이 부수값과 같아도 X 다(간지 오행이 부수보다 먼저 —
+    # 乙·子·辛 등 8자). 그래서 X 전체를 '부수와 다른 값을 쓰는 글자'로 쓰면 틀린다 — 문구에 '다른 값' 글자 수가 필요하면
+    # 이 값을 옮긴다(2026-10-23 운영 검증 CONTENT-1: 리포트 description·/method 등급 설명이 78자 전부를 '다른 값'으로 썼다).
+    # 결과 파일(e 와 부수표 element)로도 따로 세어 두 값이 같은지 함께 싣는다.
+    exc_differs = sum(1 for v in exc.values() if v["element"] != v["radical_element"])
+    x_differs_result = sum(
+        1 for v in chars.values() if v["g"] == "X" and v["e"] != radicals[str(v["radical"])]["element"]
+    )
     practice_by_n = Counter(
         f"{v['practice']['n']}/{v['practice']['of']}" for v in exc.values() if v["kind"] == "practice" and v.get("practice")
     )
@@ -369,6 +377,9 @@ def main():
             "total": len(exc),
             "kind": dict(exc_kind),
             "ganji_changing_value": ganji_changing,
+            "differs_from_radical": exc_differs,
+            "same_as_radical": len(exc) - exc_differs,
+            "differs_matches_result": exc_differs == x_differs_result,
             "practice_by_n": dict(practice_by_n),
             "lists": exc_lists,
             "x_matches_result": not x_mismatch,
@@ -421,6 +432,8 @@ def main():
     print("실무 자료 부수 다수값 설명률(이름 없이 작은 순): " + " · ".join(f"{x['share']}({fmt(x['majority_chars'])}/{fmt(x['chars'])})" for x in explain))
     e = facts["exceptions"]
     print(f"예외 {e['total']}자 {e['kind']} · 간지 중 값이 바뀌는 글자 {ganji_changing} · 실무 n/of {e['practice_by_n']} · X=예외표 {e['x_matches_result']} {x_mismatch}")
+    print(f"  부수값과 다른 값 {e['differs_from_radical']}자 · 부수값과 같은 값 {e['same_as_radical']}자(간지) · "
+          f"결과 파일 대조 {e['differs_matches_result']}({x_differs_result})")
     for k, lst in exc_lists.items():
         print(f"  {k}: " + " ".join(f"{x['char']}{x['e']}({x['radical_char']}{x['radical_element']}{'/' + '+'.join(x['basis']) if k == 'literature' else ''})" for x in lst))
     d = facts["disputed_chars"]

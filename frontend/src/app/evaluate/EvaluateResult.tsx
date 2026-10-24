@@ -19,6 +19,7 @@ import {
   StrengthsCautions,
   type HanjaGroup,
 } from "@/components/design/EvalBody";
+import { hasVisibleContent } from "@/components/design/eval-layout";
 import { toResourceGrade } from "@/components/design/resource-grade";
 import { toggleFavorite, useIsFavorite } from "@/lib/favorites";
 import type { GenerationFit, NameEvaluationResponse } from "@/lib/types";
@@ -266,8 +267,8 @@ export function EvaluateResultView({
         </section>
       )}
 
-      {/* 강점/참고 */}
-      {(data.strengths.length > 0 || data.cautions.length > 0) && (
+      {/* 강점/참고 — 빈 쪽 상자는 StrengthsCautions 가 그리지 않는다(eval-layout.ts, 2026-10-23 BR-1) */}
+      {(hasVisibleContent(data.strengths) || hasVisibleContent(data.cautions)) && (
         <section style={{ marginTop: 48 }}>
           <SectionHead title="이름의 결" />
           <StrengthsCautions
