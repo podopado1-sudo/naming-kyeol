@@ -85,6 +85,47 @@ public class HanjaGenderOverrideTests
         Assert.Contains(combos, c => c.First == "恩");
     }
 
+    // ── 2026-10-26 B6 보완: 산호(珊·瑚)는 옥·구슬 훈 글자처럼 Female — GenderToneClassifier 보석 키워드에 '산호'가 없어 Neutral 이었다 ──
+    // B1(인명용 목록 보강)로 珊(산호 산)이 山(메 산)과 관련도가 같아지자 오행 상생 가점(±20/−12)만으로 남자 이름 산 줄이 珊으로 넘어가
+    // 강산=江珊·태산=泰珊·산하=珊河(江山·泰山·山河 탈락), 산호·호산·윤산 1순위가 珊 이 됐다(대표 뜻·서사는 산(山)을 말함). 정수 코드포인트로 적는다.
+
+    private static string Cp(int codepoint) => char.ConvertFromUtf32(codepoint);
+
+    [Theory]
+    [InlineData(0x73CA)] // 珊 산호 산
+    [InlineData(0x745A)] // 瑚 산호 호
+    [InlineData(0x73E0)] // 珠 구슬 주 — 같은 부류의 기준 글자
+    public void CoralLikeJewel_IsFemale(int codepoint)
+    {
+        var info = HanjaData.FindByCharacter(Cp(codepoint));
+        Assert.NotNull(info);
+        Assert.Equal(HanjaData.GenderPreference.Female, info!.GenderPref);
+    }
+
+    [Theory]
+    [InlineData("강산", 0x6C5F, 0x5C71)] // 江山
+    [InlineData("태산", 0x6CF0, 0x5C71)] // 泰山
+    [InlineData("산하", 0x5C71, 0x6CB3)] // 山河
+    public void SelectCombos_MaleSan_KeepsMountainWordPair(string name, int first, int second)
+    {
+        var combos = HanjaSelector.SelectCombos(name, "male", 4);
+        Assert.Contains((Cp(first), Cp(second)), combos);
+    }
+
+    [Theory]
+    [InlineData("산호", 0)]
+    [InlineData("호산", 1)]
+    [InlineData("윤산", 1)]
+    [InlineData("기산", 1)]
+    [InlineData("영산", 1)]
+    public void SelectCombos_MaleSan_TopComboUsesMountain(string name, int sanIndex)
+    {
+        var combos = HanjaSelector.SelectCombos(name, "male", 4);
+        Assert.NotEmpty(combos);
+        var top = combos[0];
+        Assert.Equal(Cp(0x5C71), sanIndex == 0 ? top.First : top.Second); // 山
+    }
+
     [Fact]
     public async Task Aesthetic_Junhyeok_NoGenderMismatchNote()
     {

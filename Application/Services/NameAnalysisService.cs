@@ -237,8 +237,15 @@ public class NameAnalysisService : INameAnalysisService
         };
     }
 
+    /// <summary>음절별 후보 카드 수 (/analysis '쓸 수 있는 한자 후보')</summary>
+    public const int HanjaOptionsPerSyllable = 10;
+
     /// <summary>
-    /// 이름의 각 음절에 대해 가능한 한자 후보를 조회
+    /// 이름의 각 음절에 대해 쓸 수 있는 한자 후보를 조회 — 표시 후보 정렬(HanjaSelector.OrderForDisplay: 불용·뜻 없는 글자 제외,
+    /// 빈출·비약자 우선) 상위 <see cref="HanjaOptionsPerSyllable"/>개. /evaluate 후보 표·ExplanationEngine 폴백('한자 예' 줄)과 같은
+    /// 표시 경로라 큰 카드(첫 후보)가 '한자 예' 줄과 같은 글자다.
+    /// 전엔 FindByReading(...).Take(10) 그대로라 서=西·우=雨·한=寒·별=別(weak)가 큰 카드에, 恨·愚·塵(불용)이 후보에 나왔다
+    /// (2026-10-23 검증 API-3 → 10-26 B8). 용신 적합(nameFitsYongshin)도 이 후보로 계산한다.
     /// </summary>
     private List<HanjaBreakdownDto> AnalyzeHanja(string firstName)
     {
@@ -247,12 +254,12 @@ public class NameAnalysisService : INameAnalysisService
         foreach (var syllable in firstName)
         {
             var syllableStr = syllable.ToString();
-            var hanjaList = HanjaData.FindByReading(syllableStr);
+            var hanjaList = HanjaSelector.OrderForDisplay(HanjaData.FindByReading(syllableStr));
 
             breakdown.Add(new HanjaBreakdownDto
             {
                 Syllable = syllableStr,
-                PossibleHanja = hanjaList.Take(10).Select(h => new HanjaOptionDto
+                PossibleHanja = hanjaList.Take(HanjaOptionsPerSyllable).Select(h => new HanjaOptionDto
                 {
                     Character       = h.Character,
                     Meaning         = h.Meaning ?? "",

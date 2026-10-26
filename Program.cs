@@ -359,25 +359,11 @@ if (args.Length >= 1 && args[0] == "dump-combo-glosses")
         return;
     }
 
-    // 이름 음절의 독음으로 읽히는 훈음 하나 — 프론트 glossForReading과 동일 규칙.
+    // 이름 음절의 독음으로 읽히는 훈음 하나 — 공용 헬퍼 HanjaData.GlossForReading(프론트 glossForReading 과 같은 규칙,
+    // /evaluate 의미 메모와 공용 — 2026-10-26 B7 에 이 자리의 지역 함수를 옮겼다).
     // 다중 독음 글자는 첫 훈이 다른 소리일 수 있어(乻 "땅 이름 얼, …, 음차 늘"의 '늘' 자리) 첫 훈만
     // 쓰면 윤문이 엉뚱한 뜻("대지 위에…")을 짓는다. "연꽃 련(연)"의 괄호 두음도 인정, 없으면 첫 훈음.
-    static string GlossFor(string m, string reading)
-    {
-        if (string.IsNullOrWhiteSpace(m)) return "";
-        var segs = m.Split(',', '/', ';', '·').Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-        foreach (var seg in segs)
-        {
-            var sp = seg.LastIndexOf(' ');
-            if (sp < 0) continue;
-            var last = seg[(sp + 1)..];
-            var open = last.IndexOf('(');
-            var main = open >= 0 ? last[..open] : last;
-            var alt = open >= 0 ? last[(open + 1)..].TrimEnd(')') : null;
-            if (main == reading || alt == reading) return seg;
-        }
-        return segs.Count > 0 ? segs[0] : "";
-    }
+    static string GlossFor(string m, string reading) => NameForm.Application.Engines.Data.HanjaData.GlossForReading(m, reading);
 
     using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(namesPath));
     var glosses = new Dictionary<string, string>();

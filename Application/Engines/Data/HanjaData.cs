@@ -218,7 +218,8 @@ public static class HanjaData
         public string Unicode { get; set; } = string.Empty; // 유니코드 값
         public string Consonant { get; set; } = string.Empty; // 첫 자음
         public List<string> AlternateReadings { get; set; } = new(); // 대체 발음 (예: "률" → ["율"])
-        public bool IsGovernmentListed { get; set; } = false; // 대법원 인명용 한자 목록 포함 여부
+        /// <summary>대법원 인명용 한자 목록 포함 여부 — data-gov.csv 또는 data-naver.csv 에 실린 글자(<see cref="GovernmentListCsvFiles"/>, 2026-10-26 B1)</summary>
+        public bool IsGovernmentListed { get; set; } = false;
 
         // ── 부수 기준 자원오행 (2026-10-22 S4 — data/hanja_resource_element.json, 호환 한자 병합 뒤 통합 키에만 적용) ──
         /// <summary>자원오행 등급: R=확정, V=이견 있음, X=예외 적용(간지·문헌·실무 자료), U=미상(FiveElement 빈 값)</summary>
@@ -252,14 +253,18 @@ public static class HanjaData
         /// <summary>
         /// 옛 뜻 기반 오행(MeaningElement)의 판정 등급: S=Core_v1, B=하드코딩, C=radical_map 뜻 키워드, D=획수 대체(값 없음).
         /// 2026-10-22 S4 부터 자원오행(FiveElement)과 무관하다 — 새 등급은 <see cref="ResourceGrade"/>, 옛 S 에 기대던
-        /// 가중치(관련도 +100·획수 조화 감산)는 <see cref="IsCoreData"/> 로 옮겼다(옛 S ⇔ Core_v1, 같은 동작).
+        /// 가중치(관련도 +100)는 <see cref="IsCoreData"/> 로 옮겼다(옛 S ⇔ Core_v1, 같은 동작). 옛 '획수 조화 감산(Core 아니면 ×0.85)'은
+        /// 2026-10-26 폐기(B3 — S5c 뒤 모든 글자의 획수가 data/hanja_strokes.json 한 출처라 Core 여부가 획수 신뢰도와 무관).
         /// </summary>
         public string ConfidenceGrade { get; set; } = "D";
         /// <summary>데이터 출처: Core_v1, Manual, Auto_Radical, Auto_Fallback (옛 뜻 기반 오행 판정의 출처)</summary>
         public string Source { get; set; } = "Auto_Fallback";
         /// <summary>
-        /// Core 데이터(hanja_core_v1.json — 강희 획수·뜻을 정리한 코어 글자) 여부. 관련도 +2000·+100, 획수 조화 감산 면제,
-        /// 3글자 Tier 1 의 기준이다. 옛 ConfidenceGrade S 와 같은 집합(2026-10-22 2,054자).
+        /// Core 데이터(hanja_core_v1.json — 강희 획수·뜻을 정리한 코어 글자) 여부. 관련도 +2000·+100, 3글자 Tier 1 의 기준이다.
+        /// 옛 ConfidenceGrade S 와 같은 집합(2026-10-22 2,054자).
+        /// ⚠️ 획수 신뢰도 신호로 쓰지 말 것 — 옛 '획수 조화 감산 면제'(Core 아니면 ×0.85·'획수 자료 미검수' 노트)는 2026-10-26 폐기(B3, API-4).
+        /// S5c-2 부터 점수에 쓰는 StrokeCount 는 Core 든 아니든 data/hanja_strokes.json(kTotalStrokes) 한 출처이고,
+        /// Core 로더는 KangxiStrokes(보존·표시)만 채운다 — Core 2,054자 중 404자는 점수 획수와 Core 강희 획수가 다르다(道 13/16 등).
         /// </summary>
         public bool IsCoreData => Source == "Core_v1";
     }
@@ -1480,6 +1485,16 @@ public static class HanjaData
         "雌",
         // 6차(2026-10-22 S6-2 두더지 검수 2라운드): 溺(빠질 닉·오줌 뇨) — 1라운드 weak 뒤 라익 4순위 빈칸으로 승격된 명백 부정자
         "溺",
+        // 7차(2026-10-26 B1 재생성 두더지 검수 1라운드): 妮(계집종 니(이)) — 인명용 목록 판정에 data-naver.csv 를 더하자(B1)
+        // 관련도 +500 을 받아 /name 조합 9쌍(다니=茶妮·예니=譽妮·채니=彩妮 등)에 승격. 훈이 婢(계집종 비)·奴(종 노)와 같은 '천함' 부류
+        "妮",
+        // 8차(2026-10-26 B6 보완 두더지 검수 1라운드): 戹(좁을 액/재앙 액) — 약자 양보 뒤 액(용신 火) 1순위로 오른 글자.
+        // 첫 훈 '좁을'이 狹(좁을 협)·阨(막힐 액)과 같은 부류이고 부훈이 厄(액 액)과 같은 '재앙'
+        "戹",
+        // 3라운드: 訛(그릇될 와 — 誤 선례. 萵 weak 뒤 와(남·용신 火) 1순위)
+        "訛",
+        // /name 재생성 두더지: 痘(역질 두 — 疫·疹 선례). 兜·杜 가 weak 로 밀린 뒤 두 줄 조합 후보 상위 6에 들어온다
+        "痘",
     };
 
     /// <summary>
@@ -1585,6 +1600,36 @@ public static class HanjaData
         "附","返","反","街","觰","膽","猧","鄲","眸","泄","熄",
         // 3라운드: 黵(문신할 — 膽 뒤 휘담 4순위 빈칸)
         "黵",
+        // ── 2026-10-26 B1 재생성 두더지 검수 1라운드 — 인명용 목록에 data-naver.csv 를 더한 뒤(관련도 +500) 새로 오른 글자 ──
+        // /name 조합: 弩(쇠뇌 — 무기 사물, 銃 선례. 노아=弩亞 등 5쌍, 努·璐 대안) 穏(穩의 일본 신자체 — 稳(간체) 선례. 온찬·휘온 4순위, 穩 대안)
+        // /evaluate 1순위: 腦(골 — 신체 훈, 膽·腸 선례. 뇌(남)·뇌(용신 水) 1순위가 雷 '우레'에서 바뀜)
+        //   醲(진한 술 — 사물 훈. 농(none·용신 金) 1순위가 瓏 '옥 소리'에서 바뀜)
+        "弩","穏","腦","醲",
+        // 2라운드: 矑(눈동자 — 신체 훈, 眸 선례. 弩 뒤 노(none·여, 용신 木) 1순위)
+        //   笯(새장 — 사물 훈, 矑 뒤 같은 칸 1순위). 다음 撈(건질 로 — 로(none·여, 용신 木)와 같은 글자)에서 멈춘다(부정 훈 아님)
+        "矑","笯",
+        // ── 2026-10-26 B6 보완 두더지 검수 1라운드 — /evaluate 배정 격자(독음 × 성별 3 × 생년월일 없음·용신 5, 희신·기신까지 /evaluate 와 같은 인자)를
+        //    HEAD(b0f840c)와 대조해 약자 양보(B6)·인명용 목록 보강(B1) 뒤 새로 1순위에 오른 글자 중 부정·허사·사물·동물 훈 ──
+        // 惓(권 자리 '삼갈/싫증날' — 첫 훈은 부정 아님, 倦 '게으를'은 불용. 김권우(남·土)=勸 → 惓) 斯(사 자리 '이 사/천할 사' — 허사, 其·矣 선례.
+        //   박사랑(여·金)=事 → 斯) 呝(닭 소리·볼멘소리) 喞(두런거릴 — 囁 '소곤거릴' 선례) 諠(지껄일 — 喧 선례) 褪(바랠 — 熄 '불 꺼질' 선례)
+        //   枙(와 자리 '옹이' 사물, 부훈 '재앙 액' — 첫 훈 기준이라 불용 아님) 泐(돌 갈라질 — 熄·泄 선례) 挒(비틀 — 捩 선례)
+        //   厓·崕(언덕 애 — 崖 의 이체, 崖 선례)
+        "惓","斯","呝","喞","諠","褪","枙","泐","挒","厓","崕",
+        // 동물·사물: 羔(새끼 양) 鷿(논병아리 — 鴨 선례) 兎·兔(토끼 — 虎 선례, 이체 둘 다) 兜(투구 — 弩·銃 선례) 鑞(땜납 — 蠟 선례) 勿(말 물 — 금지 허사, 未·不 선례)
+        "羔","鷿","兎","兔","兜","鑞","勿",
+        // 2라운드(1라운드 + 확장 영역 제외 뒤 승격): 肋(갈빗대 — 脅 선례) 颲(사나운 바람 — 挒 뒤 렬(木·남 金)) 僻(궁벽할 — 鷿 뒤 벽)
+        //   刪(깎을 — 削 선례. 珊 이 Female 이 된 뒤 산(남·金)) 萵(상추 — 菜 선례) 荄(풀뿌리 — 艾·茅 선례. 확장 䀭 을 뺀 뒤 해(남·木))
+        "肋","颲","僻","刪","萵","荄",
+        // 3라운드: 剷(깎을 — 刪 뒤 산(남·金)) 酸(실 — 辛 선례, 剷 뒤 같은 칸) 廨(공해 — 관아 건물, 庫·倉 선례. 荄 뒤 해(木))
+        "剷","酸","廨",
+        // 4라운드: 釵(비녀 — 장신구 사물. 砦 weak 뒤 채(남·용신 金·水) 1순위 — 埰·彩 대안). 다음 칸들은 埰(사패지)·彩(채색)·楷(본보기)·山(메)·
+        //   娃(예쁠)·渦(소용돌이)로 부정 훈이 아니어서 여기서 멈춘다. 모(여·土)=旄(깃대 장식)도 부정 훈이 아니라 둔다(뒤 후보 姆 유모·嫫 추녀)
+        "釵",
+        // /name 재생성 E 목록(위 weak 로 조합이 바뀐 뒤 새로 오른 글자): 姟(백 조 해 — 수 단위, 千·九 선례. 해웅·해찬 荄 뒤 빈칸)
+        //   杜(막을 두 — 遮 '가릴'·禁 '금할' 선례. 두찬·두혁 兜 뒤 4순위, /evaluate 두(木)) 枓(두공 — 건물 부재, 椽·桷 선례. 杜 뒤 같은 칸)
+        "姟","杜","枓",
+        //   侅(이상할 해 — 姟 뒤 해찬·해웅 4순위, 해안 4순위는 HEAD 부터. 偕·海·垓·楷 대안) 孩(어린아이 — 兒 선례. 侅 뒤 해안 4순위)
+        "侅","孩",
     };
 
     /// <summary>이름에 쓰지 않는 불용한자(부정적 의미)인지 판정.
@@ -2008,6 +2053,36 @@ public static class HanjaData
     }
 
     /// <summary>
+    /// 훈 조각의 끝 낱말(독음)과 괄호 속 두음 독음 — 프론트 lib/name-seo.ts glossForReading 의 정규식 글자 그대로
+    /// (OpsVerificationRegressionTests.GlossForReading_SameRegexAsFrontend 가 대조한다).
+    /// </summary>
+    public const string GlossReadingTailPattern = @"\s([^\s(]+)(?:\(([^)]+)\))?$";
+
+    private static readonly System.Text.RegularExpressions.Regex GlossReadingTail =
+        new(GlossReadingTailPattern, System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// 다중 훈 문자열에서 이름 음절(reading)로 읽히는 훈 한 조각 — 프론트 lib/name-seo.ts <c>glossForReading</c>·dump-combo-glosses 와 같은 규칙.
+    /// 조각(구분자 ',' '/' ';' '·' — 첫 훈 소비처와 같은 집합)의 끝 낱말이 독음이고, "연꽃 련(연)"처럼 괄호 속 두음 독음도 인정한다.
+    /// 맞는 조각이 없으면 첫 훈(첫 조각 — 프론트 firstGloss 와 같음).
+    /// 다중 독음 글자는 첫 훈이 다른 소리라(煇 "빛날 휘, …, 태울 훈"을 지훈의 '훈' 자리에, 乻 "땅 이름 얼, …"을 하늘의 '늘' 자리에)
+    /// 첫 훈만 쓰면 독음과 훈이 어긋난다. 소비처: /evaluate 의미 메모·강점 줄(ExplanationEngine, 2026-10-26 B7 — API-2)·dump-combo-glosses.
+    /// </summary>
+    public static string GlossForReading(string? meaning, string reading)
+    {
+        if (string.IsNullOrWhiteSpace(meaning)) return "";
+        var segs = meaning.Split(',', '/', ';', '·');
+        foreach (var raw in segs)
+        {
+            var seg = raw.Trim();
+            var m = GlossReadingTail.Match(seg);
+            if (m.Success && (m.Groups[1].Value == reading || (m.Groups[2].Success && m.Groups[2].Value == reading)))
+                return seg;
+        }
+        return segs[0].Trim();
+    }
+
+    /// <summary>
     /// 외부 데이터 소스에서 한자 정보 자동 로드
     /// Program.cs 시작 시 호출
     /// </summary>
@@ -2100,14 +2175,21 @@ public static class HanjaData
             }
         }
 
-        // 대법원 인명용 한자 CSV 로드 (data-gov.csv) — IsGovernmentListed 플래그 설정
-        foreach (var basePath in searchPaths)
+        // 대법원 인명용 한자 목록 — IsGovernmentListed 플래그 설정. 두 공식 CSV 중 어느 쪽에든 실린 글자는 등재(2026-10-26 B1).
+        // data-gov.csv 만 보면 그 파일의 ㄴ 구획이 '냉' 다음에 끊겨(1636행 冷 → 1637행 '다') 노·농·뇌·누·눈·눌·능·니 처럼
+        // ㄴ 으로만 읽는 글자(努·能·農·腦·訥 등 32자)가 빠지고, 姬·港·珊·慜·冕 등 18자는 실제 코드포인트가 아니라
+        // 법원 자체 코드(U+A0xxx·U+F0xxx — IsHanCodePoint 가 거르는 405자)나 다른 코드(姬 → 姫 U+59EB)로만 실려 있다.
+        // 이 50자는 모두 data-naver.csv 에 그 독음으로 실려 있다(근거·목록: GovernmentListCsvFiles 주석).
+        foreach (var csvFile in GovernmentListCsvFiles)
         {
-            var govCsvPath = Path.Combine(basePath, "data", "data-gov.csv");
-            if (File.Exists(govCsvPath))
+            foreach (var basePath in searchPaths)
             {
-                LoadGovernmentHanjaList(govCsvPath);
-                break;
+                var csvPath = Path.Combine(basePath, "data", csvFile);
+                if (File.Exists(csvPath))
+                {
+                    LoadGovernmentHanjaList(csvPath);
+                    break;
+                }
             }
         }
 
@@ -2119,7 +2201,23 @@ public static class HanjaData
     }
 
     /// <summary>
-    /// 대법원 인명용 한자 CSV 파일에서 한자 목록을 로드하여 IsGovernmentListed 플래그를 설정
+    /// 인명용 한자 목록 소속(<see cref="HanjaInfo.IsGovernmentListed"/>)을 정하는 공식 CSV — data/ 아래, 어느 쪽에든 있으면 등재.
+    /// data-gov.csv(대법원 인명용 한자표, 10,163행)만으로는 50자가 빠진다(2026-10-26 B1 — 검증 2026-10-23 critic gap 1):
+    ///   1) ㄴ 구획 절단 32자 — data-gov.csv 의 ㄴ 구획은 '나'~'내'·'냉,랭'(1636행)에서 끝나고 바로 '다'(1637행)다.
+    ///      두음 겸용 행(녀,여 · 노,로 · 니,이)은 ㅇ·ㄹ 구획에 따로 있어 살아남았지만, ㄴ 으로만 읽는 노·농·뇌·누·눈·눌·능·니
+    ///      글자(努·奴·怒·弩·能·農·濃·腦·惱·訥·嫩·妮 …)는 0행이다. data-naver.csv 는 같은 자리(1410~1625행)에 녀~닐을 싣는다.
+    ///   2) 실제 코드포인트가 없는 18자 — 姬(U+59EC)는 姫(U+59EB)로만, 港·珊·冕·慜 등은 같은 독음 자리에 법원 자체 코드
+    ///      (U+A0xxx·U+F0xxx, <see cref="IsHanCodePoint"/> 가 거르는 405자)만 있다. 자체 코드와 실제 글자의 대응은 문서 근거가 없어
+    ///      잇지 않는다(姬·姫 도 Unihan_Variants 18.0 에 변형 관계가 없다 — 둘 다 사전에 따로 있는 글자). 18자 모두 data-naver.csv 에 있다.
+    /// 사전(hanja_dictionary_final.json)이 두 CSV 의 합집합이라 이 규칙이면 적재 글자 전부가 등재다(두 CSV 어디에도 없는 글자 0 —
+    /// OpsVerificationRegressionTests 가 CSV 를 직접 읽어 대조). CSV 는 손대지 않는다(공식 자료에 행을 지어 넣지 않는다).
+    /// /hanja 의 gov(hanja-seo.json)는 build_hanja_seo_data.py 가 사전 sources 로 따로 정한다 — 같은 규칙으로 맞출 것.
+    /// 네이버 CSV 의 호환 한자 행(金 U+F90A '김' 등 111행)은 호환 키에 표시되고 병합 때 통합 키로 OR 된다(없으면 통합 키에 바로).
+    /// </summary>
+    public static readonly IReadOnlyList<string> GovernmentListCsvFiles = new[] { "data-gov.csv", "data-naver.csv" };
+
+    /// <summary>
+    /// 인명용 한자 CSV 파일(<see cref="GovernmentListCsvFiles"/>)에서 한자 목록을 로드하여 IsGovernmentListed 플래그를 설정
     /// </summary>
     private static void LoadGovernmentHanjaList(string csvFilePath)
     {
@@ -2132,7 +2230,9 @@ public static class HanjaData
             foreach (var kvp in csvData)
             {
                 var hanjaChar = kvp.Key;
-                if (_loadedDictionary.TryGetValue(hanjaChar, out var hanjaInfo))
+                // 호환 병합 전이라 사전에 호환 키가 있으면 그 키에(병합이 통합 키로 OR), 없으면 통합 키에 표시한다
+                if (_loadedDictionary.TryGetValue(hanjaChar, out var hanjaInfo)
+                    || _loadedDictionary.TryGetValue(ToUnifiedHanja(hanjaChar), out hanjaInfo))
                 {
                     hanjaInfo.IsGovernmentListed = true;
                 }

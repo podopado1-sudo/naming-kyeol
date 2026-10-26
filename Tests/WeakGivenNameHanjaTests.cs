@@ -155,4 +155,137 @@ public class WeakGivenNameHanjaTests
         Assert.False(HanjaData.IsWeakGivenNameHanja(picked[0]!.Character),
             $"'{syllable}' 대표로 약한 한자 {picked[0]!.Character} 선택됨 — 대안 존재 시 양보해야");
     }
+
+    // ── 2026-10-26 B1 재생성 두더지 검수 — 인명용 목록에 data-naver.csv 를 더해(관련도 +500) 새로 오른 글자 ──
+    // 정수 코드포인트로 적는다(이 블록은 B1 회귀 테스트와 같은 표기)
+
+    private static string Cp(int codepoint) => char.ConvertFromUtf32(codepoint);
+
+    [Theory]
+    [InlineData(0x5F29)] // 弩 쇠뇌 노 — 노아=弩亞 등 /name 5쌍 (무기 사물, 銃 선례)
+    [InlineData(0x7A4F)] // 穏 편안할 온 — 穩의 일본 신자체, 온찬·휘온 4순위 (稳 간체 선례)
+    [InlineData(0x8166)] // 腦 골 뇌 — 뇌(남) /evaluate 1순위가 雷에서 바뀜 (신체 훈)
+    [InlineData(0x91B2)] // 醲 진한 술 농 — 농(none·용신 金) 1순위가 瓏에서 바뀜
+    [InlineData(0x77D1)] // 矑 눈동자 로 — 2라운드(弩 뒤 노(none·여, 용신 木) 1순위, 眸 선례)
+    [InlineData(0x7B2F)] // 笯 새장 노 — 2라운드(矑 뒤 같은 칸)
+    public void MoleAudit20261026_IsWeak(int codepoint)
+    {
+        Assert.True(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+    }
+
+    [Fact]
+    public void MoleAudit20261026_MaidservantIsForbidden()
+    {
+        // 妮(계집종 니) — 婢(계집종 비)·奴(종 노)와 같은 '천함' 부류. /name 9쌍(다니=茶妮·채니=彩妮 등)에 올랐다
+        Assert.True(HanjaData.IsForbiddenNameHanja(Cp(0x59AE)));
+        Assert.False(HanjaData.IsWeakGivenNameHanja(Cp(0x59AE)));
+    }
+
+    [Theory]
+    [InlineData("노아", "male")]   // 弩亞
+    [InlineData("노은", "female")] // 弩恩
+    [InlineData("온찬", "male")]   // 穏燦
+    [InlineData("휘온", "male")]   // 輝穏
+    public void MoleAudit20261026_SelectCombos_DropsNewWeakPairs(string name, string gender)
+    {
+        var combos = HanjaSelector.SelectCombos(name, gender, 4);
+        Assert.NotEmpty(combos);
+        Assert.All(combos, c => Assert.False(
+            HanjaData.IsWeakGivenNameHanja(c.First) || HanjaData.IsWeakGivenNameHanja(c.Second),
+            $"{name}: 약자 조합 {c.First}{c.Second}"));
+    }
+
+    [Theory]
+    [InlineData("다니", "female")] // 茶妮
+    [InlineData("채니", "female")] // 彩妮
+    [InlineData("지니", "female")] // 智妮
+    public void MoleAudit20261026_SelectCombos_NoMaidservant(string name, string gender)
+    {
+        var combos = HanjaSelector.SelectCombos(name, gender, 4);
+        Assert.NotEmpty(combos);
+        Assert.DoesNotContain(combos, c => c.Second == Cp(0x59AE));
+    }
+
+    [Theory]
+    [InlineData("뇌", "male", null, 0x96F7)]   // 雷 우레 — 腦(골)가 아니라
+    [InlineData("뇌", "none", "水", 0x96F7)]   // 雷
+    [InlineData("농", "none", "金", 0x74CF)]   // 瓏 옥 소리 — 醲(진한 술)가 아니라
+    [InlineData("니", "female", "土", 0x999C)] // 馜 진한 향기 — 妮(계집종)가 아니라
+    [InlineData("노", "none", "木", 0x6488)]   // 撈 건질 — 弩·矑·笯 다음(부정 훈 아님, 여기서 멈춤)
+    [InlineData("노", "none", null, 0x52AA)]   // 努 힘쓸 — B1 로 인명용 목록에 들어 璐보다 앞선다
+    public void MoleAudit20261026_SelectPicks(string syllable, string gender, string? yongshin, int expected)
+    {
+        var picked = HanjaSelector.Select(syllable, gender, yongshin, null, null);
+        Assert.Single(picked);
+        Assert.Equal(Cp(expected), picked[0]!.Character);
+    }
+
+    // ── 2026-10-26 B6 보완 두더지 검수 — /evaluate 배정 격자(희신·기신 포함)를 HEAD 와 대조, 4라운드 수렴 + /name 재생성 E 목록 ──
+
+    [Theory]
+    [InlineData(0x60D3)] // 惓 삼갈/싫증날 권 — 김권우(남·土) 勸 뒤 1순위
+    [InlineData(0x65AF)] // 斯 이 사/천할 사 — 허사, 박사랑(여·金) 事 뒤 1순위
+    [InlineData(0x545D)] // 呝 닭 소리 액
+    [InlineData(0x559E)] // 喞 두런거릴 즉
+    [InlineData(0x8AE0)] // 諠 지껄일 훤
+    [InlineData(0x892A)] // 褪 바랠 퇴
+    [InlineData(0x6799)] // 枙 옹이 와 (부훈 재앙 액 — 첫 훈 기준이라 weak)
+    [InlineData(0x6CD0)] // 泐 돌 갈라질 륵
+    [InlineData(0x6312)] // 挒 비틀 렬 — 광렬·동렬·은렬 조합
+    [InlineData(0x5393)] // 厓 언덕 애 (崖 이체)
+    [InlineData(0x5D15)] // 崕 언덕 애 (崖 이체)
+    [InlineData(0x7F94)] // 羔 새끼 양
+    [InlineData(0x9DFF)] // 鷿 논병아리
+    [InlineData(0x514E)] // 兎 토끼
+    [InlineData(0x5154)] // 兔 토끼
+    [InlineData(0x515C)] // 兜 투구 — 두찬·두혁 조합
+    [InlineData(0x945E)] // 鑞 땜납
+    [InlineData(0x52FF)] // 勿 말 물 — 물결 조합
+    [InlineData(0x808B)] // 肋 갈빗대 (2라운드)
+    [InlineData(0x98B2)] // 颲 사나운 바람 (2라운드)
+    [InlineData(0x50FB)] // 僻 궁벽할 (2라운드)
+    [InlineData(0x522A)] // 刪 깎을 (2라운드)
+    [InlineData(0x8435)] // 萵 상추 (2라운드)
+    [InlineData(0x8344)] // 荄 풀뿌리 (2라운드) — 해랑·해웅·해찬 조합
+    [InlineData(0x5277)] // 剷 깎을 (3라운드)
+    [InlineData(0x9178)] // 酸 실 (3라운드)
+    [InlineData(0x5EE8)] // 廨 공해 (3라운드)
+    [InlineData(0x91F5)] // 釵 비녀 (4라운드)
+    [InlineData(0x59DF)] // 姟 백 조 (/name E)
+    [InlineData(0x675C)] // 杜 막을 (/name E)
+    [InlineData(0x6793)] // 枓 두공 (/name E)
+    [InlineData(0x4F85)] // 侅 이상할 (/name E)
+    [InlineData(0x5B69)] // 孩 어린아이 (/name E — 兒 선례)
+    public void MoleAudit20261026B6_IsWeak(int codepoint)
+    {
+        Assert.True(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+    }
+
+    [Theory]
+    [InlineData(0x6239)] // 戹 좁을 액/재앙 액 — 狹·阨·厄 선례
+    [InlineData(0x8A1B)] // 訛 그릇될 와 — 誤 선례
+    [InlineData(0x75D8)] // 痘 역질 두 — 疫·疹 선례
+    public void MoleAudit20261026B6_IsForbidden(int codepoint)
+    {
+        Assert.True(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+    }
+
+    [Theory]
+    [InlineData("동렬", "male", 0x6312)]   // 東挒 → 비틀 렬 없음
+    [InlineData("광렬", "male", 0x98B2)]   // 光颲 → 사나운 바람 렬 없음
+    [InlineData("해찬", "male", 0x8344)]   // 荄燦 → 풀뿌리 해 없음
+    [InlineData("두혁", "male", 0x515C)]   // 兜赫 → 투구 두 없음
+    [InlineData("물결", "none", 0x52FF)]   // 勿潔 → 말 물 없음
+    public void MoleAudit20261026B6_SelectCombos_DropsNewWeak(string name, string gender, int codepoint)
+    {
+        var combos = HanjaSelector.SelectCombos(name, gender, 4);
+        Assert.NotEmpty(combos);
+        Assert.DoesNotContain(combos, c => c.First == Cp(codepoint) || c.Second == Cp(codepoint));
+        Assert.All(combos, c => Assert.False(
+            HanjaData.IsWeakGivenNameHanja(c.First) || HanjaData.IsWeakGivenNameHanja(c.Second),
+            $"{name}: 약자 조합 {c.First}{c.Second}"));
+    }
 }

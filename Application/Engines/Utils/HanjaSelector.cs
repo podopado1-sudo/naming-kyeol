@@ -10,7 +10,9 @@ namespace NameForm.Application.Engines.Utils;
 ///
 /// 선택 우선순위 — 이 층은 "정해진 발음 이름에 어떤 한자를 배정하느냐"이지,
 /// 어떤 이름이 1등이냐(미학 우선 랭킹)가 아니므로 용신을 강하게 써도 철학에 어긋나지 않는다:
-///   1) 불용한자(부정 의미) 배제 + 한글 뜻 보유
+///   1) 불용한자(부정 의미) 배제 + 한글 뜻 보유 + 약한 한자(weak)는 동음 비약자 대안이 하나라도 있으면 후보에서 뺌
+///      (성별·용신 가점과 무관 — 대안이 없을 때만 남는다, 2026-10-26 B6)
+///      + CJK 기본 영역 글자가 있으면 확장 영역 글자는 뺌(OrderForDisplay 2순위와 같은 규칙, 2026-10-26 보완)
 ///   2) 인명 빈출 한자 우선(雨·塞·羅 등 비이름 글자 회피)
 ///   3) 용신/희신 오행과 한자 오행 일치를 '주된' 기준으로 가산, 기신은 회피
 ///   4) 성별 선호 일치 + 인명 관련도(타이브레이크)
@@ -150,6 +152,20 @@ public static class HanjaSelector
         var withMeaning = all.Where(h => !string.IsNullOrEmpty(h.Meaning)).ToList();
         var cands = withMeaning.Count > 0 ? withMeaning : all;
 
+        // 이름용으로 약한 한자(友 벗·雨 비·葷 훈채 등)는 동음 비약자 대안이 하나라도 있으면 늘 양보한다 — 대안이 없을 때만 남는다(女 '녀').
+        // 점수 감점(옛 −30)이던 때는 성별 일치 +40·용신 +100 이 감점을 이겨, 생년월일 없는 남자 지훈·성훈=葷(훈채)·채민=寨(목책)·
+        // 한솔=帥(장수 수)가 배정됐다(2026-10-23 검증 API-1 → 10-26 B6). 점수가 아니라 후보 단계에서 거르므로 아래 빈출 게이트가
+        // 약자만 남기는 일도 없다(빈출 비약자 > 비빈출 비약자 > 약자 순 — 빈출 약자만 있는 음절은 비빈출 비약자로 간다).
+        var nonWeak = cands.Where(h => !HanjaData.IsWeakGivenNameHanja(h.Character)).ToList();
+        if (nonWeak.Count > 0) cands = nonWeak;
+
+        // CJK 기본 영역(U+4E00~9FFF) 글자가 하나라도 남아 있으면 확장 영역 글자는 뺀다 — OrderForDisplay 2순위와 같은 규칙
+        // (확장 영역은 폰트가 못 그리는 일이 잦다). 용신 +100 이 관련도(기본 +1000·확장 A +100)보다 앞서는 정렬이라, 빼지 않으면
+        // 별(여·용신 金)=䭱·새(남)=㘔·니(土)=㦐·슬(火·木)=𩇣 처럼 확장 글자가 의미 메모·후보 표 맨 앞에 나왔다(2026-10-26 보완).
+        // 약자 양보 다음 단계라, 기본 영역 글자가 모두 약자인 음절은 확장 영역 비약자로 간다(약자 회피가 우선).
+        var basic = cands.Where(h => HanjaData.IsInCjkBasicRange(h.Character)).ToList();
+        if (basic.Count > 0) cands = basic;
+
         var common = cands.Where(h => HanjaData.IsCommonNameHanja(h.Character)).ToList();
         var pool = common.Count > 0 ? common : cands;
 
@@ -183,8 +199,8 @@ public static class HanjaSelector
             s += 4; // 오행 정보 보유 소가산 (정보 없는 한자보다 우선)
         }
 
-        // 이름용으로 약한 한자(友 벗·雨 비·菜 나물 등)는 감점 — 더 나은 동음 대안이 있으면 양보.
-        if (HanjaData.IsWeakGivenNameHanja(h.Character)) s -= 30;
+        // 약한 한자는 여기서 감점하지 않는다 — SelectForSyllable 이 비약자 대안이 있으면 후보에서 먼저 뺀다(2026-10-26 B6).
+        // 여기까지 온 약자는 대안이 없는 음절의 약자뿐이라, 그들끼리는 성별·용신으로만 고른다.
 
         return s;
     }

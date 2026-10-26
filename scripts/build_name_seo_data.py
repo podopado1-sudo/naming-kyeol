@@ -35,6 +35,12 @@
          대표 뜻이 자기 조합 뜻과 같으면 실패한다.
   fx 1 = 한자 조합이 없고 data/foreign-given-names.json(사람 검토 목록)에 실린 외래 이름(외국 인명 표기·'-엘' 같은 외래 요소로 지은 이름)
   덤프가 없는데 기존 출력에 플래그가 있으면 실패한다(조용히 빠지지 않게). fx 인데 조합이 있으면 덤프가 낡은 것이라 실패한다.
+pk 서사 점검 (2026-10-26 B2 — 배포 검증 NAME-1): pk 이름 서사(story)에 1순위 조합 글자의 '그 독음의 훈' 어간이 나오면 실패한다
+  (하별 '흘러나오는'(潎 빨리 흐를)·이랑 '밝은 이치를'(朗 밝을)·물결 '말 한마디도…깨끗하게'(勿 말·潔 깨끗할) — `pk_story_echoes`).
+  서사는 음절별 한자 훈(dump-story-inputs 글로스)으로 지은 문장이라 pk 대표 뜻(한글 이름의 뜻)과 따로 논다 — data/name-stories.json 을
+  손으로 고친다(한글 이름 뜻 기준 한 문장, 2026-10-26 59명). 훈 글자 그대로만 보므로 뜻말 되풀이(한솔 '넓은 강처럼'(漢 한수)·
+  별이 '이치를'(理 다스릴))는 못 잡는다 — pk 서사를 새로 넣거나 조합이 바뀌면 한글 뜻과 눈으로도 대조할 것.
+  발행 블로그가 인용한 다온·한결은 문장 고정이라 뺀다.
 출력:    frontend/src/data/name-seo.json + 검증 리포트(stdout)
 """
 
@@ -46,11 +52,64 @@ import sys
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mean_combo_check import HanjaIndex, stale_keywords  # noqa: E402
+from mean_combo_check import (  # noqa: E402
+    HanjaIndex, appears, is_hangul, jong, keywords_of, segments_for_reading, stale_keywords, with_jong,
+)
 
 HANGUL_NAME = re.compile(r"^[가-힣]{2,3}$")
 # 외래 이름의 어원 뜻 문장('히브리어로 신이 더하신다는'·'히브리어 야곱에서 이어진') — fx 가 아닌 이름에 붙으면 경고(손질 실수 탐지)
 ETYMOLOGY_MEAN = re.compile(r"^(?:고대 )?[가-힣]+어(?:로 | [가-힣]+에서 이어진$)")
+
+# pk 서사 점검에서 빼는 이름 — 발행 블로그가 서사를 인용해 문장을 고정했다(S7 대표 뜻 손질 때도 그대로 둔 두 이름)
+PK_STORY_FIXED = {"다온", "한결"}
+
+
+def _stem_forms(kw, kind):
+    """훈 키워드 → 서사에서 찾을 꼴. 명사는 그대로, 형용사·동사 어간은 흔한 활용형을 더한다.
+    따뜻하 → 따뜻(따뜻한·따뜻이) — 어근이 1음절이면 줄이지 않는다(吉 '길하' → '길'은 한길 '큰 길'에 걸린다).
+    흐르 → 흘러(르 불규칙 — 潎 '빨리 흐를'이 '흘러가며'로 나온다). 다스리 → 다스려."""
+    forms = [kw]
+    if kind != "adj":
+        return forms
+    if kw.endswith("하") and len(kw) >= 3:
+        forms.append(kw[:-1])
+    last = kw[-1]
+    if len(kw) >= 2 and is_hangul(last) and jong(last) == 0:
+        prev = kw[-2]
+        vowel = (ord(last) - 0xAC00) // 28 % 21
+        if last == "르" and jong(prev) == 0 and kw not in ("푸르", "누르"):  # 푸르러·누르러(러 불규칙)는 어간 그대로 잡힌다
+            bright = (ord(prev) - 0xAC00) // 28 % 21 in (0, 8)  # ㅏ·ㅗ 뒤는 '라'(바르 → 발라), 그 밖은 '러'(흐르 → 흘러)
+            forms.append(kw[:-2] + with_jong(prev, 8) + ("라" if bright else "러"))
+        elif vowel == 20:  # ㅣ → ㅕ (다스리 → 다스려)
+            forms.append(kw[:-1] + chr(ord(last) - 14 * 28))
+    return forms
+
+
+def pk_story_echoes(name, story, combo, mean, hanja_idx):
+    """pk(순우리말) 이름 서사에 나오는 1순위 조합 글자의 훈 어간 [(한자, 어간 꼴)]. 비어 있으면 통과.
+    훈은 이름 음절의 독음에 맞는 훈(괄호 두음 인정 — mean_combo_check.segments_for_reading), 없으면 첫 훈.
+    키워드 규칙(1음절 명사 낱말 경계·STOP_KEYWORDS·받침 없는 1음절 어간 제외)은 mean_combo_check 그대로다.
+    오탐 줄이기: 이름이나 한글 뜻(mean)에 이미 있는 낱말은 그 이름의 뜻이라 뺀다(아라 mean '맑고 투명하게'의 雅 '맑'·
+    해찬 mean '빛나는'의 燦 '빛나'·다찬 mean '가득 차'의 茶 '차')."""
+    if not story or not combo or name in PK_STORY_FIXED:
+        return []
+    keep = name + " " + (mean or "")
+    hits = []
+    for pos, ch in enumerate(combo[0][:len(name)]):
+        m = (hanja_idx.hanja.get(ch) or {}).get("m", "")
+        huns = segments_for_reading(m, name[pos])
+        if not huns:
+            first = re.match(r"^(.*\S)\s+\S+$", re.split(r"[,/;·]", m)[0].strip())
+            huns = [first.group(1)] if first else []
+        for hun in huns:
+            for kw, kind in keywords_of(hun):
+                forms = _stem_forms(kw, kind)
+                if any(f in keep for f in forms):
+                    continue
+                hit = next((f for f in forms if appears(f, kind, story)), None)
+                if hit:
+                    hits.append((ch, hit))
+    return hits
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
@@ -258,6 +317,7 @@ def main():
     etymology_not_fx = []  # 어원 문장 뜻인데 fx 가 아닌 이름(손질 실수 의심 — 보고용)
     pk_combo_mean = []  # pk 인데 대표 뜻이 자기 조합 뜻과 같다(한자 조합에서 온 뜻 — S7V-3) → 실패
     pk_no_mean = []  # pk 인데 creative-name-meanings 에 뜻이 없다(조합 뜻으로 채우지 않으므로 빈 뜻 — 보고용)
+    pk_story_echo = []  # pk 서사가 1순위 조합 글자의 훈 어간을 되풀이한다(한글 뜻이 아니라 한자 훈으로 지은 문장 — NAME-1) → 실패
     for name, rec in records.items():
         mean = meanings.get(name)
         combo = combos.get(name)
@@ -306,6 +366,9 @@ def main():
                 pk_combo_mean.append(name)
             if not mean:
                 pk_no_mean.append(name)
+            echo = pk_story_echoes(name, rec.get("story"), combo, rec.get("mean"), hanja_idx)
+            if echo:
+                pk_story_echo.append((name, echo, rec["story"]))
         elif fl.get("fx"):
             if combo:
                 flag_conflicts.append(name)
@@ -320,6 +383,12 @@ def main():
     if pk_combo_mean:
         print(f"[오류] pk(순우리말) 이름인데 대표 뜻이 한자 조합 뜻과 같은 이름 {len(pk_combo_mean)}개: {' '.join(pk_combo_mean[:10])} "
               "— data/creative-name-meanings.json 에 한글 이름의 뜻을 넣을 것(pk 는 조합 뜻으로 채우지 않는다)", file=sys.stderr)
+        return 1
+    if pk_story_echo:
+        print(f"[오류] pk(순우리말) 이름 서사가 1순위 조합 글자의 훈을 되풀이하는 이름 {len(pk_story_echo)}개 "
+              "— data/name-stories.json 에서 한글 이름 뜻에 맞게 고칠 것(조합이 바뀌었다면 새 1순위 글자의 훈인지 확인):", file=sys.stderr)
+        for name, echo, story in pk_story_echo[:20]:
+            print(f"  {name}: {' · '.join(f'{ch} {kw}' for ch, kw in echo)} ← \"{story}\"", file=sys.stderr)
         return 1
     if flag_conflicts:
         print(f"[오류] fx 플래그인데 한자 조합이 있는 이름 {len(flag_conflicts)}개: {' '.join(flag_conflicts[:10])} "

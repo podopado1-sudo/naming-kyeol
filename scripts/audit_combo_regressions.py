@@ -11,9 +11,12 @@ weak/불용 추가 → dump-name-combos → build_name_seo_data.py 직후 실행
   D 유일-약자 붕괴 — HanjaSelector 풀 게이팅(common 있으면 common만)  → FAIL
                     재현: 독음별 common 후보가 비어있지 않은데 전원 weak
   E 두더지 diff   — base 대비 새로 승격된 글자 목록(검수 대상, 정보)
+  E2 점유 급증    — base 에도 있었지만 쌍 수가 크게 는 글자(검수 대상, 정보). E 는 0쌍에서 새로 오른 글자만
+                    보여서 珊(산호 — base 17쌍 → 40쌍, 강산=江珊·태산=泰珊이 江山·泰山을 밀어냄)을 놓쳤다(2026-10-26).
+                    기준: 늘어난 쌍 ≥ --surge-min(기본 10) 이고 현재 ≥ base × --surge-ratio(기본 2). 새로 생긴 쌍을 샘플로 보인다
 
-사용: python scripts/audit_combo_regressions.py [--base HEAD] [--max-list 30]
-종료 코드: A~D 중 FAIL 있으면 1 (E는 정보 — weak 승격은 ⚠ 표시만).
+사용: python scripts/audit_combo_regressions.py [--base HEAD] [--max-list 30] [--surge-min 10] [--surge-ratio 2]
+종료 코드: A~D 중 FAIL 있으면 1 (E·E2 는 정보 — weak 승격은 ⚠ 표시만).
 점유 상세가 필요하면 audit_syllable_occupancy.py 로 TSV를 뽑아 검수한다.
 """
 import argparse
@@ -45,16 +48,18 @@ def load_base_name_seo(ref: str):
 
 
 def combo_chars(ns) -> dict:
-    """combos에 등장하는 글자 → 점유 쌍 수/샘플."""
+    """combos에 등장하는 글자 → 점유 쌍 수/샘플/(이름, 쌍) 목록."""
     count = defaultdict(int)
     samples = defaultdict(list)
+    slots = defaultdict(set)
     for name, info in ns.get("names", {}).items():
         for pair in info.get("combos") or []:
             for ch in pair:
                 count[ch] += 1
+                slots[ch].add((name, "".join(pair)))
                 if len(samples[ch]) < 3:
                     samples[ch].append(name + "=" + "".join(pair))
-    return {"count": count, "samples": samples}
+    return {"count": count, "samples": samples, "slots": slots}
 
 
 def main() -> int:
@@ -63,6 +68,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="HEAD", help="비교 기준 git 리비전 (기본 HEAD)")
     ap.add_argument("--max-list", type=int, default=30, help="상세 나열 상한")
+    ap.add_argument("--surge-min", type=int, default=10, help="E2: 늘어난 쌍 수 하한")
+    ap.add_argument("--surge-ratio", type=float, default=2.0, help="E2: 현재 쌍 수 ≥ base × 이 배수")
     args = ap.parse_args()
 
     ns = json.loads((ROOT / NAME_SEO_REL).read_text(encoding="utf-8"))
@@ -178,6 +185,21 @@ def main() -> int:
             print(f"    {c}({first_gloss(c)}) {cur['count'][c]}쌍{mark} — {' '.join(cur['samples'][c])}")
         if len(promoted) > args.max_list:
             print(f"    … 외 {len(promoted) - args.max_list}자 (--max-list로 확장)")
+
+        # E2. 점유 급증 — base 에도 있던 글자가 쌍을 크게 늘렸다(E 의 사각지대 — 관련도·오행 가점 변화로 기존 글자가 이웃 글자를 밀어낸 경우)
+        base_cc = combo_chars(base)
+        surged = []
+        for c, n in cur["count"].items():
+            b = base_cc["count"].get(c, 0)
+            if b > 0 and n - b >= args.surge_min and n >= b * args.surge_ratio:
+                surged.append((c, b, n))
+        surged.sort(key=lambda x: -(x[2] - x[1]))
+        print(f"[ℹ] E2 점유 급증 글자: {len(surged)}자 (늘어난 쌍 ≥ {args.surge_min}·{args.surge_ratio:g}배) — 새 쌍을 두더지 검수처럼 판정")
+        for c, b, n in surged[:args.max_list]:
+            mark = " ⚠weak" if c in weak else ""
+            new_slots = sorted(cur["slots"][c] - base_cc["slots"].get(c, set()))
+            sample = " ".join(f"{nm}={pr}" for nm, pr in new_slots[:6])
+            print(f"    {c}({first_gloss(c)}) {b}→{n}쌍{mark} — 새 쌍 {len(new_slots)}: {sample}")
 
     print("---")
     if fails:

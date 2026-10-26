@@ -190,7 +190,9 @@ def main():
             # C# ReorderGloss 와 같이 뜻이 비어 있으면 대표 훈 자체를 뜻으로 쓴다
             meaning = reorder_gloss(meaning or "", gloss_overrides[char]) or None
         strokes = strokes_map.get(char) or next((strokes_map[c] for c in compats if strokes_map.get(c)), None)
-        is_gov = any("gov" in (e.get("sources") or []) for e in sources)
+        # 인명용 목록 소속 = data-gov.csv 또는 data-naver.csv (백엔드 HanjaData.GovernmentListCsvFiles 와 같은 규칙, 2026-10-26 B1 —
+        # gov CSV 는 ㄴ 구획 절단·법원 자체 코드로 努·能·姬·港 등 50자가 빠진다)
+        is_gov = any({"gov", "naver"} & set(e.get("sources") or []) for e in sources)
         if compats:
             merged_compat.extend(compats)
 

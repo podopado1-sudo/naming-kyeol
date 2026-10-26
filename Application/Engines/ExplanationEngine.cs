@@ -191,7 +191,7 @@ public class ExplanationEngine : IExplanationEngine
         var resolved = ResolveMeaningHanja(name, selectedHanja);
         var meaning = FormatMeaningEvidence(resolved.Reps);
         bool strongMeaning = resolved.Reps.Count == name.Length
-            && resolved.Reps.All(h => HanjaData.IsCommonNameHanja(h.Character) && !HanjaData.IsWeakGivenNameHanja(h.Character));
+            && resolved.Reps.All(r => HanjaData.IsCommonNameHanja(r.Hanja.Character) && !HanjaData.IsWeakGivenNameHanja(r.Hanja.Character));
         if (strongMeaning && meaning.Contains("+"))
             strengths.Add(meaning);
 
@@ -349,50 +349,41 @@ public class ExplanationEngine : IExplanationEngine
     // MeaningEvidence — 한자 정보 + 카테고리 조합
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>한자 Meaning의 다중 훈음('준걸 준, 순임금 순', '임금 주/주인 주') 중 첫 훈음만. (창의 2-a와 동일)</summary>
-    private static string CleanGloss(string meaning)
-    {
-        if (string.IsNullOrWhiteSpace(meaning)) return "";
-        return meaning.Split(',', '/', ';', '·')[0].Trim();
-    }
-
     private static string BuildMeaningEvidence(string name, IReadOnlyList<HanjaInfo?>? preselected = null)
         => FormatMeaningEvidence(ResolveMeaningHanja(name, preselected).Reps);
 
     /// <summary>
-    /// 음절별 표시 한자 — 점수(HarmonyEngine)가 배정한 한자가 있으면 그것, 없으면 정제 폴백(음절별 1순위 후보).
+    /// 음절별 표시 한자 — 점수(HarmonyEngine)가 배정한 한자가 있으면 그것, 없으면 폴백(음절별 표시 후보 1순위).
+    /// 각 항목은 그 한자가 놓인 이름 음절과 함께 돌려준다 — 훈·괄호 독음을 그 음절로 고르기 위해서다
+    /// (한자 없는 음절이 빠져 인덱스로는 맞출 수 없다).
     /// UsedFallback: 표시 한자 중 하나라도 폴백이면 true — 그 줄은 이 이름의 한자가 아니라 '예'다.
     /// 한자가 없는 음절은 Reps에서 빠진다(Reps.Count &lt; name.Length).
     /// </summary>
-    private static (List<HanjaInfo> Reps, bool UsedFallback) ResolveMeaningHanja(
+    private static (List<(HanjaInfo Hanja, string Syllable)> Reps, bool UsedFallback) ResolveMeaningHanja(
         string name, IReadOnlyList<HanjaInfo?>? preselected)
     {
-        var reps = new List<HanjaInfo>();
+        var reps = new List<(HanjaInfo Hanja, string Syllable)>();
         bool usedFallback = false;
         if (string.IsNullOrEmpty(name)) return (reps, usedFallback);
 
         for (int i = 0; i < name.Length; i++)
         {
+            var syllable = name[i].ToString();
+
             // 점수(HarmonyEngine)가 실제로 배정한 한자가 있으면 그걸로 표시 — 점수=표시 일관.
             if (preselected != null && i < preselected.Count
                 && preselected[i] is { } pre && !string.IsNullOrEmpty(pre.Meaning))
             {
-                reps.Add(pre);
+                reps.Add((pre, syllable));
                 continue;
             }
 
-            // 폴백: 창의 2-a와 동일 정제(불용한자 배제 + 인명 빈출 우선).
-            var cands = HanjaData.FindByReading(name[i].ToString())
-                .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning))
-                .ToList();
-            var common = cands.Where(h => HanjaData.IsCommonNameHanja(h.Character)).ToList();
-            // 약한 한자(菜 나물·雨 비 등)는 뒤로 — 안정 정렬이라 기존 관련도 순서는 보존.
-            var rep = (common.Count > 0 ? common : cands)
-                .OrderBy(h => HanjaData.IsWeakGivenNameHanja(h.Character) ? 1 : 0)
-                .FirstOrDefault();
+            // 폴백: 표시 후보 정렬(HanjaSelector.OrderForDisplay — 불용·뜻 없는 글자 제외, 빈출·비약자 우선)의 1순위.
+            // /name-analysis 후보 카드(AnalyzeHanja)와 같은 정렬이라 '한자 예' 줄이 큰 카드와 같은 글자를 든다(2026-10-26 B8 — API-3).
+            var rep = HanjaSelector.OrderForDisplay(HanjaData.FindByReading(syllable)).FirstOrDefault();
             if (rep != null)
             {
-                reps.Add(rep);
+                reps.Add((rep, syllable));
                 usedFallback = true;
             }
         }
@@ -400,15 +391,17 @@ public class ExplanationEngine : IExplanationEngine
         return (reps, usedFallback);
     }
 
-    private static string FormatMeaningEvidence(List<HanjaInfo> reps)
+    private static string FormatMeaningEvidence(List<(HanjaInfo Hanja, string Syllable)> reps)
     {
         if (reps.Count == 0) return string.Empty;
 
         var hanjaParts = new List<string>();
         var categories = new List<string>();
-        foreach (var rep in reps)
+        foreach (var (rep, syllable) in reps)
         {
-            hanjaParts.Add($"{rep.Character}({rep.Reading}, {CleanGloss(rep.Meaning)})");
+            // 괄호 안 독음·훈은 이름 음절 기준 — 대표 독음(rep.Reading)·첫 훈으로 쓰면 지훈의 煇가 '煇(훈, 빛날 휘)'로 나갔다
+            // (2026-10-26 B7 — API-2). 훈 선택은 /name 카드·dump-combo-glosses 와 같은 HanjaData.GlossForReading.
+            hanjaParts.Add($"{rep.Character}({syllable}, {HanjaData.GlossForReading(rep.Meaning, syllable)})");
             if (!string.IsNullOrEmpty(rep.Category)) categories.Add(rep.Category);
         }
 

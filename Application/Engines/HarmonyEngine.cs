@@ -283,7 +283,6 @@ public class HarmonyEngine : IHarmonyEngine
         List<string> notes)
     {
         var strokeCounts = new List<int>();
-        var hasLowConfidence = false;
         var hasUnknownStroke = false;
 
         for (int i = 0; i < name.Length; i++)
@@ -292,10 +291,9 @@ public class HarmonyEngine : IHarmonyEngine
             if (hanja != null && hanja.StrokeCount > 0)
             {
                 strokeCounts.Add(hanja.StrokeCount);
-                // Core 데이터(강희 획수를 정리한 코어 글자)가 아니면 획수 자료 미검수 — 보수적으로 감산.
-                // 2026-10-22 S4 전에는 옛 등급 C·D 로 판정했다(옛 C·D ⇔ Core 아님, 옛 B 0자 — 같은 동작)
-                if (!hanja.IsCoreData)
-                    hasLowConfidence = true;
+                // 옛 'Core 데이터가 아니면 획수 자료 미검수(×0.85)' 감산은 2026-10-26 폐기(B3 — 검증 API-4).
+                // S5c-2 부터 모든 글자의 StrokeCount 가 data/hanja_strokes.json(kTotalStrokes) 한 출처라 Core 여부가 획수 신뢰도와 무관하고
+                // (Core 로더는 KangxiStrokes 만 채운다), '미검수' 노트는 다른 글자의 획수는 검수됐다고 오해하게 했다.
             }
             else
             {
@@ -312,20 +310,13 @@ public class HarmonyEngine : IHarmonyEngine
         int rawScore = FortuneUtils.EvaluateStrokeCount(strokeCounts[0], strokeCounts[1]);
         int score = (int)(rawScore * 0.2); // 20점 만점으로 환산
 
-        // 획수 자료 신뢰도 가중치 — 미검수 획수가 섞이면 점수를 보수적으로 조정
-        // Core 데이터: 1.0 (영향 없음)
-        // Core 아님(획수 자료 미검수): 0.85
+        // 획수 자료 신뢰도 가중치 — 획수를 모르는 글자(기본값 5로 채운 음절)가 섞일 때만 감산한다.
+        // 획수 있음: 1.0 (Core 여부 무관 — 옛 Core 아님 ×0.85 는 2026-10-26 폐기, 위 주석)
         // 획수 미상: 0.75 (큰 감산)
         if (hasUnknownStroke)
         {
             score = (int)Math.Round(score * 0.75);
             notes.Add("일부 한자 획수 정보 부족 — 획수 조화 신뢰도 감산");
-        }
-        else if (hasLowConfidence)
-        {
-            score = (int)Math.Round(score * 0.85);
-            // 사용자 노트 — 내부 코드 대신 한국어 문장으로 쓴다.
-            notes.Add("획수 자료 미검수 글자 포함 — 획수 조화 점수 보수적 산출");
         }
 
         return score;

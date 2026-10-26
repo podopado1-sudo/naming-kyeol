@@ -24,7 +24,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (1,521 테스트, 2026-10-22 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (1,724 테스트, 2026-10-26 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -48,7 +48,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 1,521개)
+# 테스트 실행 (NameForm.slnx 경유 — 1,724개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -137,6 +137,8 @@ D:\MyDev\NameForm\
           │                               ⚠️ S5b 자원오행 보완 30: 사주 과다 오행 감점(−10)에서 용신·희신은 뺀다(EV-5 — 옛 노트 '가점 일부 상쇄 (감점)' 없음)
           │                               ⚠️ S5c-1 음양 10 = 배정 한자 획수 홀짝(홀수 陽) 하나 — 옛 hanja_unihan.json 의 거꾸로 된 음양(짝수 陽)·Core 원획 홀짝 없음
           │                               ⚠️ S5c-2 획수 조화 20·음양 10·수리 15 의 한자 획수 = data/hanja_strokes.json(Unicode 18.0 kTotalStrokes, S5c-3) — /hanja 와 같은 파일·같은 값
+          │                               ⚠️ 2026-10-26 B3 획수 조화의 'Core 아니면 ×0.85 · 획수 자료 미검수 글자 포함' 폐기(획수가 한 출처라 Core 여부와 무관 —
+          │                               계획 §2-4). 획수 미상(음절에 한자 없음 → 5로 채움) ×0.75 와 '획수 정보 부족' 노트만 남는다
           │     RankerEngine            → 최종 점수 = aesthetic * 0.7 + harmony * 0.3
           │     ExplanationEngine       → 추천 이유 3줄 생성
           │     RarityScoringEngine     → 희귀도/독창성 점수
@@ -299,7 +301,8 @@ D:\MyDev\NameForm\
   YinYang (陽/陰 — StrokeCount 홀짝, 홀수 陽, 2026-10-22 S5c-1), StrokeCount (Unicode 18.0 kTotalStrokes — `data/hanja_strokes.json`, /hanja 와 같은 파일, S5c-2·3),
   KangxiStrokes(Core 강희 원획 — 보존·표시만, 원획법 수리·음양은 D10 별도 결정)
 - 옛 뜻 기반 오행(D4 — 보존만, 화면·점수에 안 씀): MeaningElement·MeaningRationale(core_v1 → radical_map, 옛 획수 대체값 D 는 없음),
-  ConfidenceGrade(옛 S/C/D — FiveElement 와 무관). 옛 S 에 기대던 가중치(관련도 +100·획수 조화 감산)는 `IsCoreData`(Source == Core_v1, 옛 S 와 같은 집합)로 옮겼다
+  ConfidenceGrade(옛 S/C/D — FiveElement 와 무관). 옛 S 에 기대던 가중치(관련도 +100)는 `IsCoreData`(Source == Core_v1, 옛 S 와 같은 집합)로 옮겼다.
+  옛 '획수 조화 감산(Core 아니면 ×0.85)'은 2026-10-26 폐기(B3) — `IsCoreData` 를 획수 신뢰도 신호로 쓰지 말 것(Core 2,054자 중 404자는 점수 획수 ≠ Core 강희 획수)
 - 카테고리: Category (자연/덕목/개념), CategoryMajor/Minor, Tags, Evidence, Confidence
 - 선호: GenderPref (Neutral/Male/Female), TonePref (Neutral/Soft/Strong)
 
@@ -328,6 +331,13 @@ D:\MyDev\NameForm\
   로더·빌드가 NFKC 로 통합 한자에 병합한다(뜻이 호환 쪽에만 있던 金·蘭·朗·廊·剆 은 수리 때 통합 쪽에도 넣음)
 - **data-gov.csv / data-naver.csv**: 대법원/네이버 인명용 한자. ⚠️ CSV 는 Web SDK 의 Content 가 아니라서
   `NameForm.csproj`의 `None Update="data\**\*.csv"`로 산출물에 넣는다(2026-10-22 전까지 publish 에 빠져 운영 `IsGovernmentListed` 전부 false)
+  ⚠️ `IsGovernmentListed` = 두 CSV 어느 쪽에든 실린 글자(`HanjaData.GovernmentListCsvFiles`, 2026-10-26 B1). data-gov.csv 만 보면 50자가 빠진다 —
+  ㄴ 구획이 '냉'(1636행) 뒤 바로 '다'라 ㄴ 으로만 읽는 努·能·農·腦·訥 등 32자가 0행, 姬(→ 姫 U+59EB)·港·珊·慜·冕 등 18자는 법원 자체 코드
+  (U+A0xxx·U+F0xxx)로만 실림. 50자 모두 data-naver.csv 근거, 두 CSV 어디에도 없는 적재 글자 0(적재 9,105자 전부 등재 — `OpsVerificationRegressionTests`).
+  CSV 에 행을 지어 넣지 않는다. 자체 코드 ↔ 실제 글자, 姬 ↔ 姫 는 Unihan 변형 근거가 없어 잇지 않는다.
+  /hanja 의 `gov`(hanja-seo)도 같은 규칙 — `build_hanja_seo_data.py` 가 사전 sources 'gov' 또는 'naver' 면 gov 1(2026-10-26 B1 재생성, 9,105자 전부 —
+  상세 50쪽의 '인명용 목록 외'·메타 설명이 바뀜). ⚠️ gov 가 전 글자 1이라 `build_hanja_variants.py` 의 정렬 기준 ③(gov_list)은 더 갈라 주지 않는다
+  (그 스크립트를 다시 돌리면 이체자 대표가 바뀔 수 있으니 결과를 대조할 것). +500 으로 오른 글자의 두더지 검수 기록은 HanjaData.cs 불용 7차·weak 2026-10-26 블록
 - **Unihan_*.txt**: Unicode 표준 발음/획수/부수 데이터
 - **data/hanja-gloss-overrides.json**: 대표 훈 오버라이드 97자 (然 불탈→그럴 연, 潤 불을→윤택할 윤·荷 멜→연꽃 하(2026-10-22) 등,
   로드 시 Meaning 재배열 — 원 훈 보존·멱등, 소비처는 첫 훈만 취하므로 무수정 전파).
@@ -339,8 +349,14 @@ D:\MyDev\NameForm\
   키워드 전면 재분류 대신 영향이 큰 글자만 여기서 고친다(赫 Female 때문에 남자 혁 이름 1순위를 侐 '고요할'이 차지했다).
   恩·秀는 하드코딩 Female 도 뺐다(恩은 다른 출처가 Neutral 이라 그것으로 충분). 惠는 둔다 — 혜 줄 빈출 惠·慧·蕙가 모두 Female 이라
   상쇄되는데 惠만 바꾸면 여자 혜 이름 1순위가 慧로 넘어간다(`HanjaGenderOverrideTests`)
-- **data/combo-meanings.json**: 한자쌍 자연어 뜻 28,633쌍 (LLM 배치 윤문 + 소량 인라인, 런타임 비용 0. 2026-10-22 자원오행 전환 재생성 때 Sonnet 5.5 배치로 5,009쌍,
-  두더지 검수 뒤 211쌍은 손으로 씀 — API 크레딧 소진).
+  ⚠️ 의미 분류기(`GenderToneClassifier`) 보석 키워드에 '산호'를 더했다(2026-10-26 보완 — 珊·瑚 두 글자만 걸림). 옥·구슬 훈 글자(珠·玉·琳·瑛·璐 …)는 모두
+  Female 인데 산호만 Neutral 이라, B1 로 珊이 山과 관련도가 같아지자 남자 산 이름 조합이 오행 상생 가점만으로 珊 으로 넘어갔다. 오버라이드 파일이 아니라
+  분류기를 고친 것은 원인이 키워드 누락이어서다(오버라이드 4자는 그대로). dump-name-scores 는 바이트 그대로
+- **data/combo-meanings.json**: 한자쌍 자연어 뜻 28,692쌍 (LLM 배치 윤문 + 소량 인라인, 런타임 비용 0. 2026-10-22 자원오행 전환 재생성 때 Sonnet 5.5 배치로 5,009쌍,
+  두더지 검수 뒤 211쌍은 손으로 씀 — API 크레딧 소진. 2026-10-26 B1 재생성 새 쌍 42개(努 19·珊 23)는 `build_combo_meanings.py --resume --model claude-sonnet-5-5
+  --thinking between_tools` 배치 — 입력 26,571·출력 774 토큰, 약 $0.03. 같은 날 보완 단계 두더지 재생성의 새 쌍 17개(沕結·紏燦·瀣朗·裕土 등)도
+  같은 설정 배치 — 입력 10,785·출력 291 토큰, 약 $0.01. ⚠️ `python -I` 는 PYTHONIOENCODING 을 무시해 Windows 콘솔(cp949)에서 끝 샘플 출력이
+  UnicodeEncodeError 로 죽는다 — 파일은 그 전에 저장되니 결과 수(완료/오류/만료)만 확인하고 다시 돌리지 말 것).
   ⚠️ `data/creative-name-meanings.json`(대표 뜻 원천)에는 손질 항목이 많다(외래 이름 어원 71·순우리말 16+72·潤·朗·蘭·西 손질 82, 2026-10-22) —
   `build_creative_meanings.py`를 다시 돌리면 덮어써지므로 돌리기 전에 손질분을 따로 보존할 것.
   외래 이름 뜻은 **어원 문장**만 쓴다 — '{언어}로 {뜻}{이라는|라는|다는}'(히브리어로 신이 더하신다는·아일랜드어로 곱게 태어났다는). 이름 사전·성경 본문에
@@ -357,8 +373,8 @@ D:\MyDev\NameForm\
   (소망·미래·다정·미소·수련·진솔·강해)이거나 한자 이름으로 흔한 이름(예린·하린·예나·한나·보미·가야·마리), include 15 = 사전에 없지만 '별'이 고유어라
   한자 조합이 소리만 맞춘 이름(한별·은별·예별… — 別·莂·潎·炦에 별(星) 뜻이 없다). `dump-name-flags`만 읽는다(런타임 순우리말 추천 엔진은 사전 그대로)
 - **/hanja·/name 정적 데이터의 플래그 필드 (2026-10-22 S7)** — 값은 모두 1, 아니면 키 생략:
-  - hanja-seo.json `nf` = ForbiddenNameHanjaSet(불용 — 이름 생성·추천·/evaluate 배정에서 빠지는 글자, 850자), `wk` = WeakGivenNameHanjaSet(뜻이 약해
-    동음 대안이 있으면 양보 — 배제 아님, 714자, nf 글자에는 안 붙음). `dotnet run -- dump-hanja-quality`(루트 hanja-quality.json) → `build_hanja_seo_data.py`
+  - hanja-seo.json `nf` = ForbiddenNameHanjaSet(불용 — 이름 생성·추천·/evaluate 배정에서 빠지는 글자, 854자 — 2026-10-26 보완), `wk` = WeakGivenNameHanjaSet(뜻이 약해
+    동음 대안이 있으면 양보 — 배제 아님, 753자, nf 글자에는 안 붙음). `dotnet run -- dump-hanja-quality`(루트 hanja-quality.json) → `build_hanja_seo_data.py`
     (덤프 없으면 실패). 화면에서 '이름에 피하는 글자'는 nf 만 — wk 를 피하는 글자로 쓰지 말 것. 글자 단위 판정이라 독음마다 다른 훈(烋 휴·효)은 구분하지 않는다
   - name-seo.json `pk` = 한글 이름으로 쓰는 순우리말 이름(120명, 조합 유무 무관 — ND-3 '한자로 쓴다면(참고)', '추천 1순위' 없음) =
     PureKoreanNameEngine 내장 사전 − exclude + include(`data/pure-korean-name-overrides.json`, `PureKoreanNameEngine.IsPureKoreanSeoName`).
@@ -367,17 +383,35 @@ D:\MyDev\NameForm\
     `build_name_seo_data.py`(덤프 없는데 기존 출력에 플래그가 있으면 실패, fx 인데 조합이 있으면 실패)
 
 ### 글자 품질 세트 (HanjaData.cs 인라인, 2026-07-02 기준)
-- **ForbiddenNameHanjaSet 852자** — 명백 부정 훈 하드 배제 (생성 경로만, 평가/분석은 통과). /evaluate 배정(HanjaSelector)·후보 표에서도 빠진다 —
+- **ForbiddenNameHanjaSet 856자** — 명백 부정 훈 하드 배제. 생성·추천 경로, /evaluate 배정(HanjaSelector)·후보 표, /name-analysis 후보 카드
+  (`HanjaSelector.OrderForDisplay` 상위 10 — 2026-10-26 B8, 옛 '평가/분석은 통과'는 S4-2 전 문구)에서 모두 빠진다. /hanja 사전에는 남아 '이름에 피하는 글자'로 표시 —
   雌(암컷 자)는 2026-10-22 S3 weak 로는 박영자(여)=映雌 배정이 남아(weak 는 양보) S4 에 여기로 옮겼다(대체 배정 慈 — 姿→紫 는 S4 자원오행 전환 효과).
   호환 코드포인트는 NFKC 정규형 조회로 자동 차단 (리터럴 등재 금지 — NFC 정규화 회귀 전력). `IsWeakGivenNameHanja`도 같은 폴백
-- **WeakGivenNameHanjaSet 714자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
+- **WeakGivenNameHanjaSet 753자** — 부정은 아니지만 이름 뜻으로 약한 글자(사물·허사·신체·친족 훈)
   감점. 배제가 아니라 동음 대안 있을 때만 양보 → combos 소실 없음.
+  2026-10-26 B1 재생성 두더지 검수(인명용 목록에 data-naver.csv 를 더해 +500 을 받은 50자 중 조합·1순위에 오른 글자, 3라운드 수렴):
+  불용 妮(계집종 — 婢 선례), weak 弩(쇠뇌)·穏(穩의 일본 신자체 — 稳 선례)·腦(골)·醲(진한 술)·矑(눈동자)·笯(새장) — 근거는 HanjaData.cs 주석,
+  회귀는 `WeakGivenNameHanjaTests.MoleAudit20261026_*`. /name 조합에서 늘어난 글자는 努(힘쓸 — 0→19쌍) — 珊(산호 — 17→40쌍, 강산=江珊·태산=泰珊·
+  산하=珊河로 江山·泰山·山河 탈락, 산호·호산·윤산 1순위 珊)은 같은 날 보완 단계에서 珊·瑚 를 Female 로 고쳐(아래 '산호' 키워드) HEAD 와 같은 17쌍으로 되돌림.
+  2026-10-26 B6 보완 두더지 검수(배포 검증 vb — 惓·斯): 약자 양보(B6)·인명용 목록 보강(B1) 뒤 /evaluate 1순위가 바뀐 칸을 **희신·기신까지 넣은 격자**
+  (독음 × 성별 3 × 생년월일 없음·용신 5 — /evaluate 와 같은 인자, 옛 regen 격자는 용신만 넣어 청(남·金)=婧 을 蜻 으로 적는 등 실제와 달랐다)로 HEAD 와
+  대조해 4라운드 수렴 + /name 재생성 E 목록 2라운드: weak 33자(惓 삼갈/싫증날·斯 이 사/천할 사·呝·喞·諠·褪·枙·泐·挒·厓·崕·羔·鷿·兎·兔·兜·鑞·勿·肋·颲·僻·
+  刪·萵·荄·剷·酸·廨·釵·姟·杜·枓·侅·孩), 불용 3자(戹 좁을/재앙 액·訛 그릇될·痘 역질). 근거는 HanjaData.cs 블록 주석, 회귀는 `MoleAudit20261026B6_*`·
+  `OpsVerificationRegressionTests.Select_MoleRound_*`·`Evaluate_MoleRound_ReportedCases`(김권우 남·土=淃, 박사랑 여·金=砂). 멈춘 칸: 모(여·土)=旄(깃대 장식 —
+  뒤 후보 姆 유모·嫫 추녀), 액=扼(누를 — 후보가 겨드랑이·조를뿐인 이름 0개 음절), 두(木)=紏(고할/노랑실)
+  `HanjaSelector.Select`(/evaluate·추천·조화 배정)는 감점이 아니라 **비약자 대안이 하나라도 있으면 후보에서 뺀다** — 성별 +40·용신 +100 과 무관
+  — 그다음 **CJK 기본 영역(U+4E00~9FFF) 글자가 남아 있으면 확장 영역 글자도 뺀다**(2026-10-26 보완, OrderForDisplay 2순위와 같은 규칙 — 용신 +100 이
+  관련도 차이를 이겨 별(여·金)=䭱·새(남)=㘔·니(土)=㦐·슬(火·木)=𩇣·솔(土·金)=䢦 이 의미 메모 맨 앞에 나왔다. 기본 영역이 모두 약자인 글 줄만 확장 㔕).
+  (2026-10-26 B6: 옛 −30 감점이 져서 생년월일 없는 남자 지훈·성훈=葷(훈채)·채민=寨·한솔=帥). 대안 없는 음절(녀·댁·몌·북, 보완 두더지 뒤 늑·즉·토 — 늑·즉은 /name 이름 0개, 토는 2개)만 약자 배정.
+  /name-analysis·/evaluate 후보 표·'한자 예' 폴백은 `OrderForDisplay`(약자 뒤로)
   `SelectCombos`(/name 조합)는 약자 없는 조합이 하나라도 있으면 약자 쌍을 **빈칸 채우기로도 쓰지 않는다**
   — 4칸을 채우려 李眼·胎輝·鰓羅가 97명에 노출되던 것(2026-10-07). 전원 약자일 때만 약자 쌍 유지
 - ⚠️ **weak·불용은 글자 단위인데 훈은 독음마다 다르다** — 烋는 휴 자리 '아름다울'이지만 효 자리
   '거들먹거릴', 乻는 얼 자리 '땅 이름'이지만 늘 자리 '음차'. 다중 독음 글자를 검수할 땐 그 글자가
   실제로 쓰이는 독음의 훈으로 판단할 것. /name 조합 카드(`glossForReading`)와 `dump-combo-glosses`는
-  이름 음절의 독음에 맞는 훈을 고른다(첫 훈 고정 시 하늘=乻 "땅 이름 얼" 노출)
+  이름 음절의 독음에 맞는 훈을 고른다(첫 훈 고정 시 하늘=乻 "땅 이름 얼" 노출). /evaluate 의미 메모·강점 줄(ExplanationEngine)도
+  같은 공용 헬퍼 `HanjaData.GlossForReading`(정규식 = 프론트 glossForReading 글자 그대로 — 테스트가 대조)을 쓰고 괄호 독음도 그 음절이다
+  (2026-10-26 B7 — 옛 첫 훈·대표 독음이라 지훈(여)=煇 '煇(훈, 빛날 휘)'). RecommendationService 의 옛 추천 이유 줄은 아직 첫 훈
 - **CommonNameHanja 322자** — 인명 빈출 가점(+300). 한 독음에 빈출 글자가 하나라도 있으면 /name 조합·라이브 선택 풀이 그 글자들로
   게이트된다 — 혁 줄은 2026-10-22 赫 하나를 넣어 侐(고요할)·焱·焃 동점 경쟁을 끝냈다. 랑 줄은 S4 에 朗(밝을) 하나 — 廊(사랑채)·浪(물결)이
   1순위를 나눠 갖던 것. 浪을 같이 넣으면 Core 가점(+2100)으로 浪이 다시 1순위가 된다(朗은 Core 아님)
@@ -396,7 +430,7 @@ D:\MyDev\NameForm\
 - **FortuneUtils**: 사주 오행 계산, 획수 기반 자원오행, 음양 판정
 - **MorphemeAnalyzer**: 형태소 분석
 - **NegativePatternLoader**: 부정적 발음 패턴 로딩 (JSON)
-- **HanjaSelector**: 이름 음절별 한자 배정의 단일 진실의 원천 (불용 배제·빈출 우선·용신 가산·weak 감점)
+- **HanjaSelector**: 이름 음절별 한자 배정의 단일 진실의 원천 (불용 배제·weak 양보(대안 있으면 제외)·확장 영역 회피(기본 영역 대안 있으면 제외)·빈출 우선·용신 가산)
 
 ### 품질 감사 스크립트 (scripts/)
 - `scan_weak_name_candidates.py` — 사전 훈 전수 스캔 (다중 훈 검수 + 약한 훈 후보)
@@ -407,7 +441,8 @@ D:\MyDev\NameForm\
 - `audit_combo_regressions.py` — **재생성 후 원커맨드 회귀 감사** (`--base REF`, 기본 HEAD):
   A combos 소실 / B 불용 잔존 / C comboMeans 커버리지(코드포인트 단위) /
   D 빈출셋 유일-약자 붕괴(HanjaSelector 풀 게이팅 재현) → FAIL 시 exit 1,
-  E 신규 승격 글자 목록(두더지 검수 대상, 훈·weak 표시·샘플 포함)
+  E 신규 승격 글자 목록(두더지 검수 대상, 훈·weak 표시·샘플 포함), E2 점유 급증 글자(base 에도 있던 글자가 쌍을 크게 늘림 — 늘어난 쌍 ≥ 10·2배,
+  `--surge-min`·`--surge-ratio`. E 는 0쌍에서 오른 글자만 보여 珊 17→40쌍을 놓쳤다 — 2026-10-26 보완)
 - `audit_mean_combo_mismatch.py` — **대표 뜻·서사 ↔ 조합 모순 감사** (판정은 `mean_combo_check.py`,
   빌드와 공용): 문장에 나온 구체 명사 훈(연꽃·비·별·으뜸·아이)이 페이지 어느 조합에도 없는 한자의 것이면
   모순. `--fail`은 mean 모순 1건 이상이면 exit 1. 형용사(맑·밝·빛나)는 동음 한자가 공유해 참고 수치만
@@ -431,6 +466,13 @@ combos가 바뀌면 낡는다(연우 "연꽃처럼…" 아래 然佑, 우정 "�
 '아' 소리 훈). build가 모순 뜻을 **1순위 조합 뜻으로 자동 교체**하므로 weak 추가 뒤 재생성만 하면
 따라온다(2026-10-07 기준 187명). 교체된 이름의 서사가 같은 모순 키워드를 되풀이하면
 `data/name-stories.json`을 직접 고칠 것(서사는 자동 교체 경로 없음).
+⚠️ **모순 판정의 사각지대 — 합성어 '옥빛'**: `mean_combo_check`는 1음절 명사 훈을 낱말 경계(뒤 글자가 조사 첫 글자)로만 잡고 2음절 훈(옥돌·서옥)은
+통째로만 본다. 그래서 '옥빛처럼'(璐 '아름다운 옥'·玖 '옥돌')은 표시 조합에 옥 훈 글자가 없어도 걸리지 않는다. 2026-10-26 보완에서 이 경우인 공개 노아(努亞 —
+'맑고 아름다운 옥빛 같은')·로한(鷺翰)·진구(津謳)의 creative 뜻을 지워 1순위 조합 뜻으로 폴백하고, 로한 서사의 '옥처럼'을 뺐다(규담·규이의 '옥처럼'은 표시 조합의
+圭 '홀'(서옥) 이라 둠). 판정 규칙은 넓히지 않았다('빛'을 조사 머리에 넣으면 별빛·눈빛도 걸려 교체 범위가 커진다) — 조합이 바뀌면 '옥'을 손으로도 찾을 것
+⚠️ **pk 서사 점검 (2026-10-26 B2)**: build 는 pk(순우리말) 이름 서사에 1순위 조합 글자의 '그 독음의 훈' 어간이 나오면 실패한다
+(stderr '[오류] pk(순우리말) 이름 서사가 1순위 조합 글자의 훈을 되풀이…' — `pk_story_echoes`). 조합이 바뀌어 걸리면 그 서사를 한글 이름 뜻 기준으로
+고친다. 훈 글자 그대로만 보므로 뜻말 되풀이(한솔 '넓은 강처럼' — 漢 한수)는 못 잡는다
 이름/뜻/OG 카피 변경 시 `python scripts/build_og_font.py`로 OG 폰트 서브셋 재생성
 (satori는 woff2 불가 → base64 TS 모듈, OG_LABELS 동기화 주의).
 
@@ -446,6 +488,8 @@ F 검사도 같은 회귀를 잡는다. 코호트 개방은 `.github/workflows/w
 `dotnet run -- dump-story-inputs` → `python scripts/build_name_stories.py`(Batch, 사람 서사형
 프롬프트+종결 힌트 로테이션) → `data/name-stories.json` → 창의 엔진(NameStoryData→Story)과
 `build_name_seo_data.py`(rec.story) 양쪽이 소비. 파일 부재 시 서사 전면 숨김(순수 additive).
+pk(순우리말) 이름 서사는 음절별 한자 훈 글로스로 지어 한글 이름 뜻과 따로 놀았다 — 2026-10-26 B2 에 120명 전수 대조로 59명을 한글 뜻 기준 한 문장으로
+고쳤다(발행 블로그 인용 다온·한결은 고정). build 의 pk 서사 점검이 같은 회귀를 막는다(위 '/name 데이터 재생성 순서')
 
 ## 코드 규칙
 
@@ -504,7 +548,7 @@ F 검사도 같은 회귀를 잡는다. 코호트 개방은 `.github/workflows/w
 Twin Result / Dual Result / Specialty Input 4종 / Evaluate Input / Coming Soon / 시스템 상태 4종 /
 Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 
-## 라우트 (정적 20,924쪽, 2026-10-22 next build 기준)
+## 라우트 (정적 21,134쪽, 2026-10-26 next build 기준 — 10-22 대비 +210 은 드립 개방 70명 × 쪽·OG·트위터 카드)
 
 ```
 /                  홈 (Hero + Categories + ProPaths + 데이터 리포트 카드 + WhyKyeol — 서버 컴포넌트)
@@ -512,8 +556,8 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 /hanja/[독음|글자]  인명용 한자 사전 SEO (9,105자 수록 — 호환 한자 85자는 통합 한자에 병합·상세 9,016자, 2026-10-22 S6 데이터.
                    /sitemap.xml 에는 독음 489쪽만 — 글자 상세는 googleBot 전용 noindex(robots index 유지)라 네이버 전용 /sitemap-hanja.xml)
 /name              이름 뜻 사전 인덱스 (인기 이름 상위 1,000개 노출 — sitemap 등재 범위와 일치)
-/name/[이름]       이름 뜻 SEO (공개 3,795쪽 — 2026-10-21 빌드 기준, 주간 드립으로 증가. 전체 수록 5,340명 중
-                   1,545명은 개방 대기 · 통계·미학 점수·한자 조합 + 이름별 OG/트위터 공유 카드도 공개 수만큼 정적 생성)
+/name/[이름]       이름 뜻 SEO (공개 3,865쪽 — 2026-10-26 빌드 기준, 주간 드립으로 증가. 전체 수록 5,340명 중
+                   1,475명은 개방 대기 · 통계·미학 점수·한자 조합 + 이름별 OG/트위터 공유 카드도 공개 수만큼 정적 생성)
 /search            이름 추천 (구 /baby — 301 리다이렉트 구성됨)
 /evaluate          이름 평가
 /analysis          이름 분석
