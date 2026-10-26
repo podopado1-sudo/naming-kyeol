@@ -66,6 +66,8 @@ public class NameAnalysisService : INameAnalysisService
         int? harmonyScore = null;
         int rarityScore;
         int finalScore;
+        // 점수가 쓴 배정 한자(출생일이 있을 때만 — ScoringService.AssignedHanja). 큰 카드·이유의 한자 줄·용신 배지가 이 한자를 쓴다.
+        IReadOnlyList<HanjaData.HanjaInfo?>? assignedHanja = null;
 
         DateTime? birthDateParsed = null;
         if (!string.IsNullOrEmpty(request.BirthDate) &&
@@ -82,6 +84,7 @@ public class NameAnalysisService : INameAnalysisService
             harmonyScore = score.HarmonyScore;
             rarityScore = score.RarityScore;
             finalScore = score.FinalScore;
+            assignedHanja = score.AssignedHanja;
         }
         else
         {
@@ -93,13 +96,14 @@ public class NameAnalysisService : INameAnalysisService
         // 5. 추천 이유 — 종합 줄은 히어로(FinalScore)와 같은 값으로, 출생일이 없으면 조화는 '미산정'.
         //    (전엔 조화를 50으로 메워 '종합 68점 — 미학 75 · 조화 50'이 히어로 '종합 75' 옆에 떴다.)
         //    엔진 인터페이스가 정수 조화를 받아 미학 값을 넘기지만, 그 값은 종합 줄에만 쓰이고 그 줄은 바로 다시 쓴다.
-        //    분석 경로는 배정 한자가 없어 '한자 뜻' 대신 '한자 예'(음절별 1순위 후보) 줄이 나온다.
+        //    출생일이 있으면 점수(조화 자원오행·성별, 미학 성별 보너스)가 쓴 배정 한자를 넘겨 '한자 뜻' 줄이 큰 카드와 같은 글자를 든다.
+        //    출생일이 없으면 배정 한자가 없어(미학은 성별 없이 채점) '한자 뜻' 대신 '한자 예'(음절별 1순위 후보) 줄이 나온다.
         var reasons = await _explanationEngine.GenerateReasonsAsync(
-            firstName, aestheticScore, harmonyScore ?? aestheticScore);
+            firstName, aestheticScore, harmonyScore ?? aestheticScore, assignedHanja);
         ExplanationEngine.AlignOverallReason(reasons, finalScore, aestheticScore, harmonyScore);
 
-        // 6. 한자 분석
-        var hanjaBreakdown = AnalyzeHanja(firstName);
+        // 6. 한자 분석 — 출생일이 있으면 점수가 쓴 배정 한자를 음절별 첫 후보(큰 카드)로
+        var hanjaBreakdown = AnalyzeHanja(firstName, assignedHanja);
 
         // 7. 강점/약점
         var (strengths, weaknesses) = EvaluateStrengthsAndWeaknesses(
@@ -166,10 +170,14 @@ public class NameAnalysisService : INameAnalysisService
         Domain.Models.Saju.YongshinResult r,
         List<HanjaBreakdownDto> hanjaBreakdown)
     {
-        // 이름 한자 후보 중 용신 오행과 일치하는 것이 하나라도 있으면 true
+        // 화면에 보이는 이 이름의 한자(음절별 큰 카드 = 점수가 쓴 배정 한자) 중 용신 오행 글자가 있으면 true —
+        // 추천 랭킹 자원오행 +8 과 같은 정의(RankerEngine.AssignedHanjaHasElement, 2026-10-26 결정 ③).
+        // 옛 규칙은 음절별 후보 10개 중 하나라도 그 오행이면 true 라, 큰 카드·점수 한자와 무관하게 거의 늘 '부합'이 떴다
+        // (은찬 恩燦 火火 · 용신 木 도 '부합').
         bool? nameFits = hanjaBreakdown.Count > 0
-            ? hanjaBreakdown.Any(b =>
-                b.PossibleHanja.Any(h => h.FiveElement == r.PrimaryYongshin))
+            ? RankerEngine.AssignedHanjaHasElement(
+                hanjaBreakdown.Select(b => b.PossibleHanja.FirstOrDefault()?.Character).ToList(),
+                r.PrimaryYongshin)
             : null;
 
         return new YongshinDto
@@ -245,16 +253,27 @@ public class NameAnalysisService : INameAnalysisService
     /// 빈출·비약자 우선) 상위 <see cref="HanjaOptionsPerSyllable"/>개. /evaluate 후보 표·ExplanationEngine 폴백('한자 예' 줄)과 같은
     /// 표시 경로라 큰 카드(첫 후보)가 '한자 예' 줄과 같은 글자다.
     /// 전엔 FindByReading(...).Take(10) 그대로라 서=西·우=雨·한=寒·별=別(weak)가 큰 카드에, 恨·愚·塵(불용)이 후보에 나왔다
-    /// (2026-10-23 검증 API-3 → 10-26 B8). 용신 적합(nameFitsYongshin)도 이 후보로 계산한다.
+    /// (2026-10-23 검증 API-3 → 10-26 B8).
+    /// 출생일이 있으면 점수(ScoringService)가 쓴 배정 한자(<paramref name="assigned"/>)를 그 음절 첫 후보(큰 카드)로 앞세운다 —
+    /// /evaluate 후보 표 첫 칸(NameEvaluationService.BuildHanjaCandidates)과 같은 방식. 조화의 자원오행·성별과 미학 성별 보너스가
+    /// 이 글자로 매겨지므로, 화면에서 가장 크게 보이는 한자가 점수의 한자다(2026-10-26 결정 ③ — 성별 판정은 사용자가 보는 한자로).
+    /// 쓸 수 없는 글자(불용·뜻 없음)는 앞세우지 않는다. 용신 적합(nameFitsYongshin)은 이 큰 카드로 계산한다.
     /// </summary>
-    private List<HanjaBreakdownDto> AnalyzeHanja(string firstName)
+    private List<HanjaBreakdownDto> AnalyzeHanja(string firstName, IReadOnlyList<HanjaData.HanjaInfo?>? assigned)
     {
         var breakdown = new List<HanjaBreakdownDto>();
 
-        foreach (var syllable in firstName)
+        for (int i = 0; i < firstName.Length; i++)
         {
-            var syllableStr = syllable.ToString();
+            var syllableStr = firstName[i].ToString();
             var hanjaList = HanjaSelector.OrderForDisplay(HanjaData.FindByReading(syllableStr)).ToList();
+
+            var pick = assigned != null && i < assigned.Count ? assigned[i] : null;
+            if (pick != null && HanjaSelector.IsUsableNameHanja(pick))
+            {
+                hanjaList.RemoveAll(h => h.Character == pick.Character);
+                hanjaList.Insert(0, pick);
+            }
 
             breakdown.Add(new HanjaBreakdownDto
             {

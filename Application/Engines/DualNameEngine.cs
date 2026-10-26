@@ -96,7 +96,9 @@ public class DualNameEngine : IDualNameEngine
         foreach (var syllable in koreanName)
         {
             var reading = syllable.ToString();
-            var hanjaList = HanjaData.FindByReading(reading);
+            // 이름에 쓸 수 있는 글자만(HanjaSelector.UsableByReading — 불용·뜻 없는 글자 제외). 사전 글자 전부를 보던 때는
+            // 카테고리 우선 정렬이 불용 글자(멸=滅 자연·蔑 덕목, 읍=泣 자연 등)를 대표 한자·뜻으로 고를 수 있었다(2026-10-26 점수 정책과 같은 판정).
+            var hanjaList = Utils.HanjaSelector.UsableByReading(reading);
 
             if (hanjaList.Any())
             {

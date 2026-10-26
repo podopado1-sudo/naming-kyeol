@@ -36,7 +36,8 @@ public class ExplanationEngine : IExplanationEngine
 
         // 한자 뜻 — 점수(Harmony)가 실제로 배정한 한자로 표시(일관). 없으면 정제 폴백.
         // 폴백 글자는 음절별 1순위 후보일 뿐 이 이름의 한자가 아니다 — 하나라도 섞이면 '한자 예'로 적어
-        // 단정하지 않는다(/analysis·쌍둥이는 배정 한자를 넘기지 않아 '하늘 → 荷+乻'이 '한자 뜻'으로 나갔다).
+        // 단정하지 않는다(옛 /analysis·쌍둥이는 배정 한자를 넘기지 않아 '하늘 → 荷+乻'이 '한자 뜻'으로 나갔다 — 2026-10-26 결정 ③부터
+        // 쌍둥이와 출생일 있는 /analysis 는 점수가 쓴 배정 한자를 넘긴다. 출생일 없는 /analysis 만 '한자 예').
         var resolved = ResolveMeaningHanja(name, selectedHanja);
         var meaning = FormatMeaningEvidence(resolved.Reps);
         if (!string.IsNullOrEmpty(meaning))
@@ -385,7 +386,7 @@ public class ExplanationEngine : IExplanationEngine
             }
 
             // 폴백: 표시 후보 정렬(HanjaSelector.OrderForDisplay — 불용·뜻 없는 글자 제외, 빈출·비약자 우선)의 1순위.
-            // /name-analysis 후보 카드(AnalyzeHanja)와 같은 정렬이라 '한자 예' 줄이 큰 카드와 같은 글자를 든다(2026-10-26 B8 — API-3).
+            // /name-analysis 후보 카드(AnalyzeHanja — 출생일 없는 경로)와 같은 정렬이라 '한자 예' 줄이 큰 카드와 같은 글자를 든다(2026-10-26 B8 — API-3).
             var rep = HanjaSelector.OrderForDisplay(HanjaData.FindByReading(syllable)).FirstOrDefault();
             if (rep != null)
             {

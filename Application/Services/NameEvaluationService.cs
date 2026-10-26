@@ -29,12 +29,10 @@ public class NameEvaluationService : INameEvaluationService
         // 단일 진실의 원천 — 모든 점수가 여기서 나옴
         var score = await _scoringService.EvaluateAsync(name, lastName, birthDate, gender, tone, birthTime);
 
-        // 점수(Harmony)가 실제 배정한 한자 — MeaningNote가 추천 카드와 같은 한자를 설명하게 한다.
-        // 출생일 미제공 시 조화 산정이 없어 비어 있으므로, 같은 선택기(HanjaSelector)를 용신 없이
-        // 호출해 표시용 한자를 정한다(/name 조합·추천 폴백과 동일 로직 = 표시 일관).
-        var selectedHanja = score.Harmony.SelectedHanja;
-        if (selectedHanja == null || selectedHanja.Count == 0)
-            selectedHanja = HanjaSelector.Select(name, ScoringService.NormalizeGender(gender), null, null, null);
+        // 점수가 쓴 배정 한자 — MeaningNote·후보 표 첫 칸이 추천 카드와 같은 한자를 설명하게 한다.
+        // 출생일이 있으면 조화의 용신 배정, 없으면 같은 선택기(HanjaSelector)를 용신 없이 — ScoringService 가 한 번 정해
+        // 미학 성별 판정에도 같은 목록을 넘겼다(2026-10-26 결정 ③). 여기서 다시 고르지 않는다.
+        var selectedHanja = score.AssignedHanja;
 
         // 설명 생성 (점수와 동일한 값으로)
         // 세대 적합도(GenerationFit)를 함께 넘겨 cautions에 세대 불일치 안내, strengths에 시대중립 노출
@@ -137,8 +135,7 @@ public class NameEvaluationService : INameEvaluationService
         for (int i = 0; i < name.Length; i++)
         {
             var syllable = name[i].ToString();
-            var hanjaList = HanjaData.FindByReading(syllable)
-                .Where(h => !string.IsNullOrEmpty(h.Meaning) && !HanjaData.IsForbiddenNameHanja(h.Character))
+            var hanjaList = HanjaSelector.UsableByReading(syllable)
                 .OrderBy(h => HanjaData.IsWeakGivenNameHanja(h.Character) ? 1 : 0)
                 .ToList();
 

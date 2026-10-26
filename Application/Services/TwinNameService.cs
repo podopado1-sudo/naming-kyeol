@@ -57,8 +57,10 @@ public class TwinNameService : ITwinNameService
                 // ScoringService 단일 진입점 — smart/evaluate와 점수 동등성 보장
                 var score = await _scoringService.EvaluateAsync(
                     name, request.LastName, birthDate, gender, tone, birthTime);
+                // 이유의 한자 줄도 점수가 쓴 배정 한자로(미학 성별 판정·조화와 같은 목록 — 2026-10-26 결정 ③).
+                // 옛 호출은 한자를 넘기지 않아 음절별 표시 1순위 '한자 예'가 나와, 카드에 보인 한자와 점수의 한자가 달랐다.
                 var reasons = await _explanationEngine.GenerateReasonsAsync(
-                    name, score.AestheticScore, score.HarmonyScore);
+                    name, score.AestheticScore, score.HarmonyScore, score.AssignedHanja);
 
                 scoredNames.Add(new TwinCandidateDto
                 {

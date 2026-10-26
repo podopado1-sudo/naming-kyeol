@@ -652,9 +652,7 @@ public class CreativeNamingEngine : ICreativeNamingEngine
     /// 밀어 더 나은 동음 대안(우→宇·祐)이 있으면 양보한다.</summary>
     private static string BestGloss(string syl)
     {
-        var cands = HanjaData.FindByReading(syl)
-            .Where(x => !HanjaData.IsForbiddenNameHanja(x.Character) && !string.IsNullOrEmpty(x.Meaning))
-            .ToList();
+        var cands = HanjaSelector.UsableByReading(syl);
         var common = cands.Where(x => HanjaData.IsCommonNameHanja(x.Character)).ToList();
         var pool = common.Count > 0 ? common : cands;
         var h = pool

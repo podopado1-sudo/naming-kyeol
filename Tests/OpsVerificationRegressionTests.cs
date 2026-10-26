@@ -676,12 +676,17 @@ public class OpsVerificationRegressionTests
     [Fact]
     public async Task Aesthetic_UsableSyllableNextToNoUsable_StillCounts()
     {
-        // 후보가 있는 음절은 예전처럼 센다 — 은(恩 등 Female)은 '퍅' 옆에서도 여자 이름 일치, '몰' 옆 서(瑞 등 자연·덕목)는 의미 가점
+        // 후보가 있는 음절은 그 음절에 보이는 한자로 센다(결정 ③) — 연(여자 이름에 보이는 蓮 Female)은 '퍅' 옆에서도 여자 이름 일치,
+        // '몰' 옆 서(瑞 등 자연·덕목)는 의미 가점(의미는 아직 음절의 쓸 수 있는 글자 전부)
         var svc = CreateEvaluationService();
-        var withPyak = await svc.EvaluateNameAsync("퍅은", "김", null, "female", "neutral");
-        var alone = await svc.EvaluateNameAsync("쁨은", "김", null, "female", "neutral");
+        var withPyak = await svc.EvaluateNameAsync("퍅연", "김", null, "female", "neutral");
+        var alone = await svc.EvaluateNameAsync("쁨연", "김", null, "female", "neutral");
+        var shownYeon = withPyak.HanjaCandidates[1].Candidates.First().Character;
+        Assert.Equal(HanjaData.GenderPreference.Female, HanjaData.FindByCharacter(shownYeon)!.GenderPref);
+        Assert.Equal(shownYeon, alone.HanjaCandidates[1].Candidates.First().Character);
+        Assert.Empty(withPyak.HanjaCandidates[0].Candidates);
         Assert.Equal(alone.Aesthetic.GenderBonus, withPyak.Aesthetic.GenderBonus);
-        Assert.True(withPyak.Aesthetic.GenderBonus > 0, $"은 여자 이름 일치: {withPyak.Aesthetic.GenderBonus}");
+        Assert.Equal(3, withPyak.Aesthetic.GenderBonus); // 보이는 Female 한 글자 = +3
 
         var mol = await svc.EvaluateNameAsync("몰서", "김", null, "none", "neutral");
         var bbeum = await svc.EvaluateNameAsync("쁨쁨", "김", null, "none", "neutral");
@@ -751,5 +756,751 @@ public class OpsVerificationRegressionTests
         // 한자 없는 음절(null — 글자가 모두 불용인 몰 등)은 건너뛴다
         Assert.Equal("슬기 지", RecommendationService.BuildCardMeaning("지몰", new List<HanjaData.HanjaInfo?> { ji, null }));
         Assert.Null(RecommendationService.BuildCardMeaning("몰닉", new List<HanjaData.HanjaInfo?> { null, null }));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 2026-10-26 점수 정책 — 후보가 있는 음절도 불용 글자는 미학 성별 보너스·의미 카테고리·톤 가점(과 옛 추천 랭킹의 자원오행 보너스)에
+    // 세지 않는다. 판정은 HanjaSelector.UsableByReading(= IsUsableNameHanja: 불용 아님 + 뜻 있음, 약자 포함) 하나.
+    // 옛 규칙은 음절 독음의 사전 글자 전부를 봐 나=瘰 '연주창'(불용, Male)이 남자 이름 일치를, 지=躓 '넘어질'(불용, Female)이 여자 이름
+    // 일치를 만들었다 — /name 200명(공개 136명) 미학 −2~−5(−4 156명). 기대값은 사전에서 독립으로 계산하고(UsableIndependent — 검사 대상인
+    // HanjaSelector 를 거치지 않는다), 사례 확인 단언은 불용 세트·성별 분류가 바뀌면 깨진다(그때 사례를 다시 고를 것).
+    // ═══════════════════════════════════════════════════════════════
+
+    private static bool HasMeaningCategory(HanjaData.HanjaInfo h) => h.Category is "자연" or "덕목" or "개념";
+
+    /// <summary>
+    /// 기대값 계산용 '쓸 수 있는 글자' — 사전 원본(FindByReading)에 불용·뜻 없음 필터를 테스트 안에서 직접 건다.
+    /// HanjaSelector.IsUsableNameHanja·UsableByReading 의 버그가 기대값으로 새지 않게 엔진 밖에서 따로 셈한다.
+    /// </summary>
+    private static List<HanjaData.HanjaInfo> UsableIndependent(string syllable)
+        => HanjaData.FindByReading(syllable)
+            .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning))
+            .ToList();
+
+    /// <summary>
+    /// /evaluate 응답에서 음절마다 사용자에게 보이는 한자 — 후보 표 첫 칸(배정 한자를 앞세운다)이고 의미 메모의 글자와 같다(여기서 함께 단언).
+    /// 후보가 없는 음절은 null. 결정 ③ 의 성별 기대값은 이 목록으로 셈한다(엔진 내부의 배정을 다시 부르지 않는다).
+    /// </summary>
+    private static List<HanjaData.HanjaInfo?> ShownHanja(NameEvaluationResultDto r)
+    {
+        var shown = r.HanjaCandidates
+            .Select(g => g.Candidates.FirstOrDefault() is { } c ? HanjaData.FindByCharacter(c.Character) : null)
+            .ToList();
+        if (shown.Any(h => h != null))
+            Assert.Equal(shown.Where(h => h != null).Select(h => h!.Character), ParseMeaningParts(r.MeaningNote).Select(p => p.Char));
+        return shown;
+    }
+
+    /// <summary>
+    /// 결정 ③ 의 성별 보너스를 테스트 안에서 따로 셈한다 — 음절마다 보이는 한자 한 글자(쓸 수 있는 글자만: 불용 아님 + 뜻 있음)의 성별 값,
+    /// 일치 음절 × 3(최대 5) − 불일치 음절 × 2(최대 5), ±5. 노트 유무는 일치·불일치 음절이 있는지로 정한다.
+    /// </summary>
+    private static int ExpectedGenderBonus(IEnumerable<HanjaData.HanjaInfo?> shown, string gender)
+        => ExpectedGenderBonus(shown, gender, out _, out _);
+
+    private static int ExpectedGenderBonus(IEnumerable<HanjaData.HanjaInfo?> shown, string gender, out bool anyMatch, out bool anyMismatch)
+    {
+        anyMatch = anyMismatch = false;
+        if (gender is not ("male" or "female")) return 0;
+        var target = gender == "male" ? HanjaData.GenderPreference.Male : HanjaData.GenderPreference.Female;
+        var opposite = gender == "male" ? HanjaData.GenderPreference.Female : HanjaData.GenderPreference.Male;
+        var counted = shown.Where(h => h != null && !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning)).ToList();
+        int match = counted.Count(h => h!.GenderPref == target);
+        int mismatch = counted.Count(h => h!.GenderPref == opposite);
+        anyMatch = match > 0;
+        anyMismatch = mismatch > 0;
+        int bonus = (match > 0 ? Math.Min(5, match * 3) : 0) - (mismatch > 0 ? Math.Min(5, mismatch * 2) : 0);
+        return Math.Clamp(bonus, -5, 5);
+    }
+
+    [Fact]
+    public void UsableByReading_ExcludesForbidden_KeepsWeak_InDictionaryOrder()
+    {
+        var rain = Cp(0x96E8);  // 雨 비 우 — weak(양보는 배정 단계의 일 — 쓸 수 있는 글자다)
+        var fool = Cp(0x611A);  // 愚 어리석을 우 — 불용
+        Assert.True(HanjaData.IsWeakGivenNameHanja(rain));
+        Assert.True(HanjaData.IsForbiddenNameHanja(fool));
+
+        var raw = HanjaData.FindByReading("우");
+        var usable = HanjaSelector.UsableByReading("우");
+        Assert.Contains(raw, h => h.Character == fool);
+        Assert.Contains(usable, h => h.Character == rain);
+        Assert.DoesNotContain(usable, h => h.Character == fool);
+        Assert.DoesNotContain(usable, h => HanjaData.IsForbiddenNameHanja(h.Character) || string.IsNullOrEmpty(h.Meaning));
+        // 테스트 안에서 따로 거른 목록과 글자·순서가 같다(사전 관련도 순 그대로) — 우 줄과 이름에 자주 쓰는 다른 줄도
+        foreach (var s in new[] { "우", "나", "지", "겸", "권", "멸", "에", "쁨" })
+            Assert.Equal(UsableIndependent(s).Select(h => h.Character), HanjaSelector.UsableByReading(s).Select(h => h.Character));
+        Assert.Equal(raw.Where(h => usable.Contains(h)).Select(h => h.Character), usable.Select(h => h.Character));
+        // 집합은 표시 후보(OrderForDisplay)와 같다 — 한 정의
+        Assert.Equal(
+            HanjaSelector.OrderForDisplay(raw).Select(h => h.Character).OrderBy(c => c, StringComparer.Ordinal),
+            usable.Select(h => h.Character).OrderBy(c => c, StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// 사전에서 그 성별 글자가 불용 글자에만 있는 음절 — 옛 '사전 글자 전부' 코드는 '일치'(+3·'한자 성별 선호도가 … 잘 맞음')였고,
+    /// 점수 정책 직후(state ①)의 '쓸 수 있는 글자 중 하나라도' 규칙은 반대 성별 글자가 하나라도 있으면 불일치(−2 — 지(여)=馶·吱)였다.
+    /// 결정 ③ 이후에는 그 음절에 보이는 한자 한 글자만 본다(불용 글자는 배정·후보 표에 나오지 않으니 성별에도 안 들어간다).
+    /// 둘째 음절 '쁨'은 사전 독음이 없어 기여 0.
+    /// </summary>
+    [Theory]
+    [InlineData("나", "male")]   // 瘰 연주창(불용, Male) — 보이는 羅 Neutral (쓸 글자의 娜 등 Female 은 세지 않는다)
+    [InlineData("겸", "male")]   // 歉 흉년 들·鉗 칼(불용, Male) — 보이는 謙 Neutral (縑 Female 은 세지 않는다)
+    [InlineData("권", "male")]   // 勌 게으를(불용, Male) — 보이는 權 Neutral
+    [InlineData("검", "male")]   // 劍·劒 칼(불용, Male) — 보이는 儉 Neutral
+    [InlineData("지", "female")] // 躓 넘어질(불용, Female) — 보이는 智 Neutral (馶·吱 Male 은 세지 않는다)
+    [InlineData("회", "male")]   // 獪 교활할(불용, Male) — 보이는 恢 Neutral
+    public async Task Aesthetic_ForbiddenHanjaGenderPref_NotCounted(string syllable, string gender)
+    {
+        var target = gender == "male" ? HanjaData.GenderPreference.Male : HanjaData.GenderPreference.Female;
+        var opposite = gender == "male" ? HanjaData.GenderPreference.Female : HanjaData.GenderPreference.Male;
+        var usable = UsableIndependent(syllable);
+
+        // 사례 확인: 그 성별 글자가 불용 글자에만 있고(옛 코드가 '일치'로 셌다), 쓸 수 있는 글자는 있다(후보 0 음절이 아님)
+        Assert.Contains(HanjaData.FindByReading(syllable), h => h.GenderPref == target && HanjaData.IsForbiddenNameHanja(h.Character));
+        Assert.NotEmpty(usable);
+        Assert.DoesNotContain(usable, h => h.GenderPref == target);
+        Assert.Empty(HanjaData.FindByReading("쁨"));
+
+        var r = await CreateEvaluationService().EvaluateNameAsync(syllable + "쁨", "김", null, gender, "neutral");
+        var shown = ShownHanja(r);
+        Assert.NotNull(shown[0]);
+        Assert.Null(shown[1]);
+        Assert.Contains(usable, h => h.Character == shown[0]!.Character); // 보이는 글자는 쓸 수 있는 글자(불용 아님)
+        bool shownOpposite = shown[0]!.GenderPref == opposite;
+
+        Assert.DoesNotContain(r.Aesthetic.Notes, n => n.Contains("성별 선호도") && n.Contains("잘 맞음"));
+        Assert.Equal(shownOpposite ? -2 : 0, r.Aesthetic.GenderBonus);
+        Assert.Equal(shownOpposite, r.Aesthetic.Notes.Any(n => n.Contains("성별 선호도") && n.Contains("맞지 않음")));
+    }
+
+    /// <summary>
+    /// 이름 사례 — /evaluate(출생일 없음)에 보이는 한자의 성별 값만 센다. 기대값은 보이는 한자로 테스트 안에서 따로 셈하고(ExpectedGenderBonus),
+    /// InlineData 숫자는 지금 배정(나 남=羅·여=娜, 건=建 Male, 윤=潤, 연 남=然·여=蓮 Female)의 사례 기록이다 — 배정·성별 분류가 바뀌면 숫자만 다시 적을 것.
+    /// 옛 '하나라도' 규칙(state ①)은 나건 남 +1·나윤 남 −4·나연 남 +1·나윤 여 +5 였다(나=娜 등 Female·윤=贇·玧·綸 Female 이 쓸 글자에 있어서).
+    /// </summary>
+    [Theory]
+    [InlineData("나건", "male", 3)]   // 羅 Neutral + 建 Male
+    [InlineData("나윤", "male", 0)]   // 羅 + 潤 모두 Neutral
+    [InlineData("나연", "male", 0)]   // 羅 + 然 모두 Neutral
+    [InlineData("나윤", "female", 3)] // 娜 Female + 潤 Neutral
+    [InlineData("나연", "female", 5)] // 娜 Female + 蓮 Female
+    public async Task Aesthetic_ForbiddenHanjaGenderPref_NameSamples(string name, string gender, int recorded)
+    {
+        var r = await CreateEvaluationService().EvaluateNameAsync(name, "김", null, gender, "neutral");
+        var expected = ExpectedGenderBonus(ShownHanja(r), gender);
+        Assert.Equal(expected, r.Aesthetic.GenderBonus);
+        Assert.Equal(recorded, expected);
+    }
+
+    /// <summary>
+    /// 의미 카테고리(자연·덕목·개념 +20)·톤(+10)도 쓸 수 있는 글자만 — 멸=滅 자연·蔑 덕목, 졸=卒 자연(모두 불용, 남은 1자는 카테고리 없음),
+    /// 나=懦 나약할·검=劍 칼(불용, Strong — 남은 글자에 Strong 없음). 옛 코드는 의미 점수가 1~2점 높았다.
+    /// </summary>
+    [Theory]
+    [InlineData("멸", "neutral")]
+    [InlineData("졸", "neutral")]
+    [InlineData("나", "strong")]
+    [InlineData("검", "strong")]
+    public async Task Aesthetic_ForbiddenHanjaCategoryTone_NotCounted(string syllable, string tone)
+    {
+        var raw = HanjaData.FindByReading(syllable);
+        var usable = UsableIndependent(syllable);
+        Assert.NotEmpty(usable);
+        if (tone == "strong")
+        {
+            Assert.Contains(raw, h => h.TonePref == HanjaData.TonePreference.Strong && HanjaData.IsForbiddenNameHanja(h.Character));
+            Assert.DoesNotContain(usable, h => h.TonePref == HanjaData.TonePreference.Strong);
+        }
+        else
+        {
+            Assert.Contains(raw, h => HasMeaningCategory(h) && HanjaData.IsForbiddenNameHanja(h.Character));
+            Assert.DoesNotContain(usable, HasMeaningCategory);
+        }
+
+        // AestheticEngine.EvaluateMeaning 을 쓸 수 있는 글자로 다시 계산(둘째 음절 '쁨'은 사전 독음 없음, 과도한 소망 음절 없음)
+        int meaningRaw = 70 + (usable.Any(HasMeaningCategory) ? 20 : 0);
+        int expected = (int)(meaningRaw * 0.10);
+
+        var r = await CreateEvaluationService().EvaluateNameAsync(syllable + "쁨", "김", null, "none", tone);
+        Assert.Equal(expected, r.Aesthetic.Meaning);
+    }
+
+    [Fact]
+    public async Task Ranker_HanjaElementBonus_IgnoresForbiddenHanja()
+    {
+        // 슬의 水 글자는 膝 무릎·虱·蝨 이(불용)뿐 — 옛 코드는 사전 글자 전부를 봐 용신 水 자원오행 보너스 +8 을 줬다.
+        // 결정 ③ 이후 +8 은 배정 한자(카드에 보이는 글자)로만 정한다 — 불용 글자는 배정되지 않으니 용신 水로 배정해도 슬 글자는 水가 아니다.
+        Assert.Contains(HanjaData.FindByReading("슬"), h => h.FiveElement == "水" && HanjaData.IsForbiddenNameHanja(h.Character));
+        Assert.NotEmpty(UsableIndependent("슬"));
+        Assert.DoesNotContain(UsableIndependent("슬"), h => h.FiveElement == "水");
+        Assert.Empty(HanjaData.FindByReading("쁨"));
+        var assigned = HanjaSelector.Select("슬쁨", "none", "水", null, null);
+        Assert.NotNull(assigned[0]);
+        Assert.Null(assigned[1]);
+        Assert.False(HanjaData.IsForbiddenNameHanja(assigned[0]!.Character));
+
+        var c = new NameForm.Domain.Models.Candidate
+        {
+            Name = "슬쁨", AestheticScore = 80, HarmonyScore = 60,
+            SyllableHanja = assigned.Select(h => h?.Character).ToList()
+        };
+        var ranked = await new RankerEngine().RankCandidatesAsync(new List<NameForm.Domain.Models.Candidate> { c }, "水");
+
+        // 80*0.7 + 60*0.3 = 74, 음령오행 보너스(+5)만 남는다
+        int expected = 74 + (KoreanUtils.HasEumryeongMatch("슬쁨", "水") ? 5 : 0);
+        Assert.Equal(expected, ranked[0].FinalScore);
+    }
+
+    /// <summary>
+    /// /name 데이터(name-seo.json 의 sc)가 지금 미학 엔진 출력과 같은지 — 엔진(성별 보너스·의미·감점·노트)을 고치고 재생성 체인
+    /// (dump-name-scores → build_name_seo_data.py)을 빠뜨리면 여기서 걸린다(2026-10-26 점수 정책 직후 HEAD name-seo 는 200명이 엔진과 달랐고
+    /// 손 대조로만 잡혔다). 성별 분기(60/40)·노트 치환은 Program.cs dump-name-scores 와 같다.
+    /// 결정 ③: 성별 판정 한자 = 페이지 1순위 조합(NameSeoHanja.DisplayedHanja — dump-name-scores 와 같은 함수). 그 한자가 json 의
+    /// combos[0] 과 같은지(조합 없는 이름은 보이는 한자 없음)도 함께 본다 — 점수가 판정한 한자와 페이지 1순위 카드가 갈라지면 여기서 걸린다.
+    /// </summary>
+    [Fact]
+    public async Task NameSeo_AestheticScores_MatchEngine()
+    {
+        static string PublicNote(string note) => note.Replace("female와", "여자 이름과").Replace("male와", "남자 이름과");
+        static int Int(System.Text.Json.JsonElement o, string key) => o.TryGetProperty(key, out var v) ? v.GetInt32() : 0;
+
+        var path = Path.Combine(RepoRoot(), "frontend", "src", "data", "name-seo.json");
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+        var engine = new AestheticEngine();
+        var mismatches = new List<string>();
+        var comboMismatches = new List<string>();
+        int checkedNames = 0;
+        foreach (var prop in doc.RootElement.GetProperty("names").EnumerateObject())
+        {
+            if (!prop.Value.TryGetProperty("sc", out var sc)) continue;
+            int m = Int(prop.Value, "m"), f = Int(prop.Value, "f"), total = m + f;
+            string gender = total > 0 && m * 100 / total >= 60 ? "male"
+                          : total > 0 && f * 100 / total >= 60 ? "female" : "none";
+            Assert.Equal(gender, NameSeoHanja.Gender(m, f));
+
+            // 페이지 1순위 조합(json combos[0]) — 없으면 페이지에 이 이름의 한자가 없다
+            var shown = NameSeoHanja.DisplayedHanja(prop.Name, gender);
+            var pageFirst = prop.Value.TryGetProperty("combos", out var combos) && combos.GetArrayLength() > 0
+                ? combos[0].EnumerateArray().Select(x => x.GetString()).ToList()
+                : Enumerable.Repeat<string?>(null, prop.Name.Length).ToList();
+            if (!shown.Select(h => h?.Character).SequenceEqual(pageFirst))
+                comboMismatches.Add($"{prop.Name}({gender}) 판정 [{string.Join(",", shown.Select(h => h?.Character ?? "_"))}] ≠ combos[0] [{string.Join(",", pageFirst.Select(c => c ?? "_"))}]");
+
+            var b = await engine.CalculateScoreWithBreakdownAsync(prop.Name, null, "neutral", gender, null, shown);
+            checkedNames++;
+
+            var expected = new[] { b.PronunciationScore, b.RhythmScore, b.SyllableScore, b.NeutralityScore, b.MeaningScore, b.TotalScore, b.GenderBonus, b.PenaltyTotal };
+            var actual = new[] { "p", "r", "s", "n", "m", "t", "g", "pn" }.Select(k => Int(sc, k)).ToArray();
+            var notes = sc.TryGetProperty("no", out var no) ? no.EnumerateArray().Select(x => x.GetString()).ToList() : new List<string?>();
+            if (!expected.SequenceEqual(actual) || !b.Notes.Select(PublicNote).SequenceEqual(notes))
+                mismatches.Add($"{prop.Name}({gender}) 엔진 [{string.Join(",", expected)}] ≠ sc [{string.Join(",", actual)}]");
+        }
+
+        Assert.True(checkedNames > 5000, $"sc 가 있는 이름 {checkedNames}명");
+        Assert.True(comboMismatches.Count == 0,
+            $"성별 판정 한자가 json combos[0] 과 다른 이름 {comboMismatches.Count}명 — dump-name-combos 부터 체인을 다시 돌릴 것:\n" + string.Join("\n", comboMismatches.Take(20)));
+        Assert.True(mismatches.Count == 0,
+            $"name-seo.json sc 가 엔진과 다른 이름 {mismatches.Count}명 — /name 재생성 체인을 다시 돌릴 것(p,r,s,n,m,t,g,pn):\n" + string.Join("\n", mismatches.Take(20)));
+    }
+
+    // 같은 판정(UsableByReading)으로 바꾼 다른 소비처 — 이중 이름 대표 한자·가족 서사 부모 이름 뜻
+
+    [Fact]
+    public async Task DualName_RepresentativeHanja_NeverForbidden()
+    {
+        // 옛 코드는 사전 글자 전부에서 카테고리 우선으로 골라 비=婢 '계집종'(Vivian·Olivia·Ivy·Ruby)·피=疲 '피곤할'(Peter·Sophia)·
+        // 미=媚 '아첨할'(Naomi·Mia)·토=吐 '토할'(Anthony)을 대표 한자·뜻으로 보여 줬다(영한 매핑 130개 중 11개)
+        var maid = Cp(0x5A62); // 婢 계집종 비 — 불용, 비 줄 사전 1번
+        Assert.True(HanjaData.IsForbiddenNameHanja(maid));
+        Assert.Equal(maid, HanjaData.FindByReading("비")[0].Character);
+
+        var engine = new DualNameEngine();
+        var birth = new DateTime(2025, 1, 1);
+        var all = new List<DualNameCandidate>();
+        foreach (var english in EnglishKoreanNameMap.GetMappings().Select(m => m.English).Distinct())
+            all.AddRange(await engine.GenerateDualNamesAsync("김", english, birth, "none", "neutral"));
+        foreach (var gender in new[] { "male", "female" })
+            all.AddRange(await engine.GenerateDualNamesAsync("김", null, birth, gender, "neutral"));
+        Assert.NotEmpty(all);
+        foreach (var c in all)
+        {
+            Assert.Equal(c.KoreanName.Length, c.HanjaCharacters.Count);
+            for (int i = 0; i < c.KoreanName.Length; i++)
+            {
+                var ch = c.HanjaCharacters[i];
+                Assert.False(HanjaData.IsForbiddenNameHanja(ch), $"{c.EnglishEquivalent} {c.KoreanName}: {ch}");
+                Assert.Contains(UsableIndependent(c.KoreanName[i].ToString()), h => h.Character == ch);
+            }
+        }
+
+        var vivian = await engine.GenerateDualNamesAsync("김", "Vivian", birth, "female", "neutral");
+        Assert.NotEmpty(vivian);
+        Assert.All(vivian, c => Assert.DoesNotContain(maid, c.HanjaCharacters));
+        Assert.All(vivian, c => Assert.DoesNotContain("계집종", c.HanjaMeaning));
+    }
+
+    [Theory]
+    [InlineData("Emily")] // 에밀리 — 옛 曀 '음산할'+密+理
+    [InlineData("Amy")]   // 에이미 — 옛 曀+理+媚 '아첨할'
+    public async Task DualName_NoUsableHanjaSyllable_DropsCandidate(string english)
+    {
+        // 에 = 曀 음산할·恚 성낼 — 둘 다 불용(후보 0 음절). 이중 이름은 모든 음절에 한자가 있어야 해서 후보에서 빠진다
+        // (2026-10-26 점수 정책 이후 /dual-name 에 Emily·Amy 를 넣으면 0건 — 화면은 0건 안내를 그린다)
+        Assert.NotEmpty(HanjaData.FindByReading("에"));
+        Assert.Empty(UsableIndependent("에"));
+        var koreans = EnglishKoreanNameMap.FindByEnglishName(english).SelectMany(m => m.Korean).ToList();
+        Assert.NotEmpty(koreans);
+        Assert.All(koreans, k => Assert.Contains("에", k));
+
+        Assert.Empty(await new DualNameEngine().GenerateDualNamesAsync("김", english, new DateTime(2025, 1, 1), "female", "neutral"));
+    }
+
+    /// <summary>
+    /// 부모 이름 의미 융합 서사(부모 기반 작명 '가족 서사')는 쓸 수 있는 글자의 뜻만 — 옛 코드는 사전 글자 전부를 봐서
+    /// 회=悔 '뉘우칠'(불용, 회 줄 첫 덕목)·검=劍 '칼'(불용, 검 줄 첫 자연)이 "부모님의 '…' 정신과 '…'의 아름다움" 문장에 들어갔다.
+    /// </summary>
+    [Theory]
+    [InlineData("회진", "비나", "덕목")]
+    [InlineData("검수", "미영", "자연")]
+    public void FamilyNarrative_MeaningFusion_IgnoresForbiddenHanja(string father, string mother, string oldCategory)
+    {
+        var syllables = (father + mother).Select(c => c.ToString()).ToList();
+        // 사례 확인: 사전 원본에서 그 카테고리의 첫 글자가 불용이다(옛 코드가 서사에 넣었다)
+        var rawFirst = syllables.SelectMany(s => HanjaData.FindByReading(s)).First(h => h.Category == oldCategory && !string.IsNullOrEmpty(h.Meaning));
+        Assert.True(HanjaData.IsForbiddenNameHanja(rawFirst.Character), rawFirst.Character);
+
+        var usable = syllables.SelectMany(s => UsableIndependent(s)).ToList();
+        var forbiddenMeanings = syllables
+            .SelectMany(s => HanjaData.FindByReading(s).Where(h => HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning)))
+            .Select(h => h.Meaning!)
+            .Except(usable.Select(h => h.Meaning!))
+            .ToList();
+        Assert.Contains(rawFirst.Meaning!, forbiddenMeanings);
+
+        var n = FamilyNarrativeExtractor.ExtractMeaningFusionNarrative(father, mother);
+
+        // 기대값: 쓸 수 있는 글자의 뜻을 아버지 → 어머니, 음절·사전 순으로 놓고 첫 덕목 + 첫 자연(엔진과 같은 문장 규칙)
+        var virtue = usable.First(h => h.Category == "덕목").Meaning;
+        var nature = usable.First(h => h.Category == "자연").Meaning;
+        Assert.Equal($"부모님의 '{virtue}' 정신과 '{nature}'의 아름다움이 조화를 이루는 이름", n.NarrativeDescription);
+        Assert.DoesNotContain(n.CoreValues, v => forbiddenMeanings.Contains(v));
+        Assert.All(forbiddenMeanings, m => Assert.DoesNotContain($"'{m}'", n.NarrativeDescription));
+        Assert.All(n.SuggestedThemes, t =>
+            Assert.DoesNotContain(forbiddenMeanings, m => t.StartsWith(m + "과 ") || t.Contains("과 " + m + "의 ")));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 2026-10-26 결정 ③ — 미학 성별 판정·추천 랭킹 자원오행 +8 은 사용자가 보는 한자(배정·표시 한자)로만 정한다.
+    // 옛 '하나라도' 규칙은 음절의 쓸 수 있는 글자 중 그 성별(오행) 글자가 하나라도 있으면 일치(보너스)로 셌다 — 지(여)는 화면의 智와 무관한
+    // 馶 '굳셀'·吱 '가는 소리'(Male) 때문에 '맞지 않음'을 받았다(/name 지 여자 이름 73명). 표면별 보이는 한자:
+    //   /evaluate·추천 카드·쌍둥이 카드 = ScoringService.AssignedHanja(출생일 있으면 조화의 용신 배정, 없으면 HanjaSelector.Select 용신 없음)
+    //   /name 정적 페이지 = NameSeoHanja.DisplayedHanja(1순위 조합 — 조합 없는 이름은 보이는 한자 없음)
+    // 기대값은 보이는 한자의 성별·오행 값으로 테스트 안에서 따로 셈한다(ExpectedGenderBonus). 사례 확인 단언은 배정·성별 분류가 바뀌면 깨진다.
+    // ═══════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task Gender_JiwooFemale_ShownJi_NoMismatch()
+    {
+        var ji = HanjaData.FindByCharacter(Cp(0x667A))!; // 智 슬기 지
+        var wu = HanjaData.FindByCharacter(Cp(0x5B87))!; // 宇 집 우
+        // 사례 확인: 지 줄의 쓸 수 있는 글자에 Male 글자(馶 '굳셀'·吱 '가는 소리')가 있고 Female 글자는 없다 — 옛 규칙이 지(여)에 '맞지 않음'을 붙인 이유.
+        var jiUsable = UsableIndependent("지");
+        Assert.Contains(jiUsable, h => h.Character == Cp(0x99B6) && h.GenderPref == HanjaData.GenderPreference.Male);
+        Assert.Contains(jiUsable, h => h.Character == Cp(0x5431) && h.GenderPref == HanjaData.GenderPreference.Male);
+        Assert.DoesNotContain(jiUsable, h => h.GenderPref == HanjaData.GenderPreference.Female);
+        Assert.Equal(HanjaData.GenderPreference.Neutral, ji.GenderPref);
+        Assert.Equal(HanjaData.GenderPreference.Neutral, wu.GenderPref);
+
+        // ① 보이는 한자 智宇 를 엔진에 그대로 — 성별 값이 없는 두 글자라 보너스·노트 없음
+        var engine = new AestheticEngine();
+        var b = await engine.CalculateScoreWithBreakdownAsync("지우", null, "neutral", "female", null, new HanjaData.HanjaInfo?[] { ji, wu });
+        Assert.Equal(0, b.GenderBonus);
+        Assert.DoesNotContain(b.Notes, n => n.Contains("성별 선호도"));
+
+        // ② /name: 페이지 1순위 조합(dump-name-scores 와 같은 함수) — 판정은 그 조합 글자의 성별 값
+        var page = NameSeoHanja.DisplayedHanja("지우", "female");
+        Assert.All(page, h => Assert.NotNull(h));
+        Assert.Equal(ji.Character, page[0]!.Character); // 사례 확인: /name 지우 1순위 조합은 智…
+        var pb = await engine.CalculateScoreWithBreakdownAsync("지우", null, "neutral", "female", null, page);
+        Assert.Equal(ExpectedGenderBonus(page, "female", out _, out var pageMismatch), pb.GenderBonus);
+        Assert.False(pageMismatch);
+        Assert.DoesNotContain(pb.Notes, n => n.Contains("맞지 않음"));
+
+        // ③ /evaluate(출생일 없음·있음) — 화면의 지 글자로 판정, '맞지 않음' 없음
+        foreach (var date in new DateTime?[] { null, new DateTime(2024, 3, 15) })
+        {
+            var r = await CreateEvaluationService().EvaluateNameAsync("지우", "김", date, "female", "neutral");
+            var shown = ShownHanja(r);
+            Assert.Equal(HanjaData.GenderPreference.Neutral, shown[0]!.GenderPref);
+            Assert.Equal(ExpectedGenderBonus(shown, "female", out _, out var mm), r.Aesthetic.GenderBonus);
+            Assert.False(mm);
+            Assert.DoesNotContain(r.Aesthetic.Notes, n => n.Contains("성별 선호도") && n.Contains("맞지 않음"));
+        }
+    }
+
+    [Fact]
+    public async Task Gender_ShownOppositeHanja_IsMismatch()
+    {
+        var seo = HanjaData.FindByCharacter(Cp(0x66F8))!; // 書 글 서
+        var jun = HanjaData.FindByCharacter(Cp(0x4FCA))!; // 俊 준걸 준
+        Assert.Equal(HanjaData.GenderPreference.Neutral, seo.GenderPref);
+        Assert.Equal(HanjaData.GenderPreference.Male, jun.GenderPref);
+        var engine = new AestheticEngine();
+
+        // 여자 이름 서준을 書俊 으로 보이면 俊(Male)이 반대 성별 — 불일치 한 음절 −2, '잘 맞음' 없음(옛 규칙은 서·준 줄의 Female 글자로 +5)
+        var f = await engine.CalculateScoreWithBreakdownAsync("서준", null, "neutral", "female", null, new HanjaData.HanjaInfo?[] { seo, jun });
+        Assert.Equal(-2, f.GenderBonus);
+        Assert.Contains("일부 한자의 성별 선호도가 여자 이름과 맞지 않음", f.Notes);
+        Assert.DoesNotContain(f.Notes, n => n.Contains("성별 선호도") && n.Contains("잘 맞음"));
+        // 같은 한자를 남자 이름으로 보이면 일치 한 음절 +3
+        var m = await engine.CalculateScoreWithBreakdownAsync("서준", null, "neutral", "male", null, new HanjaData.HanjaInfo?[] { seo, jun });
+        Assert.Equal(3, m.GenderBonus);
+        Assert.Contains("한자 성별 선호도가 남자 이름과 잘 맞음", m.Notes);
+        Assert.DoesNotContain(m.Notes, n => n.Contains("맞지 않음"));
+
+        // /evaluate: 혜성(남)에 보이는 惠 '은혜 혜'는 Female(하드코딩 관례 — 혜 줄 빈출 惠·慧·蕙가 모두 Female 이라 남자 이름에도 배정된다,
+        // HanjaGenderOverrideTests.Hye_CommonHanja_ShareOneGender). 보이는 한자가 반대 성별이면 /evaluate 도 불일치.
+        // 옛 사례 유찬 燦 '빛날 찬'은 키워드 오분류라 2026-10-26 오버라이드로 Neutral 이 됐다(裕燦 0) — 사례 확인은 배정·성별 분류가 바뀌면 다시 고를 것
+        var hye = HanjaData.FindByCharacter(Cp(0x60E0))!; // 惠 은혜 혜
+        Assert.Equal(HanjaData.GenderPreference.Female, hye.GenderPref);
+        var r = await CreateEvaluationService().EvaluateNameAsync("혜성", "김", null, "male", "neutral");
+        var shown = ShownHanja(r);
+        Assert.Equal(hye.Character, shown[0]!.Character); // 사례 확인: /evaluate 혜성(남) 배정 惠…
+        Assert.Equal(ExpectedGenderBonus(shown, "male", out var mt, out var mm), r.Aesthetic.GenderBonus);
+        Assert.True(mm);
+        Assert.Equal(mt, r.Aesthetic.Notes.Contains("한자 성별 선호도가 남자 이름과 잘 맞음"));
+        Assert.Contains("일부 한자의 성별 선호도가 남자 이름과 맞지 않음", r.Aesthetic.Notes);
+    }
+
+    /// <summary>
+    /// 2026-10-26 성별 오분류 오버라이드(data/hanja-gender-overrides.json 에 10자 — 燦·輝·彬·斌·耀·均·學·鶴 Female, 乼·茁 Male → Neutral):
+    /// 결정 ③ 뒤 키워드 부분 일치로 성별이 붙은 글자가 인기 이름의 1순위 조합에 올라 '맞지 않음'(−2)을 냈다. 오버라이드 뒤에는 /name(1순위 조합)·
+    /// 발행 데이터(name-seo.json sc.no)·/evaluate(출생일 없음) 어디에도 '맞지 않음'이 없다. 기대값은 보이는 한자의 성별 값으로 따로 센다(ExpectedGenderBonus).
+    /// 사례 확인(그 음절의 /name 보이는 글자 = 오버라이드 글자, 페이지 성별 = 사례 성별)은 조합·출생 통계가 바뀌면 깨진다.
+    /// 亨·衡 은 Male 로 두었다(HanjaGenderOverrideTests.HyeongCommonHanja_StayMale_NotOverridden) — 여자 형 이름은 이 표에 넣지 않는다.
+    /// </summary>
+    [Theory]
+    [InlineData("유찬", "male", 1, 0x71E6)]   // 裕燦 — 燦 빛날 찬 (옛 68점·'맞지 않음')
+    [InlineData("우빈", "male", 1, 0x5F6C)]   // 宇彬 — 彬 빛날 빈
+    [InlineData("예찬", "male", 1, 0x71E6)]   // 禮燦
+    [InlineData("규빈", "male", 1, 0x5F6C)]   // 奎彬
+    [InlineData("요한", "male", 0, 0x8000)]   // 耀翰 — 耀 빛날 요
+    [InlineData("휘찬", "male", 0, 0x8F1D)]   // 輝燦 — 輝 빛날 휘 (燦 과 함께 옛 −4)
+    [InlineData("동균", "male", 1, 0x5747)]   // 東均 — 均 고를 균
+    [InlineData("학준", "male", 0, 0x9DB4)]   // 鶴俊 — 鶴 학 학 (옛 '잘 맞음'+'맞지 않음' 동시)
+    [InlineData("줄리", "female", 0, 0x4E7C)] // 乼李 — 乼 줄칼 줄 (개방 대기 — 여자 이름에서 풀린 유일한 사례)
+    public async Task Gender_OverriddenHanja_PopularNames_NoMismatch(string name, string gender, int syllable, int codepoint)
+    {
+        var path = Path.Combine(RepoRoot(), "frontend", "src", "data", "name-seo.json");
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+        var rec = doc.RootElement.GetProperty("names").GetProperty(name);
+        int m = rec.TryGetProperty("m", out var mv) ? mv.GetInt32() : 0, f = rec.TryGetProperty("f", out var fv) ? fv.GetInt32() : 0;
+        Assert.Equal(gender, NameSeoHanja.Gender(m, f)); // 사례 확인: 페이지 성별
+
+        // ① /name — 페이지 1순위 조합(dump-name-scores 와 같은 함수)의 그 음절 글자가 오버라이드 글자이고 Neutral
+        var page = NameSeoHanja.DisplayedHanja(name, gender);
+        Assert.NotNull(page[syllable]);
+        Assert.Equal(Cp(codepoint), page[syllable]!.Character);
+        Assert.Equal(HanjaData.GenderPreference.Neutral, page[syllable]!.GenderPref);
+        var pb = await new AestheticEngine().CalculateScoreWithBreakdownAsync(name, null, "neutral", gender, null, page);
+        Assert.Equal(ExpectedGenderBonus(page, gender, out _, out var pageMismatch), pb.GenderBonus);
+        Assert.False(pageMismatch);
+        Assert.DoesNotContain(pb.Notes, n => n.Contains("맞지 않음"));
+
+        // ② 발행 데이터 — 재생성 체인을 거친 sc.no
+        var notes = rec.GetProperty("sc").TryGetProperty("no", out var no)
+            ? no.EnumerateArray().Select(x => x.GetString() ?? "").ToList() : new List<string>();
+        Assert.DoesNotContain(notes, n => n.Contains("맞지 않음"));
+
+        // ③ /evaluate(출생일 없음) — 배정 한자(Select)로 판정
+        var r = await CreateEvaluationService().EvaluateNameAsync(name, "김", null, gender, "neutral");
+        var shown = ShownHanja(r);
+        Assert.Equal(ExpectedGenderBonus(shown, gender, out _, out var mm), r.Aesthetic.GenderBonus);
+        Assert.False(mm);
+        Assert.DoesNotContain(r.Aesthetic.Notes, n => n.Contains("성별 선호도") && n.Contains("맞지 않음"));
+    }
+
+    /// <summary>음절의 쓸 수 있는 글자에 성별 글자(馶·吱 Male)가 있어도 화면 글자(智)가 Neutral 이면 영향 없음 — 옛 규칙은 남 +3·여 −2.</summary>
+    [Theory]
+    [InlineData("male")]
+    [InlineData("female")]
+    public async Task Gender_SyllableWithGenderedUsable_ShownNeutral_NoEffect(string gender)
+    {
+        Assert.Contains(UsableIndependent("지"), h => h.GenderPref == HanjaData.GenderPreference.Male);
+        Assert.Empty(HanjaData.FindByReading("쁨"));
+
+        var r = await CreateEvaluationService().EvaluateNameAsync("지쁨", "김", null, gender, "neutral");
+        var shown = ShownHanja(r);
+        Assert.NotNull(shown[0]);
+        Assert.Null(shown[1]);
+        Assert.Equal(HanjaData.GenderPreference.Neutral, shown[0]!.GenderPref);
+        Assert.Equal(0, r.Aesthetic.GenderBonus);
+        Assert.DoesNotContain(r.Aesthetic.Notes, n => n.Contains("성별 선호도"));
+    }
+
+    /// <summary>
+    /// 한자를 직접 넘기는 경로(IAestheticEngine 6인자 — /name 덤프·ScoringService 가 쓴다): 넘긴 한자가 성별을 정하고, 넘기지 않으면
+    /// /evaluate(출생일 없음)의 배정 = HanjaSelector.Select(용신 없음). /evaluate API 에는 사용자가 한자를 고르는 입력이 없다(이름·성·생일·성별·톤뿐).
+    /// </summary>
+    [Fact]
+    public async Task Aesthetic_ExplicitShownHanja_DecideGender_DefaultIsSelect()
+    {
+        var ji = HanjaData.FindByCharacter(Cp(0x667A))!;     // 智 Neutral
+        var wu = HanjaData.FindByCharacter(Cp(0x5B87))!;     // 宇 Neutral
+        var strong = HanjaData.FindByCharacter(Cp(0x99B6))!; // 馶 굳셀 지 — 쓸 수 있는 Male 글자
+        var trip = HanjaData.FindByCharacter(Cp(0x8E93))!;   // 躓 넘어질 지 — 불용 Female
+        Assert.Equal(HanjaData.GenderPreference.Male, strong.GenderPref);
+        Assert.False(HanjaData.IsForbiddenNameHanja(strong.Character));
+        Assert.False(string.IsNullOrEmpty(strong.Meaning));
+        Assert.True(HanjaData.IsForbiddenNameHanja(trip.Character));
+        Assert.Equal(HanjaData.GenderPreference.Female, trip.GenderPref);
+
+        var engine = new AestheticEngine();
+        Task<AestheticBreakdown> Run(params HanjaData.HanjaInfo?[] shown)
+            => engine.CalculateScoreWithBreakdownAsync("지우", null, "neutral", "female", null, shown);
+        var neutral = await Run(ji, wu);
+        var opposite = await Run(strong, wu);
+        var forbidden = await Run(trip, wu);
+        var none = await Run(null, null);
+
+        Assert.Equal(0, neutral.GenderBonus);
+        Assert.Equal(-2, opposite.GenderBonus);
+        Assert.Contains("일부 한자의 성별 선호도가 여자 이름과 맞지 않음", opposite.Notes);
+        Assert.Equal(0, forbidden.GenderBonus); // 불용 글자는 넘겨도 세지 않는다(어디서도 배정·표시하지 않는 글자)
+        Assert.DoesNotContain(forbidden.Notes, n => n.Contains("성별 선호도"));
+        Assert.Equal(0, none.GenderBonus);
+        foreach (var x in new[] { opposite, forbidden, none }) // 성별 말고는 같다
+            Assert.Equal(neutral.TotalScore - neutral.GenderBonus, x.TotalScore - x.GenderBonus);
+
+        var dflt = await engine.CalculateScoreWithBreakdownAsync("지우", null, "neutral", "female");
+        var selected = HanjaSelector.Select("지우", "female", null, null, null);
+        var viaSelected = await engine.CalculateScoreWithBreakdownAsync("지우", null, "neutral", "female", null, selected);
+        Assert.Equal(ExpectedGenderBonus(selected, "female"), dflt.GenderBonus);
+        Assert.Equal(viaSelected.GenderBonus, dflt.GenderBonus);
+        Assert.Equal(viaSelected.Notes, dflt.Notes);
+    }
+
+    /// <summary>
+    /// ScoringService 가 배정 한자를 한 번 정해 미학 성별 판정에 넘기고(AssignedHanja), /evaluate 가 그 한자를 그대로 보인다 —
+    /// 출생일이 있으면 조화의 용신 배정과 같은 목록, 없으면 용신 없는 선택기.
+    /// </summary>
+    [Theory]
+    [InlineData("지우", "female", null)]
+    [InlineData("지우", "female", "2024-03-15")]
+    [InlineData("유찬", "male", null)]
+    [InlineData("서연", "male", "2023-05-10")]
+    [InlineData("건우", "female", null)]
+    [InlineData("민준", "male", "2024-01-15")]
+    [InlineData("하은", "female", "2025-02-11")]
+    [InlineData("지쁨", "male", "2024-08-30")]
+    public async Task Scoring_GenderBonus_UsesAssignedHanja_SameAsShown(string name, string gender, string? date)
+    {
+        var birth = date == null ? (DateTime?)null : DateTime.Parse(date);
+        var scoring = new ScoringService(new AestheticEngine(), new HarmonyEngine(_saju, _yongshin), new RarityScoringEngine());
+        var s = await scoring.EvaluateAsync(name, "김", birth, gender, "neutral");
+
+        var expectedAssigned = birth.HasValue
+            ? s.Harmony.SelectedHanja.Select(h => h?.Character)
+            : HanjaSelector.Select(name, gender, null, null, null).Select(h => h?.Character);
+        Assert.Equal(expectedAssigned, s.AssignedHanja.Select(h => h?.Character));
+        Assert.Equal(ExpectedGenderBonus(s.AssignedHanja, gender), s.Aesthetic.GenderBonus);
+
+        var r = await new NameEvaluationService(scoring, new ExplanationEngine()).EvaluateNameAsync(name, "김", birth, gender, "neutral");
+        var shown = ShownHanja(r);
+        Assert.Equal(s.AssignedHanja.Select(h => h?.Character), shown.Select(h => h?.Character));
+        Assert.Equal(ExpectedGenderBonus(shown, gender, out var match, out var mismatch), r.Aesthetic.GenderBonus);
+        Assert.Equal(match, r.Aesthetic.Notes.Any(n => n.Contains("성별 선호도") && n.Contains("잘 맞음")));
+        Assert.Equal(mismatch, r.Aesthetic.Notes.Any(n => n.Contains("성별 선호도") && n.Contains("맞지 않음")));
+    }
+
+    /// <summary>/name: 페이지에 이 이름의 한자가 보이는 건 2음절·비반복 이름의 1순위 조합뿐 — 3음절·첩음·1음절은 보이는 한자가 없어 성별 0.</summary>
+    [Theory]
+    [InlineData("지우", "female")]
+    [InlineData("유찬", "male")]
+    [InlineData("다니엘", "male")]
+    [InlineData("지지", "female")]
+    [InlineData("솔", "none")]
+    public async Task NameSeoHanja_DisplayedHanja_IsFirstCombo(string name, string gender)
+    {
+        var shown = NameSeoHanja.DisplayedHanja(name, gender);
+        Assert.Equal(name.Length, shown.Count);
+        bool comboName = name.Length == 2 && name[0] != name[1];
+        var combos = comboName ? HanjaSelector.SelectCombos(name, gender, 4) : new List<(string First, string Second)>();
+        Assert.Equal(combos, NameSeoHanja.Combos(name, gender));
+        if (combos.Count > 0)
+            Assert.Equal(new[] { combos[0].First, combos[0].Second }, shown.Select(h => h!.Character));
+        else
+            Assert.All(shown, h => Assert.Null(h));
+
+        var b = await new AestheticEngine().CalculateScoreWithBreakdownAsync(name, null, "neutral", gender, null, shown);
+        Assert.Equal(ExpectedGenderBonus(shown, gender), b.GenderBonus);
+        if (combos.Count == 0) Assert.DoesNotContain(b.Notes, n => n.Contains("성별 선호도"));
+    }
+
+    /// <summary>
+    /// 랭킹 자원오행 +8 은 배정 한자(카드에 보이는 글자)의 오행으로만 — 지우=智(火)·宇(木). 옛 규칙은 지·우 줄의 쓸 수 있는 글자에
+    /// 다섯 오행이 다 있어(池 水·鋕 金 등) 어느 용신이든 +8 이었다. 배정 한자가 없으면 +8 없음.
+    /// </summary>
+    [Theory]
+    [InlineData("火", true)]
+    [InlineData("木", true)]
+    [InlineData("水", false)]
+    [InlineData("金", false)]
+    [InlineData("土", false)]
+    public async Task Ranker_HanjaElementBonus_FollowsAssignedHanja(string element, bool recorded)
+    {
+        var ji = Cp(0x667A); // 智
+        var wu = Cp(0x5B87); // 宇
+        Assert.True("지우".Any(s => UsableIndependent(s.ToString()).Any(h => h.FiveElement == element)), "옛 규칙이면 +8 인 사례");
+        bool expectBonus = new[] { ji, wu }.Any(ch => HanjaData.FindByCharacter(ch)!.FiveElement == element);
+        Assert.Equal(recorded, expectBonus);
+
+        var withHanja = new NameForm.Domain.Models.Candidate
+        {
+            Name = "지우", AestheticScore = 80, HarmonyScore = 60, SyllableHanja = new List<string?> { ji, wu }
+        };
+        var unassigned = new NameForm.Domain.Models.Candidate { Name = "지우", AestheticScore = 80, HarmonyScore = 60 };
+        await new RankerEngine().RankCandidatesAsync(new List<NameForm.Domain.Models.Candidate> { withHanja, unassigned }, element);
+
+        int eum = KoreanUtils.HasEumryeongMatch("지우", element) ? 5 : 0;
+        Assert.Equal(74 + (expectBonus ? 8 : 0) + eum, withHanja.FinalScore); // 80*0.7 + 60*0.3 = 74
+        Assert.Equal(74 + eum, unassigned.FinalScore);
+    }
+
+    /// <summary>추천(POST /recommendations, 선호 오행 있음)의 +8 이 카드 한자(Hanja)의 오행과 맞는다 — 옛 규칙과 판정이 갈리는 후보가 실제로 있다.</summary>
+    [Theory]
+    [InlineData("김", "female", "2024-01-15", "水")]
+    [InlineData("이", "male", "2023-05-10", "火")]
+    [InlineData("박", "none", "2025-02-11", "金")]
+    public async Task Recommendation_ElementBonus_FollowsCardHanja(string lastName, string gender, string date, string element)
+    {
+        var pool = new NamePoolEngine(_saju);
+        var svc = new RecommendationService(new NameForm.Infrastructure.Repositories.InMemoryRecommendationRepository(), pool,
+            new ScoringService(new AestheticEngine(), new HarmonyEngine(_saju, _yongshin), new RarityScoringEngine()),
+            new RankerEngine(), new ExplanationEngine(), new ParentBasedNamingEngine(pool, new NameReversalEngine()), new DualNameEngine(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<RecommendationService>.Instance);
+        var res = await svc.CreateRecommendationAsync(new CreateRecommendationRequestDto
+        {
+            LastName = lastName, BirthDate = date, Gender = gender, Tone = "neutral", PreferredFiveElement = element
+        });
+        Assert.NotEmpty(res.TopCandidates);
+
+        static bool Usable(HanjaData.HanjaInfo h) => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning);
+        int differsFromOldRule = 0;
+        foreach (var c in res.TopCandidates)
+        {
+            var cardChars = (c.Hanja ?? "").EnumerateRunes().Select(r => r.ToString()).ToList();
+            bool cardMatch = cardChars.Any(ch => HanjaData.FindByCharacter(ch) is { } h && Usable(h) && h.FiveElement == element);
+            bool oldRule = c.Name.Any(s => UsableIndependent(s.ToString()).Any(h => h.FiveElement == element));
+            if (cardMatch != oldRule) differsFromOldRule++;
+            int baseScore = (int)Math.Round(c.AestheticScore * 0.7 + c.HarmonyScore * 0.3);
+            int eum = KoreanUtils.HasEumryeongMatch(c.Name, element) ? 5 : 0;
+            Assert.Equal(Math.Min(100, baseScore + (cardMatch ? 8 : 0) + eum), c.FinalScore);
+        }
+        Assert.True(differsFromOldRule > 0, "상위 후보 중 옛 규칙과 +8 판정이 갈리는 후보가 없다 — 사례를 다시 고를 것");
+    }
+
+    /// <summary>쌍둥이 카드 이유의 한자 줄 = 점수가 쓴 배정 한자('한자 뜻') — 옛 호출은 배정 한자를 넘기지 않아 음절별 1순위 '한자 예'가 나왔다.</summary>
+    [Fact]
+    public async Task Twin_Reasons_HanjaLine_IsAssignedHanja()
+    {
+        var scoring = new ScoringService(new AestheticEngine(), new HarmonyEngine(_saju, _yongshin), new RarityScoringEngine());
+        var twin = new TwinNameService(new TwinNameEngine(_saju), scoring, new ExplanationEngine(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<TwinNameService>.Instance);
+        var res = await twin.GenerateTwinNamesAsync(new TwinNameRequestDto
+        {
+            LastName = "김", BirthDate = "2024-06-15", Gender = "female", Tone = "neutral", ChildCount = 2
+        });
+        var names = res.NameSets.SelectMany(s => s.Names).ToList();
+        Assert.NotEmpty(names);
+        int withHanja = 0;
+        foreach (var c in names)
+        {
+            var s = await scoring.EvaluateAsync(c.Name, "김", new DateTime(2024, 6, 15), "female", "neutral");
+            var assigned = s.AssignedHanja.Where(h => h != null && !string.IsNullOrEmpty(h.Meaning)).Select(h => h!.Character).ToList();
+            Assert.DoesNotContain(c.Reasons, r => r.StartsWith("한자 예 — "));
+            if (assigned.Count == 0) continue;
+            withHanja++;
+            var line = Assert.Single(c.Reasons, r => r.StartsWith("한자 뜻 — "));
+            var chars = line["한자 뜻 — ".Length..].Split(" — ")[0].Split(" + ").Select(OptionChar).ToList();
+            Assert.Equal(assigned, chars);
+            Assert.Equal(s.AestheticScore, c.AestheticScore);
+        }
+        Assert.True(withHanja > 0);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 결정 ③ 보완 (2026-10-26) — /name-analysis 큰 카드·용신 배지
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// /name-analysis(출생일 있음): 점수(ScoringService)가 쓴 배정 한자가 음절별 큰 카드(첫 후보)다 — 미학 성별 보너스와 조화(자원오행·성별)가
+    /// 화면에서 가장 크게 보이는 한자로 매겨진다. 옛 화면은 큰 카드가 표시 1순위(OrderForDisplay)이고 점수는 숨은 배정 한자라
+    /// 지민(여, 2024-03-15) 카드 智敏(0)인데 점수는 智旼(+3)이었다(인기 100명 × 남녀 × 생일 3개 600행 중 295행이 이렇게 갈렸다).
+    /// 기대값은 응답의 큰 카드 글자 성별 값으로 따로 센다(ExpectedGenderBonus). 사례 확인 단언은 배정·성별 분류가 바뀌면 깨진다.
+    /// </summary>
+    [Theory]
+    [InlineData("지민", "female", "2024-03-15")] // 옛 카드 智敏 0 · 점수 智旼 +3
+    [InlineData("서준", "female", "2024-03-15")] // 옛 카드 書俊 −2 · 점수 書駿 0
+    [InlineData("하준", "male", "2024-03-15")]   // 옛 카드 荷俊 +1 · 점수 夏俊 +3
+    [InlineData("민준", "female", "2024-03-15")] // 옛 카드 敏俊 −2 · 점수 旼駿 +3
+    public async Task Analysis_WithBirthDate_BigCardIsScoredHanja(string name, string gender, string date)
+    {
+        var scoring = new ScoringService(new AestheticEngine(), new HarmonyEngine(_saju, _yongshin), new RarityScoringEngine());
+        var s = await scoring.EvaluateAsync(name, "김", DateTime.Parse(date), gender, "neutral");
+        var r = await CreateAnalysisService().AnalyzeNameAsync(new NameAnalysisRequestDto
+        {
+            LastName = "김", FirstName = name, BirthDate = date, Gender = gender, Tone = "neutral"
+        });
+
+        Assert.Equal(s.AestheticScore, r.AestheticScore); // /evaluate·smart 와 같은 점수(동등성 계약은 그대로)
+        Assert.Equal(s.FinalScore, r.FinalScore);
+        var bigCards = r.HanjaBreakdown.Select(b => b.PossibleHanja.First().Character).ToList();
+        Assert.Equal(s.AssignedHanja.Select(h => h?.Character), bigCards);
+        Assert.Equal(ExpectedGenderBonus(bigCards.Select(HanjaData.FindByCharacter), gender), s.Aesthetic.GenderBonus);
+
+        // 큰 카드 뒤는 표시 정렬 그대로(배정 글자만 앞으로 옮긴다) — 10개 이하·중복 없음·불용 없음
+        for (int i = 0; i < name.Length; i++)
+        {
+            var chars = r.HanjaBreakdown[i].PossibleHanja.Select(h => h.Character).ToList();
+            Assert.True(chars.Count <= NameAnalysisService.HanjaOptionsPerSyllable);
+            Assert.Equal(chars.Count, chars.Distinct().Count());
+            Assert.DoesNotContain(chars, HanjaData.IsForbiddenNameHanja);
+            var rest = HanjaSelector.TopForDisplay(name[i].ToString(), NameAnalysisService.HanjaOptionsPerSyllable + 1)
+                .Select(h => h.Character).Where(c => c != chars[0]).Take(chars.Count - 1);
+            Assert.Equal(rest, chars.Skip(1));
+        }
+
+        // 사례 확인: 옛 큰 카드(표시 1순위)로 세면 점수의 성별 보너스와 다르다 — 옛 화면의 불일치
+        var oldCards = name.Select(c => HanjaSelector.TopForDisplay(c.ToString(), 1).FirstOrDefault()).ToList();
+        Assert.NotEqual(ExpectedGenderBonus(oldCards, gender), s.Aesthetic.GenderBonus);
+    }
+
+    /// <summary>
+    /// /name-analysis '이 이름은 용신에 부합합니다' 배지 = 큰 카드(배정 한자) 중 용신 오행 글자가 있는지 — 랭킹 자원오행 +8 과 같은 정의.
+    /// 옛 규칙은 음절별 후보 10개 중 하나라도 그 오행이면 true 라, 인기 100명 × 3성별 × 생일 3개 900행이 모두 true 였다
+    /// (새 규칙 848행 — 은찬 恩燦 火火·용신 木 도 '부합'이었다). 기대값은 응답의 큰 카드에서 따로 센다.
+    /// </summary>
+    [Theory]
+    [InlineData("은찬", "male", "2021-07-08", false)]  // 용신 木 · 큰 카드 恩燦(火火)
+    [InlineData("은찬", "male", "2024-06-15", false)]  // 용신 水 · 銀燦(金火)
+    [InlineData("은찬", "male", "2024-03-15", true)]   // 용신 火 · 恩燦
+    [InlineData("주원", "female", "2024-03-15", false)] // 용신 火 · 柱元(木木)
+    public async Task Analysis_NameFitsYongshin_FollowsBigCard(string name, string gender, string date, bool recorded)
+    {
+        var r = await CreateAnalysisService().AnalyzeNameAsync(new NameAnalysisRequestDto
+        {
+            LastName = "김", FirstName = name, BirthDate = date, Gender = gender, Tone = "neutral"
+        });
+        var y = r.Saju!.Yongshin!;
+        var bigCards = r.HanjaBreakdown.Select(b => b.PossibleHanja.FirstOrDefault()?.Character).ToList();
+        bool expected = bigCards.Any(c => c != null && HanjaData.FindByCharacter(c) is { } h
+            && !HanjaData.IsForbiddenNameHanja(c) && !string.IsNullOrEmpty(h.Meaning) && h.FiveElement == y.PrimaryYongshin);
+        Assert.Equal(expected, y.NameFitsYongshin);
+        Assert.Equal(recorded, expected); // 사례 확인
+
+        // 사례 확인: 후보 목록에는 용신 오행 글자가 있다 — 옛 '하나라도' 규칙이면 true 였을 사례
+        Assert.Contains(r.HanjaBreakdown, b => b.PossibleHanja.Any(h => h.FiveElement == y.PrimaryYongshin));
     }
 }

@@ -126,14 +126,13 @@ public class RecommendationService : IRecommendationService
             var score = await _scoringService.EvaluateAsync(
                 name, request.LastName, birthDate, request.Gender, request.Tone, birthTime);
 
-            // 점수(Harmony)가 실제 배정한 한자를 이유 표시에 그대로 사용 — 점수=표시 일관.
-            var selectedHanja = score.Harmony?.SelectedHanja;
+            // 점수가 쓴 배정 한자(조화의 용신 배정 = 미학 성별 판정에 넘긴 목록)를 이유·카드 표시와 랭킹 자원오행 보너스에 그대로 사용 — 점수=표시 일관.
+            var selectedHanja = score.AssignedHanja;
             var reasons = await _explanationEngine.GenerateReasonsAsync(
                 name, score.AestheticScore, score.HarmonyScore, selectedHanja);
 
             // 카드 표시용 한자 + 뜻 한 줄 (배정된 그 한자에서 생성 → 상세와 일관)
-            var hanjaChars = selectedHanja == null ? null
-                : string.Concat(selectedHanja.Where(h => h != null).Select(h => h!.Character));
+            var hanjaChars = string.Concat(selectedHanja.Where(h => h != null).Select(h => h!.Character));
             var meaningText = BuildCardMeaning(name, selectedHanja);
 
             // 부모 기반 후보인지 확인
@@ -158,7 +157,9 @@ public class RecommendationService : IRecommendationService
                 EnglishEquivalent = englishEquivalent,
                 HanjaMeaning = hanjaMeaning,
                 Hanja = hanjaChars,
-                MeaningText = meaningText
+                MeaningText = meaningText,
+                // 음절 인덱스를 지킨 배정 글자 — RankerEngine 자원오행 +8 이 카드에 보이는 그 한자로 판정한다(2026-10-26 결정 ③)
+                SyllableHanja = selectedHanja.Select(h => h?.Character).ToList()
             });
         }
 
@@ -262,8 +263,8 @@ public class RecommendationService : IRecommendationService
 
     private string DetermineNameType(string name)
     {
-        // 한자 의미가 강한 경우 "의미중심"
-        var hanjaInfo = Application.Engines.Data.HanjaData.FindByReading(name);
+        // 한자 의미가 강한 경우 "의미중심" — 이름에 쓸 수 있는 글자만(HanjaSelector.UsableByReading — 불용 글자의 카테고리는 세지 않는다)
+        var hanjaInfo = Application.Engines.Utils.HanjaSelector.UsableByReading(name);
         if (hanjaInfo.Any(h => !string.IsNullOrEmpty(h.Meaning) && 
                               (h.Category == "자연" || h.Category == "덕목" || h.Category == "개념")))
         {

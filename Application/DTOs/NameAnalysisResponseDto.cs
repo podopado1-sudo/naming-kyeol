@@ -109,7 +109,7 @@ public class YongshinDto
     /// <summary>용신 선택 이유 (한글)</summary>
     public string YongshinReason { get; set; } = string.Empty;
 
-    /// <summary>이름 한자 후보 중 용신 오행 존재 여부</summary>
+    /// <summary>음절별 큰 카드(첫 후보 = 점수가 쓴 배정 한자) 중 용신 오행 글자가 있는지 — 후보 10개 중 하나라도가 아니다(2026-10-26)</summary>
     public bool? NameFitsYongshin { get; set; }
 }
 
@@ -128,7 +128,7 @@ public class HanjaBreakdownDto
     /// <summary>한글 음절 (예: "민")</summary>
     public string Syllable { get; set; } = string.Empty;
 
-    /// <summary>가능한 한자 목록</summary>
+    /// <summary>가능한 한자 목록 — 출생일이 있으면 첫 글자가 점수가 쓴 배정 한자(큰 카드)</summary>
     public List<HanjaOptionDto> PossibleHanja { get; set; } = new();
     /// <summary>후보가 0개인 음절의 안내 — 후보가 있으면 null(HanjaSelector.NoHanjaNoteFor — /evaluate HanjaCandidateGroupDto.NoHanjaNote 와 같은 문구)</summary>
     public string? NoHanjaNote { get; set; }

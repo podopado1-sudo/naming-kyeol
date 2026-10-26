@@ -117,6 +117,19 @@ public class AestheticEngine : IAestheticEngine
     public async Task<AestheticBreakdown> CalculateScoreWithBreakdownAsync(
         string firstName, string? lastName, string tone, string gender, int? birthYear)
     {
+        return await CalculateScoreWithBreakdownAsync(firstName, lastName, tone, gender, birthYear, null);
+    }
+
+    /// <summary>
+    /// gender/tone 반영 + 세부 breakdown + 세대 적합도 + 화면에 보이는 한자로 성별 판정.
+    /// displayedHanja = 이름 음절과 같은 인덱스의 한자(그 음절에 보이는 한자가 없으면 null) — 성별 보너스·노트는 이 한자로만 정한다
+    /// (2026-10-26 결정 ③). null 이면 <see cref="HanjaSelector.Select"/>(용신 없음) — /evaluate 가 출생일 없이 보이는 배정 한자.
+    /// 의미 카테고리·톤 가점은 아직 음절의 쓸 수 있는 글자 전부(<see cref="HanjaSelector.UsableByReading"/>)를 본다.
+    /// </summary>
+    public async Task<AestheticBreakdown> CalculateScoreWithBreakdownAsync(
+        string firstName, string? lastName, string tone, string gender, int? birthYear,
+        IReadOnlyList<HanjaData.HanjaInfo?>? displayedHanja)
+    {
         string name = firstName;
         var breakdown = new AestheticBreakdown();
 
@@ -176,8 +189,8 @@ public class AestheticEngine : IAestheticEngine
         // 6. 톤 보너스 (발음 패턴 기반)
         breakdown.ToneBonus = EvaluateToneBonus(name, tone, breakdown.Notes);
 
-        // 7. gender 보너스 (한자 GenderPref 일치도)
-        breakdown.GenderBonus = EvaluateGenderBonus(name, gender, breakdown.Notes);
+        // 7. gender 보너스 (화면에 보이는 한자의 GenderPref 일치도)
+        breakdown.GenderBonus = EvaluateGenderBonus(name, gender, displayedHanja, breakdown.Notes);
 
         // 감점 합산
         int penaltyTotal = negativeSyllablePenalty;
@@ -300,16 +313,12 @@ public class AestheticEngine : IAestheticEngine
     // ========== gender 평가 (한자 GenderPref 일치도) ==========
 
     /// <summary>
-    /// 한자 GenderPref와 요청 gender의 일치도 평가
+    /// 화면에 보이는 한자의 GenderPref와 요청 gender의 일치도 평가 — 음절마다 그 음절에 보이는 한자 한 글자만 본다(2026-10-26 결정 ③).
     /// 편견 방지: 발음 자체는 평가하지 않고 한자 메타데이터만 사용
     /// </summary>
-    private int EvaluateGenderBonus(string name, string gender, List<string> notes)
+    private int EvaluateGenderBonus(string name, string gender, IReadOnlyList<HanjaData.HanjaInfo?>? displayedHanja, List<string> notes)
     {
         if (string.IsNullOrEmpty(gender) || gender == "none" || gender == "neutral")
-            return 0;
-
-        var hanjaInfo = GetHanjaInfo(name);
-        if (hanjaInfo == null || !hanjaInfo.Any())
             return 0;
 
         var targetPref = gender switch
@@ -329,22 +338,21 @@ public class AestheticEngine : IAestheticEngine
         int matchCount = 0;
         int mismatchCount = 0;
 
-        // 음절별 대표 한자의 GenderPref 확인
-        foreach (char c in name)
+        // 음절마다 화면에 보이는 한자 한 글자의 GenderPref — 같은 독음의 다른 글자는 세지 않는다(2026-10-26 결정 ③).
+        // 옛 규칙은 음절의 쓸 수 있는 글자 중 그 성별 글자가 하나라도 있으면 일치·반대 성별 글자만 있으면 불일치라, 지(여)는 화면의 智·志·至
+        // (Neutral)와 무관한 馶 '굳셀'·吱 '가는 소리'(Male) 때문에 '맞지 않음'을 받았다(/name 지 여자 이름 73명 — 지우·지민·지원 …).
+        // 호출부가 한자를 넘기지 않으면 /evaluate 가 출생일 없이 보이는 배정(HanjaSelector.Select, 용신 없음)으로 본다 — 출생일이 있는 화면은
+        // ScoringService 가 조화의 용신 배정 한자를, /name 정적 데이터는 NameSeoHanja.DisplayedHanja(1순위 조합)를 넘긴다.
+        var shown = displayedHanja ?? HanjaSelector.Select(name, gender, null, null, null);
+        for (int i = 0; i < name.Length; i++)
         {
-            // 쓸 한자가 없는 음절(후보 0 — 괵·몰·퍅·핍·에·죄 등)은 건너뛴다. 같은 응답이 그 음절을 '배정 없음·한글로 두기'로 다루는데
-            // 불용 글자(퍅=愎 Male)가 성별 일치·불일치 노트를 만들었다(2026-10-26 보완 — 김퍅쁨 남 +3·여 −2).
-            // 후보가 있는 음절은 예전처럼 사전 글자 전부를 본다(불용 포함 — '알려진 이슈'의 점수 정책 결정 몫).
-            if (!HanjaSelector.HasUsableHanja(c.ToString())) continue;
-            var hanjaList = HanjaData.FindByReading(c.ToString());
-            if (!hanjaList.Any()) continue;
+            var h = i < shown.Count ? shown[i] : null;
+            // 보이는 한자가 없는 음절(순우리말 음절·후보 0 음절 괵·몰·퍅, 조합 없는 /name 이름)은 기여 0. 쓸 수 있는 글자(불용 아님 + 뜻 있음 —
+            // HanjaSelector.IsUsableNameHanja)만 센다: 뜻 없는 배정 글자는 의미 메모·후보 표에 나오지 않고, 불용 글자는 어디서도 세지 않는다.
+            if (h == null || !HanjaSelector.IsUsableNameHanja(h)) continue;
 
-            // 해당 음절의 한자 중 가장 일반적인 GenderPref 판단
-            bool hasMatch = hanjaList.Any(h => h.GenderPref == targetPref);
-            bool hasMismatch = hanjaList.Any(h => h.GenderPref == oppositePref);
-
-            if (hasMatch) matchCount++;
-            if (hasMismatch && !hasMatch) mismatchCount++;
+            if (h.GenderPref == targetPref) matchCount++;
+            else if (h.GenderPref == oppositePref) mismatchCount++;
         }
 
         // 노트는 /evaluate에 그대로 노출된다 — 영문 코드("female와")가 아니라 한국어 라벨로.
@@ -552,7 +560,7 @@ public class AestheticEngine : IAestheticEngine
     // ========== 유틸리티 메서드 (기존 유지) ==========
 
     /// <summary>
-    /// 한자 정보 가져오기
+    /// 한자 정보 가져오기 — 의미 카테고리·톤 가점(EvaluateMeaning) 전용. 성별 보너스는 화면에 보이는 한자만 본다(EvaluateGenderBonus, 결정 ③).
     /// </summary>
     private List<HanjaData.HanjaInfo>? GetHanjaInfo(string name)
     {
@@ -560,13 +568,10 @@ public class AestheticEngine : IAestheticEngine
 
         foreach (char c in name)
         {
-            // 후보 0 음절의 불용 글자(몰=沒 개념·녈=涅 자연 등)가 의미 카테고리 가점(+20)을 주지 않게 건너뛴다(2026-10-26 보완 — 성별 보너스와 같은 판정).
-            if (!HanjaSelector.HasUsableHanja(c.ToString())) continue;
-            var hanjaList = HanjaData.FindByReading(c.ToString());
-            if (hanjaList.Any())
-            {
-                result.AddRange(hanjaList);
-            }
+            // 이름에 쓸 수 있는 글자만(HanjaSelector.UsableByReading) — 불용 글자(몰=沒 개념·녈=涅 자연 등)가
+            // 의미 카테고리 가점(+20)·톤 가점을 주지 않는다. 후보 0 음절은 목록이 비어 아무것도 더하지 않는다(2026-10-26 보완 → 점수 정책).
+            // 이 '음절의 쓸 수 있는 글자 전부' 규칙은 성별과 달리 아직 보이는 한자로 바꾸지 않았다(2026-10-26 — 바꿀지는 따로 정한다).
+            result.AddRange(HanjaSelector.UsableByReading(c.ToString()));
         }
 
         return result.Any() ? result : null;

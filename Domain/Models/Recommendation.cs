@@ -59,4 +59,11 @@ public class Candidate
     /// </summary>
     [NotMapped]
     public string? MeaningText { get; set; }
+
+    /// <summary>
+    /// 음절별 배정 한자 글자 — 이름 음절과 같은 인덱스, 배정 없는 음절은 null(<see cref="Hanja"/>는 이를 이어 붙인 표시값).
+    /// RankerEngine 자원오행 보너스가 카드에 보이는 그 한자로 판정하는 입력(2026-10-26 결정 ③). null 이면 배정 한자가 없어 보너스 없음. [NotMapped].
+    /// </summary>
+    [NotMapped]
+    public List<string?>? SyllableHanja { get; set; }
 }

@@ -170,7 +170,9 @@ public static class FamilyNarrativeExtractor
 
         foreach (char c in name)
         {
-            var hanjaList = HanjaData.FindByReading(c.ToString());
+            // 이름에 쓸 수 있는 글자만(HanjaSelector.UsableByReading — 불용·뜻 없는 글자 제외, 관련도 순 유지) — 사전 글자 전부를 보면
+            // 불용 글자의 뜻(나=懦 '나약할'·우=愚 '어리석을' 등)이 '부모님의 … 정신' 서사 문장에 들어갈 수 있었다(2026-10-26 점수 정책과 같은 판정)
+            var hanjaList = HanjaSelector.UsableByReading(c.ToString());
             foreach (var hanja in hanjaList)
             {
                 if (!string.IsNullOrEmpty(hanja.Meaning))

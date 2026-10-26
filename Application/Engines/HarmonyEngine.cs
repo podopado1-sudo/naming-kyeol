@@ -58,7 +58,9 @@ public class HarmonyEngine : IHarmonyEngine
         var breakdown = new HarmonyBreakdown();
 
         // 용신을 먼저 계산해 한자 '배정'에 반영(단일 진실의 원천: HanjaSelector).
-        // 같은 발음 이름도 사주에 따라 다른 한자 → 다른 자원오행/뜻. (이름 랭킹은 미학 우선 불변)
+        // 같은 발음 이름도 사주에 따라 다른 한자 → 다른 자원오행/뜻. (이름 랭킹의 미학 7 : 조화 3 가중은 그대로)
+        // 이 배정(SelectedHanja)은 화면에 보이는 한자라 미학 성별 보너스도 이 글자로 매긴다(ScoringService — 2026-10-26 결정 ③).
+        // 그래서 미학 점수가 출생일에 따라 달라질 수 있다(지우(여) 출생일 없음 智瑀 +3 · 2024-03-15 智佑 0).
         string? yPrimary = null, yHee = null, yGi = null;
         try
         {

@@ -94,10 +94,30 @@ public static class HanjaSelector
     }
 
     /// <summary>
-    /// 음절에 표시할 한자가 하나라도 있는지 — <see cref="NoHanjaNoteFor"/> 가 null 인 음절(불용·뜻 없는 글자를 뺀 <see cref="OrderForDisplay"/> 가 비지 않음).
-    /// 후보 0 음절(괵·몰·퍅·핍·에·죄 등)의 불용 글자가 다른 엔진(AestheticEngine 성별 보너스·의미 카테고리)에 들어가지 않게 거르는 판정(2026-10-26 보완).
+    /// 이름에 쓸 수 있는 글자인지 — 불용이 아니고 한글 뜻이 있다. 표시 후보(<see cref="OrderForDisplay"/>)·후보 0 판정(<see cref="HasUsableHanja"/>)·
+    /// 의미 카테고리·톤 가점(<see cref="UsableByReading"/>)과 보이는 한자 판정(미학 성별 보너스, 추천 랭킹 자원오행 +8·/name-analysis 용신 배지 —
+    /// 2026-10-26 결정 ③)이 함께 쓰는 단일 정의. 약자(weak)·확장 영역 글자는 쓸 수 있는 글자다
+    /// (대안이 있으면 양보·회피하는 것은 배정·정렬 단계의 일). <see cref="Select"/> 는 뜻 있는 글자가 사전에 전혀 없는 음절에서만 이 밖의 글자
+    /// (뜻 없는 비불용 글자)를 배정하는데, 그런 글자는 이 판정이 거짓이라 표시 후보·미학 성별·자원오행 판정이 모두 건너뛴다.
     /// </summary>
-    public static bool HasUsableHanja(string syllable) => OrderForDisplay(HanjaData.FindByReading(syllable)).Any();
+    public static bool IsUsableNameHanja(HanjaInfo h)
+        => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning);
+
+    /// <summary>
+    /// 음절의 사전 글자 중 이름에 쓸 수 있는 글자만(<see cref="IsUsableNameHanja"/>) — 순서는 <see cref="HanjaData.FindByReading"/> 그대로(관련도 순).
+    /// 사전 글자 전부를 보던 곳(미학 의미 카테고리·톤 가점, 이중 이름·가족 서사의 대표 글자, DetermineNameType, /evaluate 후보 표)이 불용 글자
+    /// (나=懦 Strong, 멸=滅 자연 등)의 톤·카테고리·뜻을 세지 않게 하는 공용 경로(2026-10-26 점수 정책 — 후보가 있는 음절의 불용 글자도 뺀다).
+    /// 미학 성별 보너스·추천 랭킹 자원오행 +8 도 처음엔 이 목록 전체('하나라도 있으면')를 봤으나, 같은 날 결정 ③으로 음절마다 보이는(배정) 한자
+    /// 한 글자만 본다(AestheticEngine.EvaluateGenderBonus·RankerEngine.AssignedHanjaHasElement).
+    /// </summary>
+    public static List<HanjaInfo> UsableByReading(string syllable)
+        => HanjaData.FindByReading(syllable).Where(IsUsableNameHanja).ToList();
+
+    /// <summary>
+    /// 음절에 표시할 한자가 하나라도 있는지 — <see cref="NoHanjaNoteFor"/> 가 null 인 음절(불용·뜻 없는 글자를 뺀 <see cref="OrderForDisplay"/> 가 비지 않음).
+    /// 후보 0 음절(괵·몰·퍅·핍·에·죄 등)을 '배정 없음·한글로 두기'로 다루는 판정(2026-10-26 보완).
+    /// </summary>
+    public static bool HasUsableHanja(string syllable) => HanjaData.FindByReading(syllable).Any(IsUsableNameHanja);
 
     /// <summary>
     /// 표시용: 한 음절에 "어떤 한자를 보여 줄까" 상위 n개 (<see cref="OrderForDisplay"/> 순서).
@@ -117,7 +137,7 @@ public static class HanjaSelector
     /// </summary>
     public static IEnumerable<HanjaInfo> OrderForDisplay(IEnumerable<HanjaInfo> candidates)
         => candidates
-            .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character) && !string.IsNullOrEmpty(h.Meaning))
+            .Where(IsUsableNameHanja)
             .OrderByDescending(h => HanjaData.IsCommonNameHanja(h.Character) && !IsWeakGivenNameHanja(h.Character))
             .ThenByDescending(h => HanjaData.IsInCjkBasicRange(h.Character))
             .ThenByDescending(h => ComboBaseScore(h, GenderPreference.Neutral))
@@ -126,9 +146,7 @@ public static class HanjaSelector
     private static List<HanjaInfo> TopComboCandidates(string syllable, GenderPreference g, int n)
     {
         var cands = HanjaData.FindByReading(syllable)
-            .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character)
-                     && !string.IsNullOrEmpty(h.Meaning)
-                     && h.StrokeCount > 0)
+            .Where(h => IsUsableNameHanja(h) && h.StrokeCount > 0)
             .ToList();
         var common = cands.Where(h => HanjaData.IsCommonNameHanja(h.Character)).ToList();
         var pool = common.Count > 0 ? common : cands;

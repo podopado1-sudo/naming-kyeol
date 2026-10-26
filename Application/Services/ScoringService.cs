@@ -1,4 +1,6 @@
 using NameForm.Application.Engines;
+using NameForm.Application.Engines.Data;
+using NameForm.Application.Engines.Utils;
 
 namespace NameForm.Application.Services;
 
@@ -33,12 +35,9 @@ public class ScoringService : IScoringService
         var normalizedGender = NormalizeGender(gender);
         var normalizedTone = NormalizeTone(tone);
 
-        // birthDate.Year를 넘겨 세대 적합도 보정을 활성화 (신생아=출생연도 기준).
-        // 출생일이 없으면 birthYear=null → 세대 적합 자동 skip (미학 엔진이 이미 지원).
-        var aesthetic = await _aestheticEngine.CalculateScoreWithBreakdownAsync(
-            firstName, lastName, normalizedTone, normalizedGender, birthDate?.Year);
-
         // 조화(사주/오행)는 출생일이 있어야 산정 가능. 없으면 미학 점수만 평가한다(UI 약속).
+        // 조화를 미학보다 먼저 — 조화가 용신을 반영해 배정한 한자(SelectedHanja)가 화면(의미 메모·후보 표 첫 칸·추천 카드)에 보이는 한자이고,
+        // 미학 성별 판정이 그 한자를 써야 하기 때문이다(2026-10-26 결정 ③).
         HarmonyBreakdown harmony;
         if (birthDate.HasValue)
         {
@@ -56,6 +55,17 @@ public class ScoringService : IScoringService
             };
         }
 
+        // 화면에 보이는 배정 한자 — 출생일이 있으면 조화가 고른 것, 없으면 같은 선택기를 용신 없이(HanjaSelector.Select).
+        // 이 목록 하나를 미학 성별 판정과 호출부의 표시(CanonicalNameScore.AssignedHanja)가 함께 쓴다 — 따로 다시 고르지 않는다.
+        IReadOnlyList<HanjaData.HanjaInfo?> assignedHanja = harmony.SelectedHanja is { Count: > 0 } selected
+            ? selected
+            : HanjaSelector.Select(firstName, normalizedGender, null, null, null);
+
+        // birthDate.Year를 넘겨 세대 적합도 보정을 활성화 (신생아=출생연도 기준).
+        // 출생일이 없으면 birthYear=null → 세대 적합 자동 skip (미학 엔진이 이미 지원).
+        var aesthetic = await _aestheticEngine.CalculateScoreWithBreakdownAsync(
+            firstName, lastName, normalizedTone, normalizedGender, birthDate?.Year, assignedHanja);
+
         var rarity = await _rarityScoringEngine.CalculateRarityScoreAsync(firstName);
 
         // FinalScore 단일 공식 — Math.Round 일관 (int cast 금지).
@@ -72,7 +82,8 @@ public class ScoringService : IScoringService
             Harmony = harmony,
             HarmonyScore = harmony.TotalScore,
             RarityScore = rarity,
-            FinalScore = finalScore
+            FinalScore = finalScore,
+            AssignedHanja = assignedHanja
         };
     }
 

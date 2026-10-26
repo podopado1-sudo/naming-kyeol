@@ -863,8 +863,8 @@ public class ParentBasedNamingEngine : IParentBasedNamingEngine
     /// </summary>
     private string DetermineNameType(string name)
     {
-        // 한자 의미가 강한 경우 "의미중심"
-        var hanjaInfo = HanjaData.FindByReading(name);
+        // 한자 의미가 강한 경우 "의미중심" — 이름에 쓸 수 있는 글자만(HanjaSelector.UsableByReading — 불용 글자의 카테고리는 세지 않는다)
+        var hanjaInfo = HanjaSelector.UsableByReading(name);
         if (hanjaInfo.Any(h => !string.IsNullOrEmpty(h.Meaning) && 
                               (h.Category == "자연" || h.Category == "덕목" || h.Category == "개념")))
         {

@@ -119,17 +119,11 @@ if (args.Length >= 1 && args[0] == "dump-name-flags")
         var name = prop.Name;
         bool pk = NameForm.Application.Engines.PureKoreanNameEngine.IsPureKoreanSeoName(name, pkInclude, pkExclude);
 
-        // 조합 유무 — dump-name-combos 와 같은 조건·성별 분기(60/40)
-        bool hasCombos = false;
-        if (name.Length == 2 && name[0] != name[1])
-        {
-            int m = prop.Value.TryGetProperty("m", out var mv) ? mv.GetInt32() : 0;
-            int f = prop.Value.TryGetProperty("f", out var fv) ? fv.GetInt32() : 0;
-            int total = m + f;
-            string gender = total > 0 && m * 100 / total >= 60 ? "male"
-                          : total > 0 && f * 100 / total >= 60 ? "female" : "none";
-            hasCombos = NameForm.Application.Engines.Utils.HanjaSelector.SelectCombos(name, gender, 4).Count > 0;
-        }
+        // 조합 유무 — dump-name-combos 와 같은 함수(NameSeoHanja.Combos — 2음절·비반복 조건·성별 분기 60/40)
+        int m = prop.Value.TryGetProperty("m", out var mv) ? mv.GetInt32() : 0;
+        int f = prop.Value.TryGetProperty("f", out var fv) ? fv.GetInt32() : 0;
+        bool hasCombos = NameForm.Application.Engines.Utils.NameSeoHanja.Combos(
+            name, NameForm.Application.Engines.Utils.NameSeoHanja.Gender(m, f)).Count > 0;
 
         bool listed = foreign.TryGetValue(name, out var kind);
         english.TryGetValue(name, out var en);
@@ -320,16 +314,15 @@ if (args.Length >= 1 && args[0] == "dump-name-combos")
     foreach (var prop in doc.RootElement.GetProperty("names").EnumerateObject())
     {
         var name = prop.Name;
-        if (name.Length != 2 || name[0] == name[1]) { skipped++; continue; }
 
-        // 성별: 60/40 분기(프론트 genderSplit과 동일). 애매하면 none으로 과제약 회피.
+        // 성별: 60/40 분기(NameSeoHanja.Gender — 프론트 genderSplit 과는 반올림이 달라 경계 이름 10명이 갈린다, 그 주석 참조). 애매하면 none으로 과제약 회피.
+        // 조합은 NameSeoHanja.Combos 하나 — dump-name-scores 의 성별 판정(1순위 조합)·dump-name-flags 와 같은 함수(2026-10-26 결정 ③).
+        // 2음절·비반복이 아닌 이름은 빈 목록이라 그대로 제외된다.
         int m = prop.Value.TryGetProperty("m", out var mv) ? mv.GetInt32() : 0;
         int f = prop.Value.TryGetProperty("f", out var fv) ? fv.GetInt32() : 0;
-        int total = m + f;
-        string gender = total > 0 && m * 100 / total >= 60 ? "male"
-                      : total > 0 && f * 100 / total >= 60 ? "female" : "none";
+        string gender = NameForm.Application.Engines.Utils.NameSeoHanja.Gender(m, f);
 
-        var combos = NameForm.Application.Engines.Utils.HanjaSelector.SelectCombos(name, gender, 4);
+        var combos = NameForm.Application.Engines.Utils.NameSeoHanja.Combos(name, gender);
         if (combos.Count == 0) { skipped++; continue; }
         dump[name] = combos.Select(c => new[] { c.First, c.Second }).ToList();
     }
@@ -400,7 +393,7 @@ if (args.Length >= 1 && args[0] == "dump-combo-glosses")
 //   dotnet run -- dump-name-scores [names-json] [outfile]
 // AestheticEngine을 lastName=null·tone="neutral"(톤 보너스 0)·60/40 성별 분기로 호출한
 // "성씨 제외·세대 중립 관점" 점수. 유행 이름 감점은 브랜드 철학(유행 배제) 그대로 노출한다.
-// combos와 달리 3음절·중첩 이름도 전부 채점한다(엔진이 모두 처리 가능).
+// combos와 달리 3음절·중첩 이름도 전부 채점한다(엔진이 모두 처리 가능). 성별 판정 한자 = 페이지 1순위 조합(NameSeoHanja.DisplayedHanja).
 if (args.Length >= 1 && args[0] == "dump-name-scores")
 {
     NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
@@ -426,14 +419,16 @@ if (args.Length >= 1 && args[0] == "dump-name-scores")
     {
         var name = prop.Name;
 
-        // 성별: 60/40 분기(프론트 genderSplit·dump-name-combos와 동일).
+        // 성별: 60/40 분기(dump-name-combos와 같은 NameSeoHanja.Gender — 프론트 genderSplit 과는 경계 이름 10명이 갈린다).
         int m = prop.Value.TryGetProperty("m", out var mv) ? mv.GetInt32() : 0;
         int f = prop.Value.TryGetProperty("f", out var fv) ? fv.GetInt32() : 0;
-        int total = m + f;
-        string gender = total > 0 && m * 100 / total >= 60 ? "male"
-                      : total > 0 && f * 100 / total >= 60 ? "female" : "none";
+        string gender = NameForm.Application.Engines.Utils.NameSeoHanja.Gender(m, f);
 
-        var b = await engine.CalculateScoreWithBreakdownAsync(name, null, "neutral", gender);
+        // 성별 보너스·노트는 페이지에 보이는 한자(1순위 조합 — dump-name-combos 와 같은 NameSeoHanja 함수)로 판정한다(2026-10-26 결정 ③).
+        // 조합이 없는 이름(3음절·첩음·외래)은 보이는 한자가 없어 성별 보너스 0. combos 를 다시 읽지 않고 같은 함수를 부르므로
+        // 체인 순서(dump-name-combos → dump-name-scores)와 무관하게 두 덤프가 갈라지지 않는다.
+        var shown = NameForm.Application.Engines.Utils.NameSeoHanja.DisplayedHanja(name, gender);
+        var b = await engine.CalculateScoreWithBreakdownAsync(name, null, "neutral", gender, null, shown);
         var rec = new Dictionary<string, object>
         {
             ["p"] = b.PronunciationScore,

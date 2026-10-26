@@ -501,7 +501,14 @@ public class ToolAccuracyRegressionTests
 
         Assert.NotNull(r.HarmonyScore);
         Assert.Equal($"종합 {r.FinalScore}점 — 미학 {r.AestheticScore} · 조화 {r.HarmonyScore}", r.Reasons[0]);
-        Assert.DoesNotContain(r.Reasons, s => s.StartsWith("한자 뜻 —"));
+        // 출생일이 있으면 점수(조화 자원오행·성별, 미학 성별 보너스)가 쓴 배정 한자가 음절별 큰 카드이고, 이유의 한자 줄도 그 글자다
+        // ('한자 뜻' — 2026-10-26 결정 ③). 옛 경로는 큰 카드가 표시 1순위·점수는 숨은 배정 한자라 '한자 예'만 냈다.
+        // 화면(/name-analysis)은 두 라벨 모두 숨긴다(frontend analysis/page.tsx filterAnalysisReasons).
+        var bigCards = r.HanjaBreakdown.Select(b => b.PossibleHanja.FirstOrDefault()?.Character).ToList();
+        Assert.All(bigCards, c => Assert.NotNull(c));
+        var line = Assert.Single(r.Reasons, s => s.StartsWith("한자 뜻 —") || s.StartsWith("한자 예 —"));
+        Assert.StartsWith("한자 뜻 —", line);
+        Assert.All(bigCards, c => Assert.Contains(c!, line));
     }
 
     [Fact]

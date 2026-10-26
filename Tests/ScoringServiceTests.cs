@@ -294,8 +294,10 @@ public class ScoringServiceTests
     [Fact]
     public async Task EvaluateAsync_WithVsWithoutBirthDate_AestheticMatches_FinalDiffers()
     {
-        // 같은 이름이면 미학 점수는 출생일 유무와 무관하게 동일,
-        // 종합은 조화 포함 여부로 달라진다.
+        // 서윤(여·soft)은 출생일 유무와 관계없이 미학 점수가 같고, 종합은 조화 포함 여부로 달라진다.
+        // 일반 규칙은 아니다 — 출생일이 있으면 세대 적합(출생연도)과, 2026-10-26 결정 ③부터 용신 배정 한자의 성별 판정이 미학에 들어간다
+        // (지우(여) 출생일 없음 智瑀 +3 · 2024-03-15 智佑 0). 인기 100명 × 남녀 200쌍 중 미학 총점이 갈리는 쌍은 결정 ③ 전 104(세대 적합) → 134,
+        // 성별 보너스가 갈리는 쌍은 0 → 57 이다. 서윤은 두 값이 같게 나오는 사례라 그 동등을 고정한다.
         var with = await _scoring.EvaluateAsync("서윤", "김", new DateTime(2024, 6, 15), "female", "soft");
         var without = await _scoring.EvaluateAsync("서윤", "김", null, "female", "soft");
 
