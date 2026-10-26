@@ -297,7 +297,7 @@ export function CoherenceHero({
       : score >= 70
         ? "var(--color-navy)"
         : score >= 55
-          ? "var(--color-gold-600)"
+          ? "var(--color-gold-700)"
           : "var(--color-text-2)";
   const tint =
     score >= 85
@@ -307,6 +307,16 @@ export function CoherenceHero({
         : score >= 55
           ? "var(--color-gold-50)"
           : "var(--color-surface-2)";
+  // 'SET COHERENCE' 칩(11px) 글자 — color 는 30px 점수·원 그래프(큰 글씨·비텍스트 3:1)용이라 틴트 위 작은 글씨에는 짙은 글자 토큰
+  // (teal/teal-50 4.15 → teal-800 4.93, gold-700/gold-50 3.40 → gold-800 7.06:1 — 2026-10-26 팔레트 #2 보완)
+  const chipText =
+    score >= 85
+      ? "var(--color-teal-800)"
+      : score >= 70
+        ? "var(--color-navy)"
+        : score >= 55
+          ? "var(--color-gold-800)"
+          : "var(--color-text-2)";
   const pct = Math.max(0, Math.min(100, score));
   const r = 44;
   const c = 2 * Math.PI * r;
@@ -398,7 +408,7 @@ export function CoherenceHero({
             display: "inline-block",
             fontSize: 11,
             fontWeight: 500,
-            color,
+            color: chipText,
             background: tint,
             padding: "3px 10px",
             borderRadius: 999,

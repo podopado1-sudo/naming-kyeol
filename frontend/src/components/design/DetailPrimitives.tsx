@@ -10,7 +10,14 @@ import type { CSSProperties } from "react";
 export interface FiveElement {
   label: string;
   name: string;
+  /** 오행 표지색 — 막대·왼쪽 테두리 같은 비텍스트에 쓴다 */
   color: string;
+  /**
+   * 글자색 — 칩(10.5~12px)·오행 분포 글자·용신 글자. 옛 color 를 글자에 그대로 쓰면 틴트 칩 위에서 木 4.17 · 火 2.79 ·
+   * 土 3.35 · 金 4.05:1 로 WCAG AA(4.5:1) 미달이라 짙은 글자 전용 토큰으로 갈랐다(2026-10-26 팔레트 #2 — tests/palette-contrast.test.mjs).
+   * 火·土 는 /hanja 오행 배지와 같은 토큰(amber-warm-600·gold-800). 水 는 원래 짙어(9.64:1) 그대로
+   */
+  text: string;
   tintBg: string;
   solidBorder: string;
 }
@@ -20,6 +27,7 @@ export const FIVE_EL: Record<string, FiveElement> = {
     label: "木",
     name: "목",
     color: "#4A7C59",
+    text: "var(--color-score-high-700)",
     tintBg: "rgba(74,124,89,0.12)",
     solidBorder: "rgba(74,124,89,0.35)",
   },
@@ -27,6 +35,7 @@ export const FIVE_EL: Record<string, FiveElement> = {
     label: "火",
     name: "화",
     color: "#B5874C",
+    text: "var(--color-amber-warm-600)",
     tintBg: "rgba(181,135,76,0.14)",
     solidBorder: "rgba(181,135,76,0.35)",
   },
@@ -34,6 +43,7 @@ export const FIVE_EL: Record<string, FiveElement> = {
     label: "土",
     name: "토",
     color: "#9A7E3A",
+    text: "var(--color-gold-800)",
     tintBg: "rgba(201,169,110,0.20)",
     solidBorder: "rgba(201,169,110,0.40)",
   },
@@ -41,6 +51,7 @@ export const FIVE_EL: Record<string, FiveElement> = {
     label: "金",
     name: "금",
     color: "#2E7D7A",
+    text: "var(--color-teal-800)",
     tintBg: "rgba(46,125,122,0.14)",
     solidBorder: "rgba(46,125,122,0.35)",
   },
@@ -48,6 +59,7 @@ export const FIVE_EL: Record<string, FiveElement> = {
     label: "水",
     name: "수",
     color: "#1E3A5F",
+    text: "#1E3A5F",
     tintBg: "rgba(30,58,95,0.10)",
     solidBorder: "rgba(30,58,95,0.30)",
   },
@@ -120,11 +132,15 @@ export function ScoreTile({
   big = false,
   placeholder = false,
 }: ScoreTileProps) {
-  const tints: Record<ScoreVariant, { bg: string; color: string }> = {
-    high: { bg: "rgba(74,124,89,0.10)", color: "var(--color-score-high)" },
-    mid: { bg: "rgba(91,127,170,0.10)", color: "var(--color-score-mid)" },
-    low: { bg: "rgba(181,135,76,0.10)", color: "var(--color-score-low)" },
-    primary: { bg: "var(--color-navy)", color: "var(--color-background)" },
+  // color = 32~44px 점수 숫자(큰 글씨 3:1), label = 11px 라벨 글자(4.5:1) — 옛 라벨은 숫자 색 그대로라 틴트(종이 위) 위
+  // 미학 score-high 4.10 · 조화·유니크 score-mid 3.56:1 이었다(2026-10-26 팔레트 #2 보완 — 같은 색상의 짙은 글자 토큰).
+  // mid 라벨 score-mid-700 은 흰 위 틴트 4.65 · 종이 위 틴트 4.47:1 로 종이 쪽이 아직 조금 모자란다(CLAUDE.md '대비 미달로 남은 색').
+  // low 는 쓰는 곳이 없지만 amber-warm 글자 규칙(tests/amber-contrast.test.mjs)에 맞춰 둔다
+  const tints: Record<ScoreVariant, { bg: string; color: string; label: string }> = {
+    high: { bg: "rgba(74,124,89,0.10)", color: "var(--color-score-high)", label: "var(--color-score-high-700)" },
+    mid: { bg: "rgba(91,127,170,0.10)", color: "var(--color-score-mid)", label: "var(--color-score-mid-700)" },
+    low: { bg: "rgba(181,135,76,0.10)", color: "var(--color-amber-warm-700)", label: "var(--color-amber-warm-700)" },
+    primary: { bg: "var(--color-navy)", color: "var(--color-background)", label: "rgba(250,247,242,0.85)" },
   };
   const t = tints[variant];
 
@@ -182,7 +198,7 @@ export function ScoreTile({
   const labelStyle: CSSProperties = {
     fontSize: 11,
     fontWeight: 600,
-    color: variant === "primary" ? "rgba(250,247,242,0.85)" : t.color,
+    color: t.label,
     letterSpacing: "0.1em",
     marginTop: 10,
     whiteSpace: "nowrap",

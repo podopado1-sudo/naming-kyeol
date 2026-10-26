@@ -760,7 +760,7 @@ export function ServerErrorScreen({
         }}
       >
         <Card>
-          <Eyebrow color="var(--color-gold-600)">Error · 500</Eyebrow>
+          <Eyebrow color="var(--color-gold-800)">Error · 500</Eyebrow>
           <h1
             style={{
               fontFamily: "var(--font-sans)",

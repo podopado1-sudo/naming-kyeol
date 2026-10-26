@@ -453,7 +453,10 @@ function SubHeaderParent({
 // ParentHero + Family Mapping Banner
 // ============================================================
 interface Bridge {
+  /** 부모·아이 이름 강조 글자·주석 알약 글자 */
   color: string;
+  /** 점선 연결선·화살표·주석 알약 테두리(비텍스트) — 글자만 짙은 토큰으로 옮겨도 선은 옛 색 그대로 */
+  lineColor: string;
   fatherChar: string | null;
   motherChar: string | null;
   childChar: string | null;
@@ -488,6 +491,7 @@ function computeBridge(
     }
     return {
       color: "var(--color-teal)",
+      lineColor: "var(--color-teal)",
       fatherChar,
       motherChar,
       childChar,
@@ -506,7 +510,10 @@ function computeBridge(
       anchor.includes("아빠") || (fatherFull && anchor.includes(fatherFull));
     const childHanjaChar = top.hanjaName ? top.hanjaName.slice(-1) : null;
     return {
-      color: "var(--color-gold-600)",
+      // 부모 이름 강조 글자(13~32px, gold-50 바탕) — 옛 gold-600 은 gold-50 위 2.55:1 이라 골드 글자 토큰(2026-10-26 팔레트 #2).
+      // 연결선·화살표·주석 알약 테두리는 옛 gold-600 그대로(비텍스트 — 짙은 갈색 선이 되지 않게, 같은 날 보완)
+      color: "var(--color-gold-800)",
+      lineColor: "var(--color-gold-600)",
       fatherChar: null,
       motherChar: null,
       childChar: null,
@@ -521,6 +528,7 @@ function computeBridge(
   }
   return {
     color: "var(--color-navy)",
+    lineColor: "var(--color-navy)",
     fatherChar: null,
     motherChar: null,
     childChar: null,
@@ -550,7 +558,7 @@ function ParentNode({
   const hanjaChars = (person.hanjaName || "").split("");
   const hl = highlightColor || "var(--color-teal)";
   const hlBg =
-    hl === "var(--color-gold-600)"
+    hl === "var(--color-gold-800)"
       ? "var(--color-gold-50)"
       : hl === "var(--color-navy)"
         ? "var(--color-navy-50)"
@@ -663,7 +671,7 @@ function ChildNode({
   const m = NAMING_MODELS[model ?? "narrative"];
   const hl = highlightColor || m.activeBorder;
   const hlBg =
-    hl === "var(--color-gold-600)"
+    hl === "var(--color-gold-800)"
       ? "var(--color-gold-50)"
       : hl === "var(--color-navy)"
         ? "var(--color-navy-50)"
@@ -892,7 +900,7 @@ function FamilyMappingBanner({
           highlightColor={bridge.color}
         />
       </div>
-      <ConnectorSVG color={bridge.color} />
+      <ConnectorSVG color={bridge.lineColor} />
       {bridge.annotation && (
         <div
           style={{
@@ -901,7 +909,7 @@ function FamilyMappingBanner({
             top: "calc(50% - 6px)",
             transform: "translate(-50%, -50%)",
             background: "var(--color-surface)",
-            border: "1px solid " + bridge.color,
+            border: "1px solid " + bridge.lineColor,
             padding: "4px 10px",
             borderRadius: 999,
             fontFamily: "var(--font-sans)",

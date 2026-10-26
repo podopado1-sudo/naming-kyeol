@@ -94,13 +94,17 @@ export function HanjaGradeBadge({
   );
 }
 
-// 오행 색상 — HanjaCandidateCard와 동일 톤
+// 오행 색상 — 바탕(·테두리)이 색상을 맡고 12px 글자는 짙은 글자 전용 토큰(2026-10-26 팔레트 #2). 옛 글자색은 火 amber-warm
+// amber-50 3.10 · 土 gold-700/gold-50 3.40 · 水 score-mid/종이 3.97:1 로 WCAG AA(4.5:1) 미달이었다. 火·土 는 함께 짙게 하면
+// 같은 갈색이 돼서 火 는 주황 쪽·土 는 짙은 황토로 갈랐다(ΔE 7.2 → 15.9). 수치는 tests/palette-contrast.test.mjs.
+// 金 의 text-navy-700·水 의 bg-paper-tint/border-paper-line 은 정의되지 않은 클래스다(金 글자는 부모 색 상속 — 실측 #14120f,
+// 水 바탕은 투명 → 종이) — 디자인 결정 대기라 그대로 둔다
 const ELEMENT_COLOR: Record<string, string> = {
   木: "bg-teal-50 text-teal-700 border-teal-50",
-  火: "bg-amber-50 text-amber-warm border-amber-50",
-  土: "bg-gold-50 text-gold-700 border-gold-50",
+  火: "bg-amber-50 text-amber-warm-600 border-amber-50",
+  土: "bg-gold-50 text-gold-800 border-gold-50",
   金: "bg-navy-50 text-navy-700 border-navy-50",
-  水: "bg-paper-tint text-score-mid border-paper-line",
+  水: "bg-paper-tint text-score-mid-700 border-paper-line",
 };
 
 /** 자원오행 뱃지 — rationale 은 자원오행 근거 한 줄(note) */

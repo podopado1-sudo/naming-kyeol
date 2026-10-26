@@ -647,7 +647,7 @@ function SubHeader({
           >
             <span
               aria-hidden="true"
-              style={saved ? { color: "var(--color-gold-600)" } : undefined}
+              style={saved ? { color: "var(--color-gold-700)" } : undefined}
             >
               {saved ? "♥" : "♡"}
             </span>{" "}
@@ -825,7 +825,7 @@ function TopPickCard({
             flexWrap: "wrap",
           }}
         >
-          <Eyebrow color="var(--color-gold-600)">
+          <Eyebrow color="var(--color-gold-800)">
             Top Pick · {pick.categoryLabel}
           </Eyebrow>
           {c.hasScore && (
@@ -907,13 +907,14 @@ function TopPickCard({
                   color: "var(--color-navy-500)",
                 }}
               >
+                {/* 장식 인용 부호 — 1.4.3 대비 예외(글자 아님)라 밝은 골드 인상을 남기는 gold-700(2026-10-26 팔레트 #2 보완) */}
                 <span
-                  style={{ color: "var(--color-gold-600)", marginRight: 4 }}
+                  style={{ color: "var(--color-gold-700)", marginRight: 4 }}
                 >
                   “
                 </span>
                 {c.story}
-                <span style={{ color: "var(--color-gold-600)", marginLeft: 2 }}>
+                <span style={{ color: "var(--color-gold-700)", marginLeft: 2 }}>
                   ”
                 </span>
               </p>
@@ -1392,11 +1393,12 @@ function CandidateCard({
                 color: "var(--color-navy-500)",
               }}
             >
-              <span style={{ color: "var(--color-gold-600)", marginRight: 4 }}>
+              {/* 장식 인용 부호 — gold-700(위 Top Pick 과 같다) */}
+              <span style={{ color: "var(--color-gold-700)", marginRight: 4 }}>
                 “
               </span>
               {c.story}
-              <span style={{ color: "var(--color-gold-600)", marginLeft: 2 }}>
+              <span style={{ color: "var(--color-gold-700)", marginLeft: 2 }}>
                 ”
               </span>
             </p>

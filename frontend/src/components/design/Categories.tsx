@@ -120,7 +120,8 @@ export function Categories() {
             transition: "all 280ms cubic-bezier(.2,.6,.2,1)",
             transform: isHover ? "translateY(-2px)" : "none",
             minHeight: 196,
-            opacity: isComing ? 0.78 : 1,
+            // 준비 중 카드는 카드 전체 opacity(옛 0.78) 대신 큰 한자·제목 색만 옅게 — 'Coming'·읽기 음 11px text-3 글자가
+            // 반투명 탓에 3.33:1 로 AA 아래였다(2026-10-26 팔레트 #2 보완). 상태는 'Coming' 라벨이 글로 알린다
           };
           const hoverProps = {
             onMouseEnter: () => setHover(it.key),
@@ -225,7 +226,7 @@ function CardBody({
           fontFamily: "var(--font-serif)",
           fontSize: 44,
           fontWeight: 700,
-          color: "var(--color-text)",
+          color: isComing ? "var(--color-text-2)" : "var(--color-text)",
           lineHeight: 1,
           marginBottom: 18,
           display: "flex",
@@ -254,7 +255,7 @@ function CardBody({
           margin: 0,
           marginBottom: 8,
           letterSpacing: "-0.01em",
-          color: "var(--color-text)",
+          color: isComing ? "var(--color-text-2)" : "var(--color-text)",
         }}
       >
         {it.title}

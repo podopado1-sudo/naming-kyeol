@@ -298,6 +298,26 @@ export default function DualNamePage() {
             </Field>
           </div>
 
+          {/* 0건 — 예전에는 아무 말 없이 폼만 다시 보였다. 이중 이름은 모든 음절에 한자가 있어야 해서, 한글 소리에 이름에 쓸 만한
+              인명용 한자가 없는 음절이 있으면(Emily·Amy 의 '에' — 2026-10-26 점수 정책 뒤 후보 0) 후보가 빠진다 */}
+          {candidates && candidates.length === 0 && !error && (
+            <div
+              role="status"
+              style={{
+                fontSize: 13,
+                lineHeight: 1.6,
+                color: "var(--color-text-2)",
+                background: "var(--color-surface-2)",
+                borderRadius: 8,
+                padding: "10px 14px",
+              }}
+            >
+              {preferredEnglishName.trim()
+                ? `입력한 영어 이름(${preferredEnglishName.trim()})으로는 한자 이중 이름을 찾지 못했어요. 한글로 옮긴 소리 가운데 이름에 쓸 만한 인명용 한자가 없는 음절이 있거나, 아직 준비되지 않은 영어 이름이에요. 다른 영어 이름을 넣거나 칸을 비워 두면 성별에 맞는 이중 이름을 추천해 드려요.`
+                : "조건에 맞는 이중 이름을 찾지 못했어요. 성별이나 톤을 바꿔 다시 시도해 보세요."}
+            </div>
+          )}
+
           {error && (
             <div
               style={{

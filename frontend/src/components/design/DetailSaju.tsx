@@ -206,7 +206,7 @@ export function SajuSection({
                       padding: "2px 7px",
                       borderRadius: 999,
                       background: stemEl.tintBg,
-                      color: stemEl.color,
+                      color: stemEl.text,
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -285,7 +285,7 @@ export function SajuSection({
                       fontFamily: "var(--font-serif)",
                       fontSize: 14,
                       fontWeight: 600,
-                      color: el.color,
+                      color: el.text,
                     }}
                   >
                     {k}
@@ -354,7 +354,7 @@ export function SajuSection({
                     padding: "3px 9px",
                     borderRadius: "var(--radius-sm)",
                     background: "rgba(181,135,76,0.14)",
-                    color: "#9A7E3A",
+                    color: "var(--color-gold-800)", // 土 글자 토큰 — 옛 #9A7E3A 는 amber 14% 틴트 위 3.37:1
                     border: "1px solid rgba(181,135,76,0.3)",
                     whiteSpace: "nowrap",
                   }}
@@ -413,7 +413,7 @@ export function SajuSection({
             <span
               style={{
                 fontFamily: "var(--font-serif)",
-                color: FIVE_EL[saju.yongshin.primaryYongshin]?.color,
+                color: FIVE_EL[saju.yongshin.primaryYongshin]?.text,
               }}
             >
               {saju.yongshin.primaryYongshin}

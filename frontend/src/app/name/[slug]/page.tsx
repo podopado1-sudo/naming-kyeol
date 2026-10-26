@@ -205,7 +205,7 @@ function GenderBar({ rec }: { rec: NameSeoRecord }) {
 const OHAENG_CHIP: Record<string, string> = {
   생: "bg-teal-50 text-teal-700",
   비화: "bg-navy-50 text-navy",
-  극: "bg-gold-50 text-gold-700",
+  극: "bg-gold-50 text-gold-800", // 土 배지와 같은 골드 글자 토큰 — 옛 gold-700 은 gold-50 위 3.40:1
   unknown: "",
 };
 

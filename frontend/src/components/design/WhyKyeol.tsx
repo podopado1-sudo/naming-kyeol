@@ -82,7 +82,7 @@ export function WhyKyeol() {
           <div
             style={{
               fontSize: 12,
-              color: "var(--color-gold-600)",
+              color: "var(--color-gold-800)",
               letterSpacing: "0.08em",
               paddingBottom: 6,
             }}

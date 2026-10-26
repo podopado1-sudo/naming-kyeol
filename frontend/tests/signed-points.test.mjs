@@ -5,7 +5,7 @@
 // 부호·색은 값으로 정하고, /evaluate ScoreBar bonus 행(`value >= 0 ? +v : v`)과 같은 규칙을 쓴다.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -45,18 +45,41 @@ test("색은 값의 부호로 — 음수는 가점 색(teal)이 아니라 짙은
 });
 
 // 위 규칙을 카드가 실제로 쓰는지 — 행 종류로 부호를 붙이던 옛 코드로 되돌리면 여기서 걸린다
-test("/name 미학 점수 카드·조화 카드가 값으로 부호·색을 정한다", () => {
+test("/name 미학 점수 카드가 값으로 부호·색을 정한다", () => {
   const score = read("src", "components", "results", "ScoreBreakdownCard.tsx");
   assert.match(score, /formatSignedPoints\(value\)/);
   assert.match(score, /signedPointsClass\(value\)/);
   assert.doesNotMatch(score, /<BonusLine\b[^>]*\btype=|isPositive/); // 옛 코드: type="bonus" → 늘 '+'·청록
   assert.match(score, /label="성별 보너스" value=\{aesthetic\.genderBonus\}/);
   assert.match(score, /label="감점" value=\{-aesthetic\.penalty\}/);
+});
 
-  const harmony = read("src", "components", "results", "HarmonyBreakdownCard.tsx");
-  assert.doesNotMatch(harmony, /\+\{harmony\.genderBonus\}/);
-  assert.match(harmony, /formatSignedPoints\(harmony\.genderBonus\)/);
-
+// 2026-10-26: 쓰지 않던 results/HarmonyBreakdownCard.tsx(조화 카드 — import 0건)를 지웠다. 사주 조화의 성별 보너스는
+// /evaluate 결과(EvaluateResult harmonyRows → EvalPrimitives ScoreBar bonus 행)가 그린다 — 거기서 같은 규칙을 확인한다
+test("/evaluate 가점·감점 행(미학·조화 성별 보너스·감점)이 값으로 부호를 정한다", () => {
   const bar = read("src", "components", "design", "EvalPrimitives.tsx");
-  assert.match(bar, /formatSignedPoints\(value\)/);
+  assert.match(bar, /bonus\s*\?\s*formatSignedPoints\(value\)/);
+
+  const result = read("src", "app", "evaluate", "EvaluateResult.tsx");
+  for (const row of [
+    /\{ label: "성별 보너스", value: data\.aesthetic\.genderBonus, max: 0, bonus: true \}/,
+    /\{ label: "감점", value: -data\.aesthetic\.penalty, max: 0, bonus: true \}/,
+    /\{ label: "성별 보너스", value: data\.harmony\.genderBonus, max: 0, bonus: true \}/,
+  ]) {
+    assert.match(result, row);
+  }
+});
+
+/** src 아래 .ts·.tsx 전부 (데이터 JSON 폴더 제외) */
+function sourceFiles(dir = join(ROOT, "src")) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) return e.name === "data" ? [] : sourceFiles(p);
+    return /\.tsx?$/.test(e.name) ? [p] : [];
+  });
+}
+
+test("성별 보너스에 '+' 를 손으로 붙이는 옛 코드가 없다 — 지운 조화 카드의 '+{harmony.genderBonus}' 재유입 방지", () => {
+  const offenders = sourceFiles().filter((f) => /\+\{[^}]*genderBonus\b/.test(readFileSync(f, "utf8")));
+  assert.deepEqual(offenders, []);
 });

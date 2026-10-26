@@ -50,15 +50,22 @@
   --color-gold-100: var(--color-gold-100-token);
   --color-gold-50: var(--color-gold-50-token);
   --color-gold-700: var(--color-gold-700-token);
+  --color-gold-800: var(--color-gold-800-token);
 
   /* === 경고/참고 톤 (amber-warm — red 회피) === */
   --color-amber-warm: var(--color-amber-warm-token);
+  --color-amber-warm-600: var(--color-amber-warm-600-token);
   --color-amber-warm-700: var(--color-amber-warm-700-token);
 
   /* === Score 분기 === */
   --color-score-high: var(--color-score-high-token);
   --color-score-mid: var(--color-score-mid-token);
   --color-score-low: var(--color-score-low-token);
+
+  /* === 글자 전용 짙은 색 (작은 글씨 WCAG AA 4.5:1 — 바탕·테두리·막대는 위 원래 색) === */
+  --color-score-high-700: var(--color-score-high-700-token);
+  --color-score-mid-700: var(--color-score-mid-700-token);
+  --color-teal-800: var(--color-teal-800-token);
 
   /* === Spacing (8px grid) === */
   --spacing-sp-1: 4px;
@@ -133,7 +140,11 @@
   /* 五墨 — 焦/濃/重/淡/清 */
   --color-text-token: #14120f; /* 焦 — 가장 짙은 먹, 헤드라인 */
   --color-text-2-token: #4a4640; /* 重 — 본문 강조 */
-  --color-text-3-token: #8a857c; /* 淡 — 보조/캡션 */
+  /* 淡 — 보조/캡션. 옛 #8a857c 는 흰 3.67·종이 3.51·surface-2 3.27:1 로 캡션(11~13px) WCAG AA 미달이라 같은 색상·채도에서
+     밝기만 내렸다(2026-10-26 팔레트 #2) — 흰 5.45·종이 5.21·surface-2 4.86·navy-50 4.65·teal-50 4.66·gold-50 4.76:1.
+     위계는 text-1 18.70 > text-2 9.37 > text-3 5.45:1(흰 바탕). 옛 값은 --color-ink-dan(淡墨 — 비텍스트 선)에 남아 있다.
+     이 블록 아래 gold-800·amber-warm-600·score-*-700·teal-800 수치와 오행 색 구분(ΔE)은 tests/palette-contrast.test.mjs */
+  --color-text-3-token: #6e6961;
   --color-border-token: rgba(20, 18, 15, 0.14);
   --color-divider-token: rgba(20, 18, 15, 0.08);
   /* 본문 기본은 濃(#2C2A26)으로. 별도 토큰. */
@@ -157,15 +168,24 @@
   --color-gold-600-token: #b49258;
   --color-gold-100-token: #efe3cb;
   --color-gold-50-token: #f7efdd;
-  --color-gold-700-token: #9a7d44; /* 짙은 골드 — 火 오행/뱃지 외곽선 */
+  --color-gold-700-token: #9a7d44; /* 짙은 골드 — V 뱃지 외곽선·큰 글씨(18px+)·아이콘(★ ♥ ⚠ — 비텍스트 3:1) */
+  /* 골드 글자 전용 — 오행 土 배지·칩 글자와 골드 강조 작은 글씨(Top Pick 머리말·인용 부호·부모 이름 강조 글자). gold-600(#b49258)
+     흰 2.92 · gold-700 gold-50 3.40:1 이 AA 미달이라 土 색상(h≈84~86)을 지키며 짙게 했다(2026-10-26 팔레트 #2) — 흰 8.08 ·
+     종이 7.73 · gold-50 7.06 · gold-100 6.36 · 土 20% 틴트 6.74 · amber 14% 틴트 6.75:1(틴트는 종이 위). 火(amber-warm-600)와 CIEDE2000 ΔE 15.9 */
+  --color-gold-800-token: #5f4e22;
 
   /* 경고/참고 톤 — score-low·destructive와 동일값 (red 회피) */
   --color-amber-warm-token: #b5874c;
   /* 짙은 amber-warm — 작은 글씨(14px 이하 감점 숫자·경고 문장·'이견 있음' 배지) 전용. amber-warm 글자는 흰 바탕 3.21:1·
      종이 3.08:1 로 WCAG AA(작은 글자 4.5:1)에 못 미쳐(2026-10-26 F3·검증 BR-3), 디자인 산출물이 이미 쓰던 #7A5B22
      (DetailHanja V 배지·EvalBody '참고할 점'·EvaluateResult 기본값 경고)를 토큰으로 올렸다 — 흰 6.27 · 종이 6.00 · gold-50 5.48 ·
-     amber-50 6.05 · amber 14% 틴트 5.45:1 (tests/amber-contrast.test.mjs). 테두리·바탕·아이콘은 amber-warm 그대로 */
+     amber-50 6.05 · amber 14% 틴트 5.45:1 (tests/amber-contrast.test.mjs). 테두리·바탕은 amber-warm 그대로
+     (/method DontRow XCircle 아이콘은 2026-10-26 팔레트 #2 에서 이 토큰으로 — surface-2 5.60:1, 옛 #B5874C 2.87:1) */
   --color-amber-warm-700-token: #7a5b22;
+  /* 오행 火 글자 전용 — amber-warm(#b5874c) 글자는 amber-50 배지 3.10 · 火 14% 틴트 2.79:1. amber-warm-700 은 색상이 h≈80 으로
+     土 쪽에 붙어(土 글자와 ΔE 7.6) 오행 구분이 사라지므로, 火 는 주황 쪽(h≈66)으로 조금 옮기고 채도를 올렸다(2026-10-26 팔레트 #2) —
+     amber-50 5.39 · 흰 5.59 · 종이 5.35 · 火 14% 틴트 4.67:1(종이 위), 土(gold-800)와 ΔE 15.9. 테두리·바탕·막대는 amber-warm 그대로 */
+  --color-amber-warm-600-token: #975918;
 
   /* === 주홍 印章 (vermilion seal) — 한국 전통 포인트 컬러 (붓요정 마스코트와 통일) ===
      사용처: 印 스탬프, top-pick 마이크로 액센트, hero 강조점.
@@ -186,6 +206,12 @@
   --color-score-high-token: #4a7c59; /* 90+ calm green */
   --color-score-mid-token: #5b7faa;  /* 80+ soft blue */
   --color-score-low-token: #b5874c;  /* 70+ mustard */
+  /* 오행 글자 전용 짙은 색(2026-10-26 팔레트 #2) — 같은 색상·채도에서 밝기만 내렸다. 바탕·테두리·막대는 원래 색 그대로.
+     score-high-700: FIVE_EL 木(옛 #4A7C59 — 12% 틴트 4.17:1) · score-mid-700: /hanja 水 배지(옛 score-mid — 종이 3.97:1) ·
+     teal-800: FIVE_EL 金(옛 #2E7D7A — 14% 틴트 4.05:1). Tailwind 기본 teal-800 은 쓰지 않던 이름이라 덮어써도 바뀌는 화면이 없다 */
+  --color-score-high-700-token: #417250;
+  --color-score-mid-700-token: #4a6f99;
+  --color-teal-800-token: #1f716e;
 
   /* === Inline style용 alias (디자인 컴포넌트가 var(--color-X) 직접 참조) === */
   --color-background: var(--color-background-token);
@@ -213,7 +239,10 @@
   --color-gold-600: var(--color-gold-600-token);
   --color-gold-100: var(--color-gold-100-token);
   --color-gold-50: var(--color-gold-50-token);
+  --color-gold-700: var(--color-gold-700-token);
+  --color-gold-800: var(--color-gold-800-token);
 
+  --color-amber-warm-600: var(--color-amber-warm-600-token);
   --color-amber-warm-700: var(--color-amber-warm-700-token);
 
   --color-vermilion: var(--color-vermilion-token);
@@ -230,6 +259,9 @@
   --color-score-high: var(--color-score-high-token);
   --color-score-mid: var(--color-score-mid-token);
   --color-score-low: var(--color-score-low-token);
+  --color-score-high-700: var(--color-score-high-700-token);
+  --color-score-mid-700: var(--color-score-mid-700-token);
+  --color-teal-800: var(--color-teal-800-token);
 
   /* === Typography Scale (Claude Design) === */
   --fs-h1: 40px;

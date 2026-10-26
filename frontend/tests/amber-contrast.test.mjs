@@ -6,67 +6,10 @@
 // 대비는 globals.css(와 Tailwind amber-50)의 실제 색 값으로 계산한다 — 토큰 값을 바꾸면 여기서 다시 잰다.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const read = (...p) => readFileSync(join(ROOT, ...p), "utf8");
-const CSS = read("src", "app", "globals.css");
-
-/** globals.css :root 의 `--name: #rrggbb;` 값 */
-function token(name) {
-  const m = new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})\\s*;`).exec(CSS);
-  assert.ok(m, `globals.css 에 --${name} 가 없다`);
-  return m[1];
-}
-
-function hexRgb(hex) {
-  const h = hex.replace("#", "");
-  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
-}
-
-/** Tailwind 기본 팔레트(oklch) → sRGB 0~255 */
-function oklchRgb(L, C, H) {
-  const a = C * Math.cos((H * Math.PI) / 180);
-  const b = C * Math.sin((H * Math.PI) / 180);
-  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
-  const lin = [
-    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
-  ];
-  return lin.map((x) => {
-    const c = Math.min(1, Math.max(0, x));
-    return Math.round((c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055) * 255);
-  });
-}
-
-function tailwindColor(name) {
-  const theme = readFileSync(join(ROOT, "node_modules", "tailwindcss", "theme.css"), "utf8");
-  const m = new RegExp(`--color-${name}:\\s*oklch\\(([\\d.]+)%\\s+([\\d.]+)\\s+([\\d.]+)\\)`).exec(theme);
-  assert.ok(m, `tailwindcss theme.css 에 --color-${name} 가 없다`);
-  return oklchRgb(Number(m[1]) / 100, Number(m[2]), Number(m[3]));
-}
-
-function luminance([r, g, b]) {
-  const f = (c) => {
-    const v = c / 255;
-    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-}
-
-/** WCAG 2.x 대비 */
-function contrast(fg, bg) {
-  const [a, b] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
-  return (a + 0.05) / (b + 0.05);
-}
-
-/** rgba(fg, alpha) 를 bg 위에 합성 — color-mix(… N%, transparent)·rgba 틴트 바탕 */
-const tint = (rgb, alpha, under) => rgb.map((c, i) => Math.round(alpha * c + (1 - alpha) * under[i]));
+import { readdirSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+// 색 읽기·대비 계산은 tests/color-utils.mjs 공용(2026-10-26 팔레트 #2 — tests/palette-contrast.test.mjs 와 같이 쓴다)
+import { ROOT, read, token, hexRgb, tailwindColor, contrast, tint } from "./color-utils.mjs";
 
 const AA_SMALL = 4.5;
 const AMBER = hexRgb(token("color-amber-warm-token"));
@@ -81,7 +24,7 @@ const BACKGROUNDS = [
   ["흰 카드(/method '이견 있음' 칩·SmartResult 카드)", WHITE],
   // /name 미학 카드는 bg-paper-card 가 정의돼 있지 않아(cn 이 bg-card 를 지운다) 바탕이 투명 — 감점 숫자는 종이 위에 놓인다(브라우저 실측)
   ["종이 바탕(/name 감점 숫자·/hanja·/name '이견 있음' 배지·/company 오류 상자)", PAPER],
-  ["gold-50('이견 있음' hover·NameCard 55+)", GOLD_50],
+  ["gold-50('이견 있음' hover)", GOLD_50],
   ["amber-50(입력 화면 오류 상자)", AMBER_50],
   ["amber 8% 틴트(/company 키워드 안내·주의사항)", tint(AMBER, 0.08, WHITE)],
   ["amber 10% 틴트(SmartResult 성별 주의 칩)", tint(AMBER, 0.1, WHITE)],
@@ -141,17 +84,15 @@ function sourceFiles(dir = join(ROOT, "src")) {
 }
 
 /**
- * 옛 amber-warm 을 글자색으로 남겨 둔 곳 — 오행 火 배지(색이 오행 표지라 土·水 와 함께 팔레트로 정할 일 — 따로 남김)와
- * 글자가 아닌 아이콘만. 여기 없는 곳에 amber-warm 글자색이 새로 생기면 실패한다.
+ * 옛 amber-warm 값이 `color:` 로 남아도 되는 곳 — 글자가 아닌 표지색만. 2026-10-26 팔레트 #2 에서 오행 火 배지(→ amber-warm-600)·
+ * /method DontRow XCircle 아이콘(→ amber-warm-700)을 옮기고 쓰지 않던 HanjaCandidateCard 를 지워, FIVE_EL 火 표지색
+ * (막대·왼쪽 테두리용 — 글자는 text 필드) 하나만 남았다. 여기 없는 곳에 amber-warm 글자색이 새로 생기면 실패한다.
  */
 const ALLOWED_AMBER_TEXT = [
-  ["components/hanja/HanjaBadges.tsx", /火: "bg-amber-50 text-amber-warm /],
-  ["components/results/HanjaCandidateCard.tsx", /"火": "bg-amber-50 text-amber-warm /],
-  ["components/design/DetailPrimitives.tsx", /^\s*color: "#B5874C",$/], // FIVE_EL 火
-  ["app/method/page.tsx", /style=\{\{ flexShrink: 0, color: "#B5874C", marginTop: 1 \}\}/], // DontRow XCircle 아이콘
+  ["components/design/DetailPrimitives.tsx", /^\s*color: "#B5874C",$/], // FIVE_EL 火 표지색(비텍스트)
 ];
 
-test("작은 글씨에 옛 amber-warm(#b5874c) 글자색이 남지 않는다 — 오행 火 배지·아이콘만 예외", () => {
+test("작은 글씨에 옛 amber-warm(#b5874c) 글자색이 남지 않는다 — FIVE_EL 火 표지색(비텍스트)만 예외", () => {
   const offenders = [];
   for (const file of sourceFiles()) {
     const rel = relative(join(ROOT, "src"), file).split(sep).join("/");
@@ -160,10 +101,13 @@ test("작은 글씨에 옛 amber-warm(#b5874c) 글자색이 남지 않는다 —
       .forEach((line, i) => {
         if (/^\s*(\/\/|\/?\*|\{\/\*)/.test(line)) return; // 주석 줄(옛 색을 설명하는 말)
         // text-destructive 도 같은 색이다(globals.css --destructive: #b5874c — red 회피). 입력 화면 오류 문장 3곳이 12px 로 쓰고 있었다(2026-10-26 보완)
+        // score-low 도 같은 값(#b5874c)이다 — `color: "var(--color-score-low)"` 글자색도 잡는다(2026-10-26 팔레트 #2 보완 — ScoreTile low).
+        // 삼항식으로 고르는 큰 점수 숫자(ScoreRing 40px·SmartCards·SmartTop·CompanyResult 24px — 큰 글씨 3:1, 흰 3.21:1)는 이 줄 모양에 걸리지 않는다
         const amberText =
           /\btext-amber-warm(?![-\w/])/.test(line) ||
           /\btext-destructive(?![-\w/])/.test(line) ||
-          /color:\s*"(var\(--color-amber-warm\)|var\(--color-destructive\)|#b5874c)"/i.test(line);
+          /\btext-score-low(?![-\w/])/.test(line) ||
+          /color:\s*"(var\(--color-amber-warm\)|var\(--color-destructive\)|var\(--color-score-low\)|#b5874c)"/i.test(line);
         if (!amberText) return;
         if (ALLOWED_AMBER_TEXT.some(([f, re]) => f === rel && re.test(line))) return;
         offenders.push(`${rel}:${i + 1}: ${line.trim()}`);

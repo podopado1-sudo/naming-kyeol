@@ -131,7 +131,7 @@ export function CompanyNameCard({
                 className="rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide"
                 style={{
                   background: "var(--color-gold-50)",
-                  color: "var(--color-gold-700)",
+                  color: "var(--color-gold-800)",
                 }}
               >
                 TOP PICK

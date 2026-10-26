@@ -415,9 +415,11 @@ function SurnameCard({
         <span style={{ whiteSpace: "nowrap" }}>
           {chars.length === 2 ? "복성" : "단성"}
         </span>
+        {/* 희귀 단계를 알리는 것은 이 별 개수뿐이라 글자로 본다(11px — RarityChip 의 #6F5421 과 같은 기준) — gold-700 은
+            surface-2 위 3.48:1 이라 골드 글자 토큰 gold-800(7.21:1, 2026-10-26 팔레트 #2 보완) */}
         <span
           style={{
-            color: "var(--color-gold-600)",
+            color: "var(--color-gold-800)",
             fontWeight: 600,
             whiteSpace: "nowrap",
           }}
@@ -474,7 +476,7 @@ function DownArrow({ label }: { label: string }) {
         style={{
           width: 1,
           height: 18,
-          background: "var(--color-text-3)",
+          background: "var(--color-ink-dan)", // 1px 세로선(비텍스트) — text-3 를 짙게 한 뒤에도 옛 淡墨 그대로
           margin: "0 auto 6px",
         }}
       />
@@ -1352,7 +1354,7 @@ function RareCandidateCard({
                   style={{
                     fontFamily: "var(--font-serif)",
                     marginRight: 6,
-                    color: "var(--color-gold-600)",
+                    color: "var(--color-gold-700)",
                   }}
                 >
                   ★
@@ -1771,7 +1773,7 @@ function CategoryTabsR({
                     fontFamily: "var(--font-serif)",
                     fontSize: 11,
                     color: isActive
-                      ? "var(--color-gold-600)"
+                      ? "var(--color-gold-700)"
                       : "var(--color-text-3)",
                   }}
                 >

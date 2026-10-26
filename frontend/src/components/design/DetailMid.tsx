@@ -117,14 +117,16 @@ export function KyeolBlocks({
         title="강점"
         items={strengths}
         tintBg="rgba(74,124,89,0.08)"
-        accent="var(--color-score-high)"
+        // 13px 제목·점 — 옛 score-high 4.42 · 약점 #9A7E3A 3.57:1(틴트 위) → 짙은 글자 토큰(2026-10-26 팔레트 #2 보완,
+        // 약점은 /evaluate EvalBody '참고할 점'과 같은 amber-warm-700)
+        accent="var(--color-score-high-700)"
       />
       <Block
         emoji="⚠"
         title="약점"
         items={weaknesses}
         tintBg="rgba(201,169,110,0.12)"
-        accent="#9A7E3A"
+        accent="var(--color-amber-warm-700)"
       />
       <Block
         emoji="📝"
@@ -227,7 +229,7 @@ export function EumryeongTimeline({ analysis }: { analysis: EumryeongData | null
                         padding: "3px 8px",
                         borderRadius: "var(--radius-sm)",
                         background: el.tintBg,
-                        color: el.color,
+                        color: el.text,
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -276,7 +278,7 @@ export function EumryeongTimeline({ analysis }: { analysis: EumryeongData | null
           <span
             style={{
               fontWeight: 600,
-              color: FIVE_EL[dominantElement].color,
+              color: FIVE_EL[dominantElement].text,
               whiteSpace: "nowrap",
             }}
           >

@@ -59,7 +59,8 @@ function FootLink({ link }: { link: FooterLink }) {
             fontSize: 9.5,
             fontWeight: 500,
             color: "var(--color-text-3)",
-            background: "var(--color-divider)",
+            // 옛 divider(검정 8%) 바탕은 종이 위 text-3 4.41:1 — surface-2 4.86:1(2026-10-26 팔레트 #2 보완, 지금은 쓰는 링크 없음)
+            background: "var(--color-surface-2)",
             padding: "1px 6px",
             borderRadius: 999,
             letterSpacing: "0.06em",

@@ -333,7 +333,8 @@ export function StrengthsCautions({
       title: "이 이름의 강점",
       items: strengths,
       tintBg: "rgba(74,124,89,0.08)",
-      accent: "var(--color-score-high)",
+      // 13px 제목·아이콘·점 — score-high 는 초록 8% 틴트(종이 위) 4.22:1 이라 짙은 글자 토큰(5.0:1 안팎, 2026-10-26 팔레트 #2 보완)
+      accent: "var(--color-score-high-700)",
     },
     {
       key: "cautions",

@@ -241,7 +241,7 @@ function HanjaCard({ entry }: { entry: HanjaSyllableEntry }) {
                   padding: "3px 9px",
                   borderRadius: "var(--radius-sm)",
                   background: el.tintBg,
-                  color: el.color,
+                  color: el.text,
                   whiteSpace: "nowrap",
                 }}
               >
@@ -395,7 +395,7 @@ function HanjaCard({ entry }: { entry: HanjaSyllableEntry }) {
                             padding: "2px 7px",
                             borderRadius: 6,
                             background: oel.tintBg,
-                            color: oel.color,
+                            color: oel.text,
                             whiteSpace: "nowrap",
                           }}
                         >

@@ -307,6 +307,7 @@ export default function MethodPage() {
               rows={HARMONY_ROWS}
               tail="출생일 미입력 시 조화 점수 생략"
               accent="var(--color-gold)"
+              textAccent="var(--color-gold-800)"
             />
           </div>
         </section>
@@ -855,12 +856,19 @@ function ScoreBlock({
   rows,
   tail,
   accent,
+  textAccent,
 }: {
   title: string;
   subtitle: string;
   rows: PillarRow[];
   tail: string;
+  /** 막대 색(비텍스트) */
   accent: string;
+  /**
+   * 배점 숫자(12px) 글자색 — 없으면 accent. 골드(#C9A96E)는 흰 카드 2.24:1 이라 조화 블록은 gold-800(8.08:1)을 넘긴다
+   * (2026-10-26 팔레트 #2 보완, 막대는 accent 그대로 — tests/palette-contrast.test.mjs)
+   */
+  textAccent?: string;
 }) {
   return (
     <div
@@ -933,7 +941,7 @@ function ScoreBlock({
                   fontFamily: "Inter, var(--font-sans)",
                   fontSize: 12,
                   fontWeight: 600,
-                  color: accent,
+                  color: textAccent ?? accent,
                   letterSpacing: "0.04em",
                 }}
               >
@@ -1126,7 +1134,8 @@ const GRADE_CHIP_STYLE: Record<GradeCode, React.CSSProperties> = {
   U: {
     background: "var(--color-surface-2)",
     color: "var(--color-text-3)",
-    border: "1.5px dashed var(--color-text-3)",
+    // 점선 테두리(비텍스트)는 옛 淡墨 그대로 — 글자만 짙어진 text-3(surface-2 4.86:1, 옛 3.27:1)
+    border: "1.5px dashed var(--color-ink-dan)",
   },
 };
 
@@ -1223,7 +1232,7 @@ function DontRow({ text }: { text: string }) {
       <XCircle
         size={18}
         strokeWidth={1.5}
-        style={{ flexShrink: 0, color: "#B5874C", marginTop: 1 }}
+        style={{ flexShrink: 0, color: "var(--color-amber-warm-700)", marginTop: 1 }}
       />
       <span
         style={{

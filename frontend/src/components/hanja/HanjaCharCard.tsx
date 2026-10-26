@@ -17,6 +17,9 @@ import {
  * 카드를 흐리게 그리는 글자 — 옛 규칙은 획수 자동 판정(D등급)이었다(2026-10-22 폐지).
  * 지금은 자원오행을 정하지 못한 글자(U 미상)와 이름에 피하는 글자(불용 nf)만 흐린다.
  * 이견 있음(V)은 흐리지 않는다 — 祐·禮처럼 이름에 흔한 글자가 많고, 값이 틀렸다는 뜻이 아니다.
+ * 흐리는 것은 큰 한자 글리프(30px — 큰 글씨 3:1)만이다. 옛 카드 전체 opacity-75 는 오행·등급 배지 12px 글자까지 반투명이라
+ * 木 3.03·水 3.09·火 3.30·'이견 있음' 3.50:1 로 AA(4.5:1) 아래였다(2026-10-26 팔레트 #2 보완). 상태는 '미상'·'이름에 피함' 배지
+ * (불용 소구획은 묶음 제목)가 글로 알린다 — tests/palette-contrast.test.mjs
  */
 export function isDimmedCard(record: HanjaSeoRecord): boolean {
   return record.g === "U" || isAvoidedForNames(record);
@@ -44,10 +47,16 @@ export function HanjaCharCard({
       className={cn(
         "flex h-full items-center gap-3 rounded-lg border border-paper-line bg-paper-card p-3 transition",
         linked && "hover:border-teal hover:shadow-sm",
-        isDimmedCard(record) && "opacity-75",
       )}
     >
-      <span className="font-hanja text-3xl font-medium text-navy">{char}</span>
+      <span
+        className={cn(
+          "font-hanja text-3xl font-medium text-navy",
+          isDimmedCard(record) && "opacity-75",
+        )}
+      >
+        {char}
+      </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-navy">
           {record.m ?? record.r.join(", ")}

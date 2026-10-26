@@ -30,7 +30,7 @@ export function ElementChip({ el }: { el?: string }) {
         padding: "2px 8px",
         borderRadius: 6,
         background: def.tintBg,
-        color: def.color,
+        color: def.text,
         whiteSpace: "nowrap",
         lineHeight: 1.5,
         fontFamily: "var(--font-sans)",

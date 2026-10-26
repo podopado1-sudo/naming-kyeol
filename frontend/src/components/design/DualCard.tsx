@@ -92,7 +92,7 @@ export function DualCard({
       : s >= 70
         ? "var(--color-navy)"
         : s >= 55
-          ? "var(--color-gold-600)"
+          ? "var(--color-gold-700)"
           : "var(--color-text-2)";
 
   const highlightSyllables = mode === "phonetic";
@@ -442,7 +442,7 @@ export function DualCard({
             alignItems: "flex-start",
           }}
         >
-          <span style={{ color: "var(--color-gold-600)" }}>⚠</span>
+          <span style={{ color: "var(--color-gold-700)" }}>⚠</span>
           <span>{cand.note}</span>
         </div>
       )}
