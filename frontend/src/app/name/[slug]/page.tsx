@@ -20,10 +20,8 @@ import {
   ohaengRelation,
   syllablesOf,
   toAestheticBreakdown,
-  type NameScoreBreakdown,
   type NameSeoRecord,
 } from "@/lib/name-seo";
-import type { AestheticBreakdown } from "@/lib/types";
 
 /**
  * /name/[이름] — 이름 뜻 SEO 페이지.
@@ -86,21 +84,6 @@ function nameKind(rec: NameSeoRecord): NameKind {
 /** 외래 이름(fx)인데 뜻이 없을 때 '이름 뜻' 아래 한 줄 — 어원이 갈리거나 원어 이름이 없어 비운 이름(S7 데이터 단계) */
 const FOREIGN_NO_MEAN_NOTE =
   "한자 없이 한글로 쓰는 이름이라 한자 뜻이 따로 없습니다. 어원이 분명하지 않아 뜻풀이는 적지 않았습니다.";
-
-/**
- * 미학 점수 노트 — 외래 이름(fx)에는 한자가 없으니 '한자 성별 선호도'를 '음절 성별 선호도'로 바꿔 보인다.
- * 성별 보너스는 음절마다 그 소리로 읽는 한자의 성별 선호(AestheticEngine)로 매기므로, 한자 없는 이름에서는 음절 단위 경향이다.
- */
-function scoreBreakdownFor(kind: NameKind, sc: NameScoreBreakdown): AestheticBreakdown {
-  const breakdown = toAestheticBreakdown(sc);
-  if (kind !== "foreign") return breakdown;
-  return {
-    ...breakdown,
-    notes: breakdown.notes.map((n) =>
-      n.replace("일부 한자의 성별 선호도", "일부 음절의 성별 선호도").replace("한자 성별 선호도", "음절 성별 선호도"),
-    ),
-  };
-}
 
 /** 대표 뜻 아래 한 줄 — 이름 갈래별 */
 function meanNote(kind: NameKind, hasCombos: boolean): string {
@@ -461,7 +444,9 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
               봅니다.
             </p>
             <ScoreBreakdownCard
-              aesthetic={scoreBreakdownFor(kind, rec.sc)}
+              // 성별 보너스·노트는 페이지 1순위 조합 한자로만 매긴다(dump-name-scores — NameSeoHanja.DisplayedHanja, 2026-10-26 결정 ③).
+              // 조합이 없는 이름(외래 fx·3음절·첩음)은 보이는 한자가 없어 성별 노트가 생기지 않는다 — 옛 '음절 성별 선호도' 치환은 지웠다.
+              aesthetic={toAestheticBreakdown(rec.sc)}
               totalScore={rec.sc.t}
             />
             <p className="mt-3 text-sm text-text-2">

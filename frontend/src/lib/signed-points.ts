@@ -4,7 +4,8 @@
  * /evaluate 막대(components/design/EvalPrimitives.tsx ScoreBar 의 bonus 행)와 /name 미학 점수 카드
  * (components/results/ScoreBreakdownCard.tsx)가 같은 규칙을 쓴다: 0 이상은 '+N', 음수는 '-N'.
  * 2026-10-23 운영 검증 NAME-2 — ScoreBreakdownCard 가 type="bonus" 행에 늘 '+'와 청록을 붙여, 성별 선호가 맞지 않는
- * 이름(name-seo sc.g -2·-4, 공개 87쪽 — 재윤·다솜 등)이 '성별 보너스 +-2'(청록)로 나왔다.
+ * 이름(name-seo sc.g -2·-4, 당시 공개 87쪽 — 재윤·다솜 등)이 '성별 보너스 +-2'(청록)로 나왔다.
+ * (2026-10-26 결정 ③ 뒤로 성별 판정은 페이지 1순위 조합 한자로 — 두 이름은 지금 0, 음수 사례는 유찬·우빈 등)
  *
  * 감점(penalty)은 엔진이 양수로 내는 값이라(AestheticEngine PenaltyTotal) 부르는 쪽이 `-penalty` 로 넘긴다
  * — EvaluateResult 의 '감점' 행과 같다.

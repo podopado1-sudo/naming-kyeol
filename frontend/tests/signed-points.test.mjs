@@ -1,7 +1,7 @@
 // 가점·감점 한 줄 부호·색 테스트 — `npm test`
 //
 // 2026-10-23 운영 검증 NAME-2: /name 미학 점수 카드(ScoreBreakdownCard)가 행 종류(type="bonus")로 '+'·청록을 붙여
-// 음수 성별 보너스(name-seo sc.g -2·-4 — 재윤 -4·다솜 -2)가 '성별 보너스 +-2'(청록)로 나왔다.
+// 음수 성별 보너스(name-seo sc.g -2·-4 — 2026-10-23 당시 재윤 -4·다솜 -2)가 '성별 보너스 +-2'(청록)로 나왔다.
 // 부호·색은 값으로 정하고, /evaluate ScoreBar bonus 행(`value >= 0 ? +v : v`)과 같은 규칙을 쓴다.
 import { test } from "node:test";
 import assert from "node:assert/strict";
