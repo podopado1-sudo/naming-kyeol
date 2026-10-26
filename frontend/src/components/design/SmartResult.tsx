@@ -1372,7 +1372,7 @@ function CandidateCard({
                   alignItems: "center",
                   fontSize: 11.5,
                   fontWeight: 600,
-                  color: "var(--color-amber-warm)",
+                  color: "var(--color-amber-warm-700)",
                   background: "rgba(181,135,76,0.10)",
                   border: "1px solid rgba(181,135,76,0.3)",
                   borderRadius: 999,

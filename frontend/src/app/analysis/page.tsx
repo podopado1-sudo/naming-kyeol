@@ -184,8 +184,9 @@ function AnalysisInner({
     const sajuData = mapSaju(result.saju);
     const eumryeongData = mapEumryeong(result);
     const hanjaBreakdown = mapHanjaBreakdown(result);
-    // 순우리말 음절처럼 한자 후보가 없는 음절만 있으면 섹션 제목만 남지 않게 숨긴다
-    const hasHanja = hanjaBreakdown.some((b) => b.possibleHanja.length > 0);
+    // 후보가 없는 음절(순한글 음절·후보가 모두 불용인 음절)도 '한글로 두기를 권해요' 한 줄을 그리므로(DetailHanja NoHanjaCard —
+    // 2026-10-26 L4) 음절이 하나라도 있으면 섹션을 둔다. 옛 화면은 그런 음절 카드를 걸러, 후보 없는 음절만 있으면 섹션을 숨겼다
+    const hasHanjaSection = hanjaBreakdown.length > 0;
 
     const strengths = result.strengths ?? [];
     const weaknesses = result.weaknesses ?? [];
@@ -223,7 +224,7 @@ function AnalysisInner({
         )}
 
         {/* 한자 분석 */}
-        {hasHanja && (
+        {hasHanjaSection && (
           <section style={{ marginTop: 48 }}>
             <SectionHead
               title="한자 분석"

@@ -33,13 +33,14 @@ test("감점은 -penalty 로 넘겨 '-N' (EvaluateResult '감점' 행과 같다)
   for (const pn of [5, 10, 15, 27]) assert.equal(formatSignedPoints(-pn), `-${pn}`);
 });
 
-test("색은 값의 부호로 — 음수는 가점 색(teal)이 아니라 amber-warm", () => {
+test("색은 값의 부호로 — 음수는 가점 색(teal)이 아니라 짙은 amber-warm(작은 글자 AA — F3)", () => {
   assert.equal(pointsPolarity(5), "plus");
   assert.equal(pointsPolarity(-2), "minus");
   assert.equal(pointsPolarity(0), "zero");
   assert.equal(signedPointsClass(5), "text-teal");
-  assert.equal(signedPointsClass(-2), "text-amber-warm");
-  assert.equal(signedPointsClass(-4), "text-amber-warm");
+  // 옛 text-amber-warm(#b5874c)은 흰 카드 3.21:1 — 대비 수치는 tests/amber-contrast.test.mjs
+  assert.equal(signedPointsClass(-2), "text-amber-warm-700");
+  assert.equal(signedPointsClass(-4), "text-amber-warm-700");
   assert.notEqual(signedPointsClass(0), "text-teal");
 });
 

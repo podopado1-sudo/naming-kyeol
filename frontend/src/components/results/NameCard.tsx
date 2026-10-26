@@ -13,7 +13,7 @@ interface NameCardProps {
 function scoreColor(score: number) {
   if (score >= 85) return "bg-teal-50 text-teal-700 border-teal-50";
   if (score >= 70) return "bg-navy-50 text-navy-700 border-navy-50";
-  if (score >= 55) return "bg-gold-50 text-amber-warm border-gold-50";
+  if (score >= 55) return "bg-gold-50 text-amber-warm-700 border-gold-50";
   return "bg-paper-tint text-muted-foreground border-paper-line";
 }
 

@@ -779,7 +779,7 @@ function FieldHint({
   kind?: "info" | "warn";
 }) {
   const color =
-    kind === "warn" ? "var(--color-gold-600)" : "var(--color-text-3)";
+    kind === "warn" ? "var(--color-amber-warm-700)" : "var(--color-text-3)";
   return (
     <div
       style={{ marginTop: 8, fontSize: 12.5, color, lineHeight: 1.5 }}

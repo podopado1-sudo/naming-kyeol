@@ -37,7 +37,7 @@ const GRADE_CLASS: Record<ResourceGrade, { className: string; showCheck: boolean
     showCheck: false,
   },
   V: {
-    className: "bg-transparent text-amber-warm border-[1.5px] border-gold-700 hover:bg-gold-50",
+    className: "bg-transparent text-amber-warm-700 border-[1.5px] border-gold-700 hover:bg-gold-50",
     showCheck: false,
   },
   U: {

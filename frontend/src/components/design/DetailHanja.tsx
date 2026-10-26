@@ -11,6 +11,7 @@ import { useId, useState } from "react";
 import { FIVE_EL } from "./DetailPrimitives";
 import { gradeBadgeKey } from "@/components/hanja/hanja-element-text";
 import { RESOURCE_GRADE_INFO, type ResourceBadgeKey, type ResourceGrade } from "./resource-grade";
+import { hasNoHanja, noHanjaSyllableNote } from "@/lib/no-hanja";
 
 // ============================================================
 // ResourceGradeBadge — 자원오행 판정 등급 (R 확정 / V 이견 있음 / X 예외 적용 / U 미상)
@@ -422,6 +423,43 @@ function HanjaCard({ entry }: { entry: HanjaSyllableEntry }) {
   );
 }
 
+/**
+ * 후보가 0개인 음절(순한글 음절·후보가 모두 불용인 음절) — 옛 화면은 카드를 걸러 음절이 말없이 빠졌다.
+ * /evaluate 후보 표와 같은 한 줄 안내를 같은 자리에 둔다(2026-10-26 L4, lib/no-hanja.ts).
+ */
+function NoHanjaCard({ syllable }: { syllable: string }) {
+  return (
+    <article
+      style={{
+        background: "var(--color-surface)",
+        borderRadius: "var(--radius-lg)",
+        boxShadow: "var(--shadow-sm)",
+        padding: "18px 24px",
+        display: "grid",
+        gridTemplateColumns: "auto 1fr",
+        columnGap: 22,
+        alignItems: "center",
+      }}
+    >
+      <div
+        style={{
+          minWidth: 88,
+          textAlign: "center",
+          fontSize: 18,
+          fontWeight: 500,
+          color: "var(--color-text-2)",
+          letterSpacing: "-0.01em",
+        }}
+      >
+        {syllable}
+      </div>
+      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "var(--color-text-2)" }}>
+        {noHanjaSyllableNote(syllable)}
+      </p>
+    </article>
+  );
+}
+
 export function HanjaBreakdown({
   breakdown,
 }: {
@@ -429,12 +467,14 @@ export function HanjaBreakdown({
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {breakdown
-        .filter((b) => b.possibleHanja.length > 0)
-        .map((b, i) => (
-          // 같은 음절이 반복되는 이름(예: 하하)도 있어 음절만으로는 키가 겹친다
+      {breakdown.map((b, i) =>
+        // 같은 음절이 반복되는 이름(예: 하하)도 있어 음절만으로는 키가 겹친다
+        hasNoHanja(b.possibleHanja) ? (
+          <NoHanjaCard key={`${i}-${b.syllable}`} syllable={b.syllable} />
+        ) : (
           <HanjaCard key={`${i}-${b.syllable}`} entry={b} />
-        ))}
+        )
+      )}
     </div>
   );
 }

@@ -94,8 +94,8 @@ export function HarmonyBreakdownCard({
         )}
 
         {harmony.usedFallback && (
-          <div className="rounded-lg border border-amber-warm/30 bg-amber-50 p-3 text-sm text-amber-warm">
-            한자 정보 부족으로 기본값을 사용했어요
+          <div className="rounded-lg border border-amber-warm/30 bg-amber-50 p-3 text-sm text-amber-warm-700">
+            배정할 한자가 없는 음절이 있어 기본값으로 계산했어요
           </div>
         )}
 

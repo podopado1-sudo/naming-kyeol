@@ -457,7 +457,7 @@ export default function ParentBasedPage() {
 
       {/* Error */}
       {error && (
-        <div className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm">
+        <div className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700">
           {error}
         </div>
       )}

@@ -1114,7 +1114,8 @@ const GRADE_CHIP_STYLE: Record<GradeCode, React.CSSProperties> = {
   },
   V: {
     background: "transparent",
-    color: "var(--color-gold-600)",
+    // 글자는 짙은 amber-warm(흰 카드 6.27:1) — 옛 gold-600(#b49258)은 12.5px 칩에서 2.92:1 로 WCAG AA 미달(2026-10-26 F3)
+    color: "var(--color-amber-warm-700)",
     border: "1.5px solid var(--color-gold)",
   },
   X: {

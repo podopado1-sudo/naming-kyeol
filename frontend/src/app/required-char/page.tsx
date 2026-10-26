@@ -309,7 +309,7 @@ function RequiredCharForm({
                 )}
               />
               {birthDateError && (
-                <p className="text-xs text-destructive" role="alert">
+                <p className="text-xs text-amber-warm-700" role="alert">
                   출생일을 입력해주세요. 부족한 오행을 채우는 글자를 고르는 데
                   필요해요.
                 </p>
@@ -379,7 +379,7 @@ function RequiredCharForm({
       </Card>
 
       {error && (
-        <div className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm">
+        <div className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700">
           {error}
         </div>
       )}

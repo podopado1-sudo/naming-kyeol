@@ -343,7 +343,7 @@ function BabyNamingInner({
                 className={cn(birthDateError && "border-destructive focus-visible:ring-destructive")}
               />
               {birthDateError && (
-                <p className="text-xs text-destructive" role="alert">
+                <p className="text-xs text-amber-warm-700" role="alert">
                   생년월일을 입력해주세요. 조화 점수 계산에 필요해요.
                 </p>
               )}
@@ -466,7 +466,7 @@ function BabyNamingInner({
                     {englishNameIssue && (
                       <p
                         id="englishName-error"
-                        className="text-xs text-destructive"
+                        className="text-xs text-amber-warm-700"
                         role="alert"
                       >
                         {englishNameIssue}

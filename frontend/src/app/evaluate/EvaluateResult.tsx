@@ -246,7 +246,8 @@ export function EvaluateResultView({
                       color: "#7A5B22",
                     }}
                   >
-                    ⚠ 한자 정보 부족으로 기본값을 사용했어요
+                    {/* usedFallback = 배정 한자가 없는 음절(순한글 음절·글자가 모두 불용인 음절)이 있다 — 백엔드 HarmonyEngine 노트와 같은 말(2026-10-26) */}
+                    ⚠ 배정할 한자가 없는 음절이 있어 기본값으로 계산했어요
                   </div>
                 ) : null}
               </>

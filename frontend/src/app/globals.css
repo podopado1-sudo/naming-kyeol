@@ -53,6 +53,7 @@
 
   /* === 경고/참고 톤 (amber-warm — red 회피) === */
   --color-amber-warm: var(--color-amber-warm-token);
+  --color-amber-warm-700: var(--color-amber-warm-700-token);
 
   /* === Score 분기 === */
   --color-score-high: var(--color-score-high-token);
@@ -160,6 +161,11 @@
 
   /* 경고/참고 톤 — score-low·destructive와 동일값 (red 회피) */
   --color-amber-warm-token: #b5874c;
+  /* 짙은 amber-warm — 작은 글씨(14px 이하 감점 숫자·경고 문장·'이견 있음' 배지) 전용. amber-warm 글자는 흰 바탕 3.21:1·
+     종이 3.08:1 로 WCAG AA(작은 글자 4.5:1)에 못 미쳐(2026-10-26 F3·검증 BR-3), 디자인 산출물이 이미 쓰던 #7A5B22
+     (DetailHanja V 배지·EvalBody '참고할 점'·EvaluateResult 기본값 경고)를 토큰으로 올렸다 — 흰 6.27 · 종이 6.00 · gold-50 5.48 ·
+     amber-50 6.05 · amber 14% 틴트 5.45:1 (tests/amber-contrast.test.mjs). 테두리·바탕·아이콘은 amber-warm 그대로 */
+  --color-amber-warm-700-token: #7a5b22;
 
   /* === 주홍 印章 (vermilion seal) — 한국 전통 포인트 컬러 (붓요정 마스코트와 통일) ===
      사용처: 印 스탬프, top-pick 마이크로 액센트, hero 강조점.
@@ -207,6 +213,8 @@
   --color-gold-600: var(--color-gold-600-token);
   --color-gold-100: var(--color-gold-100-token);
   --color-gold-50: var(--color-gold-50-token);
+
+  --color-amber-warm-700: var(--color-amber-warm-700-token);
 
   --color-vermilion: var(--color-vermilion-token);
   --color-vermilion-600: var(--color-vermilion-600-token);

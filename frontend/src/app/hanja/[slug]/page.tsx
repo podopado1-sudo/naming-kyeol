@@ -34,6 +34,7 @@ import {
   standardCharOf,
 } from "@/lib/hanja-seo";
 import { josa } from "@/lib/josa";
+import { isNameUsableRecord, noHanjaSyllableNote } from "@/lib/no-hanja";
 import { BASE_OPEN_GRAPH } from "@/lib/og";
 
 /**
@@ -233,6 +234,9 @@ function ReadingPage({ reading, chars }: { reading: string; chars: string[] }) {
   // ND-5: 불용(nf) 글자는 '이름에 피하는 글자'로 따로 모은다. 각 묶음 안은 코어 → 등급 → 획수 순 그대로
   const { usable, avoided } = splitAvoidedChars(chars);
   const ordered = [...usable, ...avoided];
+  // 이름에 실제로 쓰는 글자 = 불용이 아니고 뜻이 있는 글자(백엔드 HanjaSelector 판정과 같음). 핍(畐)·뉵(沑)처럼 뜻 없는 글자만 남은
+  // 독음은 백엔드가 '쓸 한자 없음'으로 다루니 추천 버튼을 두지 않고 한글로 두기를 권한다(뜻 없는 글자 카드는 위 목록에 그대로 둔다)
+  const named = usable.filter((c) => isNameUsableRecord(getHanja(c)));
 
   return (
     <>
@@ -262,6 +266,17 @@ function ReadingPage({ reading, chars }: { reading: string; chars: string[] }) {
               {" "}
               {chars.length > 1 ? "모두" : "이 글자는"} 뜻 가운데 부정적인 풀이가 있어 이 사이트의
               이름 추천에서 쓰지 않는 글자입니다.
+            </>
+          )}
+          {usable.length > 0 && named.length === 0 && (
+            <>
+              {" "}
+              {avoided.length > 0
+                ? `남은 ${usable.length}자는`
+                : usable.length > 1
+                  ? "모두"
+                  : "이 글자는"}{" "}
+              사전에 뜻 풀이가 없는 글자라 이름 추천에도 쓰지 않습니다. {noHanjaSyllableNote(reading)}
             </>
           )}
           {chars.length === 1 && getHanja(chars[0])?.e && (
@@ -310,8 +325,8 @@ function ReadingPage({ reading, chars }: { reading: string; chars: string[] }) {
           </section>
         )}
 
-        {/* 모두 피하는 글자인 독음(죄·혐 등)은 추천 버튼을 두지 않는다 */}
-        {usable.length > 0 && (
+        {/* 이름에 쓰는 글자가 없는 독음(모두 피하는 글자인 죄·혐, 뜻 없는 글자만 남은 핍·뉵)은 추천 버튼을 두지 않는다 */}
+        {named.length > 0 && (
           <CtaBanner
             char={reading}
             label={`'${reading}'${josa(reading, "이/가")} 들어가는 이름이 궁금하신가요? 미학 점수와 오행 조화까지 분석해 드립니다.`}

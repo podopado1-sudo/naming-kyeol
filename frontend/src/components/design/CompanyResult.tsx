@@ -236,7 +236,7 @@ export function CompanyNameCard({
             <div
               key={i}
               className="flex gap-2 text-xs leading-relaxed"
-              style={{ color: "var(--color-amber-warm)" }}
+              style={{ color: "var(--color-amber-warm-700)" }}
             >
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               <span>{w}</span>

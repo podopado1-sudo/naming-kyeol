@@ -286,7 +286,7 @@ export function CompanyForm() {
       </Card>
 
       {error && (
-        <div className="mb-6 rounded-lg border border-amber-warm/50 p-4 text-sm text-amber-warm">
+        <div className="mb-6 rounded-lg border border-amber-warm/50 p-4 text-sm text-amber-warm-700">
           {error}
         </div>
       )}
@@ -317,7 +317,7 @@ export function CompanyForm() {
                 <div
                   key={i}
                   className="flex gap-2 text-xs leading-relaxed"
-                  style={{ color: "var(--color-amber-warm)" }}
+                  style={{ color: "var(--color-amber-warm-700)" }}
                 >
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                   <span>{n}</span>

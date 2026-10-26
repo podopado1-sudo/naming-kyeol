@@ -14,6 +14,7 @@ import { ElementChip } from "./EvalPrimitives";
 import { ResourceGradeBadge } from "./DetailHanja";
 import type { ResourceGrade } from "./resource-grade";
 import { keepFilledBlocks, twoColTemplate } from "./eval-layout";
+import { hasNoHanja, noHanjaSyllableNote } from "@/lib/no-hanja";
 
 // ============================================================
 // HanjaCandidatesTable — 음절별 한자 후보 (2-col 카드)
@@ -42,10 +43,13 @@ export function HanjaCandidatesTable({ groups }: { groups: HanjaGroup[] }) {
         gap: 16,
       }}
     >
-      {groups.map((g) => (
+      {groups.map((g, gi) => (
         <div
-          key={g.syllable}
+          // 같은 음절이 반복되는 이름(하하·똘똘)도 있어 음절만으로는 키가 겹친다 — DetailHanja HanjaBreakdown 과 같게
+          key={`${gi}-${g.syllable}`}
           style={{
+            // 안내 한 줄뿐인 상자는 옆 칸 높이로 늘이지 않는다(빈 흰 상자가 길게 남지 않게)
+            alignSelf: hasNoHanja(g.candidates) ? "start" : undefined,
             background: "var(--color-surface)",
             borderRadius: "var(--radius-lg)",
             boxShadow: "var(--shadow-sm)",
@@ -62,8 +66,22 @@ export function HanjaCandidatesTable({ groups }: { groups: HanjaGroup[] }) {
               letterSpacing: "0.08em",
             }}
           >
-            {g.syllable} 음절 · {g.candidates.length}개
+            {hasNoHanja(g.candidates) ? `${g.syllable} 음절` : `${g.syllable} 음절 · ${g.candidates.length}개`}
           </div>
+          {/* 후보 0 음절(순한글 음절·후보가 모두 불용인 음절) — 빈 상자 대신 한 줄 안내(2026-10-26 L4, lib/no-hanja.ts) */}
+          {hasNoHanja(g.candidates) && (
+            <p
+              style={{
+                margin: 0,
+                padding: "14px 20px",
+                fontSize: 13.5,
+                lineHeight: 1.6,
+                color: "var(--color-text-2)",
+              }}
+            >
+              {noHanjaSyllableNote(g.syllable)}
+            </p>
+          )}
           <div>
             {g.candidates.map((c, i) => (
               <div

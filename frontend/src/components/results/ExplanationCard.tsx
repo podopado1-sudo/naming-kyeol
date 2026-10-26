@@ -51,11 +51,11 @@ export function ExplanationCard({
         {/* Cautions — amber-warm tone (red 회피) */}
         {cautions.length > 0 && (
           <div>
-            <h4 className="mb-2 text-sm font-semibold text-amber-warm">참고</h4>
+            <h4 className="mb-2 text-sm font-semibold text-amber-warm-700">참고</h4>
             <ul className="space-y-1.5">
               {cautions.map((c, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm tabular-nums">
-                  <span className="mt-0.5 shrink-0 text-amber-warm">-</span>
+                  <span className="mt-0.5 shrink-0 text-amber-warm-700">-</span>
                   <span>{c}</span>
                 </li>
               ))}

@@ -18,8 +18,11 @@ import { gradeBadgeKey } from "./hanja-element-text";
 const TEAL_SOLID = "bg-teal text-white border-teal hover:bg-teal";
 const TEAL_OUTLINE =
   "bg-transparent text-teal-700 border-[1.5px] border-teal hover:bg-teal-50";
+// '이견 있음'·'자료 적음'·'추정' 12px 글자 — 옛 text-amber-warm(#b5874c)은 종이 바탕 3.08:1 로 WCAG AA(4.5:1) 미달이었다
+// (2026-10-23 검증 BR-3 → 10-26 F3). 짙은 amber-warm-700(#7A5B22 — /evaluate·/analysis 배지 DetailHanja 와 같은 글자색)은
+// 종이 6.00 · 흰 6.27 · hover gold-50 5.48:1. 테두리(gold-700)·바탕(투명)은 그대로라 4축 구분은 같다
 const GOLD_OUTLINE =
-  "bg-transparent text-amber-warm border-[1.5px] border-gold-700 hover:bg-gold-50";
+  "bg-transparent text-amber-warm-700 border-[1.5px] border-gold-700 hover:bg-gold-50";
 const NEUTRAL_DASHED =
   "bg-paper-card/60 text-muted-foreground border-[1.5px] border-dashed border-paper-line hover:bg-paper-tint";
 
