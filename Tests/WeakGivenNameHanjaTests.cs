@@ -635,7 +635,6 @@ public class WeakGivenNameHanjaTests
     [InlineData("소", 0x71D2)] // 燒 불사를 (weak)
     [InlineData("섭", 0x8076)] // 聶 소곤거릴 (weak)
     [InlineData("설", 0x6D29)] // 洩 샐 (weak)
-    [InlineData("흔", 0x712E)] // 焮 태울 (weak)
     [InlineData("악", 0x5053)] // 偓 악착할 (weak)
     [InlineData("면", 0x7704)] // 眄 곁눈질할 (weak)
     [InlineData("훈", 0x7147)] // 煇 태울 훈 (weak)
@@ -647,6 +646,7 @@ public class WeakGivenNameHanjaTests
     [InlineData("니", 0x5462)] // 呢 소곤거릴 — 니 줄은 비약자가 3자(馜·濔·柅)뿐이라 상위 10 안에 남되 비약자 뒤
     [InlineData("달", 0x6A7D)] // 橽 물 샐 — 달 줄은 9자뿐
     [InlineData("술", 0x73EC)] // 珬 자개 — 술 줄은 8자뿐
+    [InlineData("흔", 0x712E)] // 焮 태울 — 10/26 '남긴 칸' 처리에서 痕 도 weak 가 돼 흔 줄 비약자가 9자라 10위에 남되 비약자 뒤
     public void NegGloss20261026Fix_TopForDisplay_WeakGoesBehind(string syllable, int codepoint)
     {
         var top = HanjaSelector.TopForDisplay(syllable, 10).Select(x => x.Character).ToList();
@@ -664,4 +664,180 @@ public class WeakGivenNameHanjaTests
     [InlineData("주역")] // 柱驛(역참) — 1차 정리 4순위, 보완 뒤 HEAD 와 같은 周亦
     public void NegGloss20261026Fix_SelectCombos_DropsReported(string name)
         => NegGloss20261026_SelectCombos_DropsReported(name);
+
+    // ── 2026-10-26 '남긴 칸' 처리 — 9차·보완이 '대안 없음'·'부정 훈이 아님'·'잠재'로 남긴 글자(근거는 HanjaData.cs 불용 10차·weak 같은 날 블록) ──
+    // 원칙: 명백 부정(형벌·죽음·병·악덕과 그 선례 부류)은 불용 — 그 음절 후보가 0이 되어도 넣는다. 약한 훈은 weak(대안 없으면 남는다).
+
+    [Theory]
+    [InlineData(0x5436)] // 吶 말 더듬을 눌 — 啞·聾 선례(언어 장애). 눌 후보 1위였다
+    [InlineData(0x8A25)] // 訥 말 더듬거릴 눌 — 같은 훈
+    [InlineData(0x5403)] // 吃 말 더듬을 흘 — 같은 훈(9차가 訥 과 함께 둔 글자)
+    [InlineData(0x506A)] // 偪 핍박할 핍 — 迫 선례
+    [InlineData(0x903C)] // 逼 핍박할 핍 — 迫 선례
+    [InlineData(0x9998)] // 馘 귀 벨 괵 — 刖·割·斬 선례
+    [InlineData(0x8844)] // 衄 코피 뉵 — 病 선례
+    [InlineData(0x6D85)] // 涅 개흙 녈 — 泥·淖·淤 선례
+    [InlineData(0x6C92)] // 沒 빠질 몰 — 歿 '죽을 몰'과 통용
+    [InlineData(0x85A8)] // 薨 훙서할 훙 — 死·殂 선례
+    [InlineData(0x6BA4)] // 殤 일찍 죽을 상 — 잠재
+    [InlineData(0x6B80)] // 殀 일찍 죽을 요 — 잠재
+    [InlineData(0x592D)] // 夭 일찍 죽을 요 — 첫 훈 기준(잠재)
+    [InlineData(0x533F)] // 匿 숨길 닉·사악할 특 — 慝 선례(같은 두 훈)
+    [InlineData(0x60C4)] // 惄 허출할 녁 — 飢·餒 선례
+    [InlineData(0x610E)] // 愎 강퍅할 퍅 — 很·戾 선례
+    [InlineData(0x809B)] // 肛 항문 항 — 尿·膀·胱 선례(9차가 잠재로만 적은 글자)
+    [InlineData(0x7B18)] // 笘 회초리 점 — 鞭·箠 선례(2라운드 — 墊 weak 뒤 점 10위)
+    public void LeftCells20261026_IsForbidden(int codepoint)
+    {
+        Assert.True(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+    }
+
+    [Theory]
+    [InlineData(0x98EB)] // 飫 물릴 어 — 惓 '싫증날' 선례(어령 2순위 飫玲)
+    [InlineData(0x6216)] // 或 혹 혹 — 허사(其·矣·乎 선례)
+    [InlineData(0x75D5)] // 痕 흔적 흔 — 瘢 '흉터'는 불용, '흔적'은 약자
+    [InlineData(0x9873)] // 顳 관자놀이 섭 — 額·顎·頰 선례
+    [InlineData(0x80AD)] // 肭 살찔 눌 — 肥 선례
+    [InlineData(0x588A)] // 墊 빠질 점 — 淪 선례
+    [InlineData(0x8AF1)] // 諱 숨길 휘 — 秘 선례
+    [InlineData(0x6759)] // 杙 말뚝 익 — 臬 선례(2라운드 — 찬익 4순위 燦杙)
+    [InlineData(0x5F0B)] // 弋 주살 익 — 矰 선례(2라운드)
+    [InlineData(0x8089)] // 肉 고기 육 — 膚·肥·乳 선례(재생성 두더지 — 육 후보 1위·배정 9칸, 育 과 관련도 동점)
+    public void LeftCells20261026_IsWeak(int codepoint)
+    {
+        Assert.True(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+    }
+
+    /// <summary>판단만 하고 세트에 넣지 않은 글자 — 근거는 HanjaData.cs 불용 10차 블록 위 CLAUDE.md '남긴 칸 처리' 줄</summary>
+    [Theory]
+    [InlineData(0x55DB)] // 嗛 겸손할 겸 — 첫 훈 기준①(부훈 '흉년 들'·'원한 품을 함'은 歉·銜 통가), 라겸·문겸 2순위 등 12명
+    [InlineData(0x95E5)] // 闥 문 달 — 門 '문 문' 비약자 선례, 달(木) 1순위
+    [InlineData(0x9EDA)] // 黚 검누를 겸 — 색 이름 단독은 약자 아님(黔·黝·緇·玄 비약자) — 라겸·문겸 조합 뜻 문장만 훈에 맞게 고침
+    public void LeftCells20261026_KeptAsIs(int codepoint)
+    {
+        Assert.False(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+    }
+
+    private static readonly string?[] LeftCellsYongshin = { null, "木", "火", "土", "金", "水" };
+
+    /// <summary>
+    /// 글자가 모두 불용인 음절 — 배정 없음(null)·표시 후보 0개·안내 문구. 옛 후보 0 음절(에·죄·틈·픽·혐·히)과 같은 경로이고,
+    /// 뜻 없는 글자만 남은 핍(畐)·뉵(沑)도 그 글자로 메우지 않는다(Select 가 뜻 있는 글자가 모두 불용이면 null).
+    /// </summary>
+    [Theory]
+    [InlineData("괵")] // 馘
+    [InlineData("녈")] // 涅
+    [InlineData("몰")] // 沒(歿 은 기존 불용)
+    [InlineData("닉")] // 匿(溺 은 6차 불용)
+    [InlineData("녁")] // 惄
+    [InlineData("훙")] // 薨
+    [InlineData("퍅")] // 愎
+    [InlineData("핍")] // 偪·逼(乏 은 기존 불용) — 뜻 없는 畐 만 남음
+    [InlineData("뉵")] // 衄 — 뜻 없는 沑 만 남음
+    [InlineData("에")] // 曀·恚 — 옛 후보 0 음절
+    [InlineData("죄")] // 罪
+    [InlineData("혐")] // 嫌
+    public void LeftCells20261026_NoUsableHanja_NoAssignment(string syllable)
+    {
+        Assert.NotEmpty(HanjaData.FindByReading(syllable)); // 사전 독음은 있다 — 순우리말 음절과 다른 안내
+        Assert.Empty(HanjaSelector.TopForDisplay(syllable, 10));
+        foreach (var g in new[] { "none", "male", "female" })
+            foreach (var y in LeftCellsYongshin)
+            {
+                var (p, h, gi) = NegGlossTriple(y);
+                var picked = HanjaSelector.Select(syllable, g, p, h, gi);
+                Assert.Single(picked);
+                Assert.Null(picked[0]);
+            }
+        Assert.Equal(HanjaSelector.NoUsableHanjaNote, HanjaSelector.NoHanjaNoteFor(syllable));
+    }
+
+    [Theory]
+    [InlineData("봄")]
+    [InlineData("빛")]
+    [InlineData("꽃")]
+    public void LeftCells20261026_PureKoreanSyllable_ReadingNote(string syllable)
+    {
+        Assert.Empty(HanjaData.FindByReading(syllable));
+        Assert.Null(HanjaSelector.Select(syllable, "none", null, null, null)[0]);
+        Assert.Equal(HanjaSelector.NoHanjaReadingNote, HanjaSelector.NoHanjaNoteFor(syllable));
+    }
+
+    [Theory]
+    [InlineData("민")]
+    [InlineData("눌")] // 吶·訥 불용 뒤 肭(살찔 — weak) 하나 — 대안 없는 약자라 배정·표시는 남는다(녀=女 와 같은 경로)
+    [InlineData("혹")] // 或 weak 뒤 熇(뜨거울)
+    public void LeftCells20261026_UsableSyllable_NoNote(string syllable)
+    {
+        Assert.NotEmpty(HanjaSelector.TopForDisplay(syllable, 10));
+        Assert.Null(HanjaSelector.NoHanjaNoteFor(syllable));
+    }
+
+    [Theory]
+    [InlineData("어", "none", "水", 0x98EB, 0x5539)]   // 飫 물릴 → 唹 고요히 웃을
+    [InlineData("혹", "male", null, 0x6216, 0x7187)]   // 或 혹(허사) → 熇 뜨거울
+    [InlineData("흔", "none", "水", 0x75D5, 0x6615)]   // 痕 흔적 → 昕 새벽
+    [InlineData("점", "female", "土", 0x588A, 0x5CBE)] // 墊 빠질 → 岾 땅 이름
+    [InlineData("익", "none", "木", 0x6759, 0x76CA)]   // 杙 말뚝 → 益 더할 (HEAD 부터의 칸)
+    [InlineData("익", "none", "金", 0x5F0B, 0x8B1A)]   // 弋 주살 → 謚 웃을
+    [InlineData("눌", "none", null, 0x5436, 0x80AD)]   // 吶 말 더듬을 → 肭 살찔(weak — 유일)
+    [InlineData("눌", "male", "金", 0x8A25, 0x80AD)]   // 訥 말 더듬거릴 → 肭
+    [InlineData("육", "none", null, 0x8089, 0x80B2)]   // 肉 고기 → 育 기를 (재생성 두더지)
+    [InlineData("육", "female", "水", 0x8089, 0x80B2)]
+    public void LeftCells20261026_SelectPicks(string syllable, string gender, string? yongshin, int reportedCp, int expectedCp)
+        => NegGloss20261026_SelectPicks(syllable, gender, yongshin, reportedCp, expectedCp);
+
+    [Theory]
+    [InlineData("어령", 0x98EB)] // 飫玲 2순위(11/08 공개)
+    [InlineData("찬익", 0x6759)] // 燦杙 — 1라운드 재생성 4순위(匿 불용으로 익 줄 상위 6이 바뀐 뒤)
+    public void LeftCells20261026_SelectCombos_DropsReported(string name, int codepoint)
+    {
+        foreach (var g in new[] { "male", "female", "none" })
+        {
+            var combos = HanjaSelector.SelectCombos(name, g, 4);
+            Assert.NotEmpty(combos);
+            Assert.DoesNotContain(combos, c => c.First == Cp(codepoint) || c.Second == Cp(codepoint));
+        }
+    }
+
+    /// <summary>
+    /// SelectCombos 는 확장 영역 글자가 든 쌍을 빈칸 채우기로 쓰지 않는다 — 사이트 한자 폰트(Noto Serif KR 조각)에 확장 A·B 가 없다.
+    /// 옛 결과 50쌍(새=㘔·니=㦐·슬=㻭·𩇣·솔=䢦·𧗿·별=䭱·울=𠃗·별=㔡)이 있던 이름들. 조합이 4개보다 적어도 된다(새라 → 璽羅 하나).
+    /// </summary>
+    [Theory]
+    [InlineData("니나")] [InlineData("라니")] [InlineData("나슬")] [InlineData("라별")] [InlineData("라솔")] [InlineData("라울")]
+    [InlineData("새나")] [InlineData("새라")] [InlineData("새론")] [InlineData("새벽")] [InlineData("새별")] [InlineData("새솔")]
+    [InlineData("솔빈")] [InlineData("슬빈")] [InlineData("슬찬")] [InlineData("은새")] [InlineData("찬별")] [InlineData("찬울")] [InlineData("한새")]
+    public void ExtensionArea20261026_SelectCombos_BasicOnly(string name)
+    {
+        foreach (var g in new[] { "male", "female", "none" })
+        {
+            var combos = HanjaSelector.SelectCombos(name, g, 4);
+            Assert.NotEmpty(combos);
+            Assert.True(combos.Count <= 4);
+            Assert.All(combos, c => Assert.True(HanjaData.IsInCjkBasicRange(c.First) && HanjaData.IsInCjkBasicRange(c.Second),
+                $"{name}/{g}: 확장 영역 {c.First}{c.Second} (U+{char.ConvertToUtf32(c.First, 0):X4} U+{char.ConvertToUtf32(c.Second, 0):X4})"));
+        }
+    }
+
+    [Fact]
+    public void ExtensionArea20261026_SelectCombos_KeepsWhenOnlyExtensionIsNonWeak()
+    {
+        // 글 줄은 契(부족 이름 — weak)·㔕(뜻 — 확장 A) 둘뿐이라 약자 양보가 먼저(Select 와 같은 순서) — 확장 쌍이 그대로 남아 조합이 사라지지 않는다
+        var combos = HanjaSelector.SelectCombos("한글", "none", 4);
+        Assert.NotEmpty(combos);
+        Assert.All(combos, c => Assert.Equal(Cp(0x3515), c.Second));
+    }
+
+    [Fact]
+    public void ExtensionArea20261026_SelectCombos_MayReturnFewerThanK()
+    {
+        // 새 줄 기본 영역 비약자는 璽 하나 — 옛 4칸 채우기의 㘔羅 가 빠져 새라는 한 쌍
+        var combos = HanjaSelector.SelectCombos("새라", "female", 4);
+        Assert.Single(combos);
+        Assert.Equal((Cp(0x74BD), Cp(0x7F85)), combos[0]);
+    }
 }

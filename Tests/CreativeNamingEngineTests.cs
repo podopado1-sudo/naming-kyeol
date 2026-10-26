@@ -160,6 +160,28 @@ public class CreativeNamingEngineTests
         }
     }
 
+    /// <summary>
+    /// 각 음절 글로스는 그 음절 독음의 훈이다(HanjaData.GlossForReading — 2026-10-26 '남긴 칸' 처리). 옛 첫 훈은 다중 독음 글자에서
+    /// 다른 독음의 훈을 냈다: 조=昭 '밝을 소', 탁=度 '법도 도', 락=樂 '노래 악', 늘=乻 '땅 이름 얼'.
+    /// </summary>
+    [Theory]
+    [InlineData("조은")]
+    [InlineData("경탁")]
+    [InlineData("희락")]
+    [InlineData("늘찬")]
+    public void BuildMechanicalMeaning_GlossMatchesSyllableReading(string name)
+    {
+        var parts = CreativeNamingEngine.BuildMechanicalMeaning(name).Split(" + ");
+        Assert.Equal(2, parts.Length);
+        for (int i = 0; i < 2; i++)
+        {
+            var syl = name[i].ToString();
+            var tail = parts[i].Split(' ')[^1]; // '비출 조' → 조, '즐길 락(낙)' → 락(낙)
+            Assert.True(tail == syl || tail.StartsWith(syl + "(") || tail.EndsWith("(" + syl + ")"),
+                $"'{name}' {i + 1}음절 글로스 '{parts[i]}' 가 '{syl}' 독음의 훈이 아님");
+        }
+    }
+
     [Fact]
     public void BuildMechanicalMeaning_NonTwoSyllable_ReturnsEmpty()
     {

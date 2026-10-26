@@ -254,11 +254,13 @@ public class NameAnalysisService : INameAnalysisService
         foreach (var syllable in firstName)
         {
             var syllableStr = syllable.ToString();
-            var hanjaList = HanjaSelector.OrderForDisplay(HanjaData.FindByReading(syllableStr));
+            var hanjaList = HanjaSelector.OrderForDisplay(HanjaData.FindByReading(syllableStr)).ToList();
 
             breakdown.Add(new HanjaBreakdownDto
             {
                 Syllable = syllableStr,
+                // 후보 0개 음절(글자가 모두 불용·순우리말 음절)에만 안내 — /evaluate 후보 표와 같은 문구(HanjaSelector.NoHanjaNoteFor)
+                NoHanjaNote = hanjaList.Count == 0 ? HanjaSelector.NoHanjaNoteFor(syllableStr) : null,
                 PossibleHanja = hanjaList.Take(HanjaOptionsPerSyllable).Select(h => new HanjaOptionDto
                 {
                     Character       = h.Character,
@@ -327,9 +329,10 @@ public class NameAnalysisService : INameAnalysisService
         else if (fullLength >= 5)
             weaknesses.Add($"전체 {fullLength}음절로 다소 깁니다");
 
-        // 한자 의미 유무
+        // 한자 의미 유무 — 후보 카드와 같은 기준(불용·뜻 없는 글자 제외). 사전 독음만 보면 글자가 모두 불용인 음절(몰=沒 등)도
+        // '한자 의미를 부여할 수 있는 이름'으로 셌다(2026-10-26 불용 10차)
         var hasHanja = firstName.Any(c =>
-            HanjaData.FindByReading(c.ToString()).Any());
+            HanjaSelector.OrderForDisplay(HanjaData.FindByReading(c.ToString())).Any());
         if (hasHanja)
             strengths.Add("한자 의미를 부여할 수 있는 이름입니다");
         else

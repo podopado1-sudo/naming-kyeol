@@ -332,6 +332,10 @@ public class AestheticEngine : IAestheticEngine
         // 음절별 대표 한자의 GenderPref 확인
         foreach (char c in name)
         {
+            // 쓸 한자가 없는 음절(후보 0 — 괵·몰·퍅·핍·에·죄 등)은 건너뛴다. 같은 응답이 그 음절을 '배정 없음·한글로 두기'로 다루는데
+            // 불용 글자(퍅=愎 Male)가 성별 일치·불일치 노트를 만들었다(2026-10-26 보완 — 김퍅쁨 남 +3·여 −2).
+            // 후보가 있는 음절은 예전처럼 사전 글자 전부를 본다(불용 포함 — '알려진 이슈'의 점수 정책 결정 몫).
+            if (!HanjaSelector.HasUsableHanja(c.ToString())) continue;
             var hanjaList = HanjaData.FindByReading(c.ToString());
             if (!hanjaList.Any()) continue;
 
@@ -556,6 +560,8 @@ public class AestheticEngine : IAestheticEngine
 
         foreach (char c in name)
         {
+            // 후보 0 음절의 불용 글자(몰=沒 개념·녈=涅 자연 등)가 의미 카테고리 가점(+20)을 주지 않게 건너뛴다(2026-10-26 보완 — 성별 보너스와 같은 판정).
+            if (!HanjaSelector.HasUsableHanja(c.ToString())) continue;
             var hanjaList = HanjaData.FindByReading(c.ToString());
             if (hanjaList.Any())
             {

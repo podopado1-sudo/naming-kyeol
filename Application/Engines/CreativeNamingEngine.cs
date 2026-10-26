@@ -645,14 +645,9 @@ public class CreativeNamingEngine : ICreativeNamingEngine
              : "";
     }
 
-    /// <summary>한자 Meaning의 다중 훈음('임금 주/주인 주', '괼 담, 잠길 침...') 중 첫 훈음만.</summary>
-    private static string CleanGloss(string meaning)
-    {
-        if (string.IsNullOrWhiteSpace(meaning)) return "";
-        return meaning.Split(',', '/', ';', '·')[0].Trim();
-    }
-
-    /// <summary>음절의 대표 한자 뜻 — 인명 빈출 한자 우선(雨·塞·羅 등 비이름 글자 회피) + 첫 훈음.
+    /// <summary>음절의 대표 한자 뜻 — 인명 빈출 한자 우선(雨·塞·羅 등 비이름 글자 회피) + 그 음절 독음의 훈음
+    /// (<see cref="HanjaData.GlossForReading"/> — 2026-10-26 '남긴 칸' 처리, B7·BuildCardMeaning 과 같은 규칙. 옛 첫 훈은
+    /// 다중 독음 글자에서 다른 독음의 훈을 냈다 — 늘=乻 '땅 이름 얼'·휘=煇 '태울 훈').
     /// 빈출 셋 안에서도 이름용으로 약한 글자(雨 비·友 벗 등, HanjaSelector와 동일 세트)는 뒤로
     /// 밀어 더 나은 동음 대안(우→宇·祐)이 있으면 양보한다.</summary>
     private static string BestGloss(string syl)
@@ -667,7 +662,7 @@ public class CreativeNamingEngine : ICreativeNamingEngine
                 // -3000: Core_v1 가점(+2000)까지 지배 — HanjaSelector.ComboBaseScore와 동일 근거
                 - (HanjaSelector.IsWeakGivenNameHanja(x.Character) ? 3000 : 0))
             .FirstOrDefault();
-        return CleanGloss(h?.Meaning ?? "");
+        return h == null ? "" : HanjaData.GlossForReading(h.Meaning, syl);
     }
 
     #endregion

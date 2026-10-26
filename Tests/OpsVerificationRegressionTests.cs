@@ -563,4 +563,193 @@ public class OpsVerificationRegressionTests
         Assert.DoesNotContain(Cp(cp2), all);
         Assert.DoesNotContain(all, HanjaData.IsForbiddenNameHanja);
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 2026-10-26 '남긴 칸' 처리 — 글자가 모두 불용인 음절(괵=馘·몰=沒·훙=薨 등, 불용 10차)이 든 이름의 /evaluate·/name-analysis 동작:
+    // 그 음절은 배정 없음·후보 0개·안내 문구(noHanjaNote), 나머지 음절은 그대로, 오류 없음. 옛 후보 0 음절(에·죄)과 같은 경로
+    // ═══════════════════════════════════════════════════════════════
+
+    private static bool HasUsableHanja(char syllable) => HanjaSelector.TopForDisplay(syllable.ToString(), 1).Count > 0;
+
+    [Theory]
+    [InlineData("몰희", "김", "male", null)]
+    [InlineData("몰희", "김", "male", "2019-11-23")]
+    [InlineData("서괵", "이", "female", null)]
+    [InlineData("서괵", "이", "female", "2020-03-05")]
+    [InlineData("훙민", "박", "none", "2018-07-14")]
+    [InlineData("에린", "최", "female", "2021-01-09")] // 옛 후보 0 음절 — 같은 경로
+    public async Task Evaluate_NoUsableHanjaSyllable(string name, string lastName, string gender, string? date)
+    {
+        var r = await CreateEvaluationService().EvaluateNameAsync(
+            name, lastName, date == null ? null : DateTime.Parse(date), gender, "neutral");
+
+        Assert.Equal(name.Length, r.HanjaCandidates.Count);
+        Assert.Contains(name, c => !HasUsableHanja(c)); // 이 사례가 정말 후보 0 음절을 담는지(세트가 바뀌면 사례를 다시 고를 것)
+        for (int i = 0; i < name.Length; i++)
+        {
+            var g = r.HanjaCandidates[i];
+            if (HasUsableHanja(name[i]))
+            {
+                Assert.NotEmpty(g.Candidates);
+                Assert.Null(g.NoHanjaNote);
+            }
+            else
+            {
+                Assert.Empty(g.Candidates);
+                Assert.Equal(HanjaSelector.NoUsableHanjaNote, g.NoHanjaNote);
+            }
+        }
+
+        // 의미 메모는 쓸 수 있는 음절의 한자만(불용 글자·그 음절 괄호 독음 없음)
+        var parts = ParseMeaningParts(r.MeaningNote);
+        Assert.Equal(name.Count(HasUsableHanja), parts.Count);
+        Assert.All(parts, p => Assert.False(HanjaData.IsForbiddenNameHanja(p.Char), r.MeaningNote));
+        Assert.All(parts, p => Assert.True(HasUsableHanja(p.Syllable[0]), r.MeaningNote));
+
+        // 출생일이 있으면 그 음절은 획수 추정으로 조화를 매긴다(HarmonyEngine 'anyFallback' — 오류 없이 점수가 나온다)
+        if (date != null)
+        {
+            Assert.True(r.UsedFallbackHanja);
+            Assert.InRange(r.HarmonyScore, 0, 100);
+        }
+    }
+
+    [Fact]
+    public async Task Evaluate_AllSyllablesUnusable_MeaningNoteSaysKeepHangul()
+    {
+        var r = await CreateEvaluationService().EvaluateNameAsync("몰닉", "김", null, "none", "neutral");
+        Assert.All(r.HanjaCandidates, g =>
+        {
+            Assert.Empty(g.Candidates);
+            Assert.Equal(HanjaSelector.NoUsableHanjaNote, g.NoHanjaNote);
+        });
+        Assert.Equal(ExplanationEngine.NoUsableHanjaMeaningNote, r.MeaningNote);
+    }
+
+    [Fact]
+    public async Task Evaluate_PureKoreanSyllables_ReadingNote()
+    {
+        // 순우리말 음절(사전 독음 없음)은 옛 의미 메모 그대로, 후보 안내는 '독음이 아니어서'
+        var r = await CreateEvaluationService().EvaluateNameAsync("봄빛", "김", null, "none", "neutral");
+        Assert.All(r.HanjaCandidates, g =>
+        {
+            Assert.Empty(g.Candidates);
+            Assert.Equal(HanjaSelector.NoHanjaReadingNote, g.NoHanjaNote);
+        });
+        Assert.Equal("한자 매칭 없음 — 순우리말 또는 미등록 발음", r.MeaningNote);
+    }
+
+    /// <summary>
+    /// 후보 0 음절(사전 글자가 모두 불용)의 불용 글자는 미학 성별 보너스·의미 카테고리에도 들어가지 않는다 — 같은 응답이 그 음절을
+    /// '배정 없음·한글로 두기'로 다루므로, 사전 독음이 아예 없는 순우리말 음절(쁨)과 똑같이 기여 0 이어야 한다(2026-10-26 보완 —
+    /// 옛 김퍅쁨 남 genderBonus +3 '한자 성별 선호도가 남자 이름과 잘 맞음'(愎 Male)·여 −2, 김몰쁨 의미 9(沒 카테고리 +20) vs 김쁨쁨 7).
+    /// </summary>
+    [Theory]
+    [InlineData("퍅쁨", "male")]
+    [InlineData("퍅쁨", "female")]
+    [InlineData("몰쁨", "none")]
+    [InlineData("녈쁨", "female")]
+    [InlineData("에쁨", "male")]
+    [InlineData("죄쁨", "female")]
+    [InlineData("괵쁨", "male")]
+    [InlineData("훙쁨", "female")]
+    [InlineData("핍쁨", "male")]
+    [InlineData("뉵쁨", "female")]
+    [InlineData("닉쁨", "male")]
+    [InlineData("녁쁨", "none")]
+    public async Task Aesthetic_NoUsableHanjaSyllable_ContributesLikePureKorean(string name, string gender)
+    {
+        // 사례 확인: 첫 음절은 사전 독음은 있지만 표시할 한자가 0개(세트가 바뀌면 사례를 다시 고를 것), 둘째 음절은 사전 독음 없음
+        Assert.NotEmpty(HanjaData.FindByReading(name[0].ToString()));
+        Assert.False(HasUsableHanja(name[0]));
+        Assert.Empty(HanjaData.FindByReading(name[1].ToString()));
+
+        var svc = CreateEvaluationService();
+        var r = await svc.EvaluateNameAsync(name, "김", null, gender, "neutral");
+        var control = await svc.EvaluateNameAsync("쁨쁨", "김", null, gender, "neutral");
+
+        Assert.Equal(0, r.Aesthetic.GenderBonus);
+        Assert.DoesNotContain(r.Aesthetic.Notes, n => n.Contains("성별 선호도"));
+        Assert.Equal(control.Aesthetic.Meaning, r.Aesthetic.Meaning);
+    }
+
+    [Fact]
+    public async Task Aesthetic_UsableSyllableNextToNoUsable_StillCounts()
+    {
+        // 후보가 있는 음절은 예전처럼 센다 — 은(恩 등 Female)은 '퍅' 옆에서도 여자 이름 일치, '몰' 옆 서(瑞 등 자연·덕목)는 의미 가점
+        var svc = CreateEvaluationService();
+        var withPyak = await svc.EvaluateNameAsync("퍅은", "김", null, "female", "neutral");
+        var alone = await svc.EvaluateNameAsync("쁨은", "김", null, "female", "neutral");
+        Assert.Equal(alone.Aesthetic.GenderBonus, withPyak.Aesthetic.GenderBonus);
+        Assert.True(withPyak.Aesthetic.GenderBonus > 0, $"은 여자 이름 일치: {withPyak.Aesthetic.GenderBonus}");
+
+        var mol = await svc.EvaluateNameAsync("몰서", "김", null, "none", "neutral");
+        var bbeum = await svc.EvaluateNameAsync("쁨쁨", "김", null, "none", "neutral");
+        Assert.True(mol.Aesthetic.Meaning > bbeum.Aesthetic.Meaning, $"몰서 {mol.Aesthetic.Meaning} vs 쁨쁨 {bbeum.Aesthetic.Meaning}");
+    }
+
+    [Theory]
+    [InlineData("몰희")]
+    [InlineData("서괵")]
+    [InlineData("닉현")]
+    public async Task Analysis_NoUsableHanjaSyllable(string firstName)
+    {
+        var r = await CreateAnalysisService().AnalyzeNameAsync(new NameAnalysisRequestDto
+        {
+            LastName = "김", FirstName = firstName, Gender = "none", Tone = "neutral"
+        });
+        Assert.Equal(firstName.Length, r.HanjaBreakdown.Count);
+        for (int i = 0; i < firstName.Length; i++)
+        {
+            var b = r.HanjaBreakdown[i];
+            if (HasUsableHanja(firstName[i]))
+            {
+                Assert.NotEmpty(b.PossibleHanja);
+                Assert.Null(b.NoHanjaNote);
+            }
+            else
+            {
+                Assert.Empty(b.PossibleHanja);
+                Assert.Equal(HanjaSelector.NoUsableHanjaNote, b.NoHanjaNote);
+            }
+        }
+        Assert.Contains("한자 의미를 부여할 수 있는 이름입니다", r.Strengths);
+        // '한자 예' 줄은 쓸 수 있는 음절의 글자만
+        var example = r.Reasons.SingleOrDefault(s => s.StartsWith("한자 예 — ") || s.StartsWith("한자 뜻 — "));
+        Assert.NotNull(example);
+        Assert.DoesNotContain(example!.Split(" — ")[1].Split(" + ").Select(OptionChar), HanjaData.IsForbiddenNameHanja);
+    }
+
+    [Fact]
+    public async Task Analysis_AllSyllablesUnusable_IsWeakness()
+    {
+        // 사전 독음만 보던 옛 판정은 몰닉(沒·匿)을 '한자 의미를 부여할 수 있는 이름'으로 셌다
+        var r = await CreateAnalysisService().AnalyzeNameAsync(new NameAnalysisRequestDto
+        {
+            LastName = "김", FirstName = "몰닉", Gender = "none", Tone = "neutral"
+        });
+        Assert.All(r.HanjaBreakdown, b => Assert.Equal(HanjaSelector.NoUsableHanjaNote, b.NoHanjaNote));
+        Assert.Contains("한자 매핑이 어려운 이름입니다", r.Weaknesses);
+        Assert.DoesNotContain("한자 의미를 부여할 수 있는 이름입니다", r.Strengths);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // L6 — 옛 추천(RecommendationService) 카드 뜻 줄도 그 음절의 훈(HanjaData.GlossForReading — B7 과 같은 규칙)
+    // ═══════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void RecommendationCardMeaning_UsesGlossForReading()
+    {
+        var ji = HanjaData.FindByCharacter(Cp(0x667A))!;  // 智 슬기 지
+        var hwi = HanjaData.FindByCharacter(Cp(0x7147))!; // 煇 빛날 휘, 햇무리 운, 태울 훈, …
+        var eol = HanjaData.FindByCharacter(Cp(0x4E7B))!; // 乻 땅 이름 얼, 음차 얼, 음차 늘
+        var ha = HanjaData.FindByCharacter(Cp(0x590F))!;  // 夏 여름 하
+
+        // 옛 첫 훈은 '슬기 지 · 빛날 휘', '여름 하 · 땅 이름 얼'
+        Assert.Equal("슬기 지 · 태울 훈", RecommendationService.BuildCardMeaning("지훈", new List<HanjaData.HanjaInfo?> { ji, hwi }));
+        Assert.Equal("여름 하 · 음차 늘", RecommendationService.BuildCardMeaning("하늘", new List<HanjaData.HanjaInfo?> { ha, eol }));
+        // 한자 없는 음절(null — 글자가 모두 불용인 몰 등)은 건너뛴다
+        Assert.Equal("슬기 지", RecommendationService.BuildCardMeaning("지몰", new List<HanjaData.HanjaInfo?> { ji, null }));
+        Assert.Null(RecommendationService.BuildCardMeaning("몰닉", new List<HanjaData.HanjaInfo?> { null, null }));
+    }
 }

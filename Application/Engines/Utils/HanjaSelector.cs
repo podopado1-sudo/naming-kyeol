@@ -10,6 +10,7 @@ namespace NameForm.Application.Engines.Utils;
 ///
 /// 선택 우선순위 — 이 층은 "정해진 발음 이름에 어떤 한자를 배정하느냐"이지,
 /// 어떤 이름이 1등이냐(미학 우선 랭킹)가 아니므로 용신을 강하게 써도 철학에 어긋나지 않는다:
+///   0) 불용을 빼고 나면 쓸 글자가 없는 음절(괵·몰·훙·에·죄 등)은 null — 호출부는 '한자 없음'으로 다룬다(<see cref="NoHanjaNoteFor"/>)
 ///   1) 불용한자(부정 의미) 배제 + 한글 뜻 보유 + 약한 한자(weak)는 동음 비약자 대안이 하나라도 있으면 후보에서 뺌
 ///      (성별·용신 가점과 무관 — 대안이 없을 때만 남는다, 2026-10-26 B6)
 ///      + CJK 기본 영역 글자가 있으면 확장 영역 글자는 뺌(OrderForDisplay 2순위와 같은 규칙, 2026-10-26 보완)
@@ -59,8 +60,44 @@ public static class HanjaSelector
         // 약자 없는 조합이 0개일 때만 약자 쌍을 허용하므로 combos 소실은 없다 — weak는 배제가 아니라 양보.
         var ranked = scored.OrderByDescending(x => x.s).ToList();
         var clean = ranked.Where(x => !IsWeakGivenNameHanja(x.a) && !IsWeakGivenNameHanja(x.b)).ToList();
-        return (clean.Count > 0 ? clean : ranked).Take(k).Select(x => (x.a, x.b)).ToList();
+        var pool = clean.Count > 0 ? clean : ranked;
+
+        // 확장 영역(CJK 기본 U+4E00~9FFF 밖) 글자가 든 쌍도 빈칸 채우기로 쓰지 않는다 — 두 글자 모두 기본 영역인 쌍이 하나라도 있으면 그것만
+        // (조합이 k개보다 적어도 된다). 사이트 한자 폰트(next/font Noto Serif KR)의 unicode-range 조각에 확장 A·B 코드포인트가 하나도 없어
+        // 㦐·㘔·䭱·𩇣 같은 글자는 기기 폰트에 기대야 그려진다(2026-10-26 빌드 CSS 373 조각 실측 — 확장 A 0/6,592). 옛 결과는 48쌍 +
+        // 부정 훈 정리 보완의 니나·라니 4순위 㦐 2쌍이 이렇게 들어왔다. 약자 양보 다음 단계라(Select 와 같은 순서) 기본 영역 쌍이 모두 약자뿐인
+        // 이름(한글=翰㔕 — 글 줄은 契 weak·㔕 확장뿐)은 확장 영역 비약자 쌍을 그대로 둔다.
+        var basicOnly = pool.Where(x => HanjaData.IsInCjkBasicRange(x.a) && HanjaData.IsInCjkBasicRange(x.b)).ToList();
+        if (basicOnly.Count > 0) pool = basicOnly;
+        return pool.Take(k).Select(x => (x.a, x.b)).ToList();
     }
+
+    /// <summary>
+    /// 한 음절에 이름에 쓸 만한 한자가 하나도 없을 때(후보 표·배정이 비는 음절) 응답에 싣는 안내 — 사전 독음은 있지만 글자가 모두 불용(괵=馘·몰=沒·
+    /// 훙=薨·에=曀恚·죄=罪 등, 2026-10-26 불용 10차).
+    /// </summary>
+    public const string NoUsableHanjaNote = "이 음절은 이름에 쓸 만한 인명용 한자가 없어 한글로 두기를 권해요";
+
+    /// <summary>사전에 그 독음 한자가 아예 없는 음절(순우리말·미등록 발음 — 봄·빛·꽃 같은 음절)의 안내.</summary>
+    public const string NoHanjaReadingNote = "이 음절은 인명용 한자 독음이 아니어서 한글로만 써요";
+
+    /// <summary>
+    /// 음절에 표시·배정할 한자가 없을 때의 안내 문구 — 있으면 null. 판정은 표시 정렬(<see cref="OrderForDisplay"/>: 불용·뜻 없는 글자 제외)과 같아
+    /// /evaluate 후보 표·/name-analysis 후보 카드가 0개인 음절에서만 문구가 붙는다. 사전 독음이 아예 없으면 <see cref="NoHanjaReadingNote"/>,
+    /// 있지만 모두 불용(또는 뜻 없음)이면 <see cref="NoUsableHanjaNote"/>.
+    /// </summary>
+    public static string? NoHanjaNoteFor(string syllable)
+    {
+        var all = HanjaData.FindByReading(syllable).ToList();
+        if (all.Count == 0) return NoHanjaReadingNote;
+        return OrderForDisplay(all).Any() ? null : NoUsableHanjaNote;
+    }
+
+    /// <summary>
+    /// 음절에 표시할 한자가 하나라도 있는지 — <see cref="NoHanjaNoteFor"/> 가 null 인 음절(불용·뜻 없는 글자를 뺀 <see cref="OrderForDisplay"/> 가 비지 않음).
+    /// 후보 0 음절(괵·몰·퍅·핍·에·죄 등)의 불용 글자가 다른 엔진(AestheticEngine 성별 보너스·의미 카테고리)에 들어가지 않게 거르는 판정(2026-10-26 보완).
+    /// </summary>
+    public static bool HasUsableHanja(string syllable) => OrderForDisplay(HanjaData.FindByReading(syllable)).Any();
 
     /// <summary>
     /// 표시용: 한 음절에 "어떤 한자를 보여 줄까" 상위 n개 (<see cref="OrderForDisplay"/> 순서).
@@ -143,13 +180,15 @@ public static class HanjaSelector
         string syllable, GenderPreference genderPref,
         string? yPrimary, string? yHee, string? yGi)
     {
-        var all = HanjaData.FindByReading(syllable)
-            .Where(h => !HanjaData.IsForbiddenNameHanja(h.Character))
-            .ToList();
+        var raw = HanjaData.FindByReading(syllable).ToList();
+        var all = raw.Where(h => !HanjaData.IsForbiddenNameHanja(h.Character)).ToList();
         if (all.Count == 0) return null;
 
-        // 뜻이 있는 인명 후보 우선. 전혀 없으면 뜻 없는 것이라도(획수 자원오행은 살아 있음).
+        // 뜻이 있는 인명 후보 우선. 사전에 뜻 있는 글자가 전혀 없는 음절만 뜻 없는 것이라도(획수 자원오행은 살아 있음).
+        // 뜻 있는 글자가 있었는데 모두 불용이면 배정하지 않는다 — 뜻 없는 글자로 메우면 후보 표·의미 메모는 비는데(표시는 뜻 있는 글자만)
+        // 점수만 그 글자의 오행·획수로 매겨진다(2026-10-26 불용 10차: 핍=偪·逼 뒤 畐, 뉵=衄 뒤 沑 — 옛 에·죄 처럼 null 로 끝낸다).
         var withMeaning = all.Where(h => !string.IsNullOrEmpty(h.Meaning)).ToList();
+        if (withMeaning.Count == 0 && raw.Any(h => !string.IsNullOrEmpty(h.Meaning))) return null;
         var cands = withMeaning.Count > 0 ? withMeaning : all;
 
         // 이름용으로 약한 한자(友 벗·雨 비·葷 훈채 등)는 동음 비약자 대안이 하나라도 있으면 늘 양보한다 — 대안이 없을 때만 남는다(女 '녀').

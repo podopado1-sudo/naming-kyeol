@@ -105,6 +105,11 @@ public class HanjaCandidateGroupDto
 {
     public string Syllable { get; set; } = "";
     public List<HanjaCandidateDto> Candidates { get; set; } = new();
+    /// <summary>
+    /// 후보가 0개인 음절의 안내 — 후보가 있으면 null. 사전 독음은 있지만 글자가 모두 불용이면 "이 음절은 이름에 쓸 만한 인명용 한자가 없어 한글로 두기를 권해요",
+    /// 독음 자체가 없으면(순우리말 음절) "이 음절은 인명용 한자 독음이 아니어서 한글로만 써요" (HanjaSelector.NoHanjaNoteFor, 2026-10-26 불용 10차)
+    /// </summary>
+    public string? NoHanjaNote { get; set; }
 }
 
 /// <summary>

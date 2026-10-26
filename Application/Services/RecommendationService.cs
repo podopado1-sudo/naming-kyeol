@@ -134,7 +134,7 @@ public class RecommendationService : IRecommendationService
             // 카드 표시용 한자 + 뜻 한 줄 (배정된 그 한자에서 생성 → 상세와 일관)
             var hanjaChars = selectedHanja == null ? null
                 : string.Concat(selectedHanja.Where(h => h != null).Select(h => h!.Character));
-            var meaningText = BuildCardMeaning(selectedHanja);
+            var meaningText = BuildCardMeaning(name, selectedHanja);
 
             // 부모 기반 후보인지 확인
             var (namingModel, nameType) = parentBasedCandidateInfo.TryGetValue(name, out var info)
@@ -240,15 +240,23 @@ public class RecommendationService : IRecommendationService
     /// <summary>
     /// 이름 타입 결정 (의미중심 vs 음운중심)
     /// </summary>
-    /// <summary>배정된 한자에서 카드용 뜻 한 줄을 만든다("벗 우 · 맑을 정"). 다중 훈음은 첫 훈음만.</summary>
-    private static string? BuildCardMeaning(IReadOnlyList<HanjaInfo?>? hanja)
+    /// <summary>
+    /// 배정된 한자에서 카드용 뜻 한 줄을 만든다("벗 우 · 맑을 정"). 다중 훈음은 그 이름 음절로 읽히는 훈 하나 —
+    /// /evaluate 의미 메모(ExplanationEngine, 2026-10-26 B7)·/name 카드와 같은 HanjaData.GlossForReading. 옛 첫 훈은 지훈=煇 를
+    /// '빛날 휘'(휘 자리 훈), 하늘=乻 를 '땅 이름 얼'로 적었다(2026-10-26 L6). 배정 목록은 Select 결과라 이름 음절과 인덱스가 같다(한자 없는 음절은 null).
+    /// </summary>
+    public static string? BuildCardMeaning(string name, IReadOnlyList<HanjaInfo?>? hanja)
     {
         if (hanja == null) return null;
-        var parts = hanja
-            .Where(h => h != null && !string.IsNullOrWhiteSpace(h!.Meaning))
-            .Select(h => h!.Meaning.Split(',', '/', ';', '·')[0].Trim())
-            .Where(s => s.Length > 0)
-            .ToList();
+        var parts = new List<string>();
+        for (int i = 0; i < hanja.Count; i++)
+        {
+            var h = hanja[i];
+            if (h == null || string.IsNullOrWhiteSpace(h.Meaning)) continue;
+            var syllable = i < name.Length ? name[i].ToString() : h.Reading;
+            var gloss = Application.Engines.Data.HanjaData.GlossForReading(h.Meaning, syllable);
+            if (gloss.Length > 0) parts.Add(gloss);
+        }
         return parts.Count > 0 ? string.Join(" · ", parts) : null;
     }
 

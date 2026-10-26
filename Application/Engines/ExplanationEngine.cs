@@ -73,8 +73,11 @@ public class ExplanationEngine : IExplanationEngine
             ToneReason = BuildToneReason(name, toneLabel)
         };
 
+        // 표시할 한자가 한 글자도 없을 때 — 사전 독음은 있는데 글자가 모두 불용(괵·몰·훙 등 — 2026-10-26 불용 10차)이면 '순우리말'이 아니다
         if (string.IsNullOrEmpty(result.MeaningNote))
-            result.MeaningNote = "한자 매칭 없음 — 순우리말 또는 미등록 발음";
+            result.MeaningNote = name.Any(c => HanjaData.FindByReading(c.ToString()).Any())
+                ? NoUsableHanjaMeaningNote
+                : "한자 매칭 없음 — 순우리말 또는 미등록 발음";
 
         return await Task.FromResult(result);
     }
@@ -82,6 +85,9 @@ public class ExplanationEngine : IExplanationEngine
     // ═══════════════════════════════════════════════════════════════
     // Summary — 점수 한 줄 진단
     // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>의미 메모 — 이름의 어느 음절에도 쓸 만한 한자가 없고, 그중 사전 독음이 있는 음절이 있을 때(글자가 모두 불용)</summary>
+    public const string NoUsableHanjaMeaningNote = "이름에 쓸 만한 인명용 한자 없음 — 한글로 두기를 권해요";
 
     /// <summary>'기본기 갖춤' 강점 줄의 꼬리 — <see cref="AlignOverall"/>가 이 줄의 종합 점수를 다시 쓴다.</summary>
     private const string BasicsTail = "점 — 기본기 갖춤";

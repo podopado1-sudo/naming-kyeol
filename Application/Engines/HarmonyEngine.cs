@@ -78,7 +78,7 @@ public class HarmonyEngine : IHarmonyEngine
 
         if (selectedHanja.All(h => h == null))
         {
-            // 모든 음절에서 한자를 찾지 못한 경우 → fallback 정책
+            // 모든 음절에 배정할 한자가 없는 경우(순우리말 이름·글자가 모두 불용인 음절만 — 몰닉) → fallback 정책
             breakdown.UsedFallback = true;
             breakdown.FiveElementScore = 14;           // 45% of 30
             breakdown.ResourceElementScore = 10;        // 50% of 20
@@ -86,7 +86,7 @@ public class HarmonyEngine : IHarmonyEngine
             breakdown.PronunciationElementScore = CalculatePronunciationElementScore(lastName, name, breakdown.Notes);
             breakdown.SuriSagyeokScore = 7;             // fallback 중간값
             breakdown.GenderBonus = 0;
-            breakdown.Notes.Add("한자 정보가 부족하여 기본값을 사용했습니다");
+            breakdown.Notes.Add("배정할 한자가 없어 기본값을 사용했습니다");
             breakdown.TotalScore = Math.Max(0, Math.Min(100,
                 breakdown.FiveElementScore + breakdown.ResourceElementScore +
                 breakdown.YinYangScore + breakdown.PronunciationElementScore +
@@ -119,11 +119,12 @@ public class HarmonyEngine : IHarmonyEngine
             breakdown.Notes.Add(genderNote);
         }
 
-        // fallback 표시
+        // fallback 표시 — 한자가 없는 음절(순우리말 음절 쁨·봄, 글자가 모두 불용인 음절 괵·몰 — 2026-10-26 '남긴 칸' 처리)이 하나라도 있을 때.
+        //   옛 문구 '한자 정보를 찾지 못해'는 불용으로 뺀 음절(사전에는 있음)에 맞지 않아 '배정할 한자가 없어'로 바꿨다
         if (anyFallback)
         {
             breakdown.UsedFallback = true;
-            breakdown.Notes.Add("일부 음절의 한자 정보를 찾지 못해 획수 기반 추정을 사용했습니다");
+            breakdown.Notes.Add("일부 음절에 배정할 한자가 없어 획수 기반 추정을 사용했습니다");
         }
 
         int raw = breakdown.FiveElementScore

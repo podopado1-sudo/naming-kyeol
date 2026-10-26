@@ -171,7 +171,9 @@ public class NameEvaluationService : INameEvaluationService
             result.Add(new HanjaCandidateGroupDto
             {
                 Syllable = syllable,
-                Candidates = candidates
+                Candidates = candidates,
+                // 후보 0개 음절(글자가 모두 불용 — 괵·몰·훙 등, 또는 순우리말 음절)에만 안내 — 화면이 '0개' 빈 칸 대신 이 문구를 보인다
+                NoHanjaNote = candidates.Count == 0 ? HanjaSelector.NoHanjaNoteFor(syllable) : null
             });
         }
 

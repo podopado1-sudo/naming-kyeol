@@ -130,6 +130,8 @@ public class HanjaBreakdownDto
 
     /// <summary>가능한 한자 목록</summary>
     public List<HanjaOptionDto> PossibleHanja { get; set; } = new();
+    /// <summary>후보가 0개인 음절의 안내 — 후보가 있으면 null(HanjaSelector.NoHanjaNoteFor — /evaluate HanjaCandidateGroupDto.NoHanjaNote 와 같은 문구)</summary>
+    public string? NoHanjaNote { get; set; }
 }
 
 public class HanjaOptionDto
