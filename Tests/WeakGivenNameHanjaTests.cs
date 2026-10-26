@@ -288,4 +288,380 @@ public class WeakGivenNameHanjaTests
             HanjaData.IsWeakGivenNameHanja(c.First) || HanjaData.IsWeakGivenNameHanja(c.Second),
             $"{name}: 약자 조합 {c.First}{c.Second}"));
     }
+
+    // ── 2026-10-26 운영 검증 부정 훈 정리 — 최항준(남)=桁(차꼬)·/analysis 후보 犴·蠢·旱·嗽 제보 뒤 전 독음 덤프
+    //    (/evaluate 배정 격자 = 독음 × 성별 3 × 생년월일 없음·용신 5(희신·기신 포함), /name-analysis 표시 상위 10) 3라운드 + /name 재생성 E 1라운드 ──
+    // 분류 근거(선례)는 HanjaData.cs 불용 9차·weak 같은 날 블록. 정수 코드포인트로 적는다
+
+    [Theory]
+    [InlineData(0x6841)] // 桁 형구 — 囚·刑 선례(차꼬 = 형구)
+    [InlineData(0x72B4)] // 犴 짐승·감옥 — 犬·狗·狴(감옥) 선례
+    [InlineData(0x65F1)] // 旱 재앙 — 災·渴 선례(가뭄)
+    [InlineData(0x8822)] // 蠢 어리석음 — 憃·蟲 선례(어리석을·벌레)
+    [InlineData(0x777E)] // 睾 신체 부정 — 尿·膀·胱 선례(배설·생식 기관)
+    [InlineData(0x99D1)] // 駑 어리석음 — 鈍·騃 선례(둔할)
+    [InlineData(0x865C)] // 虜 도둑 — 擄 선례(노략질·사로잡을)
+    [InlineData(0x688F)] // 梏 형구 — 囚·刑 선례(수갑)
+    [InlineData(0x684E)] // 桎 형구 — 囚·刑 선례(차꼬)
+    [InlineData(0x91F1)] // 釱 형구 — 囚·刑 선례(차꼬)
+    [InlineData(0x8F5E)] // 轞 형구 — 囚 선례(함거 = 죄인 수레)
+    [InlineData(0x5709)] // 圉 감옥 — 圄·囹 선례(감옥 어)
+    [InlineData(0x61F2)] // 懲 형벌 — 罰·刑 선례(징계할)
+    [InlineData(0x75A5)] // 疥 병 — 瘡·疣 선례(옴)
+    [InlineData(0x7668)] // 癨 병 — 病·瘡 선례(곽란)
+    [InlineData(0x75B8)] // 疸 병 — 病 선례(황달)
+    [InlineData(0x7630)] // 瘰 병 — 瘡 선례(연주창)
+    [InlineData(0x7667)] // 癧 병 — 瘡 선례(연주창)
+    [InlineData(0x75F3)] // 痳 병 — 病 선례(임질)
+    [InlineData(0x7655)] // 癕 병 — 瘡 선례(악창)
+    [InlineData(0x7670)] // 癰 병 — 瘡 선례(악창)
+    [InlineData(0x7648)] // 癈 병 — 病 선례(고질병)
+    [InlineData(0x7665)] // 癥 병 — 病 선례(적취)
+    [InlineData(0x75C7)] // 症 병 — 病 선례(증세)
+    [InlineData(0x760B)] // 瘋 병 — 狂·病 선례(두풍·미칠)
+    [InlineData(0x7600)] // 瘀 병 — 病 선례(어혈질)
+    [InlineData(0x7599)] // 疙 병 — 瘡 선례(쥐부스럼)
+    [InlineData(0x7643)] // 癃 병 — 疲·瘁 선례(느른할·고질병)
+    [InlineData(0x6B91)] // 殑 죽음 — 殞·殆 선례(까무러칠)
+    [InlineData(0x6901)] // 椁 죽음 — 冢·殮 선례(덧널 = 관)
+    [InlineData(0x69E8)] // 槨 죽음 — 冢·殮 선례(외관)
+    [InlineData(0x7A80)] // 窀 죽음 — 墓·塚 선례(광중 = 무덤 구덩이)
+    [InlineData(0x9099)] // 邙 죽음 — 墓·塚 선례(북망산 = 무덤)
+    [InlineData(0x7A86)] // 窆 죽음 — 葬 선례(하관할)
+    [InlineData(0x7FE3)] // 翣 죽음 — 葬·絰 선례(불삽 = 상여 장식)
+    [InlineData(0x7E17)] // 縗 죽음 — 絰 선례(상복)
+    [InlineData(0x9AFD)] // 髽 죽음 — 絰 선례(북상투 = 상중 머리)
+    [InlineData(0x6B89)] // 殉 죽음 — 死 선례(따라 죽을)
+    [InlineData(0x6BB2)] // 殲 죽음 — 殺·戮 선례(다 죽일)
+    [InlineData(0x6B8D)] // 殍 죽음 — 餓·死 선례(주려 죽을)
+    [InlineData(0x794A)] // 祊 죽음 — 祭 선례(제사)
+    [InlineData(0x81B0)] // 膰 죽음 — 祭 선례(제사 고기)
+    [InlineData(0x993D)] // 餽 죽음 — 祭 선례(제사 지낼)
+    [InlineData(0x6E8F)] // 溏 더러움 — 淖·泥 선례(진창)
+    [InlineData(0x6FD8)] // 濘 더러움 — 淖·泥 선례(진창)
+    [InlineData(0x9709)] // 霉 더러움 — 腐·朽 선례(곰팡이)
+    [InlineData(0x7C95)] // 粕 더러움 — 滓·渣 선례(지게미)
+    [InlineData(0x884A)] // 衊 더러움 — 汚 선례(더럽힐)
+    [InlineData(0x5113)] // 儓 천함 — 僕·隷 선례(하인)
+    [InlineData(0x61E6)] // 懦 천함 — 弱 선례(나약할)
+    [InlineData(0x5B71)] // 孱 천함 — 弱 선례(잔약할)
+    [InlineData(0x5122)] // 儢 어리석음 — 怠·惰 선례(힘쓰지 아니할)
+    [InlineData(0x7A84)] // 窄 천함 — 狹 선례(좁을)
+    [InlineData(0x8CB6)] // 貶 천함 — 低·蔑 선례(낮출)
+    [InlineData(0x8D9C)] // 趜 가난 — 困 선례(곤궁할)
+    [InlineData(0x5226)] // 刦 도둑 — 劫 선례(겁탈할 — 劫의 이체)
+    [InlineData(0x5227)] // 刧 도둑 — 劫 선례(겁탈할 — 劫의 이체)
+    [InlineData(0x527D)] // 剽 도둑 — 劫 선례(겁박할)
+    [InlineData(0x62D0)] // 拐 도둑 — 掠·擄 선례(후릴 = 유괴)
+    [InlineData(0x4FD8)] // 俘 도둑 — 擄 선례(사로잡을)
+    [InlineData(0x8CC2)] // 賂 범죄 — 罪·犯 선례(뇌물)
+    [InlineData(0x8A51)] // 詑 거짓 — 詐·欺 선례(속일)
+    [InlineData(0x8A43)] // 詃 거짓 — 誑·誆 선례(꾈)
+    [InlineData(0x8ADC)] // 諜 거짓 — 覘·窺 선례(염탐할)
+    [InlineData(0x8B1E)] // 謞 거짓 — 奸 선례(간특할)
+    [InlineData(0x509D)] // 傝 악 — 惡 선례(나쁠)
+    [InlineData(0x5FD2)] // 忒 잘못 — 誤·訛 선례(틀릴)
+    [InlineData(0x9006)] // 逆 잘못 — 叛·違 선례(거스를)
+    [InlineData(0x6096)] // 悖 잘못 — 叛·戾 선례(거스를)
+    [InlineData(0x5F88)] // 很 잘못 — 戾 선례(패려궂을)
+    [InlineData(0x8FEB)] // 迫 포악 — 虐 선례(핍박할)
+    [InlineData(0x8A10)] // 訐 비방 — 詆·誹 선례(들추어낼)
+    [InlineData(0x6353)] // 捓 비방 — 嘲 선례(야유할)
+    [InlineData(0x5A9F)] // 媟 교만 — 嫚·慢 선례(버릇없이 굴)
+    [InlineData(0x5B32)] // 嬲 문란 — 姦·淫 선례(희롱할)
+    [InlineData(0x722D)] // 爭 다툼 — 鬩·鬪 선례(다툴)
+    [InlineData(0x6230)] // 戰 다툼 — 鬪 선례(싸움)
+    [InlineData(0x9D06)] // 鴆 재앙 — 毒 선례(짐새 = 독조)
+    [InlineData(0x8831)] // 蠱 재앙 — 蟲·呪 선례(뱃속벌레·고독)
+    [InlineData(0x6BC0)] // 毀 훼손 — 壞·損 선례(헐)
+    [InlineData(0x6BC1)] // 毁 훼손 — 壞·損 선례(헐 — 毀의 이체)
+    [InlineData(0x5F0A)] // 弊 훼손 — 敝 선례(폐단·해질)
+    [InlineData(0x584C)] // 塌 훼손 — 崩·坍 선례(무너질)
+    [InlineData(0x511C)] // 儜 고통 — 苦 선례(괴로워할)
+    [InlineData(0x61AF)] // 憯 슬픔 — 慘 선례(비통할)
+    [InlineData(0x615F)] // 慟 슬픔 — 哀·悲 선례(서러워할)
+    [InlineData(0x606B)] // 恫 슬픔 — 悼·傷 선례(상심할)
+    [InlineData(0x6B38)] // 欸 슬픔 — 嘆·歎 선례(한숨 쉴)
+    [InlineData(0x54BB)] // 咻 고통 — 嗚·哽 선례(신음 소리)
+    [InlineData(0x5992)] // 妒 감정 — 妬 선례(강샘할 — 妬의 이체)
+    [InlineData(0x8127)] // 脧 신체 부정 — 尿·膀·胱 선례(불알)
+    [InlineData(0x81A3)] // 膣 신체 부정 — 尿·膀·胱 선례(음도)
+    [InlineData(0x77C7)] // 矇 신체 부정 — 盲 선례(청맹과니)
+    [InlineData(0x7707)] // 眇 신체 부정 — 盲 선례(애꾸눈)
+    [InlineData(0x778E)] // 瞎 신체 부정 — 盲 선례(애꾸눈)
+    [InlineData(0x79BF)] // 禿 신체 부정 — 跛·佝 선례(대머리)
+    [InlineData(0x77EE)] // 矮 신체 부정 — 佝·跛 선례(난쟁이)
+    [InlineData(0x54BC)] // 咼 신체 부정 — 跛·蹇 선례(입 비뚤어질)
+    [InlineData(0x7278)] // 牸 신체 부정 — 雌 선례(암소)
+    [InlineData(0x86E3)] // 蛣 짐승 — 蚊·蛆 선례(장구벌레)
+    [InlineData(0x8839)] // 蠹 짐승 — 蟲 선례(좀)
+    [InlineData(0x867B)] // 虻 짐승 — 蚊·蠅 선례(등에)
+    [InlineData(0x87CA)] // 蟊 짐승 — 蟲 선례(해충)
+    [InlineData(0x8765)] // 蝥 짐승 — 蟲 선례(해충)
+    [InlineData(0x9D42)] // 鵂 짐승 — 鶹·梟 선례(수리부엉이)
+    [InlineData(0x8C56)] // 豖 짐승 — 豕 선례(발 얽은 돼지 걸음)
+    [InlineData(0x9EF7)] // 黷 더러움 — 汚 선례(더럽힐)
+    [InlineData(0x77BD)] // 瞽 신체 부정 — 盲 선례(맹인)
+    [InlineData(0x5AEB)] // 嫫 신체 부정 — 醜 선례(추녀)
+    [InlineData(0x63F6)] // 揶 비방 — 嘲·捓 선례(야유할)
+    [InlineData(0x8DCC)] // 跌 훼손 — 蹶·躓 선례(거꾸러질)
+    [InlineData(0x6658)] // 晘 재앙 — 旱 선례(가물)
+    public void NegGloss20261026_IsForbidden(int codepoint)
+    {
+        Assert.True(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+    }
+
+    [Theory]
+    [InlineData(0x55FD)] // 嗽 — 咳 선례(기침)
+    [InlineData(0x6B2C)] // 欬 — 咳 선례(기침)
+    [InlineData(0x5476)] // 呶 — 喧·諠 선례(지껄일)
+    [InlineData(0x5542)] // 啂 — 乳 선례(젖)
+    [InlineData(0x5C3B)] // 尻 — 臀 선례(볼기)
+    [InlineData(0x4FBF)] // 便 — 降 선례(독음별 훈 — 변 자리 '똥오줌', 편 자리 '편할')
+    [InlineData(0x5FD3)] // 忓 — 降 선례(독음별 훈 — 간 자리 '방해할', 한 자리 '아름다울')
+    [InlineData(0x7006)] // 瀆 — 枙 선례(첫 훈 '도랑', 부훈 '더럽힐' — 첫 훈 기준이라 불용 아님)
+    [InlineData(0x6DEA)] // 淪 — 熄·泄 선례(빠질)
+    [InlineData(0x634F)] // 捏 — 飾 선례(꾸밀)
+    [InlineData(0x57CB)] // 埋 — 葬 은 불용이나 '묻을'은 매장·매립 겸용(약자)
+    [InlineData(0x580B)] // 堋 — 埋 와 같은 훈(묻을)
+    [InlineData(0x7164)] // 煤 — 煙 선례(그을음)
+    [InlineData(0x711A)] // 焚 — 煂 선례(불사를)
+    [InlineData(0x71D4)] // 燔 — 煂 선례(불사를)
+    [InlineData(0x7207)] // 爇 — 煂 선례(불사를)
+    [InlineData(0x522E)] // 刮 — 削·刪 선례(깎을)
+    [InlineData(0x7357)] // 獗 — 颲 선례(날뛸)
+    [InlineData(0x614A)] // 慊 — 愢 선례(찐덥지 않을)
+    [InlineData(0x8D8C)] // 趌 — 嚇 선례(성내어 달릴)
+    [InlineData(0x4FD6)] // 俖 — 非 선례(옳지 못할)
+    [InlineData(0x5F17)] // 弗 — 不 선례(아닐 — 허사)
+    [InlineData(0x7953)] // 祓 — 賽 선례(푸닥거리할)
+    [InlineData(0x8A1F)] // 訟 — 諷 선례(송사할)
+    [InlineData(0x8B6B)] // 譫 — 喧 선례(헛소리)
+    [InlineData(0x7FEB)] // 翫 — 玩 선례(희롱할)
+    [InlineData(0x620E)] // 戎 — 弩·兜 선례(병장기)
+    [InlineData(0x67D9)] // 柙 — 檻 선례(우리)
+    [InlineData(0x58C5)] // 壅 — 杜 선례(막을)
+    [InlineData(0x5616)] // 嘖 — 喧 선례(들렐)
+    [InlineData(0x546B)] // 呫 — 囁·喞 선례(소곤거릴)
+    [InlineData(0x558B)] // 喋 — 喧 선례(재재거릴)
+    [InlineData(0x5062)] // 偢 — 愢 선례(인정 없을)
+    [InlineData(0x52E1)] // 勡 — 嚇 선례(으를)
+    [InlineData(0x5420)] // 吠 — 喧 선례(짖을)
+    [InlineData(0x9EE0)] // 黠 — 狡 는 불용이나 '약을'은 약자
+    [InlineData(0x76FB)] // 盻 — 瞥 선례(흘겨볼)
+    [InlineData(0x8FF7)] // 迷 — 眩 은 불용이나 '미혹할'은 약자
+    [InlineData(0x60D1)] // 惑 — 迷 와 같은 훈(미혹할)
+    [InlineData(0x91C1)] // 釁 — 祭 근처 '피 칠할'·틈 — 약자
+    [InlineData(0x8755)] // 蝕 — 蠹 근처 '좀먹을' — 약자
+    [InlineData(0x5AAA)] // 媪 — 媼 선례(할머니 — 媼의 이체)
+    [InlineData(0x60D8)] // 惘 — 悶 은 불용이나 '멍할'은 약자
+    [InlineData(0x9F6A)] // 齪 — 狹 근처 '악착할'(도량 좁음) — 약자
+    [InlineData(0x9F77)] // 齷 — 齪 과 같은 훈(악착할)
+    [InlineData(0x5243)] // 剃 — 削 선례(머리털 깎을)
+    [InlineData(0x9AF0)] // 髰 — 削 선례(머리털 깎을)
+    [InlineData(0x9C3E)] // 鰾 — 鰓 선례(부레)
+    [InlineData(0x77F0)] // 矰 — 弩 선례(주살)
+    [InlineData(0x8F62)] // 轢 — 踐 선례(짓밟을)
+    [InlineData(0x9095)] // 邕 — 壅 과 같은 훈(막을) — 壅 weak 뒤 옹(土·金) 1순위
+    [InlineData(0x54A2)] // 咢 — 喧 선례(시끄럽게 다툴)
+    [InlineData(0x9157)] // 酗 — 醲 선례(주정할 — 술 훈)
+    [InlineData(0x9F38)] // 鼸 — 蛙·蝸 선례(도마뱀 — 범속 동물, 鼠 부수)
+    public void NegGloss20261026_IsWeak(int codepoint)
+    {
+        Assert.True(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+    }
+
+    private static readonly string[] NegGlossCycle = { "木", "火", "土", "金", "水" };
+
+    /// <summary>/evaluate 가 Select 에 넘기는 (용신, 희신 = 용신을 생하는 오행, 기신 = 용신을 극하는 오행) — null 이면 생년월일 없음</summary>
+    private static (string? P, string? H, string? G) NegGlossTriple(string? primary)
+    {
+        if (primary == null) return (null, null, null);
+        int i = Array.IndexOf(NegGlossCycle, primary);
+        return (primary, NegGlossCycle[(i + 4) % 5], NegGlossCycle[(i + 3) % 5]);
+    }
+
+    [Theory]
+    [InlineData("항", "male", null, 0x6841, 0x6052)]   // 桁 차꼬 → (1라운드 貥 큰 자개 — Male +40) → 恒 항상 (최항준(남, 생년월일 없음), 보완에서 貥 weak)
+    [InlineData("고", "female", null, 0x8831, 0x66A0)] // 蠱 뱃속벌레 → 暠 밝을
+    [InlineData("겁", "none", null, 0x5226, 0x8FF2)]   // 刦 겁탈할(劫 이체) → 迲 자래
+    [InlineData("짐", "none", null, 0x9D06, 0x659F)]   // 鴆 짐새 → 斟 짐작할
+    [InlineData("특", "female", null, 0x5FD2, 0x7279)] // 忒 틀릴 → 特 특별할
+    [InlineData("할", "none", "木", 0x778E, 0x8F44)]   // 瞎 애꾸눈 → 轄 다스릴
+    [InlineData("폄", "none", "木", 0x7A86, 0x782D)]   // 窆 하관할 → 砭 돌침
+    [InlineData("풍", "none", "土", 0x760B, 0x98A8)]   // 瘋 두풍 → 風 바람
+    [InlineData("망", "none", "土", 0x9099, 0x8F1E)]   // 邙 북망산 → (1라운드 惘 멍할) → 輞 바퀴 테
+    [InlineData("체", "none", "金", 0x91F1, 0x8ADF)]   // 釱 차꼬 → (1라운드 剃 머리털 깎을) → 諟 살필
+    [InlineData("독", "none", "水", 0x7006, 0x8B80)]   // 瀆 도랑/더럽힐 → (1라운드 黷 더럽힐) → 讀 읽을
+    [InlineData("옹", "none", "土", 0x58C5, 0x96CD)]   // 壅 막을 → (1라운드 邕 막을) → 雍 화할
+    [InlineData("표", "none", "水", 0x6B8D, 0x560C)]   // 殍 주려 죽을 → (1라운드 鰾 부레) → 嘌 빠를
+    [InlineData("착", "female", "金", 0x7A84, 0x947F)] // 窄 좁을 → (1라운드 齪 악착할) → 鑿 뚫을
+    public void NegGloss20261026_SelectPicks(string syllable, string gender, string? yongshin, int reportedCp, int expectedCp)
+    {
+        var (p, h, g) = NegGlossTriple(yongshin);
+        var picked = HanjaSelector.Select(syllable, gender, p, h, g);
+        Assert.Single(picked);
+        Assert.NotNull(picked[0]);
+        Assert.NotEqual(Cp(reportedCp), picked[0]!.Character);
+        Assert.Equal(Cp(expectedCp), picked[0]!.Character);
+    }
+
+    [Theory]
+    [InlineData("안", 0x72B4)] // 犴 들개/감옥
+    [InlineData("준", 0x8822)] // 蠢 꿈틀거릴
+    [InlineData("한", 0x65F1)] // 旱 가물
+    [InlineData("한", 0x6658)] // 晘 가물 (2라운드)
+    [InlineData("수", 0x55FD)] // 嗽 기침할 (weak — 뒤로 밀려 상위 10 밖)
+    [InlineData("고", 0x5C3B)] // 尻 꽁무니 (weak)
+    [InlineData("고", 0x77BD)] // 瞽 맹인 (2라운드)
+    [InlineData("곡", 0x688F)] // 梏 수갑
+    [InlineData("질", 0x684E)] // 桎 차꼬
+    [InlineData("미", 0x8FF7)] // 迷 미혹할 (weak)
+    [InlineData("전", 0x6230)] // 戰 싸움
+    public void NegGloss20261026_TopForDisplay_ExcludesReported(string syllable, int codepoint)
+    {
+        var top = HanjaSelector.TopForDisplay(syllable, 10).Select(x => x.Character).ToList();
+        Assert.NotEmpty(top);
+        Assert.DoesNotContain(Cp(codepoint), top);
+    }
+
+    [Fact]
+    public void NegGloss20261026_TopForDisplay_WeakGoesBehind()
+    {
+        // 淪(빠질 륜) — HEAD 에서 륜 후보 2위. weak 는 배제가 아니라 양보라 륜 줄(비약자 8자)에서는 상위 10 끝으로만 밀린다
+        var top = HanjaSelector.TopForDisplay("륜", 10).Select(x => x.Character).ToList();
+        int i = top.IndexOf(Cp(0x6DEA));
+        Assert.True(i < 0 || top.Skip(i).All(HanjaData.IsWeakGivenNameHanja), string.Join("", top));
+    }
+
+    [Theory]
+    [InlineData("문겸")] // 文慊(찐덥지 않을) → 1차 재생성 때 文鼸(도마뱀) → 文岒
+    [InlineData("라겸")] // 羅慊
+    [InlineData("세겸")] // 勢慊
+    [InlineData("휘겸")] // 輝慊
+    [InlineData("어령")] // 圉玲(마부/감옥)
+    public void NegGloss20261026_SelectCombos_DropsReported(string name)
+    {
+        foreach (var g in new[] { "male", "female", "none" })
+        {
+            var combos = HanjaSelector.SelectCombos(name, g, 4);
+            Assert.NotEmpty(combos);
+            Assert.All(combos, c =>
+            {
+                Assert.False(HanjaData.IsForbiddenNameHanja(c.First) || HanjaData.IsForbiddenNameHanja(c.Second), $"{name}/{g}: 불용 {c.First}{c.Second}");
+                Assert.False(HanjaData.IsWeakGivenNameHanja(c.First) || HanjaData.IsWeakGivenNameHanja(c.Second), $"{name}/{g}: 약자 {c.First}{c.Second}");
+            });
+        }
+    }
+
+    // ── 같은 날 보완(검증 지적 — 정리 뒤 격자·표시 상위 10 재검수, 2라운드 수렴) ──
+    // 근거는 HanjaData.cs 불용 9차 보완·weak 같은 날 보완 블록. 牡 는 불용에서 weak 로 옮겼다(雄 '수컷 웅'이 인명 빈출)
+
+    [Theory]
+    [InlineData(0x80C6)] // 胆 신체 부정 — 睾·盲·跛 선례(옷 벗을 단 — 김단우(남) 배정)
+    [InlineData(0x81DD)] // 臝 신체 부정 — 같은 선례(벌거벗을)
+    [InlineData(0x502E)] // 倮 신체 부정 — 같은 선례(벗을, 부훈 '좁을'은 窄 선례)
+    [InlineData(0x88F8)] // 裸 신체 부정 — 臝·倮 와 같은 훈(벗을, 잠재)
+    [InlineData(0x4FB5)] // 侵 포악 — 迫·掠·擄 선례(침노할 = 침략)
+    [InlineData(0x7669)] // 癩 병 — 瘋·癧 선례(나병, 2라운드 잠재)
+    public void NegGloss20261026Fix_IsForbidden(int codepoint)
+    {
+        Assert.True(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+    }
+
+    [Theory]
+    [InlineData(0x5053)] // 偓 — 齷 선례(악착할)
+    [InlineData(0x71D2)] // 燒 — 焚·燔·爇 선례(불사를)
+    [InlineData(0x721A)] // 爚 — 焚 선례(불사를)
+    [InlineData(0x5462)] // 呢 — 呫 선례(소곤거릴)
+    [InlineData(0x8076)] // 聶 — 呫 선례(소곤거릴)
+    [InlineData(0x54A0)] // 咠 — 呫 선례(소곤거릴)
+    [InlineData(0x5665)] // 噥 — 呫 선례(소곤거릴)
+    [InlineData(0x6D29)] // 洩 — 泄 선례(샐 — 泄의 이체)
+    [InlineData(0x6F0F)] // 漏 — 泄 선례(샐)
+    [InlineData(0x6A7D)] // 橽 — 泄 선례(물 샐)
+    [InlineData(0x7704)] // 眄 — 盻 선례(곁눈질할)
+    [InlineData(0x712E)] // 焮 — 煂 선례(태울)
+    [InlineData(0x7147)] // 煇 — 便·降 선례(독음별 훈 — 훈 자리 '태울', 휘 자리 '빛날')
+    [InlineData(0x5AD6)] // 嫖 — 瀆 선례(첫 훈 '날랠', 부훈 '음탕할')
+    [InlineData(0x8CA5)] // 貥 — 貝 선례(큰 자개 — 사물 훈)
+    [InlineData(0x73EC)] // 珬 — 貝 선례(자개)
+    [InlineData(0x6ADC)] // 櫜 — 弩·矰 선례(활집 — 무기 사물)
+    [InlineData(0x9A5B)] // 驛 — 校 선례(역 — 시설 훈)
+    [InlineData(0x7261)] // 牡 — 불용에서 옮김(雄 '수컷 웅'이 인명 빈출)
+    [InlineData(0x9265)] // 鉥 — 針 선례(돗바늘, 2라운드)
+    [InlineData(0x9DB8)] // 鶸 — 鷄·鴨·鷿 선례(댓닭, 2라운드)
+    [InlineData(0x513A)] // 儺 — 祓 선례(푸닥거리, 2라운드)
+    [InlineData(0x54EA)] // 哪 — 祓·那 선례(역귀 쫓는 소리/어찌, 2라운드)
+    public void NegGloss20261026Fix_IsWeak(int codepoint)
+    {
+        Assert.True(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+    }
+
+    [Theory]
+    [InlineData("단", "male", null, 0x80C6, 0x65E6)] // 胆 옷 벗을 → 旦 아침 (김단우(남, 생년월일 없음))
+    [InlineData("단", "male", "水", 0x80C6, 0x6E4D)] // 胆 → 湍 여울
+    [InlineData("침", "none", null, 0x4FB5, 0x5BE2)] // 侵 침노할 → 寢 잘
+    [InlineData("침", "female", "火", 0x4FB5, 0x99F8)] // 侵 → 駸 달릴
+    [InlineData("표", "none", "土", 0x5AD6, 0x719B)] // 嫖 날랠/음탕할 → 熛 불똥
+    [InlineData("표", "male", "土", 0x5AD6, 0x50C4)] // 嫖 → 僄 날랠
+    [InlineData("악", "female", "火", 0x5053, 0x9D9A)] // 偓 악착할 → 鶚 물수리
+    [InlineData("면", "male", "木", 0x7704, 0x514D)] // 眄 곁눈질할 → 免 면할
+    [InlineData("항", "none", "金", 0x8CA5, 0x5AE6)] // 貥 큰 자개 → 嫦 항아
+    [InlineData("고", "male", null, 0x6ADC, 0x9AD8)] // 櫜 활집 → 高 높을
+    [InlineData("고", "male", "木", 0x6ADC, 0x6832)] // 櫜 → 栲 붉나무
+    [InlineData("훈", "female", null, 0x7147, 0x85B0)] // 煇 태울 → 薰 향초 (지훈(여))
+    [InlineData("훈", "female", "火", 0x7147, 0x52F3)] // 煇 → 勳 공
+    [InlineData("달", "none", "木", 0x6A7D, 0x95E5)] // 橽 물 샐 → 闥 문
+    [InlineData("술", "none", "金", 0x73EC, 0x8FF0)] // 珬 자개 → (1라운드 鉥 돗바늘) → 述 펼
+    [InlineData("약", "male", "火", 0x721A, 0x7D04)] // 爚 불사를 → (1라운드 鶸 댓닭) → 約 맺을
+    [InlineData("약", "female", "火", 0x721A, 0x846F)] // 爚 → (鶸) → 葯 꽃밥
+    public void NegGloss20261026Fix_SelectPicks(string syllable, string gender, string? yongshin, int reportedCp, int expectedCp)
+        => NegGloss20261026_SelectPicks(syllable, gender, yongshin, reportedCp, expectedCp);
+
+    [Theory]
+    [InlineData("표", 0x5AD6)] // 嫖 날랠/음탕할 (weak — 殍·剽·勡 이 빠진 뒤 9위로 들었던 글자)
+    [InlineData("단", 0x80C6)] // 胆 옷 벗을
+    [InlineData("나", 0x81DD)] // 臝 벌거벗을
+    [InlineData("나", 0x502E)] // 倮 벗을
+    [InlineData("라", 0x81DD)] // 臝
+    [InlineData("라", 0x502E)] // 倮
+    [InlineData("나", 0x513A)] // 儺 푸닥거리 (weak, 2라운드)
+    [InlineData("침", 0x4FB5)] // 侵 침노할
+    [InlineData("소", 0x71D2)] // 燒 불사를 (weak)
+    [InlineData("섭", 0x8076)] // 聶 소곤거릴 (weak)
+    [InlineData("설", 0x6D29)] // 洩 샐 (weak)
+    [InlineData("흔", 0x712E)] // 焮 태울 (weak)
+    [InlineData("악", 0x5053)] // 偓 악착할 (weak)
+    [InlineData("면", 0x7704)] // 眄 곁눈질할 (weak)
+    [InlineData("훈", 0x7147)] // 煇 태울 훈 (weak)
+    [InlineData("역", 0x9A5B)] // 驛 역 (weak)
+    public void NegGloss20261026Fix_TopForDisplay_ExcludesReported(string syllable, int codepoint)
+        => NegGloss20261026_TopForDisplay_ExcludesReported(syllable, codepoint);
+
+    [Theory]
+    [InlineData("니", 0x5462)] // 呢 소곤거릴 — 니 줄은 비약자가 3자(馜·濔·柅)뿐이라 상위 10 안에 남되 비약자 뒤
+    [InlineData("달", 0x6A7D)] // 橽 물 샐 — 달 줄은 9자뿐
+    [InlineData("술", 0x73EC)] // 珬 자개 — 술 줄은 8자뿐
+    public void NegGloss20261026Fix_TopForDisplay_WeakGoesBehind(string syllable, int codepoint)
+    {
+        var top = HanjaSelector.TopForDisplay(syllable, 10).Select(x => x.Character).ToList();
+        int i = top.IndexOf(Cp(codepoint));
+        // 상위 10 에 남더라도 그 뒤의 기본 영역 글자는 모두 약자여야 한다(비약자를 앞지르지 않음)
+        Assert.True(i < 0 || top.Skip(i).Where(HanjaData.IsInCjkBasicRange).All(HanjaData.IsWeakGivenNameHanja), string.Join("", top));
+    }
+
+    [Theory]
+    [InlineData("니나")] // 呢羅(소곤거릴) — 3순위
+    [InlineData("라니")] // 羅呢 — 3순위
+    [InlineData("다니")] // 茶呢 — 4순위
+    [InlineData("대니")] // 大呢 — 2순위
+    [InlineData("루니")] // 樓呢 — 4순위
+    [InlineData("주역")] // 柱驛(역참) — 1차 정리 4순위, 보완 뒤 HEAD 와 같은 周亦
+    public void NegGloss20261026Fix_SelectCombos_DropsReported(string name)
+        => NegGloss20261026_SelectCombos_DropsReported(name);
 }

@@ -518,4 +518,49 @@ public class OpsVerificationRegressionTests
         }
         Assert.True(bad.Count == 0, $"대안이 있는데 약자 배정 {bad.Count}건: {string.Join(" ", bad.Take(20))}");
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 2026-10-26 운영 검증 부정 훈 정리 — 최항준(남, 생년월일 없음)=桁(차꼬)·/analysis 후보 犴(들개/감옥)·蠢(꿈틀거릴)·旱(가물)·嗽(기침할)
+    // 세트 근거는 HanjaData.cs 불용 9차·weak 같은 날 블록, 글자 단위 회귀는 WeakGivenNameHanjaTests.NegGloss20261026_*
+    // ═══════════════════════════════════════════════════════════════
+
+    [Theory]
+    [InlineData("항준", "최", "male", null, 0x6841)]          // 桁 차꼬 항 — 운영 제보
+    [InlineData("항준", "최", "male", "2019-11-23", 0x6841)]
+    [InlineData("고은", "김", "female", null, 0x8831)]        // 蠱 뱃속벌레 고 — 고(여, 생년월일 없음)
+    [InlineData("짐우", "김", "none", null, 0x9D06)]          // 鴆 짐새 짐
+    [InlineData("항준", "최", "male", null, 0x8CA5)]          // 貥 큰 자개 — 정리 1라운드 뒤 Male +40 으로 恒 을 이기던 글자(보완 weak)
+    [InlineData("단우", "김", "male", null, 0x80C6)]          // 胆 옷 벗을 단 — 단우 남아 2,914명(보완 불용)
+    [InlineData("지훈", "박", "female", null, 0x7147)]        // 煇 태울 훈(휘 자리 '빛날') — 보완 weak
+    public async Task Evaluate_NegGlossCleanup_ReportedCases(string name, string lastName, string gender, string? date, int reportedCp)
+    {
+        var r = await CreateEvaluationService().EvaluateNameAsync(
+            name, lastName, date == null ? null : DateTime.Parse(date), gender, "neutral");
+        Assert.DoesNotContain(Cp(reportedCp), r.MeaningNote);
+        foreach (var (ch, _, _) in ParseMeaningParts(r.MeaningNote))
+        {
+            Assert.False(HanjaData.IsForbiddenNameHanja(ch), $"{lastName}{name}: 불용 {ch} — {r.MeaningNote}");
+            Assert.False(HanjaData.IsWeakGivenNameHanja(ch), $"{lastName}{name}: 약자 {ch} — {r.MeaningNote}");
+        }
+    }
+
+    [Theory]
+    [InlineData("안준", 0x72B4, 0x8822)] // 犴 들개/감옥 · 蠢 꿈틀거릴/어리석을 — 운영 제보
+    [InlineData("한수", 0x65F1, 0x55FD)] // 旱 가물 · 嗽 기침할(weak — 뒤로 밀려 상위 10 밖)
+    [InlineData("항고", 0x6841, 0x777E)] // 桁 차꼬 · 睾 불알(10/26 인명용 합집합으로 새로 인명용)
+    [InlineData("나연", 0x81DD, 0x502E)] // 臝 벌거벗을 · 倮 벗을 — 보완 불용(나 줄 8·10위)
+    [InlineData("표단", 0x5AD6, 0x80C6)] // 嫖 날랠/음탕할(weak — 표 줄 9위) · 胆 옷 벗을(불용 — 단 줄 9위)
+    [InlineData("소침", 0x71D2, 0x4FB5)] // 燒 불사를(weak — 소 줄 7위) · 侵 침노할(불용 — 침 줄 1위)
+    public async Task Analysis_NegGlossCleanup_ReportedCases(string firstName, int cp1, int cp2)
+    {
+        var r = await CreateAnalysisService().AnalyzeNameAsync(new NameAnalysisRequestDto
+        {
+            LastName = "최", FirstName = firstName, Gender = "none", Tone = "neutral"
+        });
+        var all = r.HanjaBreakdown.SelectMany(b => b.PossibleHanja.Select(h => h.Character)).ToList();
+        Assert.NotEmpty(all);
+        Assert.DoesNotContain(Cp(cp1), all);
+        Assert.DoesNotContain(Cp(cp2), all);
+        Assert.DoesNotContain(all, HanjaData.IsForbiddenNameHanja);
+    }
 }

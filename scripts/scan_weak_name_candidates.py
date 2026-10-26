@@ -45,10 +45,14 @@ def extract_charset_from_cs(path: Path, decl_marker: str) -> set:
                 break
         i += 1
     block = text[open_brace : i + 1]
-    # 주석 제거 후 "X" 리터럴 수집 (호환자 등 비BMP도 1"글자")
+    # 주석 제거 후 "X" 리터럴 수집 (호환자 등 비BMP도 1"글자").
+    # C# 유니코드 이스케이프("\u6841"·"\U0002A6A5")도 글자로 푼다 — 2026-10-26 부정 훈 정리부터 새 글자는 이스케이프로 적는다
+    # (호환 한자 리터럴이 편집 도구의 NFC 정규화로 바뀐 회귀 전력). 풀지 않으면 감사 B(불용 잔존)·D·E 가 새 글자를 못 본다.
     block = re.sub(r"//[^\n]*", "", block)
     chars = set()
-    for lit in re.findall(r'"([^"\\]+)"', block):
+    for lit in re.findall(r'"((?:[^"\\]|\\u[0-9A-Fa-f]{4}|\\U[0-9A-Fa-f]{8})+)"', block):
+        lit = re.sub(r"\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})",
+                     lambda m: chr(int(m.group(1) or m.group(2), 16)), lit)
         if len(lit) <= 2 and len(lit.encode("utf-32-le")) // 4 == 1:
             chars.add(lit)
     return chars
