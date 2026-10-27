@@ -78,11 +78,42 @@ def keywords_of(hun):
     return [(kw, kind)]
 
 
+def adj_forms(kw):
+    """형용사·동사 어간 키워드 → 문장에서 찾을 꼴. 'ㅂ 불규칙' 훈(아름다울·고울·즐거울·가벼울·새로울·날카로울 …)은
+    keywords_of 가 '아름다우'로 잡는데 문장에는 아름다운·아름다움·아름다워·아름답게로 나와 그 꼴을 더한다(2026-10-27 —
+    언 26명의 대표 뜻·서사가 嫣 '아리따울' 기준인데 표시 조합에서 嫣 이 빠져도 잡지 못했다).
+    '…우'로 끝나는 어간: X우 → X운·X움·X워·X와(고와·도와) + 받침 ㅂ 꼴(X답·곱). 세우·키우 같은 '우' 동사도 X운·X움이 맞는 활용형이고,
+    받침 ㅂ 꼴(셉·킵)은 문장에 거의 나오지 않아 따로 가르지 않는다.
+    받침 없는 어간 끝 음절에는 ㄴ·ㄹ 받침 꼴을 더한다(2026-10-27 검증): keywords_of 는 'X+ㄹ' 관형형에서 ㄹ 을 떼므로
+    ㄹ 어간(어질 → '어지', 가늘 → '가느')은 어질고·어진·가는에 걸리지 않았다(仁 이 빠진 여자 인 17명의 '어진' 뜻).
+    하 어간(형통하·넉넉하·고요하)은 X한·X히·X해·X함 꼴이 문장에 나온다(亨 이 빠진 형 페이지의 '형통한'·'형통히').
+    반환 (꼴 목록, 낱말 첫머리에서만 셀 꼴 목록) — 2음절 어간의 ㄴ·ㄹ 꼴은 다른 낱말 속에 흔해(가느 → 가는 ⊂ 살아가는,
+    하느 → 하는 ⊂ 승리하는) 앞 글자가 한글이 아닐 때만 센다."""
+    forms, edge = [kw], []
+    if len(kw) >= 2 and kw[-1] == "우":
+        stem = kw[:-1]
+        forms += [stem + "운", stem + "움", stem + "워", stem + "와"]
+        if is_hangul(stem[-1]) and jong(stem[-1]) == 0:
+            forms.append(stem[:-1] + with_jong(stem[-1], 17))  # ㅂ 받침(아름다 → 아름답, 고 → 곱)
+    if len(kw) >= 2 and is_hangul(kw[-1]) and jong(kw[-1]) == 0:
+        nl_forms = [kw[:-1] + with_jong(kw[-1], 4), kw[:-1] + with_jong(kw[-1], 8)]  # ㄴ·ㄹ 받침(어지 → 어진·어질, 가느 → 가는·가늘)
+        (forms if len(kw) >= 3 else edge).extend(nl_forms)
+    if len(kw) >= 3 and kw[-1] == "하":
+        forms += [kw[:-1] + t for t in ("히", "해", "함")]  # 하 어간(형통하 → 형통히·형통해·형통함; 형통한은 ㄴ 받침 꼴)
+    return forms, edge
+
+
 def appears(kw, kind, text):
     """키워드가 문장에 '그 뜻으로' 나타나는지. 1음절 명사는 단어 경계 규칙을 둔다
     (나→빛나는, 중→중심, 형→형통, 뜻→따뜻한 오탐 차단)."""
-    if len(kw) >= 2 or kind == "adj":
-        return kw in text  # 다음절 명사(연꽃·으뜸)·어간(맑·빛나)은 부분 문자열로 충분
+    if kind == "adj":
+        forms, edge = adj_forms(kw)  # 어간(맑·빛나·아름다우)은 부분 문자열로 충분 — ㅂ 불규칙·ㄹ·하 어간은 활용형도
+        if any(f in text for f in forms):
+            return True
+        return any(m.start() == 0 or not is_hangul(text[m.start() - 1])
+                   for f in edge for m in re.finditer(re.escape(f), text))
+    if len(kw) >= 2:
+        return kw in text  # 다음절 명사(연꽃·으뜸)는 부분 문자열로 충분
     if jong(kw) == 0 and with_jong(kw, 19) in text:
         return True  # 사이시옷형(비→빗: 빗속·빗방울)
     for i, ch in enumerate(text):
@@ -169,3 +200,30 @@ def stale_keywords(name, text, combos, idx):
     """모순 확정(noun·strict) 키워드 집합 — 비어 있으면 모순 아님."""
     return {k for m in find_mismatches(name, text, combos, idx, kinds=("noun",)) if m["strict"]
             for ks in m["hits"].values() for k in ks}
+
+
+def _self_test():
+    """python -I -X utf8 scripts/mean_combo_check.py — ㅂ 불규칙 어간 꼴과 기존 규칙 회귀 확인(실패하면 AssertionError)."""
+    assert keywords_of("아름다울") == [("아름다우", "adj")]
+    for text in ("아름다운 사람", "아름다움을 지닌", "아름답게 피어나는", "아름다워 보이는"):
+        assert appears("아름다우", "adj", text), text
+    assert keywords_of("고울") == [("고우", "adj")]
+    for text in ("곱게 자란", "고운 마음", "고와서"):
+        assert appears("고우", "adj", text), text
+    for kw, text in (("즐거우", "즐거운 웃음"), ("가벼우", "가볍게 날아오르는"), ("무거우", "무거움"),
+                     ("새로우", "새롭게 시작하는"), ("날카로우", "날카로운 눈빛")):
+        assert appears(kw, "adj", text), (kw, text)
+    assert keywords_of("어질") == [("어지", "adj")] and keywords_of("가늘") == [("가느", "adj")]
+    for kw, text in (("어지", "빼어나게 어질고 너그러운"), ("어지", "바다처럼 넓고 어진"), ("가느", "부드럽고 가는 결"),
+                     ("형통하", "모든 일이 뜻대로 형통한"), ("형통하", "제 길을 형통히 걷는"), ("넉넉하", "넉넉한 복록")):
+        assert appears(kw, "adj", text), (kw, text)
+    assert not appears("어지", "adj", "맑고 너그러운") and not appears("형통하", "adj", "형제처럼")
+    assert not appears("가느", "adj", "묵묵히 살아가는 사람") and not appears("하느", "adj", "당당하게 승리하는")
+    assert not appears("아름다우", "adj", "맑고 밝은")
+    assert appears("맑", "adj", "맑은 물") and appears("빛나", "adj", "빛나는")  # 기존 어간 그대로
+    assert not appears("비", "noun", "비밀") and appears("비", "noun", "비처럼")  # 1음절 명사 경계 그대로
+    print("mean_combo_check self-test OK")
+
+
+if __name__ == "__main__":
+    _self_test()
