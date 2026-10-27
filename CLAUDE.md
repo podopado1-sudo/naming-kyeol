@@ -575,6 +575,9 @@ D:\MyDev\NameForm\
 감사: `audit_combo_regressions.py`(A~F) + `audit_mean_combo_mismatch.py --fail` +
 `audit_insights_tables.py`(데이터 리포트 표의 대표 한자·뜻 칸 대조 — 뜻 칸은 json 을 자동으로 따라가지 않는다.
 불일치면 `--fix`로 뜻 칸만 교체, 대표 한자가 바뀌면 본문 서술을 손으로 다시 읽을 것. `--fix`도 고치지 않은 불일치가 남으면 exit 1).
+⚠️ 1순위 조합이 바뀌면 `/guide/resource-element-radicals` 의 '이름에 쓰는 글자로 좁히면' 수치·표와 '이 사이트가 바꾼 것' 둘째 문단도
+`python -I -X utf8 scripts/build_insight_resource_element.py`(INSIGHT_FACTS_OUT 으로 출력 위치 지정)로 다시 세어 옮길 것 — 이 표는 /name 링크가 없어
+`audit_insights_tables.py` 가 보지 않는다(2026-10-27 배포 뒤 검증에서 425→412자·1,762→1,569명 낡은 채로 발견).
 `dotnet test` 의 `OpsVerificationRegressionTests.NameSeo_AestheticScores_MatchEngine` 이 name-seo.json `sc`(5,340명)를 지금 미학 엔진 출력과 전수 대조한다
 (성별 60/40 분기·노트 치환·성별 판정 한자 = `NameSeoHanja.DisplayedHanja` 1순위 조합은 dump-name-scores 와 같고, 판정 한자가 json combos[0] 과 같은지도 대조한다)
 — 미학 엔진을 고치고 이 체인을 빠뜨리면 테스트가 실패한다(2026-10-26 — 점수 정책 직후 HEAD 데이터 200명, 결정 ③ 구현 직후 4,371명 불일치를 잡았다).
