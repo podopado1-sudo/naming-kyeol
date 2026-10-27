@@ -262,6 +262,12 @@ function RarityBarP({ value }: { value: number }) {
 // ============================================================
 // SubHeaderParent
 // ============================================================
+// 부모 동그라미 머리글자 — 성 다음 글자(이름 첫 글자). 성만 넣으면('김') 그 자리가 '' 라 빈 동그라미가 그려졌다 —
+// 그때는 첫 글자로 (2026-10-27, ParentChip·ParentNode 공용)
+function parentInitial(fullName: string): string {
+  return fullName.slice(1, 2) || fullName.slice(0, 1);
+}
+
 function ParentChip({
   role,
   person,
@@ -270,7 +276,7 @@ function ParentChip({
   person: ParentPerson;
 }) {
   const [open, setOpen] = useState(false);
-  const initial = (person.fullName || "").slice(1, 2);
+  const initial = parentInitial(person.fullName || "");
   const isFather = role === "아빠";
   return (
     <span style={{ position: "relative" }}>
@@ -553,7 +559,7 @@ function ParentNode({
   highlightColor: string;
 }) {
   if (!person) return null;
-  const initial = person.fullName.slice(1, 2);
+  const initial = parentInitial(person.fullName);
   const chars = person.fullName.split("");
   const hanjaChars = (person.hanjaName || "").split("");
   const hl = highlightColor || "var(--color-teal)";
@@ -822,7 +828,14 @@ function ChildNode({
   );
 }
 
-function ConnectorSVG({ color }: { color: string }) {
+function ConnectorSVG({
+  color,
+  single = false,
+}: {
+  color: string;
+  /** 부모 한 명 — 가운데(x=200) 곧은 점선 하나. 기본은 두 열 가운데(x=50·350)에서 내려오는 곡선 두 줄 */
+  single?: boolean;
+}) {
   return (
     <svg
       viewBox="0 0 400 80"
@@ -838,20 +851,34 @@ function ConnectorSVG({ color }: { color: string }) {
       }}
       aria-hidden="true"
     >
-      <path
-        d="M50 0 Q 200 50 200 70"
-        stroke={color}
-        strokeWidth="1.5"
-        fill="none"
-        strokeDasharray="3 4"
-      />
-      <path
-        d="M350 0 Q 200 50 200 70"
-        stroke={color}
-        strokeWidth="1.5"
-        fill="none"
-        strokeDasharray="3 4"
-      />
+      {single ? (
+        // preserveAspectRatio="none" 의 가로 늘임(폰 0.5배~데스크톱 1.3배)이 세로선 굵기를 그대로 바꾸므로 굵기만 화면 1.5px 로 고정
+        <path
+          d="M200 0 L200 70"
+          stroke={color}
+          strokeWidth="1.5"
+          fill="none"
+          strokeDasharray="3 4"
+          vectorEffect="non-scaling-stroke"
+        />
+      ) : (
+        <>
+          <path
+            d="M50 0 Q 200 50 200 70"
+            stroke={color}
+            strokeWidth="1.5"
+            fill="none"
+            strokeDasharray="3 4"
+          />
+          <path
+            d="M350 0 Q 200 50 200 70"
+            stroke={color}
+            strokeWidth="1.5"
+            fill="none"
+            strokeDasharray="3 4"
+          />
+        </>
+      )}
       <polygon points="200,76 195,68 205,68" fill={color} />
     </svg>
   );
@@ -866,6 +893,10 @@ function FamilyMappingBanner({
 }) {
   const parents = data.requestSummary.parents;
   const bridge = computeBridge(top, parents);
+  // 부모 이름은 선택 입력이다 — 폼은 아빠·엄마·키워드 중 하나만 있으면 받고 백엔드도 후보를 낸다(키워드만·한쪽 부모만).
+  // 둘 다면 옛 2열 + 곡선 두 줄 그대로, 한 명이면 그 사람만 가운데 + 곧은 점선 하나, 없으면 부모 줄·연결선·70px 간격 없이 아이 카드만.
+  // 옛 화면은 늘 2열·곡선 두 줄이라 키워드만이면 빈 띠와 허공에서 나오는 점선, 엄마만이면 아빠 자리(왼쪽 열)에 엄마가 섰다 (2026-10-27)
+  const parentCount = (parents.father ? 1 : 0) + (parents.mother ? 1 : 0);
   return (
     <div
       style={{
@@ -877,31 +908,35 @@ function FamilyMappingBanner({
         overflow: "hidden",
       }}
     >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 24,
-          position: "relative",
-        }}
-      >
-        <ParentNode
-          person={parents.father}
-          role="아빠"
-          highlightChar={bridge.fatherChar}
-          highlightHanja={bridge.fatherHanja}
-          highlightColor={bridge.color}
-        />
-        <ParentNode
-          person={parents.mother}
-          role="엄마"
-          highlightChar={bridge.motherChar}
-          highlightHanja={bridge.motherHanja}
-          highlightColor={bridge.color}
-        />
-      </div>
-      <ConnectorSVG color={bridge.lineColor} />
-      {bridge.annotation && (
+      {parentCount > 0 && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: parentCount === 2 ? "1fr 1fr" : "1fr",
+            gap: 24,
+            position: "relative",
+          }}
+        >
+          <ParentNode
+            person={parents.father}
+            role="아빠"
+            highlightChar={bridge.fatherChar}
+            highlightHanja={bridge.fatherHanja}
+            highlightColor={bridge.color}
+          />
+          <ParentNode
+            person={parents.mother}
+            role="엄마"
+            highlightChar={bridge.motherChar}
+            highlightHanja={bridge.motherHanja}
+            highlightColor={bridge.color}
+          />
+        </div>
+      )}
+      {parentCount === 2 && <ConnectorSVG color={bridge.lineColor} />}
+      {parentCount === 1 && <ConnectorSVG color={bridge.lineColor} single />}
+      {/* 주석 알약은 연결선 위 자리(배너 세로 가운데)라 부모가 없으면 아이 카드에 겹친다 — 연결선과 함께만 */}
+      {parentCount > 0 && bridge.annotation && (
         <div
           style={{
             position: "absolute",
@@ -925,7 +960,7 @@ function FamilyMappingBanner({
       )}
       <div
         style={{
-          marginTop: 70,
+          marginTop: parentCount > 0 ? 70 : 0,
           display: "flex",
           justifyContent: "center",
         }}
