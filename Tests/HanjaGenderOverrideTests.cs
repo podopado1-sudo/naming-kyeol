@@ -13,6 +13,9 @@ namespace NameForm.Tests;
 /// 赫(빛날 혁)이 키워드 분류로 Female 이 되자 남자 혁 이름 1순위를 侐(고요할 혁, D등급)이 차지했고,
 /// 恩 하드코딩 Female 때문에 남자 은 이름 1순위는 전부 銀이었다.
 /// 2026-10-26: 결정 ③(성별 판정 = 보이는 한자) 뒤 키워드 부분 일치로 성별이 붙은 10자를 더했다(아래 KeywordMisclassified_*).
+/// 2026-10-27: 성별 규칙 감사로 분류기(scripts/classify_gender_tone.py)를 고친 뒤(D2 — 판정은 오프라인 규칙 하나) 옛 결정을 지키는 4자
+/// (亨·衡 Male, 慧·纖 Female)와 쓰임이 반대인 子 Neutral 을 더했다(아래 PriorDecisionOrUsage_ViaOverrideFile). 옛 14자는 고친 규칙으로도
+/// 같은 값이라 중복이지만 지우지 않는다(해가 없고, D2 가 깨질 때의 안전망).
 /// </summary>
 public class HanjaGenderOverrideTests
 {
@@ -94,17 +97,35 @@ public class HanjaGenderOverrideTests
     }
 
     /// <summary>
-    /// 亨·衡 은 오버라이드에 넣지 않는다(2026-10-26 — 결정 대기 항목이 '분류가 맞고 조합 선택이 문제'로 적은 글자, 사용자 결정 범위 밖).
-    /// 여자 형 이름 5명(가형 佳亨·나형 羅衡 …)의 /name '맞지 않음'은 선택기 항목(SelectCombos ↔ Select) 몫으로 남는다. 바꾸려면 결정을 먼저 기록할 것.
+    /// 亨·衡 은 Male 로 둔다(2026-10-26 결정 — 형 음절 출생 남 93%, 建 Male·惠 Female 관례와 같은 판단). 옛 값은 키워드 '형'이 독음과 부분
+    /// 일치해 붙었는데, 2026-10-27 고친 규칙은 독음 낱말을 보지 않아 Neutral 이 되므로 결정을 지키려고 오버라이드 파일에 Male 로 넣었다
+    /// (사용자 결정 2026-10-27 'k 표'). 여자 형 이름 5명(가형 佳亨·나형 羅衡 …)의 /name '맞지 않음'은 선택기가 대안(炯 등)으로 푼다(O1).
     /// </summary>
     [Theory]
     [InlineData(0x4EA8)] // 亨 형통할 형
     [InlineData(0x8861)] // 衡 저울대 형
-    public void HyeongCommonHanja_StayMale_NotOverridden(int codepoint)
+    public void HyeongCommonHanja_StayMale_ViaOverrideFile(int codepoint)
     {
         var ch = Cp(codepoint);
-        Assert.False(LoadOverrideFile().ContainsKey(ch));
+        Assert.Equal("Male", LoadOverrideFile()[ch]);
         Assert.Equal(HanjaData.GenderPreference.Male, HanjaData.FindByCharacter(ch)!.GenderPref);
+    }
+
+    /// <summary>
+    /// 2026-10-27 성별 규칙 감사 뒤 오버라이드 파일로 정한 값 — 고친 규칙의 값과 다르게 두는 글자(사용자 결정 2026-10-27).
+    /// 亨·衡 은 위 테스트. 慧 는 惠(하드코딩 Female)·蕙(orchid Female)와 한 성별(Hye_CommonHanja_ShareOneGender — 고친 규칙은 '슬기로울'을 (c) 형용사로
+    /// 보아 Neutral), 纖 은 纖纖(여성 묘사 관용 — 고친 규칙은 graceful·delicate 를 女부 글자에서만 세어 Neutral, 10/26 Female 유지 결정).
+    /// 子 는 고친 규칙으로도 '아들'(성별 명사)이라 Male 이지만 쓰임이 반대라(자 음절 출생 여 77% — 이름 22명, 기준 n≥20) Neutral 로 둔다.
+    /// </summary>
+    [Theory]
+    [InlineData(0x6167, "Female")]  // 慧 슬기로울 혜
+    [InlineData(0x7E96, "Female")]  // 纖 가늘 섬
+    [InlineData(0x5B50, "Neutral")] // 子 아들 자
+    public void PriorDecisionOrUsage_ViaOverrideFile(int codepoint, string expected)
+    {
+        var ch = Cp(codepoint);
+        Assert.Equal(expected, LoadOverrideFile()[ch]);
+        Assert.Equal(Enum.Parse<HanjaData.GenderPreference>(expected), HanjaData.FindByCharacter(ch)!.GenderPref);
     }
 
     /// <summary>
