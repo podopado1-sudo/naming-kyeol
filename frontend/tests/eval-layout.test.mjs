@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import {
   hasVisibleContent,
   keepFilledBlocks,
+  kyeolSubtitle,
   threeColTemplate,
   twoColTemplate,
   visibleItems,
@@ -182,4 +183,25 @@ test("KyeolBlocks·/analysis 가 eval-layout 규칙을 쓴다", () => {
     /hasVisibleContent\(strengths\) \|\| hasVisibleContent\(weaknesses\) \|\| hasVisibleContent\(reasons\)/,
   );
   assert.doesNotMatch(page, /strengths\.length > 0 \|\| weaknesses\.length > 0/);
+});
+
+// 2026-10-27: 소제목이 늘 '강점·약점을…'이라 약점 상자가 빠진 결과에서 없는 상자를 가리켰다
+test("/analysis 소제목은 보이는 상자만 부른다", () => {
+  assert.equal(kyeolSubtitle(["2음절"], ["흔한 이름"]), "강점·약점을 항목별로 살펴봐요");
+  assert.equal(kyeolSubtitle(["2음절"], []), "강점을 항목별로 살펴봐요");
+  assert.equal(kyeolSubtitle(["2음절"], ["  "]), "강점을 항목별로 살펴봐요");
+  assert.equal(kyeolSubtitle([], ["흔한 이름"]), "약점을 항목별로 살펴봐요");
+  assert.equal(kyeolSubtitle(null, undefined), "추천 이유를 살펴봐요");
+
+  const page = read("src", "app", "analysis", "page.tsx");
+  assert.match(page, /subtitle=\{kyeolSubtitle\(strengths, weaknesses\)\}/);
+  assert.doesNotMatch(page, /subtitle="강점·약점을 항목별로 살펴봐요"/);
+});
+
+// 폰에서 3열 그대로면 칸이 100px 안팎이라 문장이 글자 단위로 꺾였다 — 640px 이하 1열·최소 높이 해제
+test("KyeolBlocks 는 640px 이하에서 1열로 쌓는다", () => {
+  const mid = read("src", "components", "design", "DetailMid.tsx");
+  assert.match(mid, /@media \(max-width: 640px\)[\s\S]*?\.kyeol-blocks \{ grid-template-columns: 1fr !important; \}/);
+  assert.match(mid, /\.kyeol-blocks > div \{ min-height: 0 !important; \}/);
+  assert.match(mid, /<style>\{KYEOL_CSS\}<\/style>\s*<div\s+className="kyeol-blocks"/);
 });

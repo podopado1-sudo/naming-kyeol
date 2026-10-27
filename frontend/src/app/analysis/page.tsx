@@ -26,7 +26,7 @@ import {
   type HanjaSyllableEntry,
 } from "@/components/design/DetailHanja";
 import { toResourceGrade } from "@/components/design/resource-grade";
-import { hasVisibleContent } from "@/components/design/eval-layout";
+import { hasVisibleContent, kyeolSubtitle } from "@/components/design/eval-layout";
 
 import { nameAnalysis } from "@/lib/api";
 import type { NameAnalysisResponse, SajuChartData as ApiSajuChart } from "@/lib/types";
@@ -216,7 +216,7 @@ function AnalysisInner({
           <section style={{ marginTop: 48 }}>
             <SectionHead
               title="이름의 결"
-              subtitle="강점·약점을 항목별로 살펴봐요"
+              subtitle={kyeolSubtitle(strengths, weaknesses)}
             />
             <KyeolBlocks
               strengths={strengths}

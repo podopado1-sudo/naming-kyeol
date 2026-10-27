@@ -43,3 +43,20 @@ export function twoColTemplate(count: number): string {
 export function threeColTemplate(count: number): string {
   return count >= 2 ? `repeat(${Math.min(count, 3)}, 1fr)` : "1fr";
 }
+
+/**
+ * /analysis '이름의 결' 소제목 — 보이는 상자만 부른다. 옛 문구는 늘 '강점·약점을 항목별로 살펴봐요'라
+ * 약점 상자가 빠진 대부분의 결과(생년월일 없는 분석)에서 없는 상자를 가리켰다(2026-10-27).
+ * 추천 이유는 옛 문구처럼 이름을 부르지 않고, 그 상자만 남을 때만 쓴다.
+ */
+export function kyeolSubtitle(
+  strengths: readonly string[] | null | undefined,
+  weaknesses: readonly string[] | null | undefined
+): string {
+  const strong = hasVisibleContent(strengths);
+  const weak = hasVisibleContent(weaknesses);
+  if (strong && weak) return "강점·약점을 항목별로 살펴봐요";
+  if (strong) return "강점을 항목별로 살펴봐요";
+  if (weak) return "약점을 항목별로 살펴봐요";
+  return "추천 이유를 살펴봐요";
+}

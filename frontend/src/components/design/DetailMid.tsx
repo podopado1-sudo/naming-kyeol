@@ -100,6 +100,15 @@ function Block({
 // 2026-10-27: 생년월일 없는 분석은 약점이 대부분 빈 배열이라 '⚠ 약점' 상자가 제목만 단 채 가운데 칸에 그려졌다.
 // '약점이 없다'는 빈 상태 문구는 두지 않는다(정해진 검사에 걸리지 않았을 뿐이다). 셋 다 비면 아무것도 그리지 않는다.
 // 상자 속성은 JSX 그대로 둔다 — tests/palette-contrast.test.mjs 가 tintBg="…"·accent="…" 로 제목 색 대비를 읽는다
+// 640px 이하는 1열로 쌓고 상자 최소 높이(220)를 푼다 — 옛 화면은 폰에서도 3열이라 한 칸이 100px 안팎으로 좁아 문장이 글자 단위로 꺾였다
+// (2026-10-27, /evaluate eval-2col 480px 규칙과 같은 방식 — 3열은 칸이 더 좁아 기준을 640px 로)
+const KYEOL_CSS = `
+  @media (max-width: 640px) {
+    .kyeol-blocks { grid-template-columns: 1fr !important; }
+    .kyeol-blocks > div { min-height: 0 !important; }
+  }
+`;
+
 export function KyeolBlocks({
   strengths,
   weaknesses,
@@ -116,43 +125,47 @@ export function KyeolBlocks({
   if (count === 0) return null;
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: threeColTemplate(count),
-        gap: 14,
-      }}
-    >
-      {strong.length > 0 && (
-        <Block
-          emoji="💎"
-          title="강점"
-          items={strong}
-          tintBg="rgba(74,124,89,0.08)"
-          // 13px 제목·점 — 옛 score-high 4.42 · 약점 #9A7E3A 3.57:1(틴트 위) → 짙은 글자 토큰(2026-10-26 팔레트 #2 보완,
-          // 약점은 /evaluate EvalBody '참고할 점'과 같은 amber-warm-700)
-          accent="var(--color-score-high-700)"
-        />
-      )}
-      {weak.length > 0 && (
-        <Block
-          emoji="⚠"
-          title="약점"
-          items={weak}
-          tintBg="rgba(201,169,110,0.12)"
-          accent="var(--color-amber-warm-700)"
-        />
-      )}
-      {why.length > 0 && (
-        <Block
-          emoji="📝"
-          title="추천 이유"
-          items={why}
-          tintBg="var(--color-navy-50)"
-          accent="var(--color-navy)"
-        />
-      )}
-    </div>
+    <>
+      <style>{KYEOL_CSS}</style>
+      <div
+        className="kyeol-blocks"
+        style={{
+          display: "grid",
+          gridTemplateColumns: threeColTemplate(count),
+          gap: 14,
+        }}
+      >
+        {strong.length > 0 && (
+          <Block
+            emoji="💎"
+            title="강점"
+            items={strong}
+            tintBg="rgba(74,124,89,0.08)"
+            // 13px 제목·점 — 옛 score-high 4.42 · 약점 #9A7E3A 3.57:1(틴트 위) → 짙은 글자 토큰(2026-10-26 팔레트 #2 보완,
+            // 약점은 /evaluate EvalBody '참고할 점'과 같은 amber-warm-700)
+            accent="var(--color-score-high-700)"
+          />
+        )}
+        {weak.length > 0 && (
+          <Block
+            emoji="⚠"
+            title="약점"
+            items={weak}
+            tintBg="rgba(201,169,110,0.12)"
+            accent="var(--color-amber-warm-700)"
+          />
+        )}
+        {why.length > 0 && (
+          <Block
+            emoji="📝"
+            title="추천 이유"
+            items={why}
+            tintBg="var(--color-navy-50)"
+            accent="var(--color-navy)"
+          />
+        )}
+      </div>
+    </>
   );
 }
 
