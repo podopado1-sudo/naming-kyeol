@@ -90,25 +90,7 @@ export default function FavoritesPage() {
                   >
                     {f.fullName}
                   </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "var(--color-text-3)",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    {typeof f.finalScore === "number" && (
-                      <>
-                        종합 {f.finalScore}
-                        {typeof f.aestheticScore === "number" &&
-                          ` · 미학 ${f.aestheticScore}`}
-                        {showHarmony(f) && ` · 조화 ${f.harmonyScore}`}
-                      </>
-                    )}
-                    {f.birthDate && (
-                      <span style={{ marginLeft: 8 }}>· {f.birthDate}</span>
-                    )}
-                  </div>
+                  <SavedMeta f={f} />
                 </div>
 
                 {/* 일반 <a>로 풀 페이지 이동 — /evaluate 정적 라우트의 클라이언트
@@ -175,6 +157,40 @@ function nameParts(f: FavoriteName): { lastName: string; name: string } {
 function showHarmony(f: FavoriteName): boolean {
   if (typeof f.harmonyScore !== "number") return false;
   return !(!f.birthDate && f.harmonyScore === 0);
+}
+
+/**
+ * 이름 아래 한 줄 — 점수(종합·미학·조화)와 출생일. '·'와 간격은 둘 다 있을 때만 사이에 넣는다
+ * (2026-10-27 — /required-char TopPick 저장분은 출생일만 있고 점수가 없어 '· 2024-03-15'처럼
+ * 앞에 점이 매달렸다). 둘 다 없으면 줄을 그리지 않는다.
+ */
+function SavedMeta({ f }: { f: FavoriteName }) {
+  const hasScore = typeof f.finalScore === "number";
+  if (!hasScore && !f.birthDate) return null;
+  return (
+    <div
+      style={{
+        fontSize: 12,
+        color: "var(--color-text-3)",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {hasScore && (
+        <>
+          종합 {f.finalScore}
+          {typeof f.aestheticScore === "number" &&
+            ` · 미학 ${f.aestheticScore}`}
+          {showHarmony(f) && ` · 조화 ${f.harmonyScore}`}
+        </>
+      )}
+      {f.birthDate &&
+        (hasScore ? (
+          <span style={{ marginLeft: 8 }}>· {f.birthDate}</span>
+        ) : (
+          <span>{f.birthDate}</span>
+        ))}
+    </div>
+  );
 }
 
 function buildEvaluateUrl(f: FavoriteName) {
