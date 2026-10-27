@@ -30,7 +30,8 @@ public class NameEvaluationService : INameEvaluationService
         var score = await _scoringService.EvaluateAsync(name, lastName, birthDate, gender, tone, birthTime);
 
         // 점수가 쓴 배정 한자 — MeaningNote·후보 표 첫 칸이 추천 카드와 같은 한자를 설명하게 한다.
-        // 출생일이 있으면 조화의 용신 배정, 없으면 같은 선택기(HanjaSelector)를 용신 없이 — ScoringService 가 한 번 정해
+        // 출생일이 있으면 조화의 용신 배정, 없으면 HanjaSelector.DefaultAssignment(2음절은 /name 1순위 조합, 그 밖은 용신 없는 Select —
+        // 2026-10-27 O2) — ScoringService 가 한 번 정해
         // 미학 성별 판정에도 같은 목록을 넘겼다(2026-10-26 결정 ③). 여기서 다시 고르지 않는다.
         var selectedHanja = score.AssignedHanja;
 

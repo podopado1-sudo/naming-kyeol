@@ -79,4 +79,15 @@ public class HanjaGlossOverrideTests
         Assert.Equal("우거질 울", first);
         Assert.Contains("제비쑥", info.Meaning);
     }
+
+    [Fact]
+    public void Override_Sang_2026_10_27()
+    {
+        // 尙: 원문 훈은 '오히려 상' 하나 — 성별 표 전면 적용 뒤 1순위 47명(규상·기상·상구 …)에 '오히려 상'으로 보여 통용 훈 '숭상할 상'을 앞에 삽입
+        var info = HanjaData.FindByCharacter("\u5C19");
+        Assert.NotNull(info);
+        var first = info!.Meaning.Split(',', '/', ';', '·')[0].Trim();
+        Assert.Equal("숭상할 상", first);
+        Assert.Contains("오히려 상", info.Meaning);
+    }
 }

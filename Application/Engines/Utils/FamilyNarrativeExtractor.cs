@@ -358,8 +358,8 @@ public static class FamilyNarrativeExtractor
         // 공통 한자 활용
         foreach (var common in bridge.CommonHanja.Take(2))
         {
-            // 공통 한자와 다른 한자 조합
-            var hanjaList = HanjaData.HanjaDictionary.Values.Take(10);
+            // 공통 한자와 다른 한자 조합 — 불용(ForbiddenNameHanjaSet)·뜻 없는 글자는 생성 풀에서 뺀다 — /name·/evaluate 와 같은 술어(HanjaSelector.IsUsableNameHanja, 2026-10-27)
+            var hanjaList = HanjaData.HanjaDictionary.Values.Where(HanjaSelector.IsUsableNameHanja).Take(10);
             foreach (var h in hanjaList)
             {
                 combinations.Add(common + h.Reading);

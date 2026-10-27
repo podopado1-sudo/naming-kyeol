@@ -450,9 +450,10 @@ public class ThreeSyllableEngine : IThreeSyllableEngine
         var results = new List<ThreeSyllableCandidate>();
         var seen = new HashSet<string>();
 
-        // 1음절 Reading 한자만 (3한자=3음절 이름)
+        // 1음절 Reading 한자만 (3한자=3음절 이름). 불용(ForbiddenNameHanjaSet)·뜻 없는 글자는 생성 풀에서 뺀다 — /name·/evaluate 와 같은 술어(HanjaSelector.IsUsableNameHanja, 2026-10-27).
+        // 코어셋(Core_v1)은 오행 검수 커버리지라 불용 글자도 들어 있어 Tier 1 도 거른다
         var allHanja = HanjaData.HanjaDictionary.Values
-            .Where(h => !string.IsNullOrEmpty(h.Reading) && h.Reading.Length == 1)
+            .Where(h => !string.IsNullOrEmpty(h.Reading) && h.Reading.Length == 1 && HanjaSelector.IsUsableNameHanja(h))
             .ToList();
 
         // 성별/톤 필터
@@ -589,8 +590,9 @@ public class ThreeSyllableEngine : IThreeSyllableEngine
         var filteredPrefixes = FilterMorphemes(_prefixes, gender, tone);
         var filteredSuffixes = FilterMorphemes(_suffixes, gender, tone);
 
+        // 불용(ForbiddenNameHanjaSet)·뜻 없는 글자는 생성 풀에서 뺀다 — /name·/evaluate 와 같은 술어(HanjaSelector.IsUsableNameHanja, 2026-10-27) — 결과에 {Character}({Meaning}) 로 그대로 보인다
         var hanjaList = HanjaData.HanjaDictionary.Values
-            .Where(h => !string.IsNullOrEmpty(h.Reading) && h.Reading.Length == 1)
+            .Where(h => !string.IsNullOrEmpty(h.Reading) && h.Reading.Length == 1 && HanjaSelector.IsUsableNameHanja(h))
             .ToList();
         hanjaList = FilterHanjaByGenderTone(hanjaList, gender, tone);
 

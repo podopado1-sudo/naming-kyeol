@@ -21,7 +21,7 @@ public class CanonicalNameScore
 
     /// <summary>
     /// 음절별 배정 한자(이름 음절과 같은 인덱스, 배정 없는 음절은 null) — 화면에 보이는 한자이자 미학 성별 판정이 쓴 한자.
-    /// 출생일이 있으면 조화의 용신 배정(<see cref="HarmonyBreakdown.SelectedHanja"/>), 없으면 HanjaSelector.Select(용신 없음).
+    /// 출생일이 있으면 조화의 용신 배정(<see cref="HarmonyBreakdown.SelectedHanja"/>), 없으면 HanjaSelector.DefaultAssignment(2음절 이름은 /name 1순위 조합, 그 밖은 Select 용신 없음 — 2026-10-27 O2).
     /// 호출부(/evaluate 의미 메모·후보 표, 추천·쌍둥이 카드)는 이 목록을 그대로 보인다 — 따로 다시 고르면 점수와 화면이 갈라진다(2026-10-26 결정 ③).
     /// </summary>
     public IReadOnlyList<NameForm.Application.Engines.Data.HanjaData.HanjaInfo?> AssignedHanja { get; set; }

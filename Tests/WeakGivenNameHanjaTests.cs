@@ -213,7 +213,8 @@ public class WeakGivenNameHanjaTests
     [InlineData("농", "none", "金", 0x74CF)]   // 瓏 옥 소리 — 醲(진한 술)가 아니라
     [InlineData("니", "female", "土", 0x999C)] // 馜 진한 향기 — 妮(계집종)가 아니라
     [InlineData("노", "none", "木", 0x6488)]   // 撈 건질 — 弩·矑·笯 다음(부정 훈 아님, 여기서 멈춤)
-    [InlineData("노", "none", null, 0x52AA)]   // 努 힘쓸 — B1 로 인명용 목록에 들어 璐보다 앞선다
+    [InlineData("노", "none", null, 0x7490)]   // 璐 아름다운 옥 — B1 로 努 이 인명용 목록에 들어 앞섰지만, 2026-10-27 성별 규칙 감사로 努 '힘쓸'이
+                                               // Neutral 이 되어 관련도 '성별 있음 +5'를 잃었다(璐 Female). 두 글자 모두 부정 훈 아님
     public void MoleAudit20261026_SelectPicks(string syllable, string gender, string? yongshin, int expected)
     {
         var picked = HanjaSelector.Select(syllable, gender, yongshin, null, null);
@@ -485,7 +486,7 @@ public class WeakGivenNameHanjaTests
 
     [Theory]
     [InlineData("항", "male", null, 0x6841, 0x6052)]   // 桁 차꼬 → (1라운드 貥 큰 자개 — Male +40) → 恒 항상 (최항준(남, 생년월일 없음), 보완에서 貥 weak)
-    [InlineData("고", "female", null, 0x8831, 0x66A0)] // 蠱 뱃속벌레 → 暠 밝을
+    [InlineData("고", "female", null, 0x8831, 0x9AD8)] // 蠱 뱃속벌레 → (暠 밝을 — '밝을' Female 이 2026-10-27 규칙 감사로 Neutral) → 高 높을
     [InlineData("겁", "none", null, 0x5226, 0x8FF2)]   // 刦 겁탈할(劫 이체) → 迲 자래
     [InlineData("짐", "none", null, 0x9D06, 0x659F)]   // 鴆 짐새 → 斟 짐작할
     [InlineData("특", "female", null, 0x5FD2, 0x7279)] // 忒 틀릴 → 特 특별할
@@ -608,7 +609,7 @@ public class WeakGivenNameHanjaTests
     [InlineData("침", "none", null, 0x4FB5, 0x5BE2)] // 侵 침노할 → 寢 잘
     [InlineData("침", "female", "火", 0x4FB5, 0x99F8)] // 侵 → 駸 달릴
     [InlineData("표", "none", "土", 0x5AD6, 0x719B)] // 嫖 날랠/음탕할 → 熛 불똥
-    [InlineData("표", "male", "土", 0x5AD6, 0x50C4)] // 嫖 → 僄 날랠
+    [InlineData("표", "male", "土", 0x5AD6, 0x5F6A)] // 嫖 → (僄 날랠 — '날랠' Male 이 2026-10-27 규칙 감사로 Neutral) → 彪 범(tiger Male)
     [InlineData("악", "female", "火", 0x5053, 0x9D9A)] // 偓 악착할 → 鶚 물수리
     [InlineData("면", "male", "木", 0x7704, 0x514D)] // 眄 곁눈질할 → 免 면할
     [InlineData("항", "none", "金", 0x8CA5, 0x5AE6)] // 貥 큰 자개 → 嫦 항아
@@ -619,7 +620,7 @@ public class WeakGivenNameHanjaTests
     [InlineData("달", "none", "木", 0x6A7D, 0x95E5)] // 橽 물 샐 → 闥 문
     [InlineData("술", "none", "金", 0x73EC, 0x8FF0)] // 珬 자개 → (1라운드 鉥 돗바늘) → 述 펼
     [InlineData("약", "male", "火", 0x721A, 0x7D04)] // 爚 불사를 → (1라운드 鶸 댓닭) → 約 맺을
-    [InlineData("약", "female", "火", 0x721A, 0x846F)] // 爚 → (鶸) → 葯 꽃밥
+    [InlineData("약", "female", "火", 0x721A, 0x7D04)] // 爚 → (鶸) → (葯 꽃밥 — 2026-10-27 규칙 감사로 Neutral, 꽃밥은 X꽃 겹낱말이 아님) → 約 맺을
     public void NegGloss20261026Fix_SelectPicks(string syllable, string gender, string? yongshin, int reportedCp, int expectedCp)
         => NegGloss20261026_SelectPicks(syllable, gender, yongshin, reportedCp, expectedCp);
 
@@ -780,7 +781,8 @@ public class WeakGivenNameHanjaTests
     [InlineData("어", "none", "水", 0x98EB, 0x5539)]   // 飫 물릴 → 唹 고요히 웃을
     [InlineData("혹", "male", null, 0x6216, 0x7187)]   // 或 혹(허사) → 熇 뜨거울
     [InlineData("흔", "none", "水", 0x75D5, 0x6615)]   // 痕 흔적 → 昕 새벽
-    [InlineData("점", "female", "土", 0x588A, 0x5CBE)] // 墊 빠질 → 岾 땅 이름
+    [InlineData("점", "female", "土", 0x588A, 0x576B)] // 墊 빠질 → 坫 토대(옛 '산 이름' 岾 — 坫 은 옛 Male(영문 'king'⊂'drinking' 부분 일치)이라 여자에게 밀렸고
+                                                       // 2026-10-27 규칙 감사로 Neutral, 土 용신 일치)
     [InlineData("익", "none", "木", 0x6759, 0x76CA)]   // 杙 말뚝 → 益 더할 (HEAD 부터의 칸)
     [InlineData("익", "none", "金", 0x5F0B, 0x8B1A)]   // 弋 주살 → 謚 웃을
     [InlineData("눌", "none", null, 0x5436, 0x80AD)]   // 吶 말 더듬을 → 肭 살찔(weak — 유일)
@@ -839,5 +841,108 @@ public class WeakGivenNameHanjaTests
         var combos = HanjaSelector.SelectCombos("새라", "female", 4);
         Assert.Single(combos);
         Assert.Equal((Cp(0x74BD), Cp(0x7F85)), combos[0]);
+    }
+
+    /// <summary>
+    /// 2026-10-27 성별 표 전면 적용(고친 genderPref·선택기 O3) 재생성 두더지 4라운드 — 반대 성별 글자를 뺀 칸·Male/Female 이 Neutral 이 된 줄에
+    /// 새로 오른 글자. 근거는 HanjaData.cs weak 2026-10-27 블록·불용 11차 주석.
+    /// </summary>
+    [Theory]
+    [InlineData(0x7E15)] // 縕 헌솜 온 — 나온·새온 2순위
+    [InlineData(0x6A75)] // 橵 산자 산 — 산아·산휘 1순위
+    [InlineData(0x6AD3)] // 櫓 방패 로 — 로빈·로휘 4순위
+    [InlineData(0x8880)] // 袀 군복 균 — 찬균 4순위
+    [InlineData(0x78C1)] // 磁 자석 자 — 자헌 3순위
+    [InlineData(0x7C05)] // 簅 큰 피리 산 — 산해 3순위
+    [InlineData(0x76E4)] // 盤 소반 반 — 반희 1순위 盤喜
+    [InlineData(0x5830)] // 堰 둑 언 — 준언 4순위
+    [InlineData(0x58DA)] // 壚 검은 석비레 로 — 마로 4순위
+    [InlineData(0x6E26)] // 渦 소용돌이 와
+    [InlineData(0x6D3C)] // 洼 웅덩이 와
+    [InlineData(0x5261)] // 剡 땅 이름 섬
+    [InlineData(0x5581)] // 喁 벌름거릴 옹
+    [InlineData(0x7752)] // 睒 언뜻 볼 섬
+    [InlineData(0x647B)] // 摻 가늘 섬
+    [InlineData(0x5131)] // 儱 미숙한 모양 롱 — 초롱 1순위
+    [InlineData(0x63A7)] // 控 당길 공 — 공명 1순위
+    [InlineData(0x5F85)] // 待 기다릴 대 — 대권·대산 1순위
+    [InlineData(0x5DE1)] // 巡 돌 순 — 순옥 1순위
+    [InlineData(0x5FAA)] // 循 돌 순 — 巡 과 같은 훈
+    [InlineData(0x5167)] // 內 안 내 — 시내 3·4순위
+    [InlineData(0x72FB)] // 狻 사자 산 — 강산 4순위
+    [InlineData(0x4E08)] // 丈 어른 장 — 장민·장수·장군·장연 1순위
+    [InlineData(0x708E)] // 炎 담 자리 아름다울 — 담휘·아담 4순위
+    [InlineData(0x70D8)] // 烘 화톳불 홍 — 홍 줄 15→39쌍
+    [InlineData(0x66C5)] // 曅 曄 의 이체 — 찬엽 4순위
+    [InlineData(0x5B7F)] // 孿 쌍둥이 산 — 2라운드
+    [InlineData(0x7522)] // 產 낳을 산 — 2라운드
+    [InlineData(0x7523)] // 産 낳을 산 — 產 과 같은 훈(産 은 HEAD 전부터 weak — 자형 짝 확인용)
+    [InlineData(0x5098)] // 傘 우산 산 — 2라운드
+    [InlineData(0x64E1)] // 擡 들 대 — 2라운드
+    [InlineData(0x5ABB)] // 媻 비틀거릴 반 — 2라운드
+    [InlineData(0x9583)] // 閃 엿볼 섬 — 2라운드
+    [InlineData(0x965D)] // 陝 땅 이름 섬 — 2라운드
+    [InlineData(0x5B45)] // 孅 가늘 섬 — 2라운드
+    [InlineData(0x7A8A)] // 窊 우묵할 와 — 2라운드
+    [InlineData(0x9954)] // 饔 아침밥 옹 — 2라운드
+    [InlineData(0x65EC)] // 旬 열흘 순 — 2라운드
+    [InlineData(0x6C55)] // 汕 오구 산 — 3라운드
+    [InlineData(0x7958)] // 祘 산가지 산 — 3라운드
+    [InlineData(0x7E56)] // 繖 우산 산 — 3라운드
+    [InlineData(0x849C)] // 蒜 마늘 산 — 3라운드
+    [InlineData(0x9730)] // 霰 싸라기눈 산 — 3라운드(잠재)
+    [InlineData(0x7AAA)] // 窪 웅덩이 와 — 3라운드
+    [InlineData(0x7AC7)] // 竇 구멍 두 — 4라운드
+    [InlineData(0x591B)] // 夛 多 의 이체 — 다형 4순위 夛炯(多炯 과 같은 페이지), 曅 선례
+    public void MoleAudit20261027_IsWeak(int codepoint)
+    {
+        Assert.True(HanjaData.IsWeakGivenNameHanja(Cp(codepoint)));
+        Assert.False(HanjaData.IsForbiddenNameHanja(Cp(codepoint)));
+    }
+
+    [Fact]
+    public void MoleAudit20261027_Shan_IsForbidden()
+    {
+        // 疝 산증 산 — 疥·癨 선례(병 훈). 산 줄 weak 를 넓히며 다음 순번에 다가선 잠재 글자(불용 11차)
+        Assert.True(HanjaData.IsForbiddenNameHanja(Cp(0x759D)));
+    }
+
+    [Theory]
+    [InlineData("반희", 0x76E4)] // 盤
+    [InlineData("공명", 0x63A7)] // 控
+    [InlineData("초롱", 0x5131)] // 儱
+    [InlineData("장민", 0x4E08)] // 丈
+    [InlineData("장수", 0x4E08)] // 丈
+    [InlineData("대권", 0x5F85)] // 待
+    [InlineData("순옥", 0x5DE1)] // 巡
+    [InlineData("강산", 0x5B7F)] // 孿
+    [InlineData("산아", 0x6A75)] // 橵
+    [InlineData("마로", 0x58DA)] // 壚
+    [InlineData("슬옹", 0x5581)] // 喁
+    [InlineData("두산", 0x7AC7)] // 竇
+    [InlineData("다형", 0x591B)] // 夛 — 多炯 과 夛炯 이 한 페이지에(多 이체)
+    [InlineData("다휘", 0x591B)] // 夛 — HEAD 부터 多輝 옆 4순위
+    public void MoleAudit20261027_SelectCombos_DropsReported(string name, int codepoint)
+    {
+        foreach (var g in new[] { "male", "female", "none" })
+        {
+            var combos = HanjaSelector.SelectCombos(name, g, 4);
+            Assert.NotEmpty(combos);
+            Assert.DoesNotContain(combos, c => c.First == Cp(codepoint) || c.Second == Cp(codepoint));
+        }
+    }
+
+    [Theory]
+    [InlineData("산아")]
+    [InlineData("산휘")]
+    public void MoleAudit20261027_SanLine_FewerCombosNotWeakFill(string name)
+    {
+        // 산 줄 비약자는 山·珊 뿐 — 약자(孿·產·傘·祘 …)로 산 자리를 채우지 않는다(O3 보완 ② — /name 산아·산휘는 조합 1개)
+        foreach (var g in new[] { "male", "female", "none" })
+        {
+            var combos = HanjaSelector.SelectCombos(name, g, 4);
+            Assert.NotEmpty(combos);
+            Assert.All(combos, c => Assert.Contains(c.First, new[] { Cp(0x5C71), Cp(0x73CA) }));
+        }
     }
 }

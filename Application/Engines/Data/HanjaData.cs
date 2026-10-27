@@ -1616,6 +1616,9 @@ public static class HanjaData
         "\u809B",
         // 10차 2라운드(1라운드 뒤 표시 상위 10 에 새로 든 글자): 笘(鞭·箠 선례(회초리 — 매질 도구, 부훈 '대쪽 첩'); 墊 weak 뒤 점 후보 10위)
         "\u7B18",
+        // 11차(2026-10-27 성별 표 전면 적용 재생성 두더지 3라운드 — 산 줄 weak 를 넓히며 다음 순번에 다가선 잠재 글자):
+        //   疝(疥·癨 선례(산증 — 병 훈); 산 줄 — 山·珊 다음 순번)
+        "\u759D",
     };
 
     /// <summary>
@@ -1807,6 +1810,41 @@ public static class HanjaData
         // 재생성 두더지(같은 날 — 바꾼 독음의 배정 격자·표시 상위 10 재검토, 衄 불용으로 다시 본 육 줄): 肉(膚·肥·乳 선례(고기 — 신체·음식 훈);
         //   육 후보 1위·배정 9칸(생년월일 없음 성별 3 + 木·水) — HEAD 부터. 育 '기를 육'과 관련도 동점이라 코드포인트 순서로 앞섰다. 育·陸·堉·毓 대안)
         "\u8089",
+        // ── 2026-10-27 성별 표 전면 적용(고친 genderPref·선택기 O3) 재생성 두더지 1라운드 — 반대 성별 글자를 뺀 칸·빈출 Male/Female 이 Neutral 이 된 줄에
+        //   새로 오른 글자. 주석은 '글자(선례; 노출 위치)'. 줄마다 뜻 좋은 대안이 있어 양보만 시킨다(배제 아님) ──
+        // 사물·시설: 縕(헌솜 — 낡은 솜, 부정은 아님; 나온·새온 2순위) 橵(산자 — 서까래 위 산자널, 榏·棬 선례; 산아·산휘 1순위 橵亞·橵輝)
+        //   櫓(방패·노 — 帆 선례; 로빈·로휘 4순위) 袀(군복; 찬균 4순위) 磁(자석; 자헌 3순위 — 子 Neutral 뒤) 簅(큰 피리; 산해 3순위·두산 4순위)
+        //   盤(소반 — 棬 '나무 그릇' 선례; 공개 반희 1순위 盤喜 — 熙 Neutral 뒤, 伴 대안) 堰(둑 — 場·街 선례; 준언 4순위 — 嫣 Female 제외 뒤)
+        "\u7E15","\u6A75","\u6AD3","\u8880","\u78C1","\u7C05","\u76E4","\u5830",
+        // 땅·물 모양: 壚(검은 석비레 — 埴 '찰흙' 선례; 마로 4순위) 渦(소용돌이)·洼(웅덩이)(萍 선례; 로와·주와 2·3순위) 剡(땅 이름 — 鄲·宋 선례; 유섬 3순위)
+        "\u58DA","\u6E26","\u6D3C","\u5261",
+        // 동작·모양: 喁(벌름거릴 — 물고기 입; 슬옹 3순위) 睒(언뜻 볼 — 眄 '곁눈질할' 선례; 아섬 3순위) 摻(가늘 — 婐 선례; 아섬 4순위)
+        //   儱(미숙한 모양 — 稚 '어릴' 선례; 초롱 1순위 草儱) 控(당길 — 抄·遣 선례; 공명 1순위 控明) 待(기다릴 — 遣 선례; 공개 대권·대산 1순위·규대 1·2순위 —
+        //   大 '큰'이 Male 에서 빠져 동점이 된 뒤. 大·岱 대안) 巡(돌 — 返·反 '돌이킬' 선례; 순옥 1순위 巡玉 — 純 대안)·循(같은 훈 '돌')
+        "\u5581","\u7752","\u647B","\u5131","\u63A7","\u5F85","\u5DE1","\u5FAA",
+        // 그 밖: 內(안 — 半 선례(위치 훈); 시내 3·4순위) 狻(사자 — 鹿 선례(짐승 훈); 공개 강산 4순위 剛狻·두산 3순위)
+        //   丈(어른 — 母 선례(친족·호칭 훈); 장민·장수·장군·장연 1순위 — 將·壯 이 Male 에서 빠진 뒤, 將·壯·章 대안)
+        //   炎(담 자리 '아름다울' — 거의 '불꽃 염'으로만 읽혀 담 이름에서 어색, 염 자리 '불꽃'은 炎症 연상; 담휘·아담 4순위)
+        //   烘(화톳불 — 젖은 것을 불에 말림, 熄 선례; 홍 줄 15→39쌍 — 鴻 이 Male 에서 빠진 뒤, 弘·洪·泓 대안)
+        //   曅(曄 의 이체 — 穏·稳 선례(이체·간체 글자); 찬엽 4순위 燦曅 — 燦曄 이 같은 칸에 있다)
+        "\u5167","\u72FB","\u4E08","\u708E","\u70D8","\u66C5",
+        // 2라운드(1라운드 weak 뒤 같은 칸에 오른 글자): 孿(쌍둥이 — 친족 훈, 母 선례; 공개 강산 4순위·산아·산휘·산이 4순위)
+        //   產(낳을 — 産 은 앞 블록부터 weak — 자형 짝을 맞춤; 산아·산휘 2순위·두산 3순위·은산 4순위) 傘(우산 — 사물 훈; 산아·산휘 3순위·대산 4순위)
+        //   擡(들 — 抄 선례(동작 훈); 대웅·대찬·대혁·대휘 4순위) 媻(비틀거릴 — 부정에 가까운 동작; 반석 4순위)
+        //   閃(엿볼 — 睒·眄 선례; 아섬 3순위) 陝(땅 이름 — 剡 선례; 아섬 4순위) 孅(가늘 — 摻 와 같은 훈, 부훈 '교활할 첨'; 아섬 2순위)
+        //   窊(우묵할 — 洼 선례; 주와 4순위) 饔(아침밥 — 음식 훈, 肉 선례; 슬옹 4순위) 旬(열흘 — 半 선례(수·때 단위 훈); 순미·순화·영순 3·4순위)
+        "\u5B7F","\u7522","\u5098","\u64E1","\u5ABB","\u9583","\u965D","\u5B45","\u7A8A","\u9954","\u65EC",
+        // 3라운드(산·와 줄 — 2라운드 weak 뒤 같은 칸에 오른 글자, 줄에 山·珊 / 娃 만 남아 하나씩 막으면 다음 글자가 올라와 줄째 정리):
+        //   汕(오구 — 물고기 잡는 통발, 사물 훈; 공개 강산·대산·이산 4순위) 祘(산가지 — 셈 막대; 산아·산해·산휘 2~4순위) 繖(우산 — 傘 과 같은 훈)
+        //   蒜(마늘 — 음식 훈) 霰(싸라기눈 — 산 자리 희귀 글자, 다음 순번 잠재) 窪(웅덩이 — 洼 와 같은 훈; 주와 4순위).
+        //   산 줄은 山·珊 뿐이라 강산·산아·산휘 등은 조합 수가 줄어든 채 둔다(약자로 빈칸을 채우지 않는다 — O3 보완 ②)
+        "\u6C55","\u7958","\u7E56","\u849C","\u9730","\u7AAA",
+        // 4라운드: 竇(구멍 — 孔 '구멍'은 성씨·공자로 통용, 竇 는 굴·구멍 훈뿐(사물 훈); 공개 두산 3순위 竇山 — 산 줄 정리 뒤)
+        "\u7AC7",
+        // 후속(같은 날 검증 지적 — 같은 조합을 꼴만 바꿔 두 칸에): 夛(多 '많을 다'의 이체 — 曅 선례(위 1라운드, 이체 글자); 다형 4순위 夛炯 — 多炯 이 같은 페이지에.
+        //   HEAD 부터 다안·다올·다찬·다혁·다휘 4순위·다령 3순위가 多 와 나란히. hanja_variants.json 자형 쌍에 없어 이체자 접기가 못 잡는다)
+        //   — 같은 줄 奲(관대할 차·풍부할 다)는 다 자리 훈 '풍부할'이 이름 뜻으로 괜찮아 둔다
+        "\u591B",
     };
 
     /// <summary>이름에 쓰지 않는 불용한자(부정적 의미)인지 판정.
@@ -1831,6 +1869,14 @@ public static class HanjaData
         var unified = ToUnifiedHanja(character); // NFKC — 한자 1글자가 아니면 그대로
         return unified != character && WeakGivenNameHanjaSet.Contains(unified);
     }
+
+    /// <summary>
+    /// 관련도(<see cref="CalculateRelevanceScore"/>)의 '성별 값 있음(Neutral 아님) +5'. 옛날엔 Neutral 이 '값 없음'이라 정보 보유 가점이었고,
+    /// 2026-10-27 고친 성별 표부터는 Neutral 도 정해진 값이지만 모든 경로(조합·배정·표시 정렬 <see cref="Utils.HanjaSelector.OrderForDisplay"/>)가 그대로 쓴다.
+    /// 관련도 동점이 많아 이 +5 가 꽃·옥처럼 성별 결이 뚜렷한(이름에 맞는) 훈을 앞세우는 동점 깨기 노릇을 한다 — 표시 정렬에서만 빼 보니
+    /// 然·夏·映·和 가 蓮·荷·榮·花 를 앞서고 剕·匪 가 비 상위 10에 올라 되돌렸다(OrderForDisplay 주석). 성별 표를 고치면 표시 순서도 함께 움직인다.
+    /// </summary>
+    public const int GenderLabelRelevanceBonus = 5;
 
     public static int CalculateRelevanceScore(HanjaInfo hanja)
     {
@@ -1877,8 +1923,9 @@ public static class HanjaData
             score += 10;
 
         // 성별/톤 선호도가 설정됨 (Neutral이 아닌 경우)
+        // 성별 쪽 가점은 성별 없는 표시 정렬(HanjaSelector.OrderForDisplay)에서도 동점 깨기로 쓴다 — GenderLabelRelevanceBonus 참고
         if (hanja.GenderPref != GenderPreference.Neutral)
-            score += 5;
+            score += GenderLabelRelevanceBonus;
         if (hanja.TonePref != TonePreference.Neutral)
             score += 5;
 
@@ -1916,6 +1963,80 @@ public static class HanjaData
         // 사전은 호환 한자를 통합 한자 항목에 병합해 두므로, IME 가 낸 호환 코드(김→金 U+F90A)는 통합 쪽으로 찾는다
         var unified = ToUnifiedHanja(character);
         return unified != character && HanjaDictionary.TryGetValue(unified, out info) ? info : null;
+    }
+
+    /// <summary>
+    /// 자형 이체자 묶음 키 — 같은 글자의 꼴만 다른 글자(彥 U+5F65 ↔ 彦 U+5F66, 凛 ↔ 凜, 実 ↔ 實)이면 같은 키, 묶음에 없으면 null.
+    /// data/hanja_variants.json(scripts/build_hanja_variants.py — Unihan 18.0 이체 연결 + 한국 훈 대조)의 쌍 중 세 조건을 모두 갖춘 high·medium 쌍만
+    /// 잇는다: ① 자형 연결 필드(kZVariant·kTraditional/kSimplifiedVariant·kJapaneseOld/NewVariant) ② 대표 훈이 같음(k = K2) ③ 판정 부수가 같음.
+    /// 뜻 이체(kSemanticVariant 만 — 彬/斌·德/悳·圭/珪·佑/祐)와 부수가 다른 간번체 쌍(傑/杰)은 이름에서 서로 다른 글자로 쓰여 잇지 않는다
+    /// (HEAD /name 에서 같은 페이지에 함께 나오던 47·32·8·13·3쪽 — 꼴이 달라 읽는 사람에게 중복으로 보이지 않는다). 키는 묶음의 코드포인트 최소 글자.
+    /// /name 조합 목록이 같은 조합을 꼴만 바꿔 두 칸에 싣지 않게 하는 데 쓴다(<see cref="Utils.HanjaSelector.SelectCombos"/>, 2026-10-27).
+    /// </summary>
+    public static string? GlyphVariantKey(string character)
+        => GlyphVariants.Value.Key.TryGetValue(character, out var k) ? k : null;
+
+    /// <summary>
+    /// 자형 이체자 묶음의 정자(hanja_variants.json standard — 한국 표준형 kHangul E > KS X 1001 > KS X 1002 > 방향 > 인명용 표 > Core …,
+    /// 그 파일 meta.rules) 인지. 묶음에 없거나 정자 판정이 동률(standard_tie — 사람 확인 대상)이면 null.
+    /// </summary>
+    public static bool? IsGlyphVariantStandard(string character)
+        => GlyphVariants.Value.Standard.TryGetValue(character, out var std) ? std == character : null;
+
+    private static readonly Lazy<(Dictionary<string, string> Key, Dictionary<string, string> Standard)> GlyphVariants = new(LoadGlyphVariants);
+
+    /// <summary>자형(꼴) 이체를 뜻하는 Unihan 연결 필드 — kSemanticVariant(뜻 이체)·kSpecializedSemanticVariant 는 넣지 않는다.</summary>
+    private static readonly HashSet<string> GlyphVariantFields = new(StringComparer.Ordinal)
+        { "kZVariant", "kTraditionalVariant", "kSimplifiedVariant", "kJapaneseOldVariant", "kJapaneseNewVariant" };
+
+    private static (Dictionary<string, string> Key, Dictionary<string, string> Standard) LoadGlyphVariants()
+    {
+        var key = new Dictionary<string, string>(StringComparer.Ordinal);
+        var standard = new Dictionary<string, string>(StringComparer.Ordinal);
+        var path = FindOverrideFile("hanja_variants.json");
+        if (path == null) return (key, standard);
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(path, System.Text.Encoding.UTF8));
+            foreach (var g in doc.RootElement.GetProperty("groups").EnumerateArray())
+            {
+                // 자형 쌍만으로 이은 성분(유니온 파인드) — 묶음 안에서도 뜻 이체 쌍은 끊는다
+                var parent = new Dictionary<string, string>(StringComparer.Ordinal);
+                string Find(string x) { while (parent[x] != x) x = parent[x] = parent[parent[x]]; return x; }
+                foreach (var p in g.GetProperty("pairs").EnumerateArray())
+                {
+                    var conf = p.GetProperty("confidence").GetString();
+                    if (p.GetProperty("k").GetString() != "K2" || (conf != "high" && conf != "medium")) continue;
+                    if (!p.GetProperty("fields").EnumerateArray().Any(f => GlyphVariantFields.Contains(f.GetString() ?? ""))) continue;
+                    var a = p.GetProperty("a").GetString()!;
+                    var b = p.GetProperty("b").GetString()!;
+                    var radicals = g.GetProperty("radicals");
+                    if (radicals.GetProperty(a).GetProperty("kn").GetInt32() != radicals.GetProperty(b).GetProperty("kn").GetInt32()) continue;
+                    parent.TryAdd(a, a);
+                    parent.TryAdd(b, b);
+                    var ra = Find(a); var rb = Find(b);
+                    if (ra != rb) parent[ra] = rb;
+                }
+                if (parent.Count == 0) continue;
+                var std = g.GetProperty("standard").GetString();
+                bool tie = g.TryGetProperty("standard_tie", out var t) && t.ValueKind == JsonValueKind.True;
+                foreach (var comp in parent.Keys.GroupBy(Find))
+                {
+                    var members = comp.ToList();
+                    var k = members.OrderBy(c => char.ConvertToUtf32(c, 0)).First();
+                    foreach (var c in members)
+                    {
+                        key[c] = k;
+                        if (!tie && std != null && members.Contains(std)) standard[c] = std;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"이체자 묶음 로드 실패: {ex.Message}");
+        }
+        return (key, standard);
     }
 
     /// <summary>
@@ -2027,6 +2148,15 @@ public static class HanjaData
     }
 
     /// <summary>
+    /// hanja_unihan.json 에 genderPref 기록이 있는 글자(값이 Neutral 이어도) — 오프라인 분류기(scripts/classify_gender_tone.py)가 판정한 글자라
+    /// 런타임 의미 분류기(GenderToneClassifier.AutoClassifyAll)가 성별을 다시 매기지 않는다(2026-10-27 성별 규칙 감사 D2 — 판정 규칙은 오프라인 하나).
+    /// 옛 동작은 unihan 이 Neutral 로 둔 글자를 C# 부분 일치가 다시 채워, 파이썬 규칙만 고치면 260자가 되살아났다.
+    /// 레코드는 있어도 genderPref 칸이 없는 글자(48자 — 한글·영문 뜻이 없어 오프라인 분류기가 건너뜀)는 '기록 없음'으로 보고 런타임 분류기가 맡는다
+    /// (런타임은 사전 훈(Meaning)을 보므로 판정 재료가 있을 수 있다. 2026-10-27 기준 89자 모두 Neutral).
+    /// </summary>
+    private static readonly HashSet<string> UnihanGenderDecided = new(StringComparer.Ordinal);
+
+    /// <summary>
     /// JSON 파일에서 Unihan 데이터 로드
     /// Unihan 스크립트로 생성한 hanja_unihan.json 파일 사용
     /// </summary>
@@ -2074,6 +2204,7 @@ public static class HanjaData
                             }
                             
                             // GenderPref/TonePref 업데이트 (기본값인 Neutral일 때만)
+                            if (!string.IsNullOrEmpty(data.genderPref)) UnihanGenderDecided.Add(hanja); // 오프라인 분류기가 판정한 글자(Neutral 포함, D2)
                             if (hanjaInfo.GenderPref == GenderPreference.Neutral && !string.IsNullOrEmpty(data.genderPref))
                             {
                                 hanjaInfo.GenderPref = data.genderPref switch
@@ -2370,10 +2501,10 @@ public static class HanjaData
             }
         }
 
-        // 의미 기반 GenderPref/TonePref 자동 분류 (Neutral인 한자만 대상)
+        // 의미 기반 GenderPref/TonePref 자동 분류 (Neutral인 한자만 대상) — 성별은 unihan genderPref 기록이 없는 글자만(D2, UnihanGenderDecided)
         if (_loadedDictionary != null)
         {
-            GenderToneClassifier.AutoClassifyAll(_loadedDictionary);
+            GenderToneClassifier.AutoClassifyAll(_loadedDictionary, UnihanGenderDecided);
         }
     }
 

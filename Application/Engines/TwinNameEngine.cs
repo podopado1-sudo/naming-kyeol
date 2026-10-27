@@ -1,4 +1,5 @@
 using NameForm.Application.Engines.Data;
+using NameForm.Application.Engines.Utils;
 using NameForm.Application.Services;
 
 namespace NameForm.Application.Engines;
@@ -35,10 +36,10 @@ public class TwinNameEngine : ITwinNameEngine
         var strongElements  = sajuChart.FiveElementCount
             .Where(kv => kv.Value >= 2).Select(kv => kv.Key).ToList();
 
-        // 2. 성별/톤 필터 + 개인화 점수
+        // 2. 성별/톤 필터 + 개인화 점수 — 불용(ForbiddenNameHanjaSet)·뜻 없는 글자는 생성 풀에서 뺀다 — /name·/evaluate 와 같은 술어(HanjaSelector.IsUsableNameHanja, 2026-10-27)
         var allHanja = HanjaData.HanjaDictionary.Values
             .Where(h => !string.IsNullOrEmpty(h.Reading) && h.Reading.Length == 1
-                && !string.IsNullOrEmpty(h.Meaning))
+                && HanjaSelector.IsUsableNameHanja(h))
             .ToList();
         allHanja = FilterGenderTone(allHanja, gender, tone);
 

@@ -123,7 +123,8 @@ public class AestheticEngine : IAestheticEngine
     /// <summary>
     /// gender/tone 반영 + 세부 breakdown + 세대 적합도 + 화면에 보이는 한자로 성별 판정.
     /// displayedHanja = 이름 음절과 같은 인덱스의 한자(그 음절에 보이는 한자가 없으면 null) — 성별 보너스·노트는 이 한자로만 정한다
-    /// (2026-10-26 결정 ③). null 이면 <see cref="HanjaSelector.Select"/>(용신 없음) — /evaluate 가 출생일 없이 보이는 배정 한자.
+    /// (2026-10-26 결정 ③). null 이면 <see cref="HanjaSelector.DefaultAssignment"/> — /evaluate 가 출생일 없이 보이는 배정 한자
+    /// (2음절은 /name 1순위 조합, 그 밖은 Select 용신 없음 — 2026-10-27 O2).
     /// 의미 카테고리·톤 가점은 아직 음절의 쓸 수 있는 글자 전부(<see cref="HanjaSelector.UsableByReading"/>)를 본다.
     /// </summary>
     public async Task<AestheticBreakdown> CalculateScoreWithBreakdownAsync(
@@ -341,9 +342,10 @@ public class AestheticEngine : IAestheticEngine
         // 음절마다 화면에 보이는 한자 한 글자의 GenderPref — 같은 독음의 다른 글자는 세지 않는다(2026-10-26 결정 ③).
         // 옛 규칙은 음절의 쓸 수 있는 글자 중 그 성별 글자가 하나라도 있으면 일치·반대 성별 글자만 있으면 불일치라, 지(여)는 화면의 智·志·至
         // (Neutral)와 무관한 馶 '굳셀'·吱 '가는 소리'(Male) 때문에 '맞지 않음'을 받았다(/name 지 여자 이름 73명 — 지우·지민·지원 …).
-        // 호출부가 한자를 넘기지 않으면 /evaluate 가 출생일 없이 보이는 배정(HanjaSelector.Select, 용신 없음)으로 본다 — 출생일이 있는 화면은
-        // ScoringService 가 조화의 용신 배정 한자를, /name 정적 데이터는 NameSeoHanja.DisplayedHanja(1순위 조합)를 넘긴다.
-        var shown = displayedHanja ?? HanjaSelector.Select(name, gender, null, null, null);
+        // 호출부가 한자를 넘기지 않으면 /evaluate 가 출생일 없이 보이는 배정(HanjaSelector.DefaultAssignment — 2음절 이름은 /name 1순위 조합,
+        // 그 밖은 Select 용신 없음, 2026-10-27 O2)으로 본다 — 출생일이 있는 화면은 ScoringService 가 조화의 용신 배정 한자를,
+        // /name 정적 데이터는 NameSeoHanja.DisplayedHanja(1순위 조합 — 2음절 이름이면 DefaultAssignment 와 같은 한자)를 넘긴다.
+        var shown = displayedHanja ?? HanjaSelector.DefaultAssignment(name, gender);
         for (int i = 0; i < name.Length; i++)
         {
             var h = i < shown.Count ? shown[i] : null;

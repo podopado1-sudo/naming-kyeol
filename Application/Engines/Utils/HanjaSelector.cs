@@ -37,6 +37,9 @@ public static class HanjaSelector
     /// 표시용(/name 페이지): 한 발음 이름(2음절)에 흔히 쓰는 한자 '조합' 상위 k개를 오행 조화까지
     /// 반영해 선별. 각 음절 대표 1개만 뽑는 <see cref="Select"/>와 달리, "智宇·志宇·智祐"처럼
     /// 조합 다양성을 보이기 위한 별도 경로다. 결과 한자는 모두 뜻·획수를 가진 표시 가능 글자.
+    /// 음절 후보는 Select 와 같은 규칙으로 반대 성별 글자를 뺀다(<see cref="TopComboCandidates"/>, 2026-10-27 O1). 그래서 칸이 비면
+    /// 약자·확장 영역 쌍으로 다시 채우지 않고 조합이 k개보다 적은 채로 둔다(아래 약자·확장 영역 단계가 그대로 막는다).
+    /// 같은 조합을 꼴만 바꾼 이체자 쌍(始彥·始彦)은 한 칸으로 접는다(<see cref="DistinctGlyphVariants"/>).
     /// </summary>
     public static List<(string First, string Second)> SelectCombos(string name, string gender, int k)
     {
@@ -69,7 +72,40 @@ public static class HanjaSelector
         // 이름(한글=翰㔕 — 글 줄은 契 weak·㔕 확장뿐)은 확장 영역 비약자 쌍을 그대로 둔다.
         var basicOnly = pool.Where(x => HanjaData.IsInCjkBasicRange(x.a) && HanjaData.IsInCjkBasicRange(x.b)).ToList();
         if (basicOnly.Count > 0) pool = basicOnly;
-        return pool.Take(k).Select(x => (x.a, x.b)).ToList();
+        return DistinctGlyphVariants(pool.Select(x => (x.a, x.b)).ToList()).Take(k).ToList();
+    }
+
+    /// <summary>
+    /// 꼴만 다른 같은 조합을 하나로 접는다 — 두 칸이 음절마다 같은 글자이거나 같은 자형 이체자 묶음(<see cref="HanjaData.GlyphVariantKey"/>)이면
+    /// 같은 조합이다(2026-10-27 — 남자 언 이름 1~4순위가 始彥·始彦·施彥·施彦 로 찼다). 대표는 hanja_variants.json 의 정자(standard)로
+    /// 이루어진 조합(<see cref="HanjaData.IsGlyphVariantStandard"/> — 한국 표준형 kHangul·KS X 1001 순, 彥/彦 은 KS X 1001 의 彦, 凛/凜 은 凜)이고, 정자 조합이
+    /// 후보에 없거나 정자 판정이 동률이면 순위가 앞선 조합이다. 대표는 묶음에서 가장 앞선 조합의 자리에 서고, 빈 칸은 같은 단계(약자·확장 영역
+    /// 거르기를 지난) 후보의 다음 조합이 채운다. 입력 순서(순위)를 그대로 따르므로 이체자가 없는 목록은 바뀌지 않는다.
+    /// </summary>
+    private static List<(string First, string Second)> DistinctGlyphVariants(List<(string First, string Second)> ranked)
+    {
+        static string KeyOf(string c) => HanjaData.GlyphVariantKey(c) ?? c;
+        static bool IsStandardOrPlain(string c) => HanjaData.IsGlyphVariantStandard(c) != false;
+        var groups = ranked
+            .GroupBy(x => (KeyOf(x.First), KeyOf(x.Second)))   // GroupBy 는 처음 나온 순서를 지킨다
+            .Select(g => g.FirstOrDefault(x => IsStandardOrPlain(x.First) && IsStandardOrPlain(x.Second), g.First()));
+        return groups.ToList();
+    }
+
+    /// <summary>
+    /// 출생일 없는 기본 배정(/evaluate·추천 카드 — 용신이 없는 화면) — 2음절·서로 다른 음절 이름에 조합이 있으면 /name 1순위 조합
+    /// (<see cref="NameSeoHanja.Combos"/>[0] — /name 페이지·dump-name-scores 와 같은 경로), 아니면 <see cref="Select"/>(용신 없음).
+    /// 2026-10-27 O2 결정(O3 = O1 + O2): 옛 기본 배정 Select 는 같은 성별 +40 이 관련도보다 앞서 /name 과 다른 글자를 골라(지우(여) 智宇 ↔ 智瑀,
+    /// 동균 東均 ↔ 東覠) 같은 이름의 두 화면이 다른 한자·노트를 보였다. 출생일이 있으면 조화의 용신 배정(SelectedHanja)을 그대로 쓴다.
+    /// 인기 여자 이름의 출생일 없는 /evaluate 점수가 −2~−5 내려가는 것은 사용자가 받아들였다(지우 75→72·지민 78→75).
+    /// /name-analysis 출생일 없는 큰 카드(OrderForDisplay)는 이 함수를 쓰지 않는다(성별 채점이 없는 경로 — 따로 결정할 일).
+    /// </summary>
+    public static List<HanjaInfo?> DefaultAssignment(string name, string gender)
+    {
+        var combos = NameSeoHanja.Combos(name, gender);
+        if (combos.Count > 0)
+            return new List<HanjaInfo?> { HanjaData.FindByCharacter(combos[0].First), HanjaData.FindByCharacter(combos[0].Second) };
+        return Select(name, gender, null, null, null);
     }
 
     /// <summary>
@@ -132,6 +168,10 @@ public static class HanjaSelector
     /// 불용한자·뜻 없는 글자 제외 →
     ///   1) 인명 빈출 셋(약자 제외) 우선 → 2) CJK 기본 영역 우선(확장 영역은 폰트가 못 그리는 일이 잦다)
     ///   → 3) 관련도(약자 −3000) ↓ → 4) Character Ordinal.
+    /// 관련도의 '성별 값 있음 +5'(<see cref="HanjaData.GenderLabelRelevanceBonus"/>)는 여기서도 그대로 둔다 — 2026-10-27 표시 정렬에서만 빼 보니
+    /// 관련도 동점이 코드포인트 순으로 깨져 이름에 맞는 꽃·옥 훈 글자가 뜻 약한 글자에 밀렸다(연 蓮→然 '그럴'·하 荷→夏·영 榮→映·화 花→和, 비 상위 10에
+    /// 剕 '발 벨'·匪 '비적'), 출생일 없는 /name-analysis 큰 카드 첫 글자 HEAD 대비 변화도 1,227 → 1,352명으로 늘어 되돌렸다. 그래서 노 1순위는 璐
+    /// (努 '힘쓸'이 고친 성별 표에서 Neutral)이고, 성별 없는 다른 경로(Select·SelectCombos 'none')와 같다 — 남자 노아는 /name·/evaluate(남) 모두 努.
     /// <see cref="TopComboCandidates"/>처럼 빈출 글자만 남기지 않고 '앞세우기'만 한다 —
     /// 빈출이 1개뿐인 음절도 n개를 채우기 위해.
     /// </summary>
@@ -150,7 +190,28 @@ public static class HanjaSelector
             .ToList();
         var common = cands.Where(h => HanjaData.IsCommonNameHanja(h.Character)).ToList();
         var pool = common.Count > 0 ? common : cands;
+        pool = ExcludeOppositeGender(pool, g);
         return pool.OrderByDescending(h => ComboBaseScore(h, g)).Take(n).ToList();
+    }
+
+    /// <summary>
+    /// 조합 후보(빈출 게이트를 지난 음절 후보)에서 반대 성별 글자를 뺀다 — 대안이 있을 때만(2026-10-27 O1). 옛 조합 선택은 반대 성별에
+    /// −400 만 줘 Core_v1 가점(+2000)을 이기지 못해, 대안이 있는데도 1순위가 반대 성별 글자였고(남자 규언 規嫣·나형(여) 羅衡·아섬(여) 亞纖)
+    /// 같은 페이지 성별 판정이 '맞지 않음'을 냈다. 대안은 <see cref="SelectForSyllable"/> 과 같은 순서로 센다 — 약자 양보·확장 영역 회피가
+    /// 성별보다 먼저라, pool 에 비약자(기본 영역) 글자가 있으면 대안도 비약자(기본 영역)여야 한다(약자만 남겨 반대 성별을 빼지 않는다).
+    /// 같은 성별 +40·반대 −400(<see cref="ComboBaseScore"/>)은 그대로 둔다 — 대안이 없는 음절(혜 남자 = 惠·慧·蕙 모두 Female)은 지금처럼 −400 순위.
+    /// </summary>
+    private static List<HanjaInfo> ExcludeOppositeGender(List<HanjaInfo> pool, GenderPreference g)
+    {
+        if (g == GenderPreference.Neutral) return pool;
+        var opposite = g == GenderPreference.Male ? GenderPreference.Female : GenderPreference.Male;
+        if (!pool.Any(h => h.GenderPref == opposite)) return pool;
+        bool anyNonWeak = pool.Any(h => !IsWeakGivenNameHanja(h.Character));
+        bool anyBasic = pool.Any(h => HanjaData.IsInCjkBasicRange(h.Character));
+        bool hasAlternative = pool.Any(h => h.GenderPref != opposite
+            && (!anyNonWeak || !IsWeakGivenNameHanja(h.Character))
+            && (!anyBasic || HanjaData.IsInCjkBasicRange(h.Character)));
+        return hasAlternative ? pool.Where(h => h.GenderPref != opposite).ToList() : pool;
     }
 
     private static double ComboBaseScore(HanjaInfo h, GenderPreference g)

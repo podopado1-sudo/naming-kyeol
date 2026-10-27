@@ -53,8 +53,8 @@ public interface IAestheticEngine
 
     /// <summary>
     /// 위와 같고, 성별 보너스·노트를 화면에 보이는 한자로 판정한다(2026-10-26 결정 ③).
-    /// displayedHanja 는 이름 음절과 같은 인덱스(보이는 한자가 없는 음절은 null). null 을 넘기면 HanjaSelector.Select(용신 없음) —
-    /// 출생일 없는 /evaluate 의 배정 한자. 화면이 따로 한자를 고르는 곳(조화의 용신 배정·/name 1순위 조합)은 그 한자를 넘긴다.
+    /// displayedHanja 는 이름 음절과 같은 인덱스(보이는 한자가 없는 음절은 null). null 을 넘기면 HanjaSelector.DefaultAssignment(2음절 이름은 /name 1순위 조합,
+    /// 그 밖은 Select 용신 없음 — 2026-10-27 O2) — 출생일 없는 /evaluate 의 배정 한자. 화면이 따로 한자를 고르는 곳(조화의 용신 배정·/name 1순위 조합)은 그 한자를 넘긴다.
     /// </summary>
     Task<AestheticBreakdown> CalculateScoreWithBreakdownAsync(string firstName, string? lastName, string tone, string gender, int? birthYear,
         IReadOnlyList<NameForm.Application.Engines.Data.HanjaData.HanjaInfo?>? displayedHanja);

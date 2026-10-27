@@ -925,7 +925,8 @@ public class ParentBasedNamingEngine : IParentBasedNamingEngine
     /// </summary>
     private List<HanjaData.HanjaInfo> GetFilteredHanja(string gender, string tone)
     {
-        var hanjaList = HanjaData.HanjaDictionary.Values.ToList();
+        // 불용(ForbiddenNameHanjaSet)·뜻 없는 글자는 생성 풀에서 뺀다 — /name·/evaluate 와 같은 술어(HanjaSelector.IsUsableNameHanja, 2026-10-27)
+        var hanjaList = HanjaData.HanjaDictionary.Values.Where(HanjaSelector.IsUsableNameHanja).ToList();
 
         // 성별 필터링
         if (gender != "none")
