@@ -8,6 +8,11 @@
  * 항목을 담아 자주 비는데(운영 표본 12건 중 3건 — 김서진 등), 빈 '참고할 점' 상자가 제목만 단 채 오른쪽 칸에 그려졌다.
  * '흠이 없다'고 단정하는 빈 상태 문구는 두지 않는다(검사 목록이 정해져 있을 뿐이다). CompanyResult 의
  * `cautions.length > 0 &&` 와 같은 방식.
+ *
+ * /analysis '이름의 결' 3열 상자(DetailMid KyeolBlocks — 강점·약점·추천 이유)도 같은 규칙을 쓴다(threeColTemplate).
+ * 2026-10-27: NameAnalysisService 약점은 정해진 검사(미학 60 미만·흔한 이름·음절 길이·한자 매핑 등)에 걸릴 때만 담겨
+ * 생년월일 없는 기본 분석에서 /name 이름 90% 안팎(김 성씨 5,340명 중 4,834명)이 빈 배열인데, 빈 '⚠ 약점' 상자가 제목만 단 채
+ * 가운데 칸에 그려졌다. 여기서도 '약점이 없다'는 문구는 두지 않는다.
  */
 
 /** 화면에 그릴 줄만 — 공백뿐인 줄은 뺀다 */
@@ -15,7 +20,7 @@ export function visibleItems(items: readonly string[] | null | undefined): strin
   return (items ?? []).filter((it) => typeof it === "string" && it.trim().length > 0);
 }
 
-/** 그릴 줄이 하나라도 있는지 — EvaluateResult 가 '이름의 결' 절 자체를 그릴지 정할 때 쓴다 */
+/** 그릴 줄이 하나라도 있는지 — EvaluateResult·/analysis 가 '이름의 결' 절 자체를 그릴지 정할 때 쓴다 */
 export function hasVisibleContent(items: readonly string[] | null | undefined): boolean {
   return visibleItems(items).length > 0;
 }
@@ -32,4 +37,9 @@ export function keepFilledBlocks<T extends { items: readonly string[] }>(
 /** 남은 상자 수에 맞춘 grid-template-columns — 둘 이상이면 2열, 하나면 1열 */
 export function twoColTemplate(count: number): string {
   return count >= 2 ? "repeat(2, 1fr)" : "1fr";
+}
+
+/** 남은 상자 수에 맞춘 grid-template-columns — 최대 3열(셋이면 3열, 둘이면 2열), 하나면 1열 */
+export function threeColTemplate(count: number): string {
+  return count >= 2 ? `repeat(${Math.min(count, 3)}, 1fr)` : "1fr";
 }

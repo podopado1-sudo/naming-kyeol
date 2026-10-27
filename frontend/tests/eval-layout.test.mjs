@@ -1,4 +1,4 @@
-// /evaluate 결과 '이 이름의 강점'·'참고할 점' 2열 상자 배치 테스트 — `npm test`
+// /evaluate 결과 '이 이름의 강점'·'참고할 점' 2열 상자, /analysis '이름의 결' 3열 상자 배치 테스트 — `npm test`
 //
 // 2026-10-23 운영 검증 BR-1: cautions 가 빈 응답(운영 표본 12건 중 3건 — 김서진·박지우·조준혁)에서 '참고할 점' 상자가
 // 제목만 단 채 오른쪽 칸에 그려졌다. 빈 상자는 그리지 않고, 한쪽만 남으면 1열.
@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import {
   hasVisibleContent,
   keepFilledBlocks,
+  threeColTemplate,
   twoColTemplate,
   visibleItems,
 } from "../src/components/design/eval-layout.ts";
@@ -83,4 +84,102 @@ test("StrengthsCautions·EvaluateResult 가 eval-layout 규칙을 쓴다", () =>
 
   const result = read("src", "app", "evaluate", "EvaluateResult.tsx");
   assert.match(result, /hasVisibleContent\(data\.strengths\) \|\| hasVisibleContent\(data\.cautions\)/);
+});
+
+// ------------------------------------------------------------
+// /analysis '이름의 결' 3열 상자(DetailMid KyeolBlocks — 강점·약점·추천 이유)
+//
+// 2026-10-27: 생년월일 없는 기본 분석은 약점이 대부분 빈 배열(김 성씨 /name 5,340명 중 4,834명 — 실제
+// NameAnalysisService 오프라인 실행)이라 빈 '⚠ 약점' 상자가 제목만 단 채 가운데 칸에 그려졌다.
+// ------------------------------------------------------------
+
+// 김소윤(성별 없음·생년월일 없음) 응답 — 약점 [], 추천 이유는 filterAnalysisReasons 를 거친 뒤('한자 예 —' 줄 숨김)
+const SOYUN = {
+  strengths: [
+    "발음과 리듬이 양호합니다 (미학 78점)",
+    "적당한 독창성을 가진 이름입니다 (유니크 65점)",
+    "2음절 이름으로 부르기 편합니다",
+    "전체 3음절로 이상적인 길이입니다",
+    "한자 의미를 부여할 수 있는 이름입니다",
+  ],
+  weaknesses: [],
+  reasons: [
+    "종합 78점 — 미학 78 (조화 미산정)",
+    "발음 78점 — 받침 1개 / 부드러운 자음 100%",
+    "음령오행 상생 — 土(ㅇ) → 金(ㅅ) 역방향",
+  ],
+};
+
+/** KyeolBlocks 가 그리는 상자(같은 순서) — 목록마다 visibleItems 로 거르고 빈 목록 상자는 뺀다 */
+function kyeolBlocks({ strengths, weaknesses, reasons }) {
+  return [
+    ["강점", strengths],
+    ["약점", weaknesses],
+    ["추천 이유", reasons],
+  ]
+    .map(([title, items]) => ({ title, items: visibleItems(items) }))
+    .filter((b) => b.items.length > 0);
+}
+
+/** /analysis 의 '이름의 결' 절 조건과 같은 식 */
+const analysisSectionShown = ({ strengths, weaknesses, reasons }) =>
+  hasVisibleContent(strengths) || hasVisibleContent(weaknesses) || hasVisibleContent(reasons);
+
+test("/analysis 약점이 비면 강점·추천 이유 두 상자, 2열(빈 가운데 칸 없음)", () => {
+  const blocks = kyeolBlocks(SOYUN);
+  assert.deepEqual(blocks.map((b) => b.title), ["강점", "추천 이유"]);
+  assert.equal(blocks[0].items.length, 5);
+  assert.equal(blocks[1].items.length, 3);
+  assert.equal(threeColTemplate(blocks.length), "repeat(2, 1fr)");
+  assert.equal(analysisSectionShown(SOYUN), true);
+});
+
+test("/analysis 셋 다 있으면 3열, 순서는 강점 → 약점 → 추천 이유", () => {
+  // 김가윤 — '흔한 이름' 약점이 붙는 인기 이름
+  const blocks = kyeolBlocks({ ...SOYUN, weaknesses: ["흔한 이름에 속합니다 (유니크 30점)"] });
+  assert.deepEqual(blocks.map((b) => b.title), ["강점", "약점", "추천 이유"]);
+  assert.equal(threeColTemplate(blocks.length), "repeat(3, 1fr)");
+});
+
+test("/analysis 한 상자만 남으면 1열", () => {
+  const blocks = kyeolBlocks({ strengths: [], weaknesses: ["한자 매핑이 어려운 이름입니다"], reasons: [" "] });
+  assert.deepEqual(blocks.map((b) => b.title), ["약점"]);
+  assert.equal(threeColTemplate(blocks.length), "1fr");
+});
+
+test("/analysis 셋 다 보이는 줄이 없으면 상자도, '이름의 결' 절도 그리지 않는다", () => {
+  const empty = { strengths: [""], weaknesses: [], reasons: ["  "] };
+  assert.deepEqual(kyeolBlocks(empty), []);
+  // 옛 조건(length > 0)은 공백뿐인 줄에도 절을 그렸다
+  assert.equal(analysisSectionShown(empty), false);
+  assert.equal(analysisSectionShown({ strengths: [], weaknesses: [], reasons: [] }), false);
+});
+
+test("threeColTemplate 는 최대 3열, twoColTemplate(/evaluate)은 그대로 최대 2열", () => {
+  assert.deepEqual([0, 1, 2, 3, 4].map(threeColTemplate), ["1fr", "1fr", "repeat(2, 1fr)", "repeat(3, 1fr)", "repeat(3, 1fr)"]);
+  assert.deepEqual([0, 1, 2, 3].map(twoColTemplate), ["1fr", "1fr", "repeat(2, 1fr)", "repeat(2, 1fr)"]);
+});
+
+// 위 규칙을 /analysis 화면이 실제로 쓰는지 — 컴포넌트를 되돌리면 여기서 걸린다
+test("KyeolBlocks·/analysis 가 eval-layout 규칙을 쓴다", () => {
+  const mid = read("src", "components", "design", "DetailMid.tsx");
+  const kb = /export function KyeolBlocks\([\s\S]*?\r?\n}\r?\n/.exec(mid);
+  assert.ok(kb, "KyeolBlocks 없음");
+  // 상자 속성은 JSX 그대로(palette-contrast.test.mjs 가 tintBg="…"·accent="…" 를 읽는다) — 목록을 보이는 줄로 거른 뒤 조건부로 그린다
+  for (const [list, raw] of [["strong", "strengths"], ["weak", "weaknesses"], ["why", "reasons"]]) {
+    assert.match(kb[0], new RegExp(`const ${list} = visibleItems\\(${raw}\\);`));
+    assert.match(kb[0], new RegExp(`\\{${list}\\.length > 0 && \\(\\s*<Block[^>]*?items=\\{${list}\\}`));
+    assert.doesNotMatch(kb[0], new RegExp(`items=\\{${raw}\\}`));
+  }
+  assert.match(kb[0], /const count = \[strong, weak, why\]\.filter\(\(items\) => items\.length > 0\)\.length;/);
+  assert.match(kb[0], /if \(count === 0\) return null;/);
+  assert.match(kb[0], /gridTemplateColumns: threeColTemplate\(count\)/);
+  assert.doesNotMatch(kb[0], /gridTemplateColumns: "repeat\(3, 1fr\)"/);
+
+  const page = read("src", "app", "analysis", "page.tsx");
+  assert.match(
+    page,
+    /hasVisibleContent\(strengths\) \|\| hasVisibleContent\(weaknesses\) \|\| hasVisibleContent\(reasons\)/,
+  );
+  assert.doesNotMatch(page, /strengths\.length > 0 \|\| weaknesses\.length > 0/);
 });

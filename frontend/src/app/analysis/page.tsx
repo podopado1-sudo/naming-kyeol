@@ -26,6 +26,7 @@ import {
   type HanjaSyllableEntry,
 } from "@/components/design/DetailHanja";
 import { toResourceGrade } from "@/components/design/resource-grade";
+import { hasVisibleContent } from "@/components/design/eval-layout";
 
 import { nameAnalysis } from "@/lib/api";
 import type { NameAnalysisResponse, SajuChartData as ApiSajuChart } from "@/lib/types";
@@ -209,8 +210,9 @@ function AnalysisInner({
         {/* Hero */}
         <DetailHero data={heroData} />
 
-        {/* 강점/약점/추천이유 */}
-        {(strengths.length > 0 || weaknesses.length > 0 || reasons.length > 0) && (
+        {/* 강점/약점/추천이유 — 빈 쪽 상자는 KyeolBlocks 가 그리지 않고, 셋 다 보이는 줄이 없을 때만 절을 숨긴다
+            (eval-layout.ts — /evaluate BR-1 과 같은 '보이는 줄' 기준, 2026-10-27) */}
+        {(hasVisibleContent(strengths) || hasVisibleContent(weaknesses) || hasVisibleContent(reasons)) && (
           <section style={{ marginTop: 48 }}>
             <SectionHead
               title="이름의 결"
