@@ -11,6 +11,10 @@ import type { DualCandidate, DualMode } from "@/components/design/DualCard";
 import type { DualContext } from "@/components/design/DualResult";
 
 import { dualName } from "@/lib/api";
+import {
+  buildMappingNote,
+  splitEnglishToSyllables,
+} from "@/lib/dual-name-mapping";
 import type { DualNameCandidate } from "@/lib/types";
 
 // ============================================================
@@ -35,33 +39,8 @@ function syllabify(name: string): string[] {
   return [...name];
 }
 
-// 영어 음절 분리는 어려운 작업 — 간단히 절반 분할
-function splitEnglishToSyllables(eng: string, koreanLen: number): string[] {
-  if (!eng) return [];
-  if (koreanLen <= 1) return [eng];
-  // 단순 분할: 길이 비례
-  const chunkSize = Math.ceil(eng.length / koreanLen);
-  const result: string[] = [];
-  for (let i = 0; i < eng.length; i += chunkSize) {
-    result.push(eng.slice(i, i + chunkSize));
-  }
-  return result;
-}
-
-function buildMappingNote(c: DualNameCandidate): string {
-  if (!c.englishEquivalent || !c.hanjaCharacters.length) return "";
-  const eng = splitEnglishToSyllables(
-    c.englishEquivalent,
-    c.koreanName.length
-  );
-  const ko = syllabify(c.koreanName);
-  const pairs = ko.map((k, i) => {
-    const e = eng[i] ?? "";
-    const h = c.hanjaCharacters[i] ?? "";
-    return `${e} ↔ ${k}${h ? `(${h})` : ""}`;
-  });
-  return pairs.join(" · ");
-}
+// 영어 음절 칩·매핑 줄은 lib/dual-name-mapping.ts — 조각이 음절보다 적게 나와 빈 '·  ↔ 언(…)'이 찍히던 분할을
+// 음절 수만큼 나누도록 고쳤다(2026-10-27 — Ryan·Olivia·Diana·Aria 등)
 
 function mapResponse(candidates: DualNameCandidate[]): DualCandidate[] {
   return candidates.map((c, i) => {
