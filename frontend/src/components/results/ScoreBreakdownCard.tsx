@@ -73,6 +73,12 @@ export function ScoreBreakdownCard({
     { label: "세대 중립", value: aesthetic.neutrality, max: 15 },
     { label: "의미", value: aesthetic.meaning, max: 10 },
   ];
+  // 0 인 줄은 BonusLine 이 숨기므로, 셋 다 0 이면 구분선 묶음째 그리지 않는다 — 옛 코드는 빈 구분선과 여백만 남았다
+  // (2026-10-27 — 10/26 보이는 한자 판정·10/27 성별 표 재분류 뒤 /name 이름의 3분의 2가량이 셋 다 0 이라 눈에 띔)
+  const hasBonusLines =
+    aesthetic.toneBonus !== 0 ||
+    aesthetic.genderBonus !== 0 ||
+    aesthetic.penalty !== 0;
 
   return (
     <Card className="border-paper-line bg-paper-card shadow-sm">
@@ -92,11 +98,13 @@ export function ScoreBreakdownCard({
           <ScoreBar key={bar.label} {...bar} />
         ))}
 
-        <div className="space-y-1.5 border-t border-paper-line pt-3">
-          <BonusLine label="톤 보너스" value={aesthetic.toneBonus} />
-          <BonusLine label="성별 보너스" value={aesthetic.genderBonus} />
-          <BonusLine label="감점" value={-aesthetic.penalty} />
-        </div>
+        {hasBonusLines && (
+          <div className="space-y-1.5 border-t border-paper-line pt-3">
+            <BonusLine label="톤 보너스" value={aesthetic.toneBonus} />
+            <BonusLine label="성별 보너스" value={aesthetic.genderBonus} />
+            <BonusLine label="감점" value={-aesthetic.penalty} />
+          </div>
+        )}
 
         {aesthetic.notes.length > 0 && (
           <div className="border-t border-paper-line pt-3">
