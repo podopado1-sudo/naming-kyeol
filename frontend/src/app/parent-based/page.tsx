@@ -31,6 +31,12 @@ import {
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 
+/**
+ * 생년월일 — 백엔드 필수(POST parent-based 가 비면 400 '생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다').
+ * 옛 폼은 출생일 칸을 선택처럼 두고 그대로 보내 백엔드 문구가 오류 상자에 떴다 — 제출 전에 막고 이 문구를 같은 상자에 보인다(2026-10-28)
+ */
+const BIRTH_DATE_REQUIRED = "생년월일을 입력해 주세요.";
+
 // ============================================================
 // 작명 모델 분류 — backend nameType 기반
 // ============================================================
@@ -39,6 +45,31 @@ function detectNamingModel(c: ParentBasedCandidate): NamingModelKey {
   if (nt.includes("음운")) return "phonetic";
   if (nt.includes("의미")) return "semantic";
   return "narrative";
+}
+
+// ============================================================
+// /evaluate 링크 — 후보 카드·첫 번째 후보의 '이 이름 평가하기'
+// ============================================================
+/**
+ * 부모 기반 응답(ParentBasedCandidate)에는 점수가 없다 — name·namingModel·nameType·description 뿐.
+ * 옛 어댑터는 후보 순서(인덱스)로 미학·조화·최종을, 고정값 50으로 희귀도를 지어내 점수처럼 보였다(2026-10-28 제거).
+ * 점수는 평가 화면이 실제로 계산하니 이 화면의 입력을 그대로 넘긴다. 값이 있는 것만 넣고 성별 'none' 은 넣지 않는다
+ * (app/favorites buildEvaluateUrl·app/search handleCandidateDetail 과 같은 꼴). 출생 시각은 생년월일과 함께일 때만 —
+ * /evaluate 가 날짜 없는 시각을 버린다(evaluate-params timeWithDate)
+ */
+function buildEvaluateUrl(
+  lastName: string,
+  name: string,
+  ctx: { birthDate: string; birthTime: string; gender: string; tone: string }
+): string {
+  const params = new URLSearchParams();
+  if (lastName) params.set("lastName", lastName);
+  if (name) params.set("name", name);
+  if (ctx.birthDate) params.set("birthDate", ctx.birthDate);
+  if (ctx.birthDate && ctx.birthTime) params.set("birthTime", ctx.birthTime);
+  if (ctx.gender && ctx.gender !== "none") params.set("gender", ctx.gender);
+  if (ctx.tone) params.set("tone", ctx.tone);
+  return `/evaluate?${params.toString()}`;
 }
 
 // ============================================================
@@ -54,31 +85,23 @@ function buildParentResultData(
     motherName: string;
     storyKeyword: string;
     birthDate: string;
+    birthTime: string;
     gender: string;
     tone: string;
   }
 ): ParentResultData {
-  // backend 미반환 점수 → 등수 기반 mock 점수
-  const total = candidates.length;
-  const uiCandidates: ParentUICandidate[] = candidates.map((c, i) => {
-    const seed = total > 0 ? 1 - i / Math.max(total, 1) : 1;
-    const aesthetics = Math.round(72 + seed * 20); // 72~92
-    const harmony = Math.round(70 + seed * 22); // 70~92
-    const finalScore = Math.round(aesthetics * 0.7 + harmony * 0.3);
-    return {
-      fullName: `${inputs.babySurname}${c.name}`,
-      meaning: c.description || "",
-      aesthetics,
-      harmony,
-      finalScore,
-      rarity: 50, // backend 미제공 → 중앙값
-      tags: c.nameType ? [c.nameType, c.namingModel] : [c.namingModel],
-      reasons: c.description ? [c.description] : [],
-      phonologyNotes: [],
-      namingModel: detectNamingModel(c),
-      parentLink: { anchor: c.namingModel },
-    };
-  });
+  // 요청에 보낸 성(trim)과 같은 값 — 이름(fullName)·평가 링크의 lastName 이 같은 성을 쓴다
+  const surname = inputs.babySurname.trim();
+  const uiCandidates: ParentUICandidate[] = candidates.map((c) => ({
+    fullName: `${surname}${c.name}`,
+    meaning: c.description || "",
+    tags: c.nameType ? [c.nameType, c.namingModel] : [c.namingModel],
+    reasons: c.description ? [c.description] : [],
+    phonologyNotes: [],
+    namingModel: detectNamingModel(c),
+    parentLink: { anchor: c.namingModel },
+    evaluateHref: buildEvaluateUrl(surname, c.name, inputs),
+  }));
 
   const fatherFull =
     `${inputs.fatherSurname || ""}${inputs.fatherName || ""}`.trim();
@@ -86,7 +109,7 @@ function buildParentResultData(
     `${inputs.motherSurname || ""}${inputs.motherName || ""}`.trim();
 
   const requestSummary: ParentSummary = {
-    lastName: inputs.babySurname,
+    lastName: surname,
     date: inputs.birthDate || undefined,
     gender:
       inputs.gender === "none"
@@ -123,27 +146,6 @@ function buildParentResultData(
     label: modelLabels[key],
   }));
 
-  const avgAesthetics =
-    uiCandidates.length > 0
-      ? Math.round(
-          uiCandidates.reduce((s, c) => s + c.aesthetics, 0) /
-            uiCandidates.length
-        )
-      : 0;
-  const avgHarmony =
-    uiCandidates.length > 0
-      ? Math.round(
-          uiCandidates.reduce((s, c) => s + c.harmony, 0) / uiCandidates.length
-        )
-      : 0;
-  const avgFinal =
-    uiCandidates.length > 0
-      ? Math.round(
-          uiCandidates.reduce((s, c) => s + c.finalScore, 0) /
-            uiCandidates.length
-        )
-      : 0;
-
   const analysisInputs: string[] = [];
   if (fatherFull) analysisInputs.push(`아버지 ${fatherFull}`);
   if (motherFull) analysisInputs.push(`어머니 ${motherFull}`);
@@ -160,11 +162,6 @@ function buildParentResultData(
     parentMeta: {
       modelsAvailable,
       analysisInputs,
-      averageScores: {
-        aesthetics: avgAesthetics,
-        harmony: avgHarmony,
-        final: avgFinal,
-      },
     },
   };
 
@@ -203,6 +200,12 @@ export default function ParentBasedPage() {
       setError("자녀 성씨를 입력해주세요.");
       return;
     }
+    // 폼 순서(자녀 정보 → 부모 정보)대로 — 성씨 다음이 출생일
+    if (!birthDate) {
+      setError(BIRTH_DATE_REQUIRED);
+      document.getElementById("birthDate")?.focus();
+      return;
+    }
     if (!fatherName.trim() && !motherName.trim() && !storyKeyword.trim()) {
       setError(
         "부모 이름 또는 스토리 키워드 중 하나는 입력해주세요."
@@ -223,7 +226,7 @@ export default function ParentBasedPage() {
         motherSurname: motherSurname.trim() || undefined,
         motherName: motherName.trim() || undefined,
         storyKeyword: storyKeyword.trim() || undefined,
-        birthDate: birthDate || undefined,
+        birthDate,
         birthTime: birthTime || undefined,
         gender:
           gender === "none"
@@ -267,6 +270,7 @@ export default function ParentBasedPage() {
       motherName,
       storyKeyword,
       birthDate,
+      birthTime,
       gender,
       tone,
     });
@@ -302,8 +306,8 @@ export default function ParentBasedPage() {
         <CardHeader>
           <CardTitle className="text-navy">기본 정보</CardTitle>
           <CardDescription>
-            자녀 성씨와 부모 정보를 입력해주세요. 부모 이름 또는 스토리
-            키워드 중 하나는 필수예요.
+            자녀 성씨·출생일과 부모 정보를 입력해주세요. 부모 이름 또는
+            스토리 키워드 중 하나는 필수예요.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -356,13 +360,29 @@ export default function ParentBasedPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {/* 출생일 — 백엔드 필수. 표시는 이 폼의 '(선택)'·/required-char·/search 의 '(필수 · …)'와 같은 작은 글씨.
+                    native required 는 달지 않는다 — 브라우저 말풍선이 먼저 떠 오류 상자의 '생년월일을 입력해 주세요.'가
+                    나오지 않는다. 대신 aria-required, 빈 채로 제출해 그 오류가 떠 있는 동안 aria-invalid(테두리) */}
                 <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="birthDate">출생일</Label>
+                  <Label htmlFor="birthDate">
+                    출생일{" "}
+                    <span className="text-[10px] text-muted-foreground">(필수)</span>
+                  </Label>
                   <Input
                     id="birthDate"
                     type="date"
                     value={birthDate}
-                    onChange={(e) => setBirthDate(e.target.value)}
+                    onChange={(e) => {
+                      setBirthDate(e.target.value);
+                      if (e.target.value && error === BIRTH_DATE_REQUIRED) setError(null);
+                    }}
+                    aria-required="true"
+                    aria-invalid={
+                      (error === BIRTH_DATE_REQUIRED && !birthDate) || undefined
+                    }
+                    aria-describedby={
+                      error === BIRTH_DATE_REQUIRED && !birthDate ? "parent-based-error" : undefined
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -457,7 +477,11 @@ export default function ParentBasedPage() {
 
       {/* Error */}
       {error && (
-        <div className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700">
+        <div
+          id="parent-based-error"
+          role="alert"
+          className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700"
+        >
           {error}
         </div>
       )}

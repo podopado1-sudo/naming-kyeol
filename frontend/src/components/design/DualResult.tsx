@@ -17,6 +17,28 @@ export interface DualContext {
   mode: DualMode;
   gender: "male" | "female" | "any";
   tone: "neutral" | "soft" | "strong";
+  /** YYYY-MM-DD — '이 이름 평가하기' 링크에 싣는다. 입력 폼이 필수로 받는다(백엔드 dual-name 이 없으면 400) */
+  birthDate: string;
+  /** HH:mm, "" = 미입력 */
+  birthTime: string;
+}
+
+/**
+ * 후보 하나를 /evaluate 로 — 값이 있는 것만 넣는다(favorites buildEvaluateUrl·search handleCandidateDetail 과 같은 꼴).
+ * 성별 '미지정'(any)은 넣지 않고, 출생 시각은 생년월일이 있을 때만(/evaluate 가 날짜 없는 시각을 버린다).
+ * name 은 성씨를 뺀 이름(koreanFull = 백엔드 koreanName).
+ */
+function evaluateUrl(ctx: DualContext, name: string): string {
+  const params = new URLSearchParams();
+  if (ctx.lastName) params.set("lastName", ctx.lastName);
+  if (name) params.set("name", name);
+  if (ctx.birthDate) {
+    params.set("birthDate", ctx.birthDate);
+    if (ctx.birthTime) params.set("birthTime", ctx.birthTime);
+  }
+  if (ctx.gender !== "any") params.set("gender", ctx.gender);
+  if (ctx.tone) params.set("tone", ctx.tone);
+  return `/evaluate?${params.toString()}`;
 }
 
 const MODE_LABEL: Record<DualMode, string> = {
@@ -370,7 +392,13 @@ function ModeExplainer({ mode }: { mode: DualMode }) {
 // ============================================================
 // CompareTable
 // ============================================================
-function CompareTable({ candidates }: { candidates: DualCandidate[] }) {
+function CompareTable({
+  candidates,
+  context,
+}: {
+  candidates: DualCandidate[];
+  context: DualContext;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div
@@ -441,7 +469,9 @@ function CompareTable({ candidates }: { candidates: DualCandidate[] }) {
                   borderBottom: "1px solid var(--color-divider)",
                 }}
               >
-                {["#", "한국어", "한자", "의미", "최종"].map((h, i) => (
+                {/* '#' = 행 번호(응답 순서 번호, 순위 아님 — 백엔드 영한 이름 지도 파일 순서다).
+                    마지막 열은 옛 '최종'(순번으로 지어낸 점수) 자리 — 평가 화면 링크 */}
+                {["#", "한국어", "한자", "의미", "평가"].map((h, i) => (
                   <th
                     key={i}
                     style={{
@@ -496,17 +526,32 @@ function CompareTable({ candidates }: { candidates: DualCandidate[] }) {
                   >
                     {c.hanja.map((h) => h.meaning).join(" · ")}
                   </td>
-                  <td
-                    style={{
-                      padding: "12px",
-                      textAlign: "right",
-                      fontFamily: "Inter",
-                      fontWeight: 700,
-                      color: "var(--color-navy)",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    {c.scores.final}
+                  <td style={{ padding: "12px", textAlign: "right" }}>
+                    {/* 일반 <a> — /evaluate 정적 라우트의 클라이언트 라우터 캐시 잔상 우회. 카드 링크와 같이 새 탭
+                        (결과가 이 페이지 React 상태에만 있다), ↗ 는 장식, aria-label 은 보이는 글자 '평가하기'로 시작 */}
+                    <a
+                      href={evaluateUrl(context, c.koreanFull)}
+                      target="_blank"
+                      rel="noopener"
+                      aria-label={`평가하기: ${context.lastName}${c.koreanFull} (새 탭)`}
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        color: "var(--color-teal)",
+                        textDecoration: "underline",
+                        textUnderlineOffset: 3,
+                        textDecorationThickness: 1,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      평가하기
+                      <span
+                        aria-hidden="true"
+                        style={{ display: "inline-block", marginLeft: 3, fontSize: 11 }}
+                      >
+                        ↗
+                      </span>
+                    </a>
                   </td>
                 </tr>
               ))}
@@ -536,8 +581,10 @@ export function DualResultPage({
 }) {
   const [selected, setSelected] = useState<number | null>(null);
   const selectedCand = candidates.find((c) => c.rank === selected);
+  // koreanFull 은 성씨를 뺀 이름(백엔드 koreanName)이다 — 디자인 원본은 성씨가 붙어 있어 slice(1) 이었는데,
+  // 그대로 두면 이름 첫 음절이 잘려 '필립' 대신 '립 계열'이 나왔다
   const koreanLabel = candidates[0]?.koreanFull
-    ? `${candidates[0].koreanFull.slice(1)} 계열`
+    ? `${candidates[0].koreanFull} 계열`
     : "";
 
   return (
@@ -699,8 +746,23 @@ export function DualResultPage({
               onSelect={setSelected}
               mode={context.mode}
               lastName={context.lastName}
+              evaluateHref={evaluateUrl(context, c.koreanFull)}
             />
           ))}
+          {/* 평가 링크는 한글 이름만 넘긴다(/evaluate 는 URL 로 한자를 받지 않는다). 카드 한자는 이중 이름 엔진이 고른 것이고
+              평가 화면은 ScoringService 가 다시 배정하므로(링크에 출생일이 실려 용신 배정) 다를 수 있다 */}
+          <p
+            style={{
+              fontSize: 12,
+              lineHeight: 1.6,
+              color: "var(--color-text-2)",
+              margin: 0,
+            }}
+          >
+            ‘이 이름 평가하기’는 한글 이름으로 평가해요. 평가 화면이 한자를
+            다시 골라 점수를 매기니 카드의 한자와 다를 수 있어요 — 점수에 쓴
+            한자는 평가 화면의 ‘의미 메모’에 나와요.
+          </p>
         </div>
 
         {/* Explainer */}
@@ -710,7 +772,7 @@ export function DualResultPage({
 
         {/* Compare table */}
         <div style={{ marginBottom: 40 }}>
-          <CompareTable candidates={candidates} />
+          <CompareTable candidates={candidates} context={context} />
         </div>
 
         {/* CTAs */}

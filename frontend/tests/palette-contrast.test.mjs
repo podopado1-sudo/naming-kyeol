@@ -274,11 +274,9 @@ function tokenOffenders(tokenRe, allowed) {
 /** gold-600 이 남아도 되는 곳 — 테두리·바탕·막대·선(비텍스트, 정책상 그대로). 글자·아이콘 색으로 새로 쓰이면 실패한다 */
 const ALLOWED_GOLD_600 = [
   ["components/design/DetailHanja.tsx", /border: "1\.5px solid var\(--color-gold-600\)"/], // V 배지 테두리
-  ["components/design/DualCard.tsx", /background: "var\(--color-gold-600\)"/], // 희귀도 막대
   ["components/design/EvaluateInput.tsx", /\(invalid \? "var\(--color-gold-600\)" : "var\(--color-border\)"\)/], // 입력칸 밑줄
   // 희귀도 칸 테두리 — border: "1px solid " + (i < filled ? … : …) 의 삼항식 한 줄
   ["components/design/SmartResult.tsx", /^\s*\? "var\(--color-gold-600\)"$/, /border:\s*$[\s\S]*"1px solid " \+/m],
-  ["components/design/SmartResultParent.tsx", /^\s*\? "var\(--color-gold-600\)"$/, /border:\s*$[\s\S]*"1px solid " \+/m],
   ["components/design/SmartResultParent.tsx", /^\s*lineColor: "var\(--color-gold-600\)",$/], // 부모 기반 의미축 연결선·화살표·주석 알약 테두리
   ["components/design/SmartResultRare.tsx", /background: "var\(--color-gold-600\)"/], // 4px 점
 ];
@@ -294,9 +292,7 @@ test("gold-600 은 테두리·바탕·막대에만 남는다 — 글자·아이�
 const ALLOWED_GOLD_700 = [
   ["components/design/SmartResult.tsx", /style=\{saved \? \{ color: "var\(--color-gold-700\)" \} : undefined\}/], // 저장 ♥
   ["components/design/SmartResult.tsx", /color: "var\(--color-gold-700\)", margin(Right: 4|Left: 2) \}/], // 장식 인용 부호 “ ”
-  ["components/design/DualCard.tsx", /^\s*\? "var\(--color-gold-700\)"$/, /const scoreColor = /], // 28px 굵은 점수 숫자
   ["components/design/DualCard.tsx", /<span style=\{\{ color: "var\(--color-gold-700\)" \}\}>⚠<\/span>/], // 주의 아이콘
-  ["components/design/SmartResultRare.tsx", /^\s*color: "var\(--color-gold-700\)",$/, /fontFamily: "var\(--font-serif\)",[\s\S]*marginRight: 6,/], // 조화 이유 앞 장식 ★
   ["components/design/SmartResultRare.tsx", /^\s*\? "var\(--color-gold-700\)"$/, /color: isActive\s*$/m], // 희귀 탭 장식 ★(라벨 글자가 따로 있다)
   ["components/design/TwinResultTop.tsx", /^\s*\? "var\(--color-gold-700\)"$/, /const color =\s*$/m], // 30px 점수·원 그래프(const color — 칩 글자는 chipText)
   ["components/hanja/HanjaBadges.tsx", /border-gold-700/], // V 배지 외곽선

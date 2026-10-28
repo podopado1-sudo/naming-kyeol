@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { PhonologyNote } from "@/lib/types";
+import { josa } from "@/lib/josa";
 
 // ============================================================
 // 데이터 타입
@@ -21,8 +22,14 @@ export interface RareSummary {
   tone?: string;
 }
 
+/**
+ * 한자 옵션 한 칸 — 글자와 사전 뜻을 나눠 담는다. 백엔드 hanjaOptions 는 `${글자}(${뜻})` 문자열을 이름 음절마다 최대 3개씩
+ * 음절 순서대로 이어 붙인 목록이라(RareSurnameEngine.FindHanjaOptions) 어댑터(/rare-surname)가 갈라 넣는다
+ */
 export interface RareHanjaOption {
+  /** 한자 한 글자 — 없으면 '한글 그대로' */
   char?: string;
+  /** 사전 뜻(훈음, 예: '아름다울 미') — 비어 있으면 뜻 자리를 그리지 않는다 */
   meaning: string;
   isDefault?: boolean;
 }
@@ -43,28 +50,26 @@ export interface RareSurnameAnalysis {
   averageHarmony: number;
 }
 
+/**
+ * 희귀 성씨 후보 한 명 — 숫자는 API 가 준 성씨 발음 조화(harmonyScore) 하나뿐이다.
+ * 미학·종합·희귀도 매칭 점수는 엔진이 내지 않으므로 필드를 두지 않는다(2026-10-28 — 옛 어댑터가 순위로 지어냈다).
+ * 그 자리는 evaluateHref(같은 조건의 /evaluate — 실제 미학·조화 평가)로 잇는다.
+ */
 export interface RareUICandidate {
   fullName: string;
-  meaning: string;
-  rarityMatch: number;
-  aesthetics: number;
-  harmony: number;
+  /** 성씨와의 발음 조화 0~100 (RareSurnameEngine) — 사주 조화 점수가 아니다 */
   harmonyScore: number;
-  harmonyReason: string;
+  /**
+   * 발음 조화 근거 — 응답 harmonyReason(ScoreCandidateCore 근거 문장을 '; '로 이은 한 줄)을 나눈 목록. 펼침에서 한 번만 그린다
+   * (옛 화면은 같은 한 줄을 금색 상자와 목록에 두 번, Top Pick 한자 옆 '뜻' 자리에 한 번 더 그렸다 — 2026-10-28)
+   */
   reasons: string[];
+  /** '희귀 성씨'는 응답 isRareSurname 일 때만(어댑터) */
   tags: string[];
   hanjaOptions: RareHanjaOption[];
   phonologyNotes: PhonologyNote[];
-}
-
-export interface RareGeneralCandidate {
-  fullName: string;
-  hanjaName?: string;
-  meaning: string;
-  aesthetics: number;
-  harmony: number;
-  finalScore: number;
-  tags: string[];
+  /** '/evaluate?lastName=…&name=…' — 값이 있는 조건만 담는다 */
+  evaluateHref: string;
 }
 
 export interface RareUICategory {
@@ -73,11 +78,14 @@ export interface RareUICategory {
   description?: string;
   engineUsed?: string;
   totalInCategory: number;
-  names: (RareUICandidate | RareGeneralCandidate)[];
+  names: RareUICandidate[];
 }
 
 export interface RareResultData {
   requestSummary: RareSummary;
+  /** 응답 isRareSurname — 희귀 단계 3 이상(RareSurnameEngine). '희귀 성씨' 표지는 이 값이 참일 때만 */
+  isRareSurname: boolean;
+  /** 성씨 희귀 단계 1~4 */
   rarityLevel: number;
   surnameAnalysis: RareSurnameAnalysis;
   topPick: RareUICandidate | null;
@@ -85,8 +93,18 @@ export interface RareResultData {
   totalCount: number;
 }
 
-const RARITY_STARS = (level: number) => "★".repeat(level || 0);
-const RARITY_LABELS = ["", "조금 희귀", "희귀", "매우 희귀", "극희귀"];
+/**
+ * 성씨 희귀 단계 — 백엔드 RareSurnameEngine.DetermineRarityLevel 그대로(1 = 흔함·상위 30, 2 = 보통·31~50위, 3 = 희귀, 4 = 매우희귀).
+ * 옛 라벨은 한 칸씩 부풀려(1 = '조금 희귀' … 4 = '극희귀') 김·이도 '조금 희귀'로 보였다(2026-10-28).
+ * 별은 채운 별 + 빈 별로 4단계 눈금을 그린다 — 흔한 성씨의 별 하나가 '희귀도 1점'이 아니라 '네 단계 중 가장 낮음'으로 읽히게
+ */
+const RARITY_MAX = 4;
+const RARITY_LABELS = ["", "흔함", "보통", "희귀", "매우 희귀"];
+const rarityStars = (level: number) => {
+  const n = Math.max(0, Math.min(RARITY_MAX, level || 0));
+  return "★".repeat(n) + "☆".repeat(RARITY_MAX - n);
+};
+const rarityLabel = (level: number) => RARITY_LABELS[level] ?? "";
 
 // ============================================================
 // 공통 스타일
@@ -132,8 +150,10 @@ const popoverStyle: CSSProperties = {
 };
 
 function Sep2() {
+  // 폰 폭에서는 칩 줄이 접히며 이 세로선만 줄 끝에 홀로 남는다(375px 실측) — sm 이상에서만 그린다
   return (
     <span
+      className="hidden sm:block"
       style={{
         width: 1,
         height: 14,
@@ -235,8 +255,8 @@ function CompoundChip({ surname }: { surname: string }) {
       </button>
       {open && (
         <div style={popoverStyle}>
-          <b style={{ fontWeight: 600 }}>{surname}</b>는 두 글자로 이루어진
-          성씨입니다.
+          <b style={{ fontWeight: 600 }}>{surname}</b>
+          {josa(surname, "은/는")} 두 글자로 이루어진 성씨입니다.
         </div>
       )}
     </span>
@@ -244,6 +264,7 @@ function CompoundChip({ surname }: { surname: string }) {
 }
 
 function RarityChip({ level }: { level: number }) {
+  const label = rarityLabel(level);
   return (
     <span
       style={{
@@ -260,13 +281,18 @@ function RarityChip({ level }: { level: number }) {
         border: "1px solid var(--color-gold-100)",
       }}
     >
-      <span style={{ letterSpacing: "0.04em" }}>{RARITY_STARS(level)}</span>
+      {/* 별 눈금은 장식 — 단계는 옆 글자 '희귀도 (흔함)'이 말한다 */}
+      <span aria-hidden="true" style={{ letterSpacing: "0.04em" }}>
+        {rarityStars(level)}
+      </span>
       <span style={{ color: "var(--color-text-2)", fontWeight: 500 }}>
         희귀도
       </span>
-      <span style={{ color: "var(--color-text-3)", fontWeight: 400 }}>
-        ({RARITY_LABELS[level]})
-      </span>
+      {label && (
+        <span style={{ color: "var(--color-text-3)", fontWeight: 400 }}>
+          ({label})
+        </span>
+      )}
     </span>
   );
 }
@@ -424,7 +450,8 @@ function SurnameCard({
             whiteSpace: "nowrap",
           }}
         >
-          {RARITY_STARS(level)}
+          <span aria-hidden="true">{rarityStars(level)}</span>
+          <span className="sr-only">희귀도 {rarityLabel(level)}</span>
         </span>
       </div>
     </div>
@@ -485,7 +512,14 @@ function DownArrow({ label }: { label: string }) {
   );
 }
 
-function RareTopPickCard({ top }: { top: RareUICandidate }) {
+function RareTopPickCard({
+  top,
+  isRareSurname,
+}: {
+  top: RareUICandidate;
+  isRareSurname: boolean;
+}) {
+  // 첫 음절의 대표 한자(hanjaOptions 첫 칸) — 옆 '뜻' 자리는 그 글자의 사전 뜻만(옛 화면은 발음 조화 근거 한 줄을 붙였다)
   const defaultHanja =
     top.hanjaOptions.find((h) => h.isDefault) || top.hanjaOptions[0];
   return (
@@ -516,7 +550,8 @@ function RareTopPickCard({ top }: { top: RareUICandidate }) {
           border: "1px solid var(--color-gold)",
         }}
       >
-        TOP PICK · 특이 성씨
+        {/* 옛 고정 '· 특이 성씨'는 흔한 성씨(김)에도 붙었다 — 응답 isRareSurname 일 때만 */}
+        TOP PICK{isRareSurname ? " · 희귀 성씨" : ""}
       </div>
 
       <div
@@ -549,12 +584,16 @@ function RareTopPickCard({ top }: { top: RareUICandidate }) {
           >
             {defaultHanja.char}
           </span>
-          <span style={{ fontSize: 13, color: "var(--color-text-2)" }}>
-            · {top.meaning}
-          </span>
+          {defaultHanja.meaning && (
+            <span style={{ fontSize: 13, color: "var(--color-text-2)" }}>
+              · {defaultHanja.meaning}
+            </span>
+          )}
         </div>
       )}
 
+      {/* 줄바꿈 flex — 폰 폭(375px, 카드 안 ~216px)에서 점수 100 이면 '조화'가 혼자 내려가던 것을, 링크를 다음 줄로 보내 막는다.
+          gap 대신 columnGap·rowGap(React 의 shorthand·longhand 충돌 경고 회피) */}
       <div
         style={{
           marginTop: 16,
@@ -563,7 +602,9 @@ function RareTopPickCard({ top }: { top: RareUICandidate }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 18,
+          flexWrap: "wrap",
+          columnGap: 18,
+          rowGap: 10,
         }}
       >
         <div>
@@ -594,23 +635,37 @@ function RareTopPickCard({ top }: { top: RareUICandidate }) {
                 fontSize: 12,
                 color: "var(--color-text-3)",
                 marginLeft: 4,
+                whiteSpace: "nowrap",
               }}
             >
               발음 조화
             </span>
           </div>
         </div>
+        {/* 옛 '상세 보기'는 href="#" 빈 링크였다. 이 엔진은 발음 조화만 매기므로 미학·조화 평가는 /evaluate 로 잇는다.
+            일반 <a> — /evaluate 정적 라우트의 클라이언트 라우터 캐시가 이전 ?name= 을 재사용하는 잔상 우회(next/link 금지).
+            새 탭으로 연다 — 결과가 이 페이지 React 상태에만 있어 같은 탭으로 갔다 돌아오면 입력 폼으로 돌아가 후보를 잃는다.
+            ↗ 는 새 탭 표시(장식 — aria-hidden, 접근 이름 끝 '(새 탭)'이 알린다). 접근 이름은 보이는 글자로 시작한다(라벨-이름 일치) */}
         <a
-          href="#"
+          href={top.evaluateHref}
+          target="_blank"
+          rel="noopener"
+          aria-label={`이 이름 평가하기: ${top.fullName} (새 탭)`}
           style={{
             fontSize: 13,
             color: "var(--color-teal)",
-            fontWeight: 600,
+            fontWeight: 500,
             textDecoration: "none",
             whiteSpace: "nowrap",
           }}
         >
-          상세 보기 →
+          이 이름 평가하기
+          <span
+            aria-hidden="true"
+            style={{ display: "inline-block", marginLeft: 3, fontSize: 11 }}
+          >
+            ↗
+          </span>
         </a>
       </div>
     </div>
@@ -630,10 +685,12 @@ function SurnameAnalysisBanner({ data }: { data: RareResultData }) {
         padding: "28px 28px 24px",
       }}
     >
+      {/* 줄바꿈 flex — 옛 'auto 1fr' 격자는 폰 폭(375px)에서 성씨 카드(복성 168px)가 자리를 차지해 분석 글 칸이 ~70px 로
+          좁아져 한 줄에 한 낱말씩 내려갔다. 글 칸이 240px 보다 좁아지면 성씨 카드 아래로 내린다 */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "auto 1fr",
+          display: "flex",
+          flexWrap: "wrap",
           gap: 28,
           alignItems: "flex-start",
         }}
@@ -643,7 +700,7 @@ function SurnameAnalysisBanner({ data }: { data: RareResultData }) {
           sa={sa}
           level={data.rarityLevel}
         />
-        <div>
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <AnalysisSection title="발음 분석">
             <p
               style={{
@@ -698,7 +755,7 @@ function SurnameAnalysisBanner({ data }: { data: RareResultData }) {
       {top && (
         <>
           <DownArrow label="TopPick 결론" />
-          <RareTopPickCard top={top} />
+          <RareTopPickCard top={top} isRareSurname={data.isRareSurname} />
         </>
       )}
     </div>
@@ -745,60 +802,11 @@ function RareHero({ data }: { data: RareResultData }) {
           margin: 0,
         }}
       >
-        성씨의 결에 맞춰 발음과 의미를 정성껏 골랐어요
+        {/* 엔진(RareSurnameEngine)은 성씨와 이어지는 소리로만 이름을 고른다 — 한자는 고른 이름에 붙이는 표시용 옵션이라 옛 '발음과 의미를' 은 뺐다 */}
+        성씨와 이어지는 소리를 기준으로 두 글자 이름을 골랐어요
       </p>
 
       <SurnameAnalysisBanner data={data} />
-    </div>
-  );
-}
-
-function GeneralHeroR({ data }: { data: RareResultData }) {
-  return (
-    <div
-      style={{
-        padding: "48px 24px 8px",
-        maxWidth: 920,
-        margin: "0 auto",
-      }}
-    >
-      <div
-        style={{
-          fontFamily: "Inter, var(--font-sans)",
-          fontSize: 11,
-          fontWeight: 500,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          color: "var(--color-text-3)",
-        }}
-      >
-        Naming · Result
-      </div>
-      <h1
-        style={{
-          fontFamily: "var(--font-sans)",
-          fontSize: 32,
-          fontWeight: 500,
-          margin: "10px 0 8px",
-          letterSpacing: "-0.018em",
-          lineHeight: 1.25,
-        }}
-      >
-        {data.requestSummary.lastName} 씨를 위한 이름
-      </h1>
-      <p
-        style={{
-          fontSize: 14,
-          color: "var(--color-text-2)",
-          margin: 0,
-        }}
-      >
-        총{" "}
-        <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-          {data.totalCount}개
-        </b>{" "}
-        후보가 있어요. 특이 성씨 결과는 첫 번째 탭에서 확인하세요
-      </p>
     </div>
   );
 }
@@ -978,7 +986,8 @@ function RareSurnameBanner({
           </div>
         </BannerStatR>
 
-        <BannerStatR label="평균 조화점수">
+        {/* 응답 harmonyScore(성씨 발음 조화)의 평균 — 사주 조화 점수와 헷갈리지 않게 '발음 조화'로 밝힌다 */}
+        <BannerStatR label="평균 발음 조화">
           <div style={{ fontFamily: "Inter, var(--font-sans)" }}>
             <span
               style={{
@@ -998,89 +1007,11 @@ function RareSurnameBanner({
                 letterSpacing: "0.06em",
               }}
             >
-              발음 조화
+              후보 {cat.names.length}개
             </span>
           </div>
         </BannerStatR>
       </div>
-    </div>
-  );
-}
-
-function GeneralCategoryBannerR({ cat }: { cat: RareUICategory }) {
-  const iconOf: Record<string, string> = {
-    standard: "漢",
-    "pure-korean": "ㅎ",
-    creative: "✦",
-  };
-  return (
-    <div
-      style={{
-        maxWidth: 920,
-        margin: "20px auto 0",
-        padding: "16px 24px",
-        background: "#F4EFE7",
-        borderRadius: "var(--radius-md)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 16,
-      }}
-    >
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-        <span
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "var(--radius-sm)",
-            background: "var(--color-surface)",
-            color: "var(--color-teal)",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: "var(--font-serif)",
-            fontWeight: 500,
-            fontSize: 15,
-            border: "1px solid var(--color-divider)",
-          }}
-        >
-          {iconOf[cat.type] || "·"}
-        </span>
-        <div>
-          <div
-            style={{
-              fontWeight: 600,
-              fontSize: 14,
-              color: "var(--color-text)",
-            }}
-          >
-            {cat.label}
-          </div>
-          {cat.description && (
-            <div
-              style={{
-                fontSize: 13,
-                color: "var(--color-text-2)",
-                marginTop: 2,
-              }}
-            >
-              {cat.description}
-            </div>
-          )}
-        </div>
-      </div>
-      {cat.engineUsed && (
-        <div
-          style={{
-            fontFamily: "Inter, var(--font-sans)",
-            fontSize: 11,
-            color: "var(--color-text-3)",
-            letterSpacing: "0.04em",
-          }}
-        >
-          by {cat.engineUsed}
-        </div>
-      )}
     </div>
   );
 }
@@ -1122,30 +1053,8 @@ function RareCandidateCard({
         cursor: "pointer",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          top: -10,
-          left: 22,
-          background: "var(--color-gold-50)",
-          color: "#6F5421",
-          padding: "4px 12px",
-          borderRadius: 999,
-          fontSize: 11,
-          fontWeight: 600,
-          whiteSpace: "nowrap",
-          border: "1px solid var(--color-gold)",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 5,
-        }}
-      >
-        <span style={{ letterSpacing: "0.04em" }}>
-          {RARITY_STARS(c.rarityMatch)}
-        </span>
-        희귀도 매칭
-      </div>
-
+      {/* 옛 '희귀도 매칭' 칩은 후보마다 고정값(희귀 단계 3 이상 90 · 아니면 75)을 별 개수로 그려 별이 75~90개 찍혔다.
+          후보별 희귀도는 응답에 없고, 성씨 희귀 단계(rarityLevel)는 위 RarityChip·성씨 카드가 이미 보인다 */}
       <div
         style={{
           display: "flex",
@@ -1223,35 +1132,40 @@ function RareCandidateCard({
                   한글 그대로
                 </span>
               )}
-              <span style={{ fontSize: 13, color: "var(--color-text-2)" }}>
-                {activeHanja.char && "· "}
-                {activeHanja.meaning}
-              </span>
+              {activeHanja.meaning && (
+                <span style={{ fontSize: 13, color: "var(--color-text-2)" }}>
+                  {activeHanja.char && "· "}
+                  {activeHanja.meaning}
+                </span>
+              )}
             </div>
           )}
-          <div
+          {/* 옛 '미학 · 조화' 줄 — 미학은 순위로 지어낸 70~92, 조화는 오른쪽 발음 조화의 복제였다.
+              엔진이 미학을 매기지 않으니 같은 조건의 /evaluate(실제 미학·조화 평가)로 잇는다.
+              일반 <a> — /evaluate 정적 라우트의 클라이언트 라우터 캐시 잔상 우회(next/link 금지). 새 탭 — 결과가 이 페이지
+              React 상태에만 있다. ↗ 는 장식(aria-hidden), 접근 이름은 보이는 글자로 시작하고 후보 이름으로 링크끼리 갈린다 */}
+          <a
+            href={c.evaluateHref}
+            target="_blank"
+            rel="noopener"
+            aria-label={`이 이름 평가하기: ${c.fullName} (새 탭)`}
             style={{
-              display: "flex",
-              gap: 14,
+              display: "inline-block",
               marginTop: 12,
-              fontFamily: "Inter, var(--font-sans)",
               fontSize: 12,
-              color: "var(--color-text-2)",
+              fontWeight: 500,
+              color: "var(--color-teal)",
+              textDecoration: "none",
             }}
           >
-            <span>
-              미학{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.aesthetics}
-              </b>
+            이 이름 평가하기
+            <span
+              aria-hidden="true"
+              style={{ display: "inline-block", marginLeft: 3, fontSize: 11 }}
+            >
+              ↗
             </span>
-            <span>
-              조화{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.harmony}
-              </b>
-            </span>
-          </div>
+          </a>
         </div>
         <div style={{ textAlign: "right" }}>
           <div
@@ -1337,65 +1251,59 @@ function RareCandidateCard({
 
         {open && (
           <div style={{ marginTop: 12 }}>
-            {c.harmonyReason && (
-              <div
-                style={{
-                  padding: "10px 14px",
-                  background: "var(--color-gold-50)",
-                  borderRadius: "var(--radius-sm)",
-                  fontSize: 13.5,
-                  color: "#6F5421",
-                  lineHeight: 1.6,
-                  fontWeight: 500,
-                  border: "1px solid var(--color-gold-100)",
-                }}
-              >
-                <span
+            {/* 발음 조화 근거 — 오른쪽 '발음 조화' 숫자를 매긴 항목들(ScoreCandidateCore). 옛 화면은 같은 한 줄을 금색 ★ 상자와
+                이 목록에 두 번 그렸다(reasons = [harmonyReason]) — 어댑터가 '; '로 나눈 목록을 여기 한 번만 그린다 */}
+            {c.reasons.length > 0 && (
+              <div>
+                <div
                   style={{
-                    fontFamily: "var(--font-serif)",
-                    marginRight: 6,
-                    color: "var(--color-gold-700)",
+                    fontFamily: "Inter, var(--font-sans)",
+                    fontSize: 10,
+                    color: "var(--color-text-3)",
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    fontWeight: 600,
+                    marginBottom: 8,
                   }}
                 >
-                  ★
-                </span>
-                {c.harmonyReason}
-              </div>
-            )}
-
-            {c.reasons.length > 0 && (
-              <div
-                style={{
-                  marginTop: 10,
-                  paddingLeft: 4,
-                  display: "grid",
-                  gap: 6,
-                }}
-              >
-                {c.reasons.map((r, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      gap: 10,
-                      fontSize: 13.5,
-                      color: "var(--color-text)",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    <span
+                  발음 조화 근거
+                </div>
+                <ul
+                  style={{
+                    margin: 0,
+                    padding: 0,
+                    paddingLeft: 4,
+                    listStyle: "none",
+                    display: "grid",
+                    gap: 6,
+                  }}
+                >
+                  {c.reasons.map((r, i) => (
+                    <li
+                      key={i}
                       style={{
-                        width: 4,
-                        height: 4,
-                        borderRadius: 999,
-                        background: "var(--color-teal)",
-                        flexShrink: 0,
-                        marginTop: 8,
+                        display: "flex",
+                        gap: 10,
+                        fontSize: 13.5,
+                        color: "var(--color-text)",
+                        lineHeight: 1.6,
                       }}
-                    />
-                    <span>{r}</span>
-                  </div>
-                ))}
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: 999,
+                          background: "var(--color-teal)",
+                          flexShrink: 0,
+                          marginTop: 8,
+                        }}
+                      />
+                      <span>{r}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
@@ -1476,15 +1384,17 @@ function RareCandidateCard({
                             한글 그대로
                           </div>
                         )}
-                        <div
-                          style={{
-                            marginTop: 4,
-                            fontSize: 11,
-                            color: "var(--color-text-2)",
-                          }}
-                        >
-                          {h.meaning}
-                        </div>
+                        {h.meaning && (
+                          <div
+                            style={{
+                              marginTop: 4,
+                              fontSize: 11,
+                              color: "var(--color-text-2)",
+                            }}
+                          >
+                            {h.meaning}
+                          </div>
+                        )}
                       </button>
                     );
                   })}
@@ -1545,165 +1455,6 @@ function RareCandidateCard({
           </div>
         )}
       </div>
-    </article>
-  );
-}
-
-function GeneralCandidateCardR({
-  candidate,
-  index,
-}: {
-  candidate: RareGeneralCandidate;
-  index: number;
-}) {
-  const c = candidate;
-  return (
-    <article
-      style={{
-        background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius-lg)",
-        padding: "22px 26px",
-        boxShadow: "var(--shadow-sm)",
-        cursor: "pointer",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 10,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "Inter, var(--font-sans)",
-            fontSize: 11,
-            color: "var(--color-text-3)",
-            letterSpacing: "0.08em",
-            fontWeight: 600,
-          }}
-        >
-          #{index + 1}
-        </span>
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto",
-          gap: 24,
-          alignItems: "center",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: 28,
-              fontWeight: 500,
-              color: "var(--color-text)",
-              letterSpacing: "-0.015em",
-            }}
-          >
-            {c.fullName}
-          </div>
-          {(c.hanjaName || c.meaning) && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 10,
-                marginTop: 6,
-                flexWrap: "wrap",
-              }}
-            >
-              {c.hanjaName && (
-                <span
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    fontSize: 18,
-                    color: "var(--color-navy)",
-                  }}
-                >
-                  {c.hanjaName}
-                </span>
-              )}
-              <span
-                style={{
-                  fontSize: 13,
-                  color: "var(--color-text-2)",
-                }}
-              >
-                {c.hanjaName && "· "}
-                {c.meaning}
-              </span>
-            </div>
-          )}
-          <div
-            style={{
-              display: "flex",
-              gap: 14,
-              marginTop: 10,
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 12,
-              color: "var(--color-text-2)",
-            }}
-          >
-            <span>
-              미학{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.aesthetics}
-              </b>
-            </span>
-            <span>
-              조화{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.harmony}
-              </b>
-            </span>
-          </div>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 36,
-              fontWeight: 700,
-              color: "var(--color-navy)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-            }}
-          >
-            {c.finalScore}
-          </div>
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 10,
-              color: "var(--color-text-3)",
-              marginTop: 4,
-              letterSpacing: "0.08em",
-            }}
-          >
-            FINAL
-          </div>
-        </div>
-      </div>
-      {c.tags.length > 0 && (
-        <div
-          style={{
-            marginTop: 14,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 6,
-          }}
-        >
-          {c.tags.map((t, i) => (
-            <TagChipR key={i} label={t} />
-          ))}
-        </div>
-      )}
     </article>
   );
 }
@@ -1837,8 +1588,9 @@ export function SmartResultRarePage({
     data.categories.find((c) => c.type === tab) ?? data.categories[0];
   if (!activeCat) return null;
 
-  const isRare = activeCat.type === "rare-surname";
-
+  // 이 화면의 탭은 희귀 성씨 하나뿐이다(/rare-surname 어댑터가 rare-surname 카테고리만 만든다). 옛 일반 카테고리 분기
+  // (GeneralHeroR·GeneralCategoryBannerR·GeneralCandidateCardR)는 아무도 채우지 않는 미학·조화·FINAL 점수 필드를 그리던
+  // 도달 불가 코드라 2026-10-28 에 뺐다.
   return (
     <div
       style={{
@@ -1912,7 +1664,7 @@ export function SmartResultRarePage({
       />
 
       <main>
-        {isRare ? <RareHero data={data} /> : <GeneralHeroR data={data} />}
+        <RareHero data={data} />
 
         <CategoryTabsR
           categories={data.categories}
@@ -1921,38 +1673,29 @@ export function SmartResultRarePage({
         />
 
         <div ref={bannerRef}>
-          {isRare ? (
-            <RareSurnameBanner cat={activeCat} sa={data.surnameAnalysis} />
-          ) : (
-            <GeneralCategoryBannerR cat={activeCat} />
-          )}
+          <RareSurnameBanner cat={activeCat} sa={data.surnameAnalysis} />
         </div>
 
+        {/* minmax(0, 1fr) — 암묵 열(auto)이면 카드의 최소 폭이 펼침 속 한자 옵션 가로 줄(120px × 6 + 간격 = 760px)을 따라가
+            폰 폭(375px)에서 카드를 펼치면 페이지 전체가 838px 로 넓어졌다. 옵션 줄은 카드 안에서 가로 스크롤한다 */}
         <div
           style={{
             maxWidth: 880,
             margin: "20px auto 0",
             padding: "0 24px",
             display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr)",
             gap: 22,
           }}
         >
-          {isRare
-            ? activeCat.names.map((n, i) => (
-                <RareCandidateCard
-                  key={i}
-                  candidate={n as RareUICandidate}
-                  index={i}
-                  initialOpen={expandFirstCard && i === 0}
-                />
-              ))
-            : activeCat.names.map((n, i) => (
-                <GeneralCandidateCardR
-                  key={i}
-                  candidate={n as RareGeneralCandidate}
-                  index={i}
-                />
-              ))}
+          {activeCat.names.map((n, i) => (
+            <RareCandidateCard
+              key={i}
+              candidate={n}
+              index={i}
+              initialOpen={expandFirstCard && i === 0}
+            />
+          ))}
         </div>
 
         <footer

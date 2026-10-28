@@ -51,6 +51,8 @@ function mapResponse(candidates: DualNameCandidate[]): DualCandidate[] {
     );
     const hanja = parseHanjaMeaning(c.hanjaMeaning, c.hanjaCharacters);
     const koreanFull = `${c.koreanName}`; // 성씨는 카드에서 별도로 받음
+    // 점수 없음 — 백엔드 응답(DualNameCandidate)은 한글·영어·한자·뜻뿐이다. 예전에는 순번으로 미학·조화·최종·희귀도를
+    // 지어내(92−2i 등) 점수처럼 보였다(2026-10-28 제거). 점수 자리는 '이 이름 평가하기'(/evaluate) 링크
     return {
       rank: i + 1,
       englishName: c.englishEquivalent,
@@ -58,18 +60,30 @@ function mapResponse(candidates: DualNameCandidate[]): DualCandidate[] {
       koreanSyllables,
       englishSyllables,
       hanja,
-      // 백엔드는 점수 안 줌 — 표시용 mock (rank 기반 감소)
-      scores: {
-        aesthetic: Math.max(60, 92 - i * 2),
-        harmony: Math.max(60, 88 - i * 2),
-        final: Math.max(60, 90 - i * 2),
-        rarity: Math.max(40, 80 - i * 4),
-      },
       mappingNote: buildMappingNote(c),
       reasons: [],
     };
   });
 }
+
+/**
+ * 결과를 받은 요청의 입력 — 결과 화면(조건 칩·'이 이름 평가하기' 링크)은 이 값을 쓴다.
+ * 응답을 기다리는 동안(콜드 스타트 30초 안팎) 폼을 바꿔도 결과와 다른 조건이 링크에 실리지 않게 제출 때 잡아 둔다.
+ */
+interface SubmittedQuery {
+  /** 요청에 보낸 성씨 그대로(앞뒤 공백 제거·2자) */
+  lastName: string;
+  preferredEnglishName: string;
+  birthDate: string;
+  birthTime: string;
+  gender: "none" | "male" | "female";
+  tone: "neutral" | "soft" | "strong";
+}
+
+/** 출생일을 비우고 제출했을 때의 오류 — 칸의 aria-invalid 도 이 문구가 떠 있는 동안만 켠다(/parent-based·/rare-surname 과 같은 말) */
+const BIRTH_DATE_REQUIRED = "생년월일을 입력해 주세요.";
+const ERROR_ID = "dual-name-error";
+const BIRTH_DATE_ID = "dual-name-birthDate";
 
 // ============================================================
 // 메인 페이지
@@ -86,8 +100,10 @@ export default function DualNamePage() {
   const [candidates, setCandidates] = useState<DualNameCandidate[] | null>(
     null
   );
+  const [submitted, setSubmitted] = useState<SubmittedQuery | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const birthDateMissing = error === BIRTH_DATE_REQUIRED && !birthDate;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -95,29 +111,47 @@ export default function DualNamePage() {
       setError("성씨를 입력해주세요.");
       return;
     }
+    // 백엔드 dual-name 은 생년월일이 없으면 400('생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다') — 요청 전에 막는다.
+    // 칸에 native required 를 달지 않아(브라우저 말풍선이 먼저 떠 이 안내가 안 나온다) 여기가 유일한 검사다.
+    // 날짜를 덜 채운 칸도 value 가 "" 다
+    if (!birthDate) {
+      setError(BIRTH_DATE_REQUIRED);
+      document.getElementById(BIRTH_DATE_ID)?.focus();
+      return;
+    }
     setLoading(true);
     setError(null);
     setCandidates(null);
 
+    const query: SubmittedQuery = {
+      lastName: lastName.trim().slice(0, 2),
+      preferredEnglishName: preferredEnglishName.trim(),
+      birthDate,
+      birthTime,
+      gender,
+      tone,
+    };
+
     try {
       const data = await dualName({
-        lastName: lastName.trim().slice(0, 2),
-        preferredEnglishName: preferredEnglishName.trim() || undefined,
-        birthDate: birthDate || undefined,
-        birthTime: birthTime || undefined,
+        lastName: query.lastName,
+        preferredEnglishName: query.preferredEnglishName || undefined,
+        birthDate: query.birthDate,
+        birthTime: query.birthTime || undefined,
         gender:
-          gender === "none"
+          query.gender === "none"
             ? undefined
-            : gender === "male"
+            : query.gender === "male"
               ? "Male"
               : "Female",
         tone:
-          tone === "neutral"
+          query.tone === "neutral"
             ? "Neutral"
-            : tone === "soft"
+            : query.tone === "soft"
               ? "Soft"
               : "Strong",
       });
+      setSubmitted(query);
       setCandidates(data);
     } catch (err) {
       setError(
@@ -134,15 +168,17 @@ export default function DualNamePage() {
   }
 
   // 결과 있을 때 — 디자인 페이지
-  if (candidates && candidates.length > 0) {
+  if (candidates && candidates.length > 0 && submitted) {
     const englishLabel =
-      preferredEnglishName.trim() || candidates[0]?.englishEquivalent || "";
+      submitted.preferredEnglishName || candidates[0]?.englishEquivalent || "";
     const ctx: DualContext = {
-      lastName,
+      lastName: submitted.lastName,
       preferredEnglishName: englishLabel,
       mode,
-      gender: gender === "none" ? "any" : gender,
-      tone,
+      gender: submitted.gender === "none" ? "any" : submitted.gender,
+      tone: submitted.tone,
+      birthDate: submitted.birthDate,
+      birthTime: submitted.birthTime,
     };
     return (
       <DualResultPage
@@ -152,6 +188,9 @@ export default function DualNamePage() {
       />
     );
   }
+
+  // 0건 안내의 영어 이름도 실제로 요청한 값(제출 스냅샷) — 응답을 기다리는 동안 칸을 고쳐도 고친 이름이 찍히지 않게
+  const shownEnglish = submitted?.preferredEnglishName ?? "";
 
   // 입력 폼
   return (
@@ -269,8 +308,23 @@ export default function DualNamePage() {
               gap: 12,
             }}
           >
-            <Field label="출생일">
-              <Input type="date" value={birthDate} onChange={setBirthDate} />
+            {/* 출생일 — 백엔드 필수(없으면 400). 표시는 이 폼의 '(선택)'과 같은 꼴의 '(필수)'(/parent-based·/rare-surname 과 같은 말).
+                native required 는 달지 않는다 — 브라우저 말풍선('이 입력란을 작성하세요.')이 먼저 떠 handleSubmit 이 돌지 않고
+                아래 오류 상자의 '생년월일을 입력해 주세요.'가 나오지 않는다. 대신 aria-required, 빈 채로 제출해 그 오류가 떠 있는
+                동안 aria-invalid·aria-describedby(오류 상자). 날짜를 넣으면 그 오류를 지운다(/rare-surname 과 같이) */}
+            <Field label="출생일 (필수)" htmlFor={BIRTH_DATE_ID}>
+              <Input
+                id={BIRTH_DATE_ID}
+                type="date"
+                value={birthDate}
+                onChange={(v) => {
+                  setBirthDate(v);
+                  if (v && error === BIRTH_DATE_REQUIRED) setError(null);
+                }}
+                ariaRequired
+                ariaInvalid={birthDateMissing}
+                ariaDescribedBy={birthDateMissing ? ERROR_ID : undefined}
+              />
             </Field>
             <Field label="출생 시각 (선택 · 시주 반영)">
               <Input type="time" value={birthTime} onChange={setBirthTime} />
@@ -278,7 +332,9 @@ export default function DualNamePage() {
           </div>
 
           {/* 0건 — 예전에는 아무 말 없이 폼만 다시 보였다. 이중 이름은 모든 음절에 한자가 있어야 해서, 한글 소리에 이름에 쓸 만한
-              인명용 한자가 없는 음절이 있으면(Emily·Amy 의 '에' — 2026-10-26 점수 정책 뒤 후보 0) 후보가 빠진다 */}
+              인명용 한자가 없는 음절이 있으면(Emily·Amy 의 '에' — 2026-10-26 점수 정책 뒤 후보 0) 후보가 빠진다.
+              영어 이름이 없을 때 결과를 가르는 것은 성별(EnglishKoreanNameMap.GetByGender)뿐이다 — 톤·출생일은
+              DualNameEngine.GenerateDualNamesAsync 가 받기만 하고 쓰지 않아 '톤을 바꿔'라고 권하지 않는다 */}
           {candidates && candidates.length === 0 && !error && (
             <div
               role="status"
@@ -291,14 +347,16 @@ export default function DualNamePage() {
                 padding: "10px 14px",
               }}
             >
-              {preferredEnglishName.trim()
-                ? `입력한 영어 이름(${preferredEnglishName.trim()})으로는 한자 이중 이름을 찾지 못했어요. 한글로 옮긴 소리 가운데 이름에 쓸 만한 인명용 한자가 없는 음절이 있거나, 아직 준비되지 않은 영어 이름이에요. 다른 영어 이름을 넣거나 칸을 비워 두면 성별에 맞는 이중 이름을 추천해 드려요.`
-                : "조건에 맞는 이중 이름을 찾지 못했어요. 성별이나 톤을 바꿔 다시 시도해 보세요."}
+              {shownEnglish
+                ? `입력한 영어 이름(${shownEnglish})으로는 한자 이중 이름을 찾지 못했어요. 한글로 옮긴 소리 가운데 이름에 쓸 만한 인명용 한자가 없는 음절이 있거나, 아직 준비되지 않은 영어 이름이에요. 다른 영어 이름을 넣거나 칸을 비워 두면 성별에 맞는 이중 이름을 추천해 드려요.`
+                : "조건에 맞는 이중 이름을 찾지 못했어요. 성별을 바꾸거나 영어 이름을 넣어 다시 시도해 보세요."}
             </div>
           )}
 
           {error && (
             <div
+              id={ERROR_ID}
+              role="alert"
               style={{
                 fontSize: 13,
                 color: "#C45A4C",
@@ -337,14 +395,18 @@ export default function DualNamePage() {
 // ============================================================
 function Field({
   label,
+  htmlFor,
   children,
 }: {
   label: string;
+  /** 칸 id — 주면 라벨이 칸의 접근 이름이 된다(출생일: aria-required·aria-invalid 를 읽을 때 칸 이름이 함께 나오게) */
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
       <label
+        htmlFor={htmlFor}
         style={{
           fontSize: 12,
           color: "var(--color-text-2)",
@@ -361,25 +423,38 @@ function Field({
 }
 
 function Input({
+  id,
   value,
   onChange,
   placeholder,
   type = "text",
   required,
+  ariaRequired,
+  ariaInvalid,
+  ariaDescribedBy,
 }: {
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
   required?: boolean;
+  /** native required 없이 필수임을 알린다 — 브라우저 말풍선 대신 폼의 오류 상자로 안내하는 칸(출생일) */
+  ariaRequired?: boolean;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
 }) {
   return (
     <input
+      id={id}
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       required={required}
+      aria-required={ariaRequired || undefined}
+      aria-invalid={ariaInvalid || undefined}
+      aria-describedby={ariaDescribedBy}
       style={{
         width: "100%",
         boxSizing: "border-box",
@@ -387,7 +462,10 @@ function Input({
         fontSize: 14,
         color: "var(--color-text)",
         background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
+        // 오류가 이 칸을 가리키는 동안 테두리를 아래 오류 상자 글자색으로(옆 화면 shadcn Input 의 aria-invalid 테두리와 같은 역할)
+        border: ariaInvalid
+          ? "1px solid #C45A4C"
+          : "1px solid var(--color-border)",
         borderRadius: "var(--radius-md)",
         padding: "10px 12px",
         outline: "none",

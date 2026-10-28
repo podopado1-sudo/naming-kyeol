@@ -20,7 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { rareSurname } from "@/lib/api";
+import { josa } from "@/lib/josa";
 import type { RareSurnameResponse } from "@/lib/types";
+import {
+  evaluateHref,
+  normalizeGender,
+  normalizeTone,
+} from "@/app/evaluate/evaluate-params";
 import {
   SmartResultRarePage,
   type RareResultData,
@@ -43,73 +49,114 @@ const COMMON_COMPOUND_SURNAMES = [
   "독고",
 ];
 
+/** 백엔드 /recommendations/rare-surname 은 생년월일이 없으면 400 — 제출 전에 막고 이 문장을 오류 상자에 보인다 */
+const BIRTH_DATE_MISSING = "생년월일을 입력해 주세요.";
+
 // ============================================================
 // 어댑터: RareSurnameResponse → RareResultData
 // ============================================================
+
+/**
+ * hanjaOptions 한 칸 → 글자·뜻. 백엔드 형식은 `${글자}(${사전 뜻})` — RareSurnameEngine.FindHanjaOptions 가 이름 음절마다
+ * HanjaSelector.TopForDisplay 상위 3자를 음절 순서대로 이어 붙인 평평한 목록이다(첫 칸 = 첫 음절의 대표 한자).
+ * 뜻 안에도 괄호가 올 수 있어("연꽃 련(연)") 첫 '(' 앞을 글자, 첫 '(' 와 마지막 ')' 사이를 뜻으로 본다.
+ * 형식이 다르면 통째로 글자 칸에 두고 뜻은 비운다(뜻 자리를 그리지 않는다).
+ * 옛 어댑터는 문자열 하나를 글자·뜻 양쪽에 넣어 카드에 '美(아름다울 미) · 美(아름다울 미)'가 찍혔다(2026-10-28)
+ */
+function parseHanjaOption(opt: string): { char?: string; meaning: string } {
+  const raw = opt.trim();
+  const m = /^([^(]+)\((.*)\)$/.exec(raw);
+  if (!m) return { char: raw || undefined, meaning: "" };
+  return { char: m[1].trim(), meaning: m[2].trim() };
+}
+
+/** harmonyReason 은 ScoreCandidateCore 의 근거 문장들을 '; '로 이은 한 줄 — 나눠 목록 한 벌로 보인다 */
+function splitHarmonyReason(reason: string | undefined): string[] {
+  return (reason ?? "")
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function buildRareResultData(
   response: RareSurnameResponse,
-  inputs: { birthDate: string; gender: string; tone: string }
+  inputs: { birthDate: string; birthTime: string; gender: string; tone: string }
 ): RareResultData {
   const isCompound = response.lastName.length >= 2;
 
-  // 후보 변환 — backend의 RareSurnameCandidate에서 RareUICandidate로
-  const total = response.candidates.length;
-  const uiCandidates: RareUICandidate[] = response.candidates.map((c, i) => {
-    const seed = total > 0 ? 1 - i / Math.max(total, 1) : 1;
-    const aesthetics = Math.round(70 + seed * 22); // 70~92 mock
+  // 후보 변환 — backend의 RareSurnameCandidate에서 RareUICandidate로.
+  // 이 엔진이 주는 점수는 성씨 발음 조화(harmonyScore) 하나뿐이다. 미학·종합·희귀도 매칭 점수는 응답에 없어
+  // 화면에 그리지 않는다(2026-10-28 — 옛 어댑터가 순위로 미학 70~92·희귀도 90/75를 지어내 별 75~90개가 찍혔다).
+  // 그 자리는 같은 조건의 /evaluate 링크(실제 미학·조화 평가)로 바꿨다.
+  const uiCandidates: RareUICandidate[] = response.candidates.map((c) => {
+    const name = c.name || c.fullName.slice(response.lastName.length);
     return {
       fullName: c.fullName,
-      meaning: c.harmonyReason || "",
-      rarityMatch: response.rarityLevel >= 3 ? 90 : 75,
-      aesthetics,
-      harmony: c.harmonyScore,
       harmonyScore: c.harmonyScore,
-      harmonyReason: c.harmonyReason || "",
-      reasons: c.harmonyReason ? [c.harmonyReason] : [],
-      tags: ["희귀 성씨"],
+      // 옛 reasons = [harmonyReason] 은 펼침에서 같은 한 줄을 금색 상자와 목록에 두 번 그렸다 — 항목별로 나눠 한 번만
+      reasons: splitHarmonyReason(c.harmonyReason),
+      // 옛 고정 ["희귀 성씨"]는 김·이 같은 흔한 성씨 카드에도 붙었다 — 응답 isRareSurname(희귀 단계 3 이상)일 때만
+      tags: response.isRareSurname ? ["희귀 성씨"] : [],
       hanjaOptions: (c.hanjaOptions || []).map((opt, idx) => ({
-        char: opt,
-        meaning: opt,
+        ...parseHanjaOption(opt),
         isDefault: idx === 0,
       })),
       phonologyNotes: [],
+      // 성별 'none'·톤 'neutral'은 기본값이라 링크에서 뺀다. 시각은 날짜가 있을 때만(evaluateHref 규칙)
+      evaluateHref: evaluateHref(
+        {
+          lastName: response.lastName,
+          name,
+          birthDate: inputs.birthDate,
+          birthTime: inputs.birthTime,
+          gender: normalizeGender(inputs.gender),
+          tone: normalizeTone(inputs.tone),
+        },
+        { withBirth: true }
+      ),
     };
   });
 
+  // 배너의 '평균 발음 조화' — 응답 harmonyScore 의 평균(결과 화면은 후보가 1개 이상일 때만 그린다)
   const avgHarmony =
     uiCandidates.length > 0
       ? Math.round(
-          uiCandidates.reduce((s, c) => s + c.harmony, 0) / uiCandidates.length
+          uiCandidates.reduce((s, c) => s + c.harmonyScore, 0) /
+            uiCandidates.length
         )
       : 0;
 
-  // 성씨 분석 — backend phoneticAnalysis만 제공, 나머지는 디자인 기본값
+  // 성씨 분석 — 발음 분석 문장은 backend phoneticAnalysis 그대로. 고려사항·발음 패턴은 엔진이 실제로 하는 일만 적는다
+  // (RareSurnameEngine: GenerateNameCandidates 는 두 글자 이름만 만든다 — 외자 없음. ScoreCandidateCore 는 성씨 끝 글자와
+  //  이름 첫소리 연결·성+이름 초성 다양성·전체 리듬·음절 길이로 발음 조화를 매긴다). 옛 문구는 외자 이름 배치·종성 조절·
+  //  '이름이 튀지 않게 균형'·의미 선별처럼 엔진에 없는 일을 말했고, 흔한 성씨(김)에도 '단음 희귀형'이라 했다(2026-10-28)
+  const lastChar = response.lastName.slice(-1);
+  const totalSyllables = isCompound ? "네" : "세";
   const surnameAnalysis: RareSurnameAnalysis = {
     hanja: undefined,
     phoneticAnalysis:
       response.phoneticAnalysis || "성씨 발음 분석 정보를 불러올 수 없었어요.",
-    considerations: isCompound
-      ? [
-          "복성(複姓)은 두 음절이라 외자·두 음절 이름과 어울리는 결을 함께 살폈어요.",
-          "성씨 자체의 리듬이 강하면 이름의 종성을 가볍게 가져가는 게 좋아요.",
-        ]
-      : [
-          "단음 희귀 성씨는 흔하지 않은 만큼, 이름이 너무 튀지 않도록 균형을 맞췄어요.",
-        ],
-    pattern: isCompound ? "복성형 패턴" : "단음 희귀형 패턴",
+    considerations: [
+      `성씨 끝 글자 '${lastChar}'${josa(lastChar, "과/와")} 이름 첫 글자가 이어지는 소리를 점수에 넣었어요.`,
+      `성과 이름 ${totalSyllables} 글자의 첫소리(초성)가 서로 겹치지 않는지, 이어 읽을 때 리듬이 고른지도 함께 봤어요.`,
+    ],
+    pattern: isCompound ? "복성 · 두 글자 이름" : "단성 · 두 글자 이름",
     patternDetail: isCompound
-      ? "두 글자 성씨에 어울리도록 외자/두 음절 이름을 균형 있게 배치했어요."
-      : "단음 성씨와 결이 맞는 발음·의미를 우선 골랐어요.",
+      ? "두 글자 성 뒤에 두 글자 이름을 붙여 네 글자로 읽혀요(외자 이름은 만들지 않아요)."
+      : "한 글자 성 뒤에 두 글자 이름을 붙여 세 글자로 읽혀요.",
     strategies: [
       {
         key: "phonetic",
         label: "발음 균형",
-        detail: "성씨 발음과 충돌하지 않는 자음·모음 조합을 우선시했어요.",
+        detail: "성씨 끝소리와 이름 첫소리가 부드럽게 이어지고, 같은 자음이 잇달아 나오지 않는 이름을 우선했어요.",
       },
       {
-        key: "rarity",
-        label: "희귀도 매칭",
-        detail: "성씨의 결에 맞춰 너무 흔하지 않은 이름을 선별했어요.",
+        // 옛 '희귀도 매칭'(성씨에 맞춰 흔하지 않은 이름 선별)은 엔진에 없는 단계였다 — 엔진이 실제로 거르는 것만 적는다
+        // (RareSurnameEngine.GenerateNameCandidates: 유행 이름·금칙어·일반 낱말 충돌·부정 동음 제외)
+        key: "filter",
+        label: "유행 이름 제외",
+        detail:
+          "유행하는 이름, 금칙어나 일반 낱말과 겹치는 이름, 좋지 않은 말과 소리가 같은 이름은 후보에서 뺐어요.",
       },
     ],
     averageHarmony: avgHarmony,
@@ -135,7 +182,8 @@ function buildRareResultData(
 
   const rareCategory = {
     type: "rare-surname",
-    label: "희귀 성씨",
+    // 탭·배너 제목 — 김·이처럼 흔한 성씨(isRareSurname 거짓)에 '희귀 성씨'라고 붙이지 않는다(옆 칩이 '희귀도 (흔함)')
+    label: response.isRareSurname ? "희귀 성씨" : "성씨 맞춤",
     description: "성씨와의 발음 조화를 우선해 골랐어요.",
     engineUsed: "RareSurnameEngine",
     totalInCategory: uiCandidates.length,
@@ -144,6 +192,7 @@ function buildRareResultData(
 
   return {
     requestSummary,
+    isRareSurname: response.isRareSurname,
     rarityLevel: response.rarityLevel,
     surnameAnalysis,
     topPick: uiCandidates[0] ?? null,
@@ -166,11 +215,18 @@ export default function RareSurnamePage() {
   const [result, setResult] = useState<RareSurnameResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const birthDateMissing = error === BIRTH_DATE_MISSING;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!lastName.trim()) {
       setError("성씨를 입력해주세요.");
+      return;
+    }
+    // 생년월일 — 백엔드 필수(없으면 400 '생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다'). 날짜를 덜 채운 칸도 value 가 "" 다
+    if (!birthDate) {
+      setError(BIRTH_DATE_MISSING);
+      document.getElementById("birthDate")?.focus();
       return;
     }
     setLoading(true);
@@ -180,7 +236,7 @@ export default function RareSurnamePage() {
     try {
       const data = await rareSurname({
         lastName: lastName.trim(),
-        birthDate: birthDate || undefined,
+        birthDate,
         birthTime: birthTime || undefined,
         gender:
           gender === "none"
@@ -215,8 +271,12 @@ export default function RareSurnamePage() {
   // 결과 화면
   // ============================================================
   if (result && result.candidates.length > 0) {
-    const data = buildRareResultData(result, { birthDate, gender, tone });
-    void birthTime; // future: surface birthTime in result summary
+    const data = buildRareResultData(result, {
+      birthDate,
+      birthTime,
+      gender,
+      tone,
+    });
     return (
       <SmartResultRarePage
         data={data}
@@ -240,7 +300,7 @@ export default function RareSurnamePage() {
           복성과 희귀 성씨를 위한 작명
         </h1>
         <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
-          성씨의 결에 맞춰 발음과 의미를 정성껏 골라드릴게요
+          성씨와 이어지는 소리를 기준으로 두 글자 이름을 골라드릴게요
         </p>
       </header>
 
@@ -315,13 +375,26 @@ export default function RareSurnamePage() {
                 </Select>
               </div>
 
+              {/* 출생일 — 백엔드 필수(없으면 400). 표시는 옆 '(선택)'과 같은 꼴의 '(필수)'(/search·/required-char 와 같은 말).
+                  네이티브 required 를 걸면 브라우저 말풍선이 먼저 떠 아래 오류 상자의 안내가 나오지 않아 aria-required 로 알린다 */}
               <div className="space-y-2">
-                <Label htmlFor="birthDate">출생일</Label>
+                <Label htmlFor="birthDate">
+                  출생일{" "}
+                  <span className="text-[10px] text-muted-foreground">(필수)</span>
+                </Label>
                 <Input
                   id="birthDate"
                   type="date"
                   value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
+                  onChange={(e) => {
+                    setBirthDate(e.target.value);
+                    if (e.target.value && birthDateMissing) setError(null);
+                  }}
+                  aria-required="true"
+                  aria-invalid={birthDateMissing || undefined}
+                  aria-describedby={
+                    birthDateMissing ? "rare-surname-error" : undefined
+                  }
                 />
               </div>
 
@@ -371,7 +444,11 @@ export default function RareSurnamePage() {
 
       {/* Error */}
       {error && (
-        <div className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700">
+        <div
+          id="rare-surname-error"
+          role="alert"
+          className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700"
+        >
           {error}
         </div>
       )}

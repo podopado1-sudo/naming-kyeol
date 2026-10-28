@@ -39,25 +39,25 @@ export interface ParentSummary {
   };
 }
 
+// 점수 필드가 없다 — 부모 기반 응답(ParentBasedCandidate)은 이름·작명 모델·분류·설명만 준다. 옛 타입의 aesthetics·harmony·
+// finalScore·rarity 와 배너 averageScores 는 어댑터가 후보 순서·고정값 50으로 지어낸 숫자라 지웠다(2026-10-28).
+// 점수가 있던 자리(카드 오른쪽·첫 번째 후보)는 evaluateHref 로 실제 평가 화면에 보낸다
 export interface ParentUICandidate {
   fullName: string;
   hanjaName?: string;
   meaning: string;
-  aesthetics: number;
-  harmony: number;
-  finalScore: number;
-  rarity: number;
   tags: string[];
   reasons: string[];
   phonologyNotes: PhonologyNote[];
   namingModel?: NamingModelKey;
   parentLink?: { anchor?: string };
+  /** '이 이름 평가하기' — /evaluate?lastName=…&name=…(+입력한 생년월일·시각·성별·톤) */
+  evaluateHref: string;
 }
 
 export interface ParentBasedMeta {
   modelsAvailable: { key: NamingModelKey; label: string }[];
   analysisInputs: string[];
-  averageScores: { aesthetics: number; harmony: number; final: number };
 }
 
 export interface ParentUICategory {
@@ -211,51 +211,35 @@ function TagChipP({ label }: { label: string }) {
   );
 }
 
-function RarityBarP({ value }: { value: number }) {
-  const filled = Math.round(value / 20);
+/**
+ * '이 이름 평가하기' — 점수가 있던 자리(후보 카드 오른쪽·첫 번째 후보 카드)에 둔다. 부모 기반 응답에는 점수가 없어
+ * 옛 화면이 후보 순서로 지어낸 미학·조화·최종·희귀도 대신 실제 평가 화면으로 보낸다(2026-10-28).
+ * 새 탭으로 연다 — 후보 목록은 /parent-based 의 React 상태에만 있어 같은 탭으로 갔다 돌아오면 입력 폼으로 돌아가 후보를 잃는다.
+ * next/link 가 아니라 일반 <a> — /evaluate 는 정적 라우트라 클라이언트 라우터 캐시가 이전 ?name= 결과를 다시 내놓는다
+ * (app/favorites '다시 보기'와 같은 우회). 글자·↗ 는 teal 13·11px — 흰 카드(surface) 위 4.85:1. ↗ 는 새 탭 표시(aria-hidden —
+ * 접근 이름이 '(새 탭)'으로 말한다). 접근 이름은 보이는 글자로 시작하고(라벨-이름 일치) 후보 이름을 붙여 목록의 링크가 서로 구분된다
+ */
+function EvaluateLinkP({ href, fullName }: { href: string; fullName: string }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <span
-        style={{
-          fontFamily: "Inter, var(--font-sans)",
-          fontSize: 10,
-          letterSpacing: "0.12em",
-          color: "var(--color-text-3)",
-          fontWeight: 500,
-        }}
-      >
-        RARITY
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener"
+      aria-label={`이 이름 평가하기: ${fullName} (새 탭)`}
+      style={{
+        fontFamily: "var(--font-sans)",
+        fontSize: 13,
+        fontWeight: 500,
+        color: "var(--color-teal)",
+        textDecoration: "none",
+        whiteSpace: "nowrap",
+      }}
+    >
+      이 이름 평가하기
+      <span aria-hidden="true" style={{ fontSize: 11, marginLeft: 3 }}>
+        ↗
       </span>
-      <div style={{ display: "inline-flex", gap: 2 }}>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <span
-            key={i}
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: 2,
-              background:
-                i < filled ? "var(--color-gold)" : "var(--color-gold-50)",
-              border:
-                "1px solid " +
-                (i < filled
-                  ? "var(--color-gold-600)"
-                  : "var(--color-gold-100)"),
-            }}
-          />
-        ))}
-      </div>
-      <span
-        style={{
-          fontFamily: "Inter, var(--font-sans)",
-          fontSize: 11,
-          color: "var(--color-text-2)",
-          fontWeight: 500,
-        }}
-      >
-        ({value})
-      </span>
-    </div>
+    </a>
   );
 }
 
@@ -713,8 +697,10 @@ function ChildNode({
           border: "1px solid " + m.activeBorder,
         }}
       >
-        <span style={{ fontFamily: "var(--font-serif)" }}>{m.icon}</span> TOP
-        PICK · {m.label}
+        {/* 옛 'TOP PICK' — 부모 기반 응답은 순위를 매기지 않는다(엔진이 작명 모델별로 번갈아 담은 순서). 맨 위 이름을
+            최고점처럼 보이던 근거는 지어낸 점수뿐이라 '첫 번째 후보'로 (2026-10-28) */}
+        <span style={{ fontFamily: "var(--font-serif)" }}>{m.icon}</span>{" "}
+        첫 번째 후보 · {m.label}
       </div>
       <div
         style={{
@@ -790,23 +776,9 @@ function ChildNode({
           </span>
         </div>
       )}
-      <div
-        style={{
-          marginTop: 12,
-          fontFamily: "Inter, var(--font-sans)",
-          fontSize: 14,
-        }}
-      >
-        <b
-          style={{
-            fontWeight: 700,
-            fontSize: 22,
-            color: "var(--color-navy)",
-          }}
-        >
-          {top.finalScore}
-        </b>
-        <span style={{ color: "var(--color-text-3)", marginLeft: 6 }}>점</span>
+      {/* 옛 '92점' — 첫 번째 후보는 늘 92였다(지어낸 값). 그 자리에 실제 평가 링크 */}
+      <div style={{ marginTop: 12 }}>
+        <EvaluateLinkP href={top.evaluateHref} fullName={top.fullName} />
       </div>
       {model === "narrative" && keyword && (
         <div
@@ -978,8 +950,14 @@ function FamilyMappingBanner({
   );
 }
 
-function ParentHero({ data }: { data: ParentResultData }) {
-  const top = data.topPick;
+function ParentHero({
+  data,
+  top,
+}: {
+  data: ParentResultData;
+  /** 배너 아이 카드('첫 번째 후보')에 세울 후보 — 페이지가 아래 목록의 맨 앞(#1)을 넘긴다 */
+  top: ParentUICandidate | null;
+}) {
   if (!top) return null;
   const modelLabel = NAMING_MODELS[top.namingModel ?? "narrative"].label;
   return (
@@ -1199,37 +1177,6 @@ function BannerStat({
   );
 }
 
-function StatRow({
-  k,
-  v,
-  highlight,
-}: {
-  k: string;
-  v: number;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-      }}
-    >
-      <span style={{ color: "var(--color-text-2)" }}>{k}</span>
-      <b
-        style={{
-          fontWeight: highlight ? 700 : 600,
-          color: highlight
-            ? "var(--color-navy)"
-            : "var(--color-text)",
-        }}
-      >
-        {v}
-      </b>
-    </div>
-  );
-}
-
 function FamilyJoinIcon() {
   return (
     <span
@@ -1396,21 +1343,7 @@ function ParentBasedBanner({
             ))}
           </div>
         </BannerStat>
-
-        <BannerStat label="평균 점수">
-          <div
-            style={{
-              display: "grid",
-              gap: 4,
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 13,
-            }}
-          >
-            <StatRow k="미학" v={meta.averageScores.aesthetics} />
-            <StatRow k="조화" v={meta.averageScores.harmony} />
-            <StatRow k="최종" v={meta.averageScores.final} highlight />
-          </div>
-        </BannerStat>
+        {/* 옛 '평균 점수'(미학·조화·최종) 칸은 지어낸 후보 점수의 평균이라 뺐다(2026-10-28) */}
       </div>
     </div>
   );
@@ -1580,18 +1513,20 @@ function ParentCandidateCard({
         >
           #{index + 1}
         </span>
-        <RarityBarP value={c.rarity} />
       </div>
 
+      {/* 이름·뜻(왼쪽) + '이 이름 평가하기'(오른쪽, 옛 FINAL 점수 자리). 줄바꿈 flex — 폰 폭(카드 안 ~275px)에서는
+          링크가 이름 아래 오른쪽 끝으로 내려가 뜻 칸을 좁히지 않는다 */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto",
-          gap: 24,
+          display: "flex",
+          flexWrap: "wrap",
           alignItems: "center",
+          columnGap: 24,
+          rowGap: 10,
         }}
       >
-        <div>
+        <div style={{ flex: "1 1 200px", minWidth: 0 }}>
           <div
             style={{
               fontFamily: "var(--font-sans)",
@@ -1635,54 +1570,9 @@ function ParentCandidateCard({
               </span>
             </div>
           )}
-          <div
-            style={{
-              display: "flex",
-              gap: 14,
-              marginTop: 10,
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 12,
-              color: "var(--color-text-2)",
-            }}
-          >
-            <span>
-              미학{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.aesthetics}
-              </b>
-            </span>
-            <span>
-              조화{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.harmony}
-              </b>
-            </span>
-          </div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 36,
-              fontWeight: 700,
-              color: "var(--color-navy)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-            }}
-          >
-            {c.finalScore}
-          </div>
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 10,
-              color: "var(--color-text-3)",
-              marginTop: 4,
-              letterSpacing: "0.08em",
-            }}
-          >
-            FINAL
-          </div>
+        <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+          <EvaluateLinkP href={c.evaluateHref} fullName={c.fullName} />
         </div>
       </div>
 
@@ -1896,17 +1786,19 @@ function GeneralCandidateCard({
         >
           #{index + 1}
         </span>
-        <RarityBarP value={c.rarity} />
       </div>
+      {/* 이름·뜻(왼쪽) + '이 이름 평가하기'(오른쪽, 옛 FINAL 점수 자리). 줄바꿈 flex — 폰 폭(카드 안 ~275px)에서는
+          링크가 이름 아래 오른쪽 끝으로 내려가 뜻 칸을 좁히지 않는다 */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto",
-          gap: 24,
+          display: "flex",
+          flexWrap: "wrap",
           alignItems: "center",
+          columnGap: 24,
+          rowGap: 10,
         }}
       >
-        <div>
+        <div style={{ flex: "1 1 200px", minWidth: 0 }}>
           <div
             style={{
               fontFamily: "var(--font-sans)",
@@ -1950,54 +1842,9 @@ function GeneralCandidateCard({
               </span>
             </div>
           )}
-          <div
-            style={{
-              display: "flex",
-              gap: 14,
-              marginTop: 10,
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 12,
-              color: "var(--color-text-2)",
-            }}
-          >
-            <span>
-              미학{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.aesthetics}
-              </b>
-            </span>
-            <span>
-              조화{" "}
-              <b style={{ fontWeight: 600, color: "var(--color-text)" }}>
-                {c.harmony}
-              </b>
-            </span>
-          </div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 36,
-              fontWeight: 700,
-              color: "var(--color-navy)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-            }}
-          >
-            {c.finalScore}
-          </div>
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 10,
-              color: "var(--color-text-3)",
-              marginTop: 4,
-              letterSpacing: "0.08em",
-            }}
-          >
-            FINAL
-          </div>
+        <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+          <EvaluateLinkP href={c.evaluateHref} fullName={c.fullName} />
         </div>
       </div>
       {c.tags.length > 0 && (
@@ -2153,6 +2000,10 @@ export function SmartResultParentPage({
         (n) => !n.namingModel || activeModels.includes(n.namingModel)
       )
     : activeCat.names;
+  // 배너의 '첫 번째 후보'는 아래 목록 #1 과 같은 후보 — 작명 모델 토글로 걸러진 목록의 맨 앞. 옛 배너는 늘 응답 첫 후보
+  // (data.topPick)라 그 모델을 끄면 목록에 없는 이름이 '첫 번째 후보 · {모델}'로 남았다(2026-10-28). 모델을 모두 꺼
+  // 목록이 비면 응답 첫 후보
+  const heroTop = visibleNames[0] ?? data.topPick;
 
   return (
     <div
@@ -2226,7 +2077,11 @@ export function SmartResultParentPage({
       />
 
       <main>
-        {isParent ? <ParentHero data={data} /> : <GeneralHero data={data} />}
+        {isParent ? (
+          <ParentHero data={data} top={heroTop} />
+        ) : (
+          <GeneralHero data={data} />
+        )}
 
         <CategoryTabsP
           categories={data.categories}
