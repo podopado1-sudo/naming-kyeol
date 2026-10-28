@@ -37,7 +37,6 @@ export interface ParentState {
   fatherFirst: string;
   motherLast: string;
   motherFirst: string;
-  model: "auto" | "phonetic" | "semantic" | "narrative";
   story: string;
 }
 
@@ -322,44 +321,9 @@ export function ParentBlock({
         </div>
       </div>
 
-      <SPField label="작명 모델" style={{ marginTop: 18 }}>
-        <div style={{ display: "grid", gap: 8 }}>
-          <SPRadio
-            name="parent-model"
-            value="auto"
-            current={state.model}
-            onChange={(v) => set({ model: v as ParentState["model"] })}
-            label="자동 추천"
-            description="엔진이 최적 모델을 선택합니다"
-          />
-          <SPRadio
-            name="parent-model"
-            value="phonetic"
-            current={state.model}
-            onChange={(v) => set({ model: v as ParentState["model"] })}
-            label="음운 계승형"
-            description="부모 이름의 초성·음운 요소를 계승"
-          />
-          <SPRadio
-            name="parent-model"
-            value="semantic"
-            current={state.model}
-            onChange={(v) => set({ model: v as ParentState["model"] })}
-            label="의미 계승형"
-            description="부모 이름의 한자 의미를 계승"
-          />
-          <SPRadio
-            name="parent-model"
-            value="narrative"
-            current={state.model}
-            onChange={(v) => set({ model: v as ParentState["model"] })}
-            label="가족 서사형"
-            description="가족의 이야기·키워드 기반"
-          />
-        </div>
-      </SPField>
-
-      <SPField label="스토리 키워드" hint="(선택)">
+      {/* 옛 '작명 모델' 선택(자동·음운·의미·서사)은 엔진이 하지 않는 선택이라 지웠다(2026-10-28) — 방식은 입력에 맞춰 엔진이 고르고,
+          결과 카드마다 방식 이름(부모 이름 뜻 잇기·어머니 성씨 잇기 등 13종)을 붙인다. 이 컴포넌트는 지금 어느 라우트도 쓰지 않는다 */}
+      <SPField label="스토리 키워드" hint="(선택)" style={{ marginTop: 18 }}>
         <textarea
           value={state.story}
           onChange={(e) => set({ story: e.target.value.slice(0, 50) })}

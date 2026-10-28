@@ -39,7 +39,7 @@ public class CreateRecommendationRequestDto
     /// <summary>어머니 이름 (예: "고은")</summary>
     [StringLength(20, ErrorMessage = "어머니 이름은 20자 이내여야 합니다.")] public string? MotherName { get; set; }
 
-    /// <summary>스토리/가치관 키워드 (신해솜 모델용, 예: "신의 손", "예술적 재능")</summary>
+    /// <summary>스토리/가치관 키워드 (부모 기반 키워드 뜻 잇기용, 예: "신의 손", "희망") — 한글 낱말로만 뜻·소리를 찾는다</summary>
     [StringLength(50, ErrorMessage = "스토리 키워드는 50자 이내여야 합니다.")] public string? StoryKeyword { get; set; }
 
     /// <summary>선호 영어 이름 (이중 이름 생성용, 예: "Philip", "Sophia")</summary>

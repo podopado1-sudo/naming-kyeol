@@ -28,7 +28,7 @@ public class SmartRecommendationServiceTests
             new RankerEngine(),
             new ExplanationEngine(),
             parentBasedEngine,
-            new DualNameEngine(),
+            new DualNameEngine(fakeSaju, new YongshinCalculationService()),
             NullLogger<RecommendationService>.Instance);
 
         var twinNameService = new TwinNameService(
@@ -46,7 +46,7 @@ public class SmartRecommendationServiceTests
             parentBasedEngine,
             twinNameService,
             new RequiredCharEngine(fakeSaju),
-            new DualNameEngine());
+            new DualNameEngine(fakeSaju, new YongshinCalculationService()));
     }
 
     private static SmartRecommendationRequestDto CreateBasicRequest(string lastName = "김") => new()

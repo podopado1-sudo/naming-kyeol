@@ -24,7 +24,7 @@ function parseHanjaMeaning(
   hanjaMeaning: string,
   hanjaCharacters: string[]
 ): { char: string; meaning: string }[] {
-  // "붓 필 + 설 립" 형태 파싱
+  // "도울 필 + 낟알 립(입)" 형태 파싱 — 백엔드가 음절마다 독음 훈 하나(GlossForReading — '·'·'+' 없음)를 " + " 로 잇는다
   const parts = hanjaMeaning
     .split(/\s*[+·]\s*/)
     .map((s) => s.trim())

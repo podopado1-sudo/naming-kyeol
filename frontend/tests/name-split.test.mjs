@@ -12,6 +12,8 @@ import {
   COMPOUND_SURNAMES,
   ambiguousCompoundSurname,
   splitFullName,
+  splitParentName,
+  splitParentPair,
 } from "../src/lib/name-split.ts";
 
 /** [입력, 성, 이름] */
@@ -89,5 +91,47 @@ const HINT_CASES = [
 for (const [input, expected] of HINT_CASES) {
   test(`ambiguousCompoundSurname(${JSON.stringify(input)}) → ${expected}`, () => {
     assert.equal(ambiguousCompoundSurname(input), expected);
+  });
+}
+
+// /search 부모 이름 칸(성 포함 전체 이름) → 백엔드 FatherSurname·FatherName (2026-10-28) — [입력, 성, 이름]
+// 붙여 쓴 2자는 이름만(성 '민' + 이름 '호'로 자르지 않는다), 외자 부모는 띄어 쓴다
+const PARENT_CASES = [
+  ["김철수", "김", "철수"],
+  ["이영희", "이", "영희"],
+  [" 박지훈 ", "박", "지훈"],
+  ["남궁서연", "남궁", "서연"],
+  ["선우진", "선", "우진"],
+  // 붙여 쓴 3자 복성 — 백엔드 Utils/ParentNameSplit(옛 /search 꼴 방어)과 같은 표(2026-10-28: 백엔드가 남 + 궁민·제 + 갈량으로 나눠 설명이 거짓이 됐다)
+  ["남궁민", "남궁", "민"],
+  ["제갈량", "제갈", "량"],
+  ["황보라", "황", "보라"],
+  ["김 철", "김", "철"],
+  ["민호", "", "민호"],
+  ["김철", "", "김철"],
+  ["철", "", "철"],
+  ["", "", ""],
+];
+
+for (const [input, surname, name] of PARENT_CASES) {
+  test(`splitParentName(${JSON.stringify(input)}) → ${surname} + ${name}`, () => {
+    assert.deepEqual(splitParentName(input), { surname, name });
+  });
+}
+
+// 홈 Hero 한 칸 '부모 이름' → [아버지, 어머니]
+const PAIR_CASES = [
+  ["김민호 · 이수정", ["김민호", "이수정"]],
+  ["김민호·이수정", ["김민호", "이수정"]],
+  ["김민호, 이수정", ["김민호", "이수정"]],
+  ["김민호 이수정", ["김민호", "이수정"]],
+  ["김민호", ["김민호", ""]],
+  ["김 민호", ["김 민호", ""]],
+  ["", ["", ""]],
+];
+
+for (const [input, expected] of PAIR_CASES) {
+  test(`splitParentPair(${JSON.stringify(input)}) → ${expected.join(" / ")}`, () => {
+    assert.deepEqual(splitParentPair(input), expected);
   });
 }

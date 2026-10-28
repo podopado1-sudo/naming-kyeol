@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 import { smart } from "@/lib/api";
 import { ENGLISH_NAME_MAX, englishNameProblem } from "@/lib/english-name";
+import { splitParentName, splitParentPair } from "@/lib/name-split";
 import type {
   SmartRecommendationRequest,
   SmartRecommendationResponse,
@@ -114,9 +115,10 @@ function BabyNamingInner({
   );
   const [includeRequiredChar, setIncludeRequiredChar] = useState(false);
 
-  // conditional fields
-  const [fatherName, setFatherName] = useState(queryParentName);
-  const [motherName, setMotherName] = useState("");
+  // conditional fields — 홈 Hero 의 한 칸 '부모 이름'('김민호 · 이수정')은 아버지·어머니 두 칸으로 가른다
+  const [queryFather, queryMother] = splitParentPair(queryParentName);
+  const [fatherName, setFatherName] = useState(queryFather);
+  const [motherName, setMotherName] = useState(queryMother);
   const [englishName, setEnglishName] = useState(queryEnglishName);
   const englishNameIssue = englishNameProblem(englishName);
   const [requiredChar, setRequiredChar] = useState("");
@@ -164,6 +166,10 @@ function BabyNamingInner({
     // (includeTwin·englishName으로 보내 쌍둥이·영어 겸용 토글이 아무 효과 없던 전력).
     // 부모 이름·영어 이름·필수 글자는 켜기 플래그가 없고 값이 있으면 카테고리가 붙으므로
     // 토글이 꺼져 있으면 값을 보내지 않는 것으로 끈다.
+    // 부모 이름 칸은 성 포함 전체 이름('김철수') — 성과 이름으로 나눠 FatherSurname·FatherName 등으로 보낸다(2026-10-28).
+    // 옛 요청은 칸 값을 이름으로만 보내 부모 탭에 성 글자가 섞인 이름('수민김')이 나왔다
+    const father = includeParentBased ? splitParentName(fatherName) : { surname: "", name: "" };
+    const mother = includeParentBased ? splitParentName(motherName) : { surname: "", name: "" };
     const req: SmartRecommendationRequest = {
       lastName: lastName.trim(),
       // 백엔드가 소문자로 비교하므로 그대로 전달 (대문자로 변환 시 gender/tone 보너스 누락)
@@ -176,8 +182,10 @@ function BabyNamingInner({
       includeThreeSyllable,
       includeCreative,
       isTwin: includeTwin,
-      fatherName: includeParentBased && fatherName ? fatherName : undefined,
-      motherName: includeParentBased && motherName ? motherName : undefined,
+      fatherSurname: father.name && father.surname ? father.surname : undefined,
+      fatherName: father.name || undefined,
+      motherSurname: mother.name && mother.surname ? mother.surname : undefined,
+      motherName: mother.name || undefined,
       preferredEnglishName:
         includeDualName && englishName.trim() ? englishName.trim() : undefined,
       requiredChar:
@@ -434,6 +442,10 @@ function BabyNamingInner({
                         onChange={(e) => setMotherName(e.target.value)}
                       />
                     </div>
+                    {/* 칸 값은 성 포함 전체 이름 — lib/name-split.ts splitParentName 이 성과 이름을 나눈다(붙여 쓴 2자는 이름만으로 읽는다) */}
+                    <p className="text-[11px] text-muted-foreground sm:col-span-2">
+                      성까지 넣어 주세요. 외자 이름은 &lsquo;김 철&rsquo;처럼 띄어 써요.
+                    </p>
                   </div>
                 )}
 

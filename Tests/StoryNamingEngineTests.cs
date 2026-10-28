@@ -22,7 +22,8 @@ public class StoryNamingEngineTests
             DateTime.Now, "none", "neutral");
 
         Assert.True(candidates.Count > 0);
-        Assert.Contains(candidates, c => c.NamingModel == "신해솜모델");
+        // 방식 코드는 중립 값(2026-10-28 — 옛 '신해솜모델'은 사람 이름 꼴)
+        Assert.Contains(candidates, c => c.NamingModel is ParentNamingModels.KeywordMeaning or ParentNamingModels.KeywordSound);
     }
 
     [Fact]
@@ -33,11 +34,11 @@ public class StoryNamingEngineTests
             "신의 손",
             DateTime.Now, "none", "neutral");
 
-        // 성씨 "신"이 키워드 "신의 손"에 포함되어 성씨+이름 의미 연결 후보 기대
-        var surnameStory = candidates.Where(c =>
-            c.Description.Contains("성씨") || c.Description.Contains("연상")).ToList();
-        // 데이터 로드 여부에 따라 결과가 달라질 수 있음
-        Assert.NotNull(surnameStory);
+        // 2026-10-28: 키워드 안의 성씨를 떼고 남은 음절을 잇던 패턴('의손' 같은 조각)은 지웠다 — 키워드 경로 후보는
+        // 모두 그 키워드를 설명에 적고, 성씨 자동(키워드가 있으면 돌지 않는다) 설명은 나오지 않는다
+        Assert.NotEmpty(candidates);
+        Assert.All(candidates, c => Assert.Contains("신의 손", c.Description));
+        Assert.DoesNotContain(candidates, c => c.NamingModel == ParentNamingModels.SurnameMeaning);
     }
 
     [Fact]
@@ -48,8 +49,9 @@ public class StoryNamingEngineTests
             "하늘의 선물",
             DateTime.Now, "none", "neutral");
 
-        var reversed = candidates.Where(c => c.Description.Contains("역순")).ToList();
-        Assert.NotNull(reversed);
+        // 2026-10-28: 키워드 음절을 거꾸로 잇던 역순 패턴('늘하'·'물선')은 지웠다 — 실명이 아닌 조각만 냈다
+        Assert.DoesNotContain(candidates, c => c.Description.Contains("역순"));
+        Assert.All(candidates, c => Assert.Equal(2, c.Name.Length));
     }
 
     [Fact]
@@ -62,9 +64,10 @@ public class StoryNamingEngineTests
 
         foreach (var candidate in candidates)
         {
-            Assert.True(candidate.Name.Length >= 2);
+            // 2음절만(옛 단언은 2음절 이상) — 키워드만 준 입력은 키워드 경로만 돈다
+            Assert.Equal(2, candidate.Name.Length);
             Assert.True(candidate.Name.All(c => c >= 0xAC00 && c <= 0xD7A3));
-            Assert.Equal("신해솜모델", candidate.NamingModel);
+            Assert.Contains(candidate.NamingModel, new[] { ParentNamingModels.KeywordMeaning, ParentNamingModels.KeywordSound });
             Assert.False(string.IsNullOrEmpty(candidate.Description));
         }
     }

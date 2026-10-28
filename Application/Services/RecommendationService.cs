@@ -71,6 +71,13 @@ public class RecommendationService : IRecommendationService
             !string.IsNullOrEmpty(request.MotherSurname) || 
             !string.IsNullOrEmpty(request.StoryKeyword))
         {
+            // standard 랭킹에 합치기 전 부모 엔진과 같은 공통 품질 거르기(ParentBasedNamingEngine.QualityRejectReason) — 엔진 구현이 바뀌거나
+            // 다른 구현이 주입돼도 '이이화'(첫 글자 = 아이 성)·'아아'(반복)·금칙 글자·부모 이름 그대로가 1위 카드에 오르지 않게(2026-10-28)
+            var parentGivens = new[] { request.FatherName, request.MotherName }
+                .Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n!.Trim()).ToList();
+            var parentFulls = new[] { (request.FatherSurname, request.FatherName), (request.MotherSurname, request.MotherName) }
+                .Where(p => !string.IsNullOrWhiteSpace(p.Item1) && !string.IsNullOrWhiteSpace(p.Item2))
+                .Select(p => p.Item1!.Trim() + p.Item2!.Trim()).ToList();
             var parentCandidates = await _parentBasedNamingEngine.GenerateCandidatesAsync(
                 request.LastName,
                 request.FatherSurname,
@@ -80,10 +87,12 @@ public class RecommendationService : IRecommendationService
                 request.StoryKeyword,
                 birthDate,
                 request.Gender,
-                request.Tone);
+                request.Tone,
+                birthTime);
 
             foreach (var pc in parentCandidates)
             {
+                if (ParentBasedNamingEngine.QualityRejectReason(pc.Name, request.LastName, parentGivens, parentFulls) != null) continue;
                 parentBasedCandidates.Add(pc.Name);
                 parentBasedCandidateInfo[pc.Name] = (pc.NamingModel, pc.NameType);
             }
@@ -95,12 +104,14 @@ public class RecommendationService : IRecommendationService
 
         if (!string.IsNullOrEmpty(request.PreferredEnglishName))
         {
+            // 출생 시각까지 넘겨 엔진 글자 = 아래 ScoringService 배정(같은 이름·출생일·시각·성별) — 후보의 HanjaMeaning 이 카드 Hanja 의 뜻이 된다
             var dualCandidates = await _dualNameEngine.GenerateDualNamesAsync(
                 request.LastName,
                 request.PreferredEnglishName,
                 birthDate,
                 request.Gender,
-                request.Tone);
+                request.Tone,
+                birthTime);
 
             foreach (var dc in dualCandidates)
             {
@@ -198,6 +209,7 @@ public class RecommendationService : IRecommendationService
                 FinalScore = c.FinalScore,
                 Reasons = c.Reasons,
                 NamingModel = c.NamingModel,
+                NamingLabel = ParentNamingModels.LabelFor(c.NamingModel),
                 NameType = c.NameType,
                 RarityScore = c.RarityScore,
                 EnglishEquivalent = c.EnglishEquivalent,
@@ -227,7 +239,9 @@ public class RecommendationService : IRecommendationService
                 HarmonyScore = c.HarmonyScore,
                 FinalScore = c.FinalScore,
                 Reasons = c.Reasons,
-                NamingModel = c.NamingModel,
+                // 2026-10-28 전에 저장된 행은 옛 방식 값(사람 이름 꼴)이라 읽을 때 새 코드·라벨로 바꾼다
+                NamingModel = ParentNamingModels.Normalize(c.NamingModel),
+                NamingLabel = ParentNamingModels.LabelFor(c.NamingModel),
                 NameType = c.NameType,
                 RarityScore = c.RarityScore,
                 EnglishEquivalent = c.EnglishEquivalent,

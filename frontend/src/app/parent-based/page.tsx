@@ -22,6 +22,12 @@ import {
 import { parentBased } from "@/lib/api";
 import type { ParentBasedCandidate } from "@/lib/types";
 import {
+  KEYWORD_HANGUL_REQUIRED,
+  keywordHasHangul,
+  parentLineage,
+  parentTags,
+} from "@/lib/parent-naming";
+import {
   SmartResultParentPage,
   type NamingModelKey,
   type ParentResultData,
@@ -38,20 +44,18 @@ import { Footer } from "@/components/design/Footer";
 const BIRTH_DATE_REQUIRED = "생년월일을 입력해 주세요.";
 
 // ============================================================
-// 작명 모델 분류 — backend nameType 기반
+// 작명 모델 분류 — 방식 코드 → 칩 표(lib/parent-naming.ts), 모르는 코드만 nameType 부분 문자열
+// (옛 분류는 nameType 만 봐서 '가족 서사형'이 나올 수 없었다 — 2026-10-28)
 // ============================================================
 function detectNamingModel(c: ParentBasedCandidate): NamingModelKey {
-  const nt = c.nameType || "";
-  if (nt.includes("음운")) return "phonetic";
-  if (nt.includes("의미")) return "semantic";
-  return "narrative";
+  return parentLineage(c.namingModel, c.nameType);
 }
 
 // ============================================================
 // /evaluate 링크 — 후보 카드·첫 번째 후보의 '이 이름 평가하기'
 // ============================================================
 /**
- * 부모 기반 응답(ParentBasedCandidate)에는 점수가 없다 — name·namingModel·nameType·description 뿐.
+ * 부모 기반 응답(ParentBasedCandidate)에는 점수가 없다 — name·namingModel·namingLabel·nameType·description·hanja(뜻 잇기 방식만).
  * 옛 어댑터는 후보 순서(인덱스)로 미학·조화·최종을, 고정값 50으로 희귀도를 지어내 점수처럼 보였다(2026-10-28 제거).
  * 점수는 평가 화면이 실제로 계산하니 이 화면의 입력을 그대로 넘긴다. 값이 있는 것만 넣고 성별 'none' 은 넣지 않는다
  * (app/favorites buildEvaluateUrl·app/search handleCandidateDetail 과 같은 꼴). 출생 시각은 생년월일과 함께일 때만 —
@@ -92,14 +96,18 @@ function buildParentResultData(
 ): ParentResultData {
   // 요청에 보낸 성(trim)과 같은 값 — 이름(fullName)·평가 링크의 lastName 이 같은 성을 쓴다
   const surname = inputs.babySurname.trim();
+  // 태그는 사용자 라벨 하나(옛 태그는 nameType + 방식 값 — 실존 인물로 보일 수 있는 '…모델' 이름이 칩으로 떴다).
+  // hanjaName 은 설명이 풀이한 한자(뜻 잇기 방식만) — 첫 번째 후보가 의미 계승형이면 배너 주석(부모 글자 → 한자)이 이 글자로 그려진다.
+  // 옛 parentLink.anchor 는 방식 값이라 한자가 없어 주석이 늘 null 이었다.
+  // reasons 는 비운다 — 설명은 카드 뜻 줄(meaning)에 이미 나오고, 같은 문장이 '이름의 결' 펼침에 한 번 더 나왔다(2026-10-28)
   const uiCandidates: ParentUICandidate[] = candidates.map((c) => ({
     fullName: `${surname}${c.name}`,
+    hanjaName: c.hanja || undefined,
     meaning: c.description || "",
-    tags: c.nameType ? [c.nameType, c.namingModel] : [c.namingModel],
-    reasons: c.description ? [c.description] : [],
+    tags: parentTags(c.namingLabel),
+    reasons: [],
     phonologyNotes: [],
     namingModel: detectNamingModel(c),
-    parentLink: { anchor: c.namingModel },
     evaluateHref: buildEvaluateUrl(surname, c.name, inputs),
   }));
 
@@ -107,6 +115,9 @@ function buildParentResultData(
     `${inputs.fatherSurname || ""}${inputs.fatherName || ""}`.trim();
   const motherFull =
     `${inputs.motherSurname || ""}${inputs.motherName || ""}`.trim();
+  // 배너 강조 글자는 성을 뺀 이름에서 찾는다 — 전체 이름에서 찾으면 아버지 성 '김'이 계승 글자로 칠해졌다
+  const fatherGiven = (inputs.fatherName || "").replace(/\s+/g, "");
+  const motherGiven = (inputs.motherName || "").replace(/\s+/g, "");
 
   const requestSummary: ParentSummary = {
     lastName: surname,
@@ -124,8 +135,8 @@ function buildParentResultData(
           ? "부드러움"
           : "강함",
     parents: {
-      father: fatherFull ? { fullName: fatherFull } : undefined,
-      mother: motherFull ? { fullName: motherFull } : undefined,
+      father: fatherFull ? { fullName: fatherFull, givenName: fatherGiven || undefined } : undefined,
+      mother: motherFull ? { fullName: motherFull, givenName: motherGiven || undefined } : undefined,
       keywords: inputs.storyKeyword ? [inputs.storyKeyword] : [],
     },
   };
@@ -156,7 +167,7 @@ function buildParentResultData(
     label: "부모 기반",
     description:
       "부모님 이름·서사를 분석해 자녀에게 어울리는 결을 골라드렸어요.",
-    engineUsed: "ParentBasedNamingEngine",
+    // engineUsed 를 넘기지 않는다 — 배너가 'by ParentBasedNamingEngine'(내부 클래스 이름)을 찍었다(2026-10-28)
     totalInCategory: uiCandidates.length,
     names: uiCandidates,
     parentMeta: {
@@ -210,6 +221,11 @@ export default function ParentBasedPage() {
       setError(
         "부모 이름 또는 스토리 키워드 중 하나는 입력해주세요."
       );
+      return;
+    }
+    if (storyKeyword.trim() && !keywordHasHangul(storyKeyword)) {
+      setError(KEYWORD_HANGUL_REQUIRED);
+      document.getElementById("storyKeyword")?.focus();
       return;
     }
 
@@ -443,6 +459,11 @@ export default function ParentBasedPage() {
                   </div>
                 </div>
               </div>
+              {/* 엔진은 이름 칸을 성을 뺀 이름으로 읽는다 — 성 칸 없이 '김민수'를 넣으면 '김민수'가 이름이 된다
+                  (옛 엔진은 성 칸이 빈 3자 이름을 성으로 나눠 '한울림'을 '한' + '울림'으로 읽었다 — 2026-10-28 에 /search 옛 꼴에만 남김) */}
+              <p className="text-[10px] text-muted-foreground">
+                성은 왼쪽 칸에, 이름 칸에는 성을 뺀 이름만 적어 주세요.
+              </p>
             </fieldset>
 
             {/* 스토리 키워드 */}
@@ -455,10 +476,15 @@ export default function ParentBasedPage() {
                 placeholder="예: 사랑, 희망, 빛"
                 maxLength={50}
                 value={storyKeyword}
-                onChange={(e) => setStoryKeyword(e.target.value)}
+                onChange={(e) => {
+                  setStoryKeyword(e.target.value);
+                  if (error === KEYWORD_HANGUL_REQUIRED && keywordHasHangul(e.target.value)) setError(null);
+                }}
+                aria-invalid={error === KEYWORD_HANGUL_REQUIRED || undefined}
+                aria-describedby={error === KEYWORD_HANGUL_REQUIRED ? "parent-based-error" : undefined}
               />
               <p className="text-[10px] text-muted-foreground">
-                자녀에게 담고 싶은 의미·결을 한두 단어로 표현해주세요
+                자녀에게 담고 싶은 의미·결을 한글 한두 단어로 표현해주세요
               </p>
             </fieldset>
 
@@ -494,7 +520,7 @@ export default function ParentBasedPage() {
             추천 결과를 찾지 못했어요
           </h2>
           <p className="mb-6 text-sm text-muted-foreground">
-            조건을 바꿔서 다시 시도해주세요
+            다른 키워드나 부모 이름으로 다시 시도해주세요
           </p>
           <Button variant="outline" onClick={handleReset}>
             조건 바꿔서 다시 추천받기

@@ -1080,7 +1080,7 @@ public class OpsVerificationRegressionTests
         Assert.True(HanjaData.IsForbiddenNameHanja(maid));
         Assert.Equal(maid, HanjaData.FindByReading("비")[0].Character);
 
-        var engine = new DualNameEngine();
+        var engine = new DualNameEngine(_saju, _yongshin);
         var birth = new DateTime(2025, 1, 1);
         var all = new List<DualNameCandidate>();
         foreach (var english in EnglishKoreanNameMap.GetMappings().Select(m => m.English).Distinct())
@@ -1118,7 +1118,7 @@ public class OpsVerificationRegressionTests
         Assert.NotEmpty(koreans);
         Assert.All(koreans, k => Assert.Contains("에", k));
 
-        Assert.Empty(await new DualNameEngine().GenerateDualNamesAsync("김", english, new DateTime(2025, 1, 1), "female", "neutral"));
+        Assert.Empty(await new DualNameEngine(_saju, _yongshin).GenerateDualNamesAsync("김", english, new DateTime(2025, 1, 1), "female", "neutral"));
     }
 
     /// <summary>
@@ -1145,14 +1145,28 @@ public class OpsVerificationRegressionTests
 
         var n = FamilyNarrativeExtractor.ExtractMeaningFusionNarrative(father, mother);
 
-        // 기대값: 쓸 수 있는 글자의 뜻을 아버지 → 어머니, 음절·사전 순으로 놓고 첫 덕목 + 첫 자연(엔진과 같은 문장 규칙)
-        var virtue = usable.First(h => h.Category == "덕목").Meaning;
-        var nature = usable.First(h => h.Category == "자연").Meaning;
-        Assert.Equal($"부모님의 '{virtue}' 정신과 '{nature}'의 아름다움이 조화를 이루는 이름", n.NarrativeDescription);
-        Assert.DoesNotContain(n.CoreValues, v => forbiddenMeanings.Contains(v));
-        Assert.All(forbiddenMeanings, m => Assert.DoesNotContain($"'{m}'", n.NarrativeDescription));
+        // 2026-10-28 기대값을 고침: 옛 단언은 '쓸 수 있는 글자 전부에서 첫 덕목 + 첫 자연의 Meaning 전체'와 같은 문장을 요구했다 —
+        // 한 음절의 여러 글자 뜻이 섞이고(힘쓸 민, 어지러울 문…) 설명 뜻이 이름 한자와 맞지 않았다(37.6%). 지금은 음절마다 보이는 한자 한 자의
+        // 그 독음 훈 조각만 인용한다. 그래서 정확한 문장 대신 '인용된 조각은 모두 그 음절로 읽히는 쓸 수 있는 글자의 훈 조각'을 원자료로 따로 확인한다
+        static IEnumerable<string> Segs(string? meaning) => (meaning ?? "").Split(',', '/', ';', '·').Select(s => s.Trim()).Where(s => s.Length > 0);
+        var usableSegs = syllables
+            .SelectMany(s => UsableIndependent(s).SelectMany(h => Segs(h.Meaning)).Where(seg => seg.EndsWith(s) || seg.EndsWith($"({s})")))
+            .ToHashSet();
+        var forbiddenSegs = syllables
+            .SelectMany(s => HanjaData.FindByReading(s).Where(h => HanjaData.IsForbiddenNameHanja(h.Character)).SelectMany(h => Segs(h.Meaning)))
+            .Where(seg => !usableSegs.Contains(seg))
+            .ToList();
+        Assert.Contains(Segs(rawFirst.Meaning).First(), forbiddenSegs);
+
+        Assert.False(string.IsNullOrEmpty(n.NarrativeDescription));
+        var quoted = System.Text.RegularExpressions.Regex.Matches(n.NarrativeDescription, "'([^']+)'").Select(m => m.Groups[1].Value).ToList();
+        Assert.NotEmpty(quoted);
+        Assert.All(quoted, q => Assert.Contains(q, usableSegs));
+        Assert.All(n.CoreValues, v => Assert.Contains(v, usableSegs));
+        Assert.Equal(n.CoreValues.Count, n.CoreValues.Distinct().Count());
+        Assert.All(forbiddenSegs, seg => Assert.DoesNotContain($"'{seg}'", n.NarrativeDescription));
         Assert.All(n.SuggestedThemes, t =>
-            Assert.DoesNotContain(forbiddenMeanings, m => t.StartsWith(m + "과 ") || t.Contains("과 " + m + "의 ")));
+            Assert.DoesNotContain(forbiddenSegs, seg => t.StartsWith(seg + "과 ") || t.Contains("과 " + seg + "의 ")));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1457,7 +1471,7 @@ public class OpsVerificationRegressionTests
         var pool = new NamePoolEngine(_saju);
         var svc = new RecommendationService(new NameForm.Infrastructure.Repositories.InMemoryRecommendationRepository(), pool,
             new ScoringService(new AestheticEngine(), new HarmonyEngine(_saju, _yongshin), new RarityScoringEngine()),
-            new RankerEngine(), new ExplanationEngine(), new ParentBasedNamingEngine(pool, new NameReversalEngine()), new DualNameEngine(),
+            new RankerEngine(), new ExplanationEngine(), new ParentBasedNamingEngine(pool, new NameReversalEngine()), new DualNameEngine(_saju, _yongshin),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<RecommendationService>.Instance);
         var res = await svc.CreateRecommendationAsync(new CreateRecommendationRequestDto
         {

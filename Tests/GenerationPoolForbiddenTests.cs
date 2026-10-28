@@ -8,7 +8,7 @@ namespace NameForm.Tests;
 
 /// <summary>
 /// 생성 풀의 불용 글자 필터(2026-10-27) — 사전 전체(HanjaDictionary.Values)를 쓰던 생성 경로(ThreeSyllableEngine·TwinNameEngine·
-/// ParentBasedNamingEngine.GetFilteredHanja·FamilyNarrativeExtractor 세대 조합)가 /name·/evaluate 와 같은 술어(HanjaSelector.IsUsableNameHanja —
+/// ParentBasedNamingEngine.GetFilteredHanja·FamilyNarrativeExtractor 세대 조합 — 2026-10-28 부터 공통 글자 + 실명 짝 글자)가 /name·/evaluate 와 같은 술어(HanjaSelector.IsUsableNameHanja —
 /// 불용 아님 + 뜻 있음)로 거른다. 기대값은 테스트 안에서 IsForbiddenNameHanja + 뜻 유무로 따로 센다(검사 대상 술어를 쓰지 않는다).
 /// </summary>
 public class GenerationPoolForbiddenTests
@@ -71,13 +71,28 @@ public class GenerationPoolForbiddenTests
     }
 
     [Fact]
-    public void FamilyNarrative_GenerationalCombinations_UseUsableHanjaReadings()
+    public void FamilyNarrative_GenerationalCombinations_SharedSyllablePlusRealPartner()
     {
-        // 세대 연결 서사 — 부모 이름의 공통 글자(영) + 사전 앞쪽 글자 10개의 독음. 그 10개가 쓸 수 있는 글자 중에서만 나온다
+        // 세대 연결 서사(부모 공통 글자 잇기) — 2026-10-28 다시 씀. 옛 단언은 '공통 글자 영 + 사전 앞 10자 독음'(영춘·춘영·영추…)과
+        // 정확히 같기를 요구했다. 지금은 공통 글자 + 실명(출생신고 20명 이상) 짝 글자, 짝 글자는 쓸 수 있는 한자가 있는 음절,
+        // 시대 문구('현대/현대적/전통적')는 쓰지 않는다. 기대값(실명·쓸 수 있는 글자)은 원자료로 따로 센다
         var n = FamilyNarrativeExtractor.ExtractGenerationalBridgeNarrative("영수", "미영");
         Assert.NotEmpty(n.RecommendedHanja);
-        var readings = HanjaData.HanjaDictionary.Values.Where(UsableIndependent).Take(10).Select(h => h.Reading).ToList();
-        var expected = readings.SelectMany(r => new[] { "영" + r, r + "영" }).Distinct().Take(10).ToList();
-        Assert.Equal(expected, n.RecommendedHanja);
+        Assert.Equal(new[] { "영" }, n.CoreValues);
+        Assert.DoesNotContain("현대", n.NarrativeDescription);
+        Assert.DoesNotContain("전통", n.NarrativeDescription);
+        var oldDictionaryOrder = HanjaData.HanjaDictionary.Values.Where(UsableIndependent).Take(10).Select(h => h.Reading).ToHashSet();
+        Assert.All(n.RecommendedHanja, name =>
+        {
+            Assert.Equal(2, name.Length);
+            Assert.Equal(1, name.Count(ch => ch == '영'));
+            var partner = name.Replace("영", "");
+            Assert.NotNull(NameGenderData.NameCounts(name, 20));
+            Assert.Contains(HanjaData.FindByReading(partner), h => UsableIndependent(h));
+        });
+        // 사전 앞 10자 독음만으로 된 옛 조합이 통째로 남지 않는다
+        Assert.False(n.RecommendedHanja.All(name => oldDictionaryOrder.Contains(name.Replace("영", ""))), string.Join(",", n.RecommendedHanja));
+        // 공통 글자가 없으면 빈 서사
+        Assert.Empty(FamilyNarrativeExtractor.ExtractGenerationalBridgeNarrative("민수", "서연").RecommendedHanja);
     }
 }

@@ -86,3 +86,41 @@ export function ambiguousCompoundSurname(input: string): string | null {
   if (!SINGLE_SURNAME_FIRST_IN_THREE.has(head)) return null;
   return splitFullName(trimmed).lastName.length === 1 ? head : null;
 }
+
+/**
+ * /search 부모 이름 칸(성 포함 전체 이름 — placeholder '예: 김철수')을 성과 이름으로 — 백엔드 FatherSurname·FatherName 등으로 보낸다(2026-10-28).
+ * 옛 화면은 칸 값을 이름(fatherName)으로만 보내 부모 엔진이 '김민수'를 이름으로 읽었다 — 글자 잇기가 성 글자를 섞어
+ * '수민김'·'김수민'을 냈고, 성씨가 필요한 방식(어머니 성씨 잇기)은 돌지 않았다.
+ *
+ * 규칙 (위에서부터)
+ * 1. 빈 입력 → 성·이름 모두 빈 문자열
+ * 2. 띄어 쓰면 splitFullName 그대로("김 철" → 김 + 철 — 외자 이름은 이렇게 쓴다)
+ * 3. 붙여 쓴 2자 이하는 이름만 — '민호'를 성 '민' + 이름 '호'로 자르지 않는다(외자 부모 '김철'은 2번처럼 띄어 써야 성이 나뉜다)
+ * 4. 붙여 쓴 3자 이상은 splitFullName(복성 규칙 포함 — "남궁서연" → 남궁 + 서연)
+ */
+export function splitParentName(input: string): { surname: string; name: string } {
+  const trimmed = input.trim();
+  if (!trimmed) return { surname: "", name: "" };
+  if (/\s/.test(trimmed)) {
+    const parts = splitFullName(trimmed);
+    return { surname: parts.lastName, name: parts.name };
+  }
+  if (trimmed.length <= 2) return { surname: "", name: trimmed };
+  const parts = splitFullName(trimmed);
+  return { surname: parts.lastName, name: parts.name };
+}
+
+/**
+ * 홈 Hero 의 한 칸 '부모 이름'(placeholder '예: 김민호 · 이수정')을 아버지·어머니 두 칸 값으로 — ·, /, &, + 로 가른다.
+ * 가름표가 없으면 띄어 쓴 두 낱말이 모두 3자 이상일 때만 두 사람으로 본다("김민호 이수정"). 그 밖은 한 사람(아버지 칸).
+ * 옛 /search 는 한 칸 값을 아버지 이름 칸에 그대로 넣어 '김' + '민호·이수정'이 됐다.
+ */
+export function splitParentPair(input: string): [string, string] {
+  const trimmed = input.trim();
+  if (!trimmed) return ["", ""];
+  const bySeparator = trimmed.split(/\s*[·•,/&+]\s*/).filter((s) => s.length > 0);
+  if (bySeparator.length >= 2) return [bySeparator[0], bySeparator[1]];
+  const words = trimmed.split(/\s+/);
+  if (words.length === 2 && words.every((w) => w.length >= 3)) return [words[0], words[1]];
+  return [trimmed, ""];
+}

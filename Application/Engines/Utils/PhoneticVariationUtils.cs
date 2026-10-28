@@ -6,7 +6,8 @@ namespace NameForm.Application.Engines.Utils;
 public static class PhoneticVariationUtils
 {
     /// <summary>
-    /// 성씨 변주 매핑 (문소리 모델: 이 -> 리)
+    /// 성씨 변주 매핑 — 부모 기반 '어머니 성씨 소리 잇기'(mother-sound: 짝 글자 + 어머니 성의 끝 글자 꼴, 이 → 리).
+    /// 목록에 없는 성은 변주가 없다(ApplySurnameVariant 가 성 그대로 — 설명에 '변주'라 쓰지 않는다, 2026-10-28)
     /// </summary>
     private static readonly Dictionary<string, List<string>> SurnameVariants = new()
     {
@@ -39,6 +40,10 @@ public static class PhoneticVariationUtils
         return surname; // 변주가 없으면 원래 성씨 반환
     }
 
+    /// <summary>변주 꼴이 성과 다른지(이 → 리는 참, 윤 → 윤은 거짓)</summary>
+    public static bool HasVariant(string surname)
+        => !string.IsNullOrEmpty(surname) && ApplySurnameVariant(surname) != surname;
+
     /// <summary>
     /// 성씨의 모든 변주 반환
     /// </summary>
@@ -66,16 +71,5 @@ public static class PhoneticVariationUtils
 
         var variant = ApplySurnameVariant(surname);
         return baseName + variant;
-    }
-
-    /// <summary>
-    /// 이름 앞에 성씨를 붙일 때 (윤고은 모델)
-    /// </summary>
-    public static string PrependSurnameAsPrefix(string surname, string baseName)
-    {
-        if (string.IsNullOrEmpty(surname) || string.IsNullOrEmpty(baseName))
-            return baseName;
-
-        return surname + baseName;
     }
 }

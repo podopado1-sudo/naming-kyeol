@@ -749,8 +749,11 @@ export function DualResultPage({
               evaluateHref={evaluateUrl(context, c.koreanFull)}
             />
           ))}
-          {/* 평가 링크는 한글 이름만 넘긴다(/evaluate 는 URL 로 한자를 받지 않는다). 카드 한자는 이중 이름 엔진이 고른 것이고
-              평가 화면은 ScoringService 가 다시 배정하므로(링크에 출생일이 실려 용신 배정) 다를 수 있다 */}
+          {/* 평가 링크는 한글 이름만 넘긴다(/evaluate 는 URL 로 한자를 받지 않는다). 2026-10-28 부터 카드 한자는 이중 이름 엔진이
+              요청의 출생일·출생 시각·성별로 /evaluate 와 같은 용신 배정(HanjaSelector.Select)을 해 고른 글자라, 링크(같은 조건을 싣는다)의
+              평가 화면도 같은 한자로 점수를 매긴다 — 옛 안내 '카드의 한자와 다를 수 있어요'는 지웠다(백엔드
+              DualNameEngineTests.DualName_Hanja_SameAsEvaluateAssignedHanja_AllMappings 가 일치를 지킨다).
+              같은 영어 이름도 생년월일에 따라 한자가 달라지는 이유를 한 줄로 남긴다 */}
           <p
             style={{
               fontSize: 12,
@@ -759,9 +762,8 @@ export function DualResultPage({
               margin: 0,
             }}
           >
-            ‘이 이름 평가하기’는 한글 이름으로 평가해요. 평가 화면이 한자를
-            다시 골라 점수를 매기니 카드의 한자와 다를 수 있어요 — 점수에 쓴
-            한자는 평가 화면의 ‘의미 메모’에 나와요.
+            카드의 한자는 입력한 생년월일·출생 시각·성별에 맞춰 고른 글자예요.
+            ‘이 이름 평가하기’도 같은 조건으로 같은 한자를 골라 점수를 매겨요.
           </p>
         </div>
 

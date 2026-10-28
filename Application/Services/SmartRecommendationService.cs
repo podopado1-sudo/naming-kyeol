@@ -1,6 +1,7 @@
 using System.Globalization;
 using NameForm.Application.DTOs;
 using NameForm.Application.Engines;
+using NameForm.Application.Engines.Utils;
 
 namespace NameForm.Application.Services;
 
@@ -72,6 +73,10 @@ public class SmartRecommendationService : ISmartRecommendationService
         // [항상 실행] Task A: Standard 추천
         tasks.Add(RunSafeAsync(async () =>
         {
+            // 부모 성·이름·키워드는 standard 요청에 넘기지 않는다(2026-10-28 — 정책 결정 전까지 옛 standard·TopPick 유지).
+            // RecommendationService 는 부모 성·키워드가 있으면 부모 후보를 standard 랭킹에 합친다. 옛 /search 는 부모 칸 값을 이름으로만 보내
+            // 합류가 한 번도 켜지지 않았는데, 성을 나눠 보내자 standard 상위 10의 33%·1위와 TopPick 의 46%(72요청)가 부모 후보로 바뀌었다
+            // (김/김민수/이서연 → 예리 叡李·하리 夏李 …). 부모 후보는 부모 탭에만 — 합칠지는 사용자 결정 뒤에 켠다(CLAUDE.md 알려진 이슈)
             var standardRequest = new CreateRecommendationRequestDto
             {
                 LastName = lastName,
@@ -79,11 +84,6 @@ public class SmartRecommendationService : ISmartRecommendationService
                 BirthTime = request.BirthTime,
                 Gender = gender,
                 Tone = tone,
-                FatherSurname = request.FatherSurname,
-                FatherName = request.FatherName,
-                MotherSurname = request.MotherSurname,
-                MotherName = request.MotherName,
-                StoryKeyword = request.StoryKeyword,
                 PreferredEnglishName = request.PreferredEnglishName,
                 PreferredMeanings = request.PreferredMeanings
             };
@@ -188,23 +188,35 @@ public class SmartRecommendationService : ISmartRecommendationService
         {
             tasks.Add(RunSafeAsync(async () =>
             {
+                // 성 칸 없이 성 포함 전체 이름('김민수')을 보낸 옛 /search 꼴(배포 전 캐시 포함)은 프런트 splitParentName 과 같은 규칙으로 나눈다 —
+                // 지금 화면은 나눠 보내므로 성 칸이 있어 그대로 지난다
+                var (fatherSurname, fatherName) = ParentNameSplit.SplitIfFullName(request.FatherSurname, request.FatherName);
+                var (motherSurname, motherName) = ParentNameSplit.SplitIfFullName(request.MotherSurname, request.MotherName);
+                // 출생 시각까지 넘겨 부모 이름 뜻 잇기 카드 한자 = 같은 조건의 /evaluate 배정
+                TimeSpan? parentBirthTime = null;
+                if (!string.IsNullOrEmpty(request.BirthTime) && TimeSpan.TryParse(request.BirthTime, out var parsedParentBirthTime))
+                    parentBirthTime = parsedParentBirthTime;
                 var candidates = await _parentBasedEngine.GenerateCandidatesAsync(
                     lastName,
-                    request.FatherSurname,
-                    request.FatherName,
-                    request.MotherSurname,
-                    request.MotherName,
+                    fatherSurname,
+                    fatherName,
+                    motherSurname,
+                    motherName,
                     request.StoryKeyword,
                     birthDate,
                     gender,
-                    tone);
+                    tone,
+                    parentBirthTime);
+                // 태그는 사용자 라벨 하나(옛 태그는 방식 코드 자리에 사람 이름 꼴 값 + '의미중심'이 붙었다). 한자는 설명이 풀이한 글자가 있을 때만
+                // (뜻 잇기 방식) — 없으면 null 이라 카드가 한글 이름을 그린다
                 var names = candidates.Select(c => new SmartNameCandidateDto
                 {
                     Name = c.Name,
                     FullName = lastName + c.Name,
                     Meaning = c.Description,
+                    Hanja = c.Hanja,
                     Score = null,
-                    Tags = new List<string> { c.NamingModel, c.NameType }
+                    Tags = string.IsNullOrEmpty(c.NamingLabel) ? new List<string>() : new List<string> { c.NamingLabel }
                 }).ToList();
 
                 AddCategory(categoryResults, lockObj, "parent-based", "부모 기반 이름", "ParentBasedNamingEngine", names);
@@ -287,16 +299,25 @@ public class SmartRecommendationService : ISmartRecommendationService
         {
             tasks.Add(RunSafeAsync(async () =>
             {
+                // 출생 시각도 넘긴다 — standard 탭(위 Task A)과 같은 용신 배정이라 같은 이름은 두 탭에서 같은 한자다(2026-10-28)
+                TimeSpan? birthTime = null;
+                if (!string.IsNullOrEmpty(request.BirthTime) &&
+                    TimeSpan.TryParse(request.BirthTime, out var parsedBirthTime))
+                {
+                    birthTime = parsedBirthTime;
+                }
                 var candidates = await _dualNameEngine.GenerateDualNamesAsync(
-                    lastName, request.PreferredEnglishName, birthDate, gender, tone);
+                    lastName, request.PreferredEnglishName, birthDate, gender, tone, birthTime);
+                // 카드 한자는 Hanja 필드로(SmartResult 가 세리프로 그린다 — 비어 있으면 한글 이름으로 대신 그렸다). 옛 카드는 한자 글자를
+                // 태그 칩으로만 실어 같은 글자가 두 번 보이게 되므로 태그는 EN 하나만 남긴다
                 var names = candidates.Select(c => new SmartNameCandidateDto
                 {
                     Name = c.KoreanName,
                     FullName = lastName + c.KoreanName,
                     Meaning = c.HanjaMeaning,
+                    Hanja = string.Concat(c.HanjaCharacters),
                     Score = null,
                     Tags = new List<string> { $"EN:{c.EnglishEquivalent}" }
-                        .Concat(c.HanjaCharacters).ToList()
                 }).ToList();
 
                 AddCategory(categoryResults, lockObj, "dual-name", "영어+한자 이름", "DualNameEngine", names);
@@ -491,9 +512,10 @@ public class SmartRecommendationService : ISmartRecommendationService
     private static List<string> BuildStandardTags(CandidateDto candidate)
     {
         var tags = new List<string>();
-        if (!string.IsNullOrEmpty(candidate.NamingModel))
-            tags.Add(candidate.NamingModel);
-        if (!string.IsNullOrEmpty(candidate.NameType))
+        // 부모 기반 후보는 사용자 라벨만(방식 코드·계승 꼴은 태그로 내지 않는다 — 2026-10-28), 그 밖의 후보는 옛 그대로 이름 분류
+        if (!string.IsNullOrEmpty(candidate.NamingLabel))
+            tags.Add(candidate.NamingLabel);
+        else if (!string.IsNullOrEmpty(candidate.NameType) && string.IsNullOrEmpty(candidate.NamingModel))
             tags.Add(candidate.NameType);
         if (candidate.RarityScore > 0)
             tags.Add($"희귀도:{candidate.RarityScore}");

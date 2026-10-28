@@ -42,8 +42,9 @@ public class AestheticEngine : IAestheticEngine
         ["neutral"] = new ToneProfile { BonusPoints = 0 }
     };
 
-    // 유행 이름 패턴 (감점) — 2020~2025 통계청 기준 확장
-    private readonly HashSet<string> _trendyNames = new()
+    // 유행 이름 패턴 (감점) — 2020~2025 통계청 기준 확장. 부모 기반 엔진의 실명 짝 글자 원천(RealNamePartners)도 이 목록을
+    // 뒤로 보낸다(IsTrendyName — 2026-10-28) — 정적 집합이라 인스턴스마다 같다
+    private static readonly HashSet<string> TrendyNames = new()
     {
         // 기존 14개
         "서준", "민준", "하준", "지호", "준서", "도윤", "예준",
@@ -74,6 +75,22 @@ public class AestheticEngine : IAestheticEngine
     {
         _negativePatterns = NegativePatternLoader.Data;
     }
+
+    /// <summary>미학 감점(−5)을 받는 유행 이름인지 — 부모 기반 엔진의 실명 짝 글자 순서가 같은 목록을 쓴다.</summary>
+    public static bool IsTrendyName(string name) => TrendyNames.Contains(name);
+
+    /// <summary>
+    /// 이름(성 제외)의 부정 음절 감점(0~30) — 미학 점수의 '부정적 음절 패턴'과 같은 값. 부모 기반 엔진의 공통 품질 거르기가
+    /// 0보다 크면 후보에서 뺀다(2026-10-28 — 옛 엔진은 자체 8단어만 봤다).
+    /// </summary>
+    public static int NegativeSyllablePenalty(string name)
+        => EvaluateNegativeSyllablePatterns(NegativePatternLoader.Data, name);
+
+    /// <summary>
+    /// 성+이름 전체의 부정 패턴 감점(0~50) — 미학 점수의 '전체 이름(성+이름) 평가'와 같은 값(부정 용언·구·동음·형태소·성명 조합).
+    /// </summary>
+    public static int FullNamePatternPenalty(string fullName)
+        => EvaluateFullNamePatterns(NegativePatternLoader.Data, fullName);
 
     /// <summary>
     /// 기본 점수 계산 (하위 호환성 — tone만)
@@ -211,7 +228,7 @@ public class AestheticEngine : IAestheticEngine
         }
 
         // 유행 이름 감점 (5점 — NeutralityScore에서 이미 세대중립성 감점이 반영되므로 이중 처벌 방지)
-        if (_trendyNames.Contains(name))
+        if (TrendyNames.Contains(name))
         {
             penaltyTotal += 5;
             breakdown.Notes.Add("유행 이름 감점");
@@ -598,10 +615,13 @@ public class AestheticEngine : IAestheticEngine
     /// 부정적 음절 패턴 평가
     /// </summary>
     private int EvaluateNegativeSyllablePatterns(string name)
+        => EvaluateNegativeSyllablePatterns(_negativePatterns, name);
+
+    private static int EvaluateNegativeSyllablePatterns(NegativePatternLoader.NegativePatternData patterns, string name)
     {
         int penalty = 0;
 
-        foreach (var syllable in _negativePatterns.HighPenaltySyllables)
+        foreach (var syllable in patterns.HighPenaltySyllables)
         {
             if (name.Contains(syllable))
             {
@@ -609,7 +629,7 @@ public class AestheticEngine : IAestheticEngine
             }
         }
 
-        foreach (var syllable in _negativePatterns.MediumPenaltySyllables)
+        foreach (var syllable in patterns.MediumPenaltySyllables)
         {
             if (name.Contains(syllable))
             {
@@ -617,7 +637,7 @@ public class AestheticEngine : IAestheticEngine
             }
         }
 
-        foreach (var combination in _negativePatterns.NegativeCombinations)
+        foreach (var combination in patterns.NegativeCombinations)
         {
             if (MatchesPattern(name, combination.Pattern))
             {
@@ -668,10 +688,13 @@ public class AestheticEngine : IAestheticEngine
     }
 
     private int EvaluateFullNamePatterns(string fullName)
+        => EvaluateFullNamePatterns(_negativePatterns, fullName);
+
+    private static int EvaluateFullNamePatterns(NegativePatternLoader.NegativePatternData patterns, string fullName)
     {
         int penalty = 0;
 
-        foreach (var word in _negativePatterns.NegativeVerbsAndAdjectives)
+        foreach (var word in patterns.NegativeVerbsAndAdjectives)
         {
             if (fullName.Contains(word))
             {
@@ -679,7 +702,7 @@ public class AestheticEngine : IAestheticEngine
             }
         }
 
-        foreach (var phrase in _negativePatterns.NegativePhrases)
+        foreach (var phrase in patterns.NegativePhrases)
         {
             if (fullName.Contains(phrase))
             {
@@ -687,7 +710,7 @@ public class AestheticEngine : IAestheticEngine
             }
         }
 
-        foreach (var homophone in _negativePatterns.HomophoneNegative)
+        foreach (var homophone in patterns.HomophoneNegative)
         {
             if (fullName.Contains(homophone.Sound))
             {
@@ -722,9 +745,9 @@ public class AestheticEngine : IAestheticEngine
             }
         }
 
-        if (_negativePatterns.MorphemePatterns != null)
+        if (patterns.MorphemePatterns != null)
         {
-            foreach (var morphemePattern in _negativePatterns.MorphemePatterns)
+            foreach (var morphemePattern in patterns.MorphemePatterns)
             {
                 if (MorphemeAnalyzer.MatchesMorphemePattern(fullName, morphemePattern.Pattern))
                 {
@@ -739,7 +762,7 @@ public class AestheticEngine : IAestheticEngine
     /// <summary>
     /// 패턴 매칭 (간단한 와일드카드 지원)
     /// </summary>
-    private bool MatchesPattern(string text, string pattern)
+    private static bool MatchesPattern(string text, string pattern)
     {
         if (pattern.EndsWith("*"))
         {

@@ -13,6 +13,7 @@
 import Link from "next/link";
 import { useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { PhonologyNote } from "@/lib/types";
+import { familyMeaningRoles } from "@/lib/parent-naming";
 
 // ============================================================
 // 데이터 타입 (Parent variant 전용)
@@ -21,6 +22,8 @@ export type NamingModelKey = "phonetic" | "semantic" | "narrative";
 
 export interface ParentPerson {
   fullName: string;
+  /** 성을 뺀 이름 — 배너가 계승 글자를 이 안에서 찾는다(전체 이름에서 찾으면 성 글자가 칠해진다) */
+  givenName?: string;
   hanjaName?: string;
 }
 
@@ -50,7 +53,6 @@ export interface ParentUICandidate {
   reasons: string[];
   phonologyNotes: PhonologyNote[];
   namingModel?: NamingModelKey;
-  parentLink?: { anchor?: string };
   /** '이 이름 평가하기' — /evaluate?lastName=…&name=…(+입력한 생년월일·시각·성별·톤) */
   evaluateHref: string;
 }
@@ -458,26 +460,37 @@ interface Bridge {
 
 function computeBridge(
   top: ParentUICandidate,
-  parents: ParentSummary["parents"]
+  parents: ParentSummary["parents"],
+  lastName: string
 ): Bridge {
+  // 아이 이름(성 제외) — 옛 slice(1) 은 복성 아이의 둘째 성 글자를, 옛 3~4음절 이름('김김춘리')에서는 아버지 성을 계승 글자로 잡았다
+  const given = lastName && top.fullName.startsWith(lastName)
+    ? top.fullName.slice(lastName.length)
+    : top.fullName.slice(1);
+  const childChars = given.split("");
+  const fGiven = parents.father?.givenName ?? "";
+  const mGiven = parents.mother?.givenName ?? "";
   if (top.namingModel === "phonetic") {
-    const childChars = top.fullName.slice(1).split("");
+    // 부모 이름(성 제외) 글자를 먼저 찾고, 없을 때만 전체 이름(어머니 성씨 잇기의 성 글자)
     const f = parents.father?.fullName ?? "";
     const m = parents.mother?.fullName ?? "";
     let fatherChar: string | null = null;
     let motherChar: string | null = null;
     let childChar: string | null = null;
-    for (const ch of childChars) {
-      if (f.includes(ch)) {
-        fatherChar = ch;
-        childChar = ch;
-        break;
+    for (const [fs, ms] of [[fGiven, mGiven], [f, m]]) {
+      for (const ch of childChars) {
+        if (fs && fs.includes(ch)) {
+          fatherChar = ch;
+          childChar = ch;
+          break;
+        }
+        if (ms && ms.includes(ch)) {
+          motherChar = ch;
+          childChar = ch;
+          break;
+        }
       }
-      if (m.includes(ch)) {
-        motherChar = ch;
-        childChar = ch;
-        break;
-      }
+      if (childChar) break;
     }
     return {
       color: "var(--color-teal)",
@@ -492,36 +505,52 @@ function computeBridge(
     };
   }
   if (top.namingModel === "semantic") {
-    const anchor = top.parentLink?.anchor || "";
-    const m = anchor.match(/([一-鿿])/);
-    const parentHanja = m ? m[1] : null;
-    const fatherFull = parents.father?.fullName ?? "";
-    const fromFather =
-      anchor.includes("아빠") || (fatherFull && anchor.includes(fatherFull));
-    const childHanjaChar = top.hanjaName ? top.hanjaName.slice(-1) : null;
+    // 부모 이름 뜻 잇기 — 아이 이름 음절마다 그 음절을 준 부모와 백엔드가 풀이한 한자(hanjaName, 음절과 같은 길이).
+    // 옛 코드는 방식 이름(anchor)에서 한자를 찾아 늘 null 이었다(2026-10-28)
+    const hanja = top.hanjaName && top.hanjaName.length === childChars.length ? top.hanjaName.split("") : [];
+    let fatherChar: string | null = null;
+    let motherChar: string | null = null;
+    let fatherHanja: string | null = null;
+    let motherHanja: string | null = null;
+    const parts: string[] = [];
+    // 음절을 준 부모는 설명 문장에서 읽는다 — 이름 칸에서 아버지 먼저 찾으면 두 부모 이름에 다 있는 음절(민수 + 수진 → '수민'의 '수')을
+    // 설명("어머니 이름의 '수'…")과 반대로 아버지 글자로 칠했다(2026-10-28 2차 검증)
+    const roles = familyMeaningRoles(top.meaning, childChars, fGiven, mGiven);
+    childChars.forEach((ch, i) => {
+      if (!hanja[i]) return;
+      if (!fatherChar && roles[i] === "father") {
+        fatherChar = ch;
+        fatherHanja = hanja[i];
+        parts.push(`${ch}(${hanja[i]})`);
+      } else if (!motherChar && roles[i] === "mother") {
+        motherChar = ch;
+        motherHanja = hanja[i];
+        parts.push(`${ch}(${hanja[i]})`);
+      }
+    });
     return {
       // 부모 이름 강조 글자(13~32px, gold-50 바탕) — 옛 gold-600 은 gold-50 위 2.55:1 이라 골드 글자 토큰(2026-10-26 팔레트 #2).
       // 연결선·화살표·주석 알약 테두리는 옛 gold-600 그대로(비텍스트 — 짙은 갈색 선이 되지 않게, 같은 날 보완)
       color: "var(--color-gold-800)",
       lineColor: "var(--color-gold-600)",
-      fatherChar: null,
-      motherChar: null,
+      fatherChar,
+      motherChar,
       childChar: null,
-      fatherHanja: fromFather ? parentHanja : null,
-      motherHanja: !fromFather ? parentHanja : null,
-      childHanja: childHanjaChar,
-      annotation:
-        parentHanja && childHanjaChar
-          ? `${parentHanja} → ${childHanjaChar} · 의미축 잇기`
-          : null,
+      fatherHanja,
+      motherHanja,
+      childHanja: null,
+      // 예: "민(敏) + 서(書) · 의미축 잇기" — 부모 이름의 그 음절을 어떤 한자로 풀었는지
+      annotation: parts.length > 0 ? `${parts.join(" + ")} · 의미축 잇기` : null,
     };
   }
+  // 가족 서사형 — 두 부모 이름에 함께 있는 글자(부모 공통 글자 잇기)가 아이 이름에 있으면 셋 다 그 글자를 칠한다
+  const shared = childChars.find((ch) => fGiven.includes(ch) && mGiven.includes(ch)) ?? null;
   return {
     color: "var(--color-navy)",
     lineColor: "var(--color-navy)",
-    fatherChar: null,
-    motherChar: null,
-    childChar: null,
+    fatherChar: shared,
+    motherChar: shared,
+    childChar: shared,
     fatherHanja: null,
     motherHanja: null,
     childHanja: null,
@@ -864,7 +893,7 @@ function FamilyMappingBanner({
   top: ParentUICandidate;
 }) {
   const parents = data.requestSummary.parents;
-  const bridge = computeBridge(top, parents);
+  const bridge = computeBridge(top, parents, data.requestSummary.lastName);
   // 부모 이름은 선택 입력이다 — 폼은 아빠·엄마·키워드 중 하나만 있으면 받고 백엔드도 후보를 낸다(키워드만·한쪽 부모만).
   // 둘 다면 옛 2열 + 곡선 두 줄 그대로, 한 명이면 그 사람만 가운데 + 곧은 점선 하나, 없으면 부모 줄·연결선·70px 간격 없이 아이 카드만.
   // 옛 화면은 늘 2열·곡선 두 줄이라 키워드만이면 빈 띠와 허공에서 나오는 점선, 엄마만이면 아빠 자리(왼쪽 열)에 엄마가 섰다 (2026-10-27)
@@ -1260,18 +1289,7 @@ function ParentBasedBanner({
             {cat.label}
           </div>
         </div>
-        {cat.engineUsed && (
-          <div
-            style={{
-              fontFamily: "Inter, var(--font-sans)",
-              fontSize: 11,
-              color: "var(--color-text-3)",
-              letterSpacing: "0.04em",
-            }}
-          >
-            by {cat.engineUsed}
-          </div>
-        )}
+        {/* 내부 엔진 클래스 이름(by {cat.engineUsed})은 그리지 않는다 — 사용자에게 뜻이 없고 구현 이름이 드러난다(2026-10-28) */}
       </div>
 
       <div
@@ -1418,18 +1436,7 @@ function GeneralCategoryBanner({ cat }: { cat: ParentUICategory }) {
           )}
         </div>
       </div>
-      {cat.engineUsed && (
-        <div
-          style={{
-            fontFamily: "Inter, var(--font-sans)",
-            fontSize: 11,
-            color: "var(--color-text-3)",
-            letterSpacing: "0.04em",
-          }}
-        >
-          by {cat.engineUsed}
-        </div>
-      )}
+      {/* 내부 엔진 클래스 이름(by {cat.engineUsed})은 그리지 않는다 — 사용자에게 뜻이 없고 구현 이름이 드러난다(2026-10-28) */}
     </div>
   );
 }

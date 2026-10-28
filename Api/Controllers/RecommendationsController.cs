@@ -643,6 +643,14 @@ public class RecommendationsController : ControllerBase
                 request.LastName, request.Gender, request.Tone);
             await _usageTracker.TrackAsync("endpoint", "parent-based");
 
+            // 출생 시각 — 부모 이름 뜻 잇기의 음절 한자를 '이 이름 평가하기'(/evaluate — 같은 생년월일·시각·성별)와 같은 용신 배정으로 고른다
+            TimeSpan? birthTime = null;
+            if (!string.IsNullOrEmpty(request.BirthTime) &&
+                TimeSpan.TryParse(request.BirthTime, out var parsedBirthTime))
+            {
+                birthTime = parsedBirthTime;
+            }
+
             var candidates = await _parentBasedNamingEngine.GenerateCandidatesAsync(
                 request.LastName,
                 request.FatherSurname,
@@ -652,7 +660,8 @@ public class RecommendationsController : ControllerBase
                 request.StoryKeyword,
                 birthDate,
                 request.Gender?.ToLower() ?? "none",
-                request.Tone?.ToLower() ?? "neutral");
+                request.Tone?.ToLower() ?? "neutral",
+                birthTime);
 
             _logger.LogInformation("부모 기반 작명 완료: 후보수={CandidateCount}", candidates.Count);
             return Ok(candidates);
@@ -696,12 +705,22 @@ public class RecommendationsController : ControllerBase
                 request.LastName, request.PreferredEnglishName, request.Gender);
             await _usageTracker.TrackAsync("endpoint", "dual-name");
 
+            // 출생 시각도 엔진에 — 대표 한자가 같은 입력의 /evaluate 용신 배정과 같아야 해서('이 이름 평가하기' 링크는 시각을 싣는다).
+            // 파싱 실패는 시각 없음(RecommendationService 와 같은 방식)
+            TimeSpan? birthTime = null;
+            if (!string.IsNullOrEmpty(request.BirthTime) &&
+                TimeSpan.TryParse(request.BirthTime, out var parsedBirthTime))
+            {
+                birthTime = parsedBirthTime;
+            }
+
             var candidates = await _dualNameEngine.GenerateDualNamesAsync(
                 request.LastName,
                 request.PreferredEnglishName,
                 birthDate,
                 request.Gender?.ToLower() ?? "none",
-                request.Tone?.ToLower() ?? "neutral");
+                request.Tone?.ToLower() ?? "neutral",
+                birthTime);
 
             _logger.LogInformation("이중 이름 생성 완료: 후보수={CandidateCount}", candidates.Count);
             return Ok(candidates);

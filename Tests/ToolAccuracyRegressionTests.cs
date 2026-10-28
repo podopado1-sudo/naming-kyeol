@@ -860,10 +860,10 @@ public class ToolAccuracyRegressionTests
             Microsoft.Extensions.Logging.Abstractions.NullLogger<TwinNameService>.Instance);
         var smart = new SmartRecommendationService(
             new RecommendationService(new NameForm.Infrastructure.Repositories.InMemoryRecommendationRepository(),
-                pool, scoring, new RankerEngine(), new ExplanationEngine(), parent, new DualNameEngine(),
+                pool, scoring, new RankerEngine(), new ExplanationEngine(), parent, new DualNameEngine(_saju, _yongshin),
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<RecommendationService>.Instance),
             new PureKoreanNameEngine(), new CreativeNamingEngine(), new ThreeSyllableEngine(), new RareSurnameEngine(),
-            parent, twinService, new RequiredCharEngine(_saju), new DualNameEngine());
+            parent, twinService, new RequiredCharEngine(_saju), new DualNameEngine(_saju, _yongshin));
 
         // 감사 재현 조건(이·여·2021-07-02·soft)
         var request = new SmartRecommendationRequestDto

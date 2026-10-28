@@ -24,7 +24,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (2,317 테스트, 2026-10-27 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (2,567 테스트, 2026-10-28 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -48,7 +48,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 2,317개)
+# 테스트 실행 (NameForm.slnx 경유 — 2,567개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -72,7 +72,7 @@ npm run build
 # 린트
 npm run lint
 
-npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-10-26 기준 166개)
+npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-10-28 기준 249개)
            # 대비 테스트: tests/amber-contrast.test.mjs(amber-warm-700)·tests/palette-contrast.test.mjs(text-3·오행·골드·결과 화면 글자 토큰),
            # 공용 헬퍼 tests/color-utils.mjs(globals.css·Tailwind theme.css 실제 값, WCAG 대비, CIEDE2000 — *.test.mjs 가 아니라 따로 돌지 않는다)
 ```
@@ -151,9 +151,44 @@ D:\MyDev\NameForm\
           │     RarityScoringEngine     → 희귀도/독창성 점수
           │
           ├── 변형 엔진 (특수 작명)
-          │     ParentBasedNamingEngine → 부모 이름 기반 (음운/의미 계승, 가족 서사)
+          │     ParentBasedNamingEngine → 부모 이름 기반 (음운/의미 계승, 가족 서사) — 이름은 늘 2음절(2026-10-28 개편)
+          │                               방식 = 중립 코드 + 사용자 라벨(`ParentNamingModels` — family-meaning 부모 이름 뜻 잇기·parent-initials·
+          │                               parent-syllables·shared-syllable·mother-initial(어머니 이름 없으면 father-initial)·mother-surname·
+          │                               mother-sound·keyword-meaning/keyword-sound·surname-meaning, 예비 경로 전용 father-/mother-syllable).
+          │                               NameType = 방식의 계승 꼴(음운중심·의미중심·서사중심),
+          │                               태그·칩은 라벨만 — 옛 값은 실존 인물로 보일 수 있는 사람 이름 꼴(…모델)이라 라벨에 실존 인물 이름을 쓰지 말 것.
+          │                               DB Candidate.NamingModel 에 새 코드 저장, 옛 행은 GET 이 `ParentNamingModels.Normalize` 로 읽는다(옛 '신해솜모델'은
+          │                               키워드·성씨 자동이 같은 값이라 코드·라벨 null)
+          │                               '한 글자' = 실명 통계 짝 글자(`RealNamePartners` — NameCounts 20명 이상, 유행 이름 뒤·톤 맞는 짝 앞·빈도 구간
+          │                               [100, 2500) 먼저, 짝 음절의 보이는 한자(Select 용신 없음) 성별·톤이 반대면 뺌). 옛 원천은 사전 삽입 순서 앞 5·10·15자.
+          │                               공통 품질 거르기 `ParentBasedNamingEngine.QualityRejectReason`(2음절·첫 글자 ≠ 아이 성의 어느 음절(복성은 두 음절 —
+          │                               제갈제윤·남궁남윤)·반복·부모 이름/전체 이름·공용 금칙 3종(성 경계 금칙 포함, 성 글자만의 금칙 제외)·AestheticEngine 부정 음절·
+          │                               성+이름 부정 패턴(성 하나의 감점 초과분)·엔진 낱말 이름 표 `WordLikeRealNames`(40개 — 서민·승리·장군·천하·환희·이환 등, 실명이어도
+          │                               생활 낱말·소망형 추상명사)·끝 음절 '자'(영자·경자·정자 — 옛 세대 '-자' 꼴)·HasUsableHanja) — RecommendationService 가 standard 랭킹에
+          │                               합칠 때도 쓴다(웹 /search 는 합류를 끈 상태 — 알려진 이슈).
+          │                               성별을 고른 요청에서 반대 성별로 기우는 실명(`NamingPrinciples.GenderLeanLabel` — standard 탭 GenderNote 와 같은 판정)은
+          │                               본 목록에 넣지 않고 마지막 예비 목록으로만(설명 끝에 '· 주로 여자 이름'). 부모 이름 글자 조합(family-meaning·
+          │                               parent-initials·parent-syllables)은 실명만. '첫 번째 후보' = 두 글자 모두 부모 이름에서 온 실명 중 유행 아닌·빈도 높은 것
+          │                               (없으면 부모 글자 + 짝 글자). 목록 순서(안정 정렬): 유행 이름(IsTrendyName — 부모 첫 글자 잇기 '민서')은 뒤로, 아이 성 메아리
+          │                               (끝 음절 = 외자 성 '유 + 진유', 첫 음절 = 성의 두음 꼴 '이 + 리윤'·'임 + 림X')는 맨 뒤로.
+          │                               5개 미만이면 예비 경로 차례로: ① 부모 이름 모든 글자 + 짝 글자(앞·뒤) ② 비실명 부모 글자 조합(반대 성별로 읽히는 조각은 ④로)
+          │                               ⑤ 키워드가 있으면 키워드 뜻 한자 음절 모두 + 키워드 어간 음절 소리에 짝 글자(자리마다 6개), 그래도 모자라면 같은 찾기를 성별 검사
+          │                               없이(성별 안내) — 키워드와 무관한 성씨 뜻보다 먼저 ③ 성씨 뜻 잇기 ④ 반대 성별 실명(성별 검사만 완화).
+          │                               어머니 성씨 방식은 어머니 성이 복성이거나 아이 성과 같으면 건너뜀.
+          │                               성씨 자동(surname-meaning)은 부모 이름·키워드가 모두 없을 때(API 전용)와 예비 경로 ③.
+          │                               키워드·성씨 뜻은 훈의 낱말 일치 + 뜻 갈래 표(`SenseHanja` 검수 글자만·`SenseExcluded` — '신의 손'의 履 '신 리'·賓 '손 빈',
+          │                               '달'의 懸·注·甘, 石 '돌'의 廻 같은 동음이의 훈), 훈이 '… 이름'인 조각 제외, 인명 빈출·Core 글자만(낯선 글자로 메우지 않음).
+          │                               짝 글자는 설명에 소리만 인용하고 짝 글자를 더한 후보의 Hanja 는 null. 키워드 뜻 한자의 약자(weak — 뜻 갈래 표 글자 밖)는 한자를 보이는 두 자 카드에 쓰지 않고 짝 글자 경로로만.
+          │                               family-meaning 음절 한자 = 요청 출생일·시각·성별의 용신 배정(`HanjaSelector.Select` — /evaluate 의 AssignedHanja 와 같다,
+          │                               생성자에 ISajuCalculationService·IYongshinCalculationService(선택 인자 — 2인자 생성은 용신 없이), 인터페이스에 `TimeSpan? birthTime`).
+          │                               성 칸이 빈 전체 이름('김민수')을 나누는 것은
+          │                               SmartRecommendationService(옛 /search 꼴 방어 — `Utils/ParentNameSplit`, 프런트 splitParentName 과 같은 규칙)뿐, 엔진은 나누지 않는다
+          │                               (생성은 그대로 — 한울림 보호. 성 칸이 빈 3자 이상 이름은 나눈 이름 부분·성 + 이름을 거르기 목록에만 더해 '민수'·'박 + 지훈'을 막는다)
           │     TwinNameEngine          → 쌍둥이 (공유글자/공유의미/공유톤 세트)
-          │     DualNameEngine          → 영어+한자 이중 이름 (음역/의미 매핑)
+          │     DualNameEngine          → 영어+한자 이중 이름 (영한 음역 지도 data/english_korean_names.json → 음절마다 한자 배정)
+          │                               ⚠️ 2026-10-28 안 1a: 대표 한자 = 같은 (이름, 출생일, 출생 시각, 성별)의 /evaluate 배정 — 요청마다 용신을 한 번 계산해
+          │                               `HanjaSelector.Select`(1순위 용신·희신·기신, 사주 실패 시 용신 없이 — HarmonyEngine 과 같다). 뜻 = 음절마다 `GlossForReading`
+          │                               ' + ' 연결. 생성자에 ISajuCalculationService·IYongshinCalculationService, 인터페이스에 `TimeSpan? birthTime`(세 호출부가 넘김)
           │     RareSurnameEngine       → 희귀 성씨/복성 최적화
           │     RequiredCharEngine      → 필수 글자 포함
           │     PureKoreanNameEngine    → 순우리말 이름
@@ -524,15 +559,17 @@ D:\MyDev\NameForm\
   `UsableByReading`(FindByReading 을 이 술어로 거른 관련도 순 목록 — 프론트 `no-hanja.ts` isNameUsableRecord 와 같은 술어)이 함께 쓴다
   - ⚠️ **2026-10-26 점수 정책(사용자 승인)**: 사전 글자 전부(FindByReading)를 보던 점수·표시 경로가 `UsableByReading` 만 본다 — **불용 글자는 어디서도 세지 않고,
     약자(weak)는 그대로 센다**(양보는 배정 단계의 일). AestheticEngine 성별 보너스·의미 카테고리·톤 가점(후보 0 음절은 목록이 비어 건너뜀), RankerEngine 자원오행 +8
-    (옛 슬=膝·虱·蝨 水 — 성별 보너스·+8 은 같은 날 결정 ③으로 '보이는 한자 한 글자' 판정으로 다시 바뀌었다, '알려진 이슈'), DualNameEngine 대표 한자·뜻, FamilyNarrativeExtractor 부모 이름 뜻, RecommendationService·ParentBasedNamingEngine `DetermineNameType`
-    (이름 전체를 독음 하나로 찾는 옛 버릇 그대로 — 실제 영향은 1음절 이름뿐). 옛 규칙에서 성별 일치를 만든 불용 글자(/name 이름 수): 지=躓 '넘어질'(여 73)·
+    (옛 슬=膝·虱·蝨 水 — 성별 보너스·+8 은 같은 날 결정 ③으로 '보이는 한자 한 글자' 판정으로 다시 바뀌었다, '알려진 이슈'), DualNameEngine 대표 한자·뜻(2026-10-28 부터는 UsableByReading 이 아니라 /evaluate 와 같은 용신 배정 `Select` — '알려진 이슈'의 이중 이름 기록), FamilyNarrativeExtractor 부모 이름 뜻(2026-10-28 부터는 음절마다 `Select` 한 자 + 그 독음의 `GlossForReading` — 부모 엔진은 요청 출생일·시각의 용신을 넘겨
+    /evaluate 배정과 같은 글자(같은 날 2차 검증 뒤, 용신 인자가 없으면 용신 없음), 옛 UsableByReading 전체는 한 음절의 여러 뜻이 서사에 섞였다), RecommendationService `DetermineNameType`(이름 전체를 독음 하나로 찾는 옛 버릇 그대로 — 실제 영향은 1음절 이름뿐.
+    ParentBasedNamingEngine 의 같은 함수는 2026-10-28 에 지웠다 — 부모 후보 NameType 은 방식에서 정한다). 옛 규칙에서 성별 일치를 만든 불용 글자(/name 이름 수): 지=躓 '넘어질'(여 73)·
     겸=歉·鉗(43)·권=勌(40)·라=瘰 '연주창'(16)·나=瘰(11)·회=獪(8)·검=劍·劒(4)·복=蝮 '살무사'(3)·옹=翁·癕·癰(1)·역=癧 '연주창'(1) — 懦 '나약할'은 톤 Strong 쪽.
     ① 단계 /name 재생성(체인 3회 바이트 동일 — 지금 데이터는 ③ 기준): sc 200명(공개 136·개방 대기 64 — 11/01부터 20개 코호트) 변경, 총점 −4 156·−5 35·−2 8·−3 1, 성별 보너스
     +5→+1 155·+1→−4 29·+5→+3 8·+3→−2 6·+3→−1 1·+1→−2 1, 노트 문구 192명(공개 133). 의미 점수(m)·p·r·s·n·pn·조합·대표 뜻·서사·pk/fx·pa·comboMeans·hanja-seo 무변.
     /name 에는 총점 등급·점수 순위가 없어(막대 색은 p·r·s·n·m 기준) 표시 등급이 바뀐 이름은 0 — 메타 설명 '발음·미학 점수 N점'만 200쪽(공개 136) 바뀐다.
     '잘 맞음'·'맞지 않음' 노트가 함께 붙는 이름 1,035→1,161명(공개 735→823), g 음수 136→173명(공개 89→114). 이중 이름은 Emily·Amy(에 = 曀·恚 모두 불용)가
     후보 0이 되고(/dual-name 은 0건 안내 문구를 그린다 — 옛 화면은 말없이 폼만 다시 보였다), 9개 매핑의 대표 한자가 바뀐다(婢 '계집종'→備 Vivian·Olivia·Ivy·Ruby,
-    疲 '피곤할'→彼 Peter·Sophia, 媚 '아첨할'→薇 Naomi·Mia, 吐 '토할'→土 Anthony). 회귀 `OpsVerificationRegressionTests.Aesthetic_ForbiddenHanja*`·
+    疲 '피곤할'→彼 Peter·Sophia, 媚 '아첨할'→薇 Naomi·Mia, 吐 '토할'→土 Anthony — 이 대표 한자 기록은 2026-10-28 안 1a 로 낡았다: 지금은 출생일·시각·성별마다 /evaluate 와
+    같은 용신 배정이라 2025-01-01·시각 없음·영어 이름의 성별 기준 Vivian 飛飛安·Olivia 兀李飛雅·Ivy 雅李飛·Ruby 慺飛·Peter 髲攄·Sophia 昭髲雅·Naomi 羅悟微·Mia 微雅·Anthony 安兎柅). 회귀 `OpsVerificationRegressionTests.Aesthetic_ForbiddenHanja*`·
     `Ranker_HanjaElementBonus_IgnoresForbiddenHanja`·`UsableByReading_*`·`DualName_*`·`FamilyNarrative_MeaningFusion_IgnoresForbiddenHanja`(기대값은 테스트 안에서
     FindByReading + 불용·뜻 필터로 따로 셈 — 검사 대상 술어를 쓰지 않는다). 남은 결정('하나라도 있으면' 규칙·지(여) 노트)은 같은 날 결정 ③으로 정했다
     ('알려진 이슈'의 결정 ③ 기록)
@@ -744,6 +781,20 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   '보이는 한자'는 표면마다 — /evaluate·추천 카드(standard 탭, 부모·이중 이름 후보 포함)·쌍둥이 카드: `ScoringService` 가 한 번 정하는 `CanonicalNameScore.AssignedHanja`
   (출생일이 있으면 조화의 용신 배정 `SelectedHanja`, 없으면 `HanjaSelector.Select` 용신 없음 — 조화를 미학보다 먼저 계산한다). /evaluate 의미 메모·후보 표 첫 칸, 카드 `Hanja`·
   `MeaningText`·`Candidate.SyllableHanja`([NotMapped] — 랭커 판정용), 쌍둥이 이유의 '한자 뜻' 줄(옛 '한자 예' 음절별 1순위)이 이 목록을 그대로 쓴다.
+  /dual-name 카드·/search 이중 이름 탭(카드 `Hanja` — 2026-10-28 전에는 비어 세리프 자리에 한글 이름이 나왔다)·POST /recommendations 후보 `HanjaMeaning`: `DualNameEngine` 이
+  같은 인자(출생일·출생 시각·정규화 성별 — 'none' 그대로)로 `HanjaSelector.Select` 용신 배정을 직접 불러 AssignedHanja 와 같은 글자다(ScoringService 를 부르지 않는다 — 고칠 때 둘을
+  함께 볼 것, `DualNameEngineTests.DualName_Hanja_SameAsEvaluateAssignedHanja_AllMappings` 가 지도 전수 × 성별 3 × 출생일 4 × 시각 2 를 대조한다. 부모 엔진 family-meaning 도
+  같은 방식 — 아래).
+  /parent-based 카드·/search 부모 탭(카드 `Hanja` — 2026-10-28): 설명이 두 글자를 모두 풀이한 후보만 — family-meaning(부모 이름 음절마다 `HanjaSelector.Select`
+  요청 출생일·시각의 용신·요청 성별 — 컨트롤러·SmartRecommendationService·RecommendationService 가 출생 시각을 넘긴다)과 키워드 뜻 한자 두 자·관용구(훈 낱말 일치 +
+  뜻 갈래 표). 뜻 한자 한 자 + 실명 짝 글자(keyword-meaning·surname-meaning 의 짝 후보)와
+  나머지 방식은 null(한글 이름) — 짝 글자는 실명에서 고른 소리라 설명에 소리만 인용하고 한자를 보이지 않는다(검증 뒤 같은 날 고침 — 옛 설명은 짝 글자 훈
+  '여러 루(누)'·'거느릴 솔'·'바꿀 태'를 뜻처럼 인용했고 격자 출력의 59.7%, 그 훈은 출생일 넣은 /evaluate 배정의 훈과 55% 달랐다). family-meaning 은 같은 날 2차 검증 뒤
+  /evaluate(링크 — 같은 생년월일·시각·성별) 배정과 같다: 격자 상위 10의 family-meaning Hanja 카드가 다른 것 780/1,002 → 0/1,998(출생일 2024-03-15 — 스크래치 `pbfix3`
+  probe hanjacmp, 카드 수가 는 것은 배정 글자의 카테고리가 바뀌어 뜻 잇기 조합이 늘어서). 설명은 '부모 이름 음절을 그 음절 한자의 훈으로 풀었다'는 구조라 배정 한자의
+  훈(GlossForReading)으로 다시 써도 참이다 — 대신 배정 글자의 훈이 약할 때가 있다(연 → 然 '그럴 연'). ⚠️ keyword-meaning 두 자(관용구 포함)는 키워드 뜻으로 고른 글자라
+  /evaluate 배정과 다를 수 있다(124/130장) — 용신으로 바꾸면 '키워드의 뜻을 담은' 설명이 틀어진다(화면 안내 없음). /parent-based 의미 계승형 배너 주석
+  ('민(敏) + 서(書) · 의미축 잇기')이 이 글자를 쓰고, 음절을 준 부모는 설명 문장에서 읽는다(lib/parent-naming.ts familyMeaningRoles — 두 부모 이름에 다 있는 음절).
   /name-analysis: 출생일이 있으면 음절별 큰 카드(첫 후보)를 그 배정 한자로 앞세우고(`NameAnalysisService.AnalyzeHanja` — /evaluate 후보 표와 같은 방식, 화면은 '한자 뜻' 줄을
   여전히 숨긴다) '이 이름은 용신에 부합합니다' 배지도 큰 카드로 판정한다(+8 과 같은 정의 — 옛 배지는 후보 10개 중 하나라도라 인기 100명 × 3성별 × 생일 3개 900행이 모두 참).
   출생일이 없으면 미학을 성별 없이 채점해 해당 없음. /name: `NameSeoHanja.DisplayedHanja`(1순위 조합 combos[0]) — 조합 없는 이름(3음절·첩음·외래 fx)은 보이는 한자가
@@ -840,7 +891,9 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   인 仁 '어질' 17명, 후속의 勝 '이길'·鷺·鴻·才·士·榮 '영광'·慶·懿·種 등)은 손으로 고쳤다. comboMeans 19,541→19,464쌍.
   두더지 검수 4라운드: weak +44(884 — 후속 夛 +1 로 885), 불용 11차 疝 1(991), 대표 훈 尙 '숭상할 상'(99) — 근거는 HanjaData.cs 2026-10-27 블록, 회귀 `WeakGivenNameHanjaTests.MoleAudit20261027_*`.
   **생성 풀 불용 필터**: ThreeSyllableEngine·TwinNameEngine·ParentBasedNamingEngine.GetFilteredHanja·FamilyNarrativeExtractor 가 `HanjaSelector.IsUsableNameHanja` 로 거른다
-  (`Tests/GenerationPoolForbiddenTests.cs` — 생성 결과 문자열에 불용·뜻 없는 글자 0).
+  (`Tests/GenerationPoolForbiddenTests.cs` — 생성 결과 문자열에 불용·뜻 없는 글자 0). 2026-10-28 부모 엔진 개편 뒤 GetFilteredHanja 는 키워드·성씨 뜻 한자를 찾는
+  범위로만 쓰고(앞부분을 잘라 '한 글자'로 쓰지 않는다), FamilyNarrativeExtractor 세대 조합은 공통 글자 + 실명 짝 글자(RealNamePartners — 짝 음절의 보이는 한자가
+  쓸 수 있는 글자일 때만)라 같은 테스트의 세대 조합 단언을 다시 썼다.
   ⚠️ **성별 값 → 관련도 +5 부작용**: `CalculateRelevanceScore` 는 GenderPref 가 Neutral 이 아니면 +5 라, 성별 값을 바꾸면 성별 없는 표시(`OrderForDisplay` — /name-analysis 큰 카드·
   필수 글자 뜻 줄·희귀 성씨 HanjaOptions·'한자 예' 폴백)와 성별 none 이름 조합(SelectCombos·Select 'none' — /evaluate 성별 미선택)·/evaluate 후보 표 순서(UsableByReading =
   FindByReading 관련도 순)도 움직인다. 이번 표 적용으로 /name-analysis 출생일 없음 큰 카드 첫 글자가 1,227명(인기 300 안 51) 바뀌었다 — 모두 옛 카드 글자가 성별을
@@ -878,8 +931,97 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   랭커 자원오행 +8·음령 +5 는 POST /api/v1/recommendations 를 직접 부를 때만 작동한다(넘길지 별도 결정)
 - **쌍둥이 '공유의미' 세트 설명**: 테마 설명에 영문 카테고리 코드가 그대로 나온다("'NATURE' 의미를 공유하는 이름 세트" — TwinNameEngine 177 이 CategoryMajor 를 그대로
   넣음, 결정 ③ 전부터). 테마는 쌍둥이 엔진 내부 글자의 카테고리 기준이라 카드에 보이는 배정 한자(이유의 '한자 뜻')의 카테고리와 다를 수 있다
-- **부모 이름 엔진 성씨 뜻**: ParentBasedNamingEngine(520·547)은 성씨 독음의 사전 글자 Take(2) 뜻을 Description `성씨 '…'(뜻)` 에 넣는다(성씨 표 `SurnameData` 기준으로
-  바꿀지 판단 필요). 생성 풀의 불용 필터는 2026-10-27 에 넣었다(위 해소 기록)
+- ~~**이중 이름 대표 한자가 /evaluate·standard 탭과 다르다**~~ (2026-10-28 안 1a — 사용자 승인으로 해결): 옛 `DualNameEngine` 은 `UsableByReading` 을 Category 점수
+  (덕목 3 > 자연 2 > 개념 1)로 다시 정렬해 첫 글자를 골라 weak 양보·빈출·성별·용신을 보지 않았다 — 카드 한자가 '이 이름 평가하기' 링크의 /evaluate(출생일·시각·성별을 싣는다)와
+  달랐고(필립 筆岦 ↔ 남 駜粒·여 熚粒), 대안이 있는데 weak 글자(단=壇·비=備·사=赦·피=彼·하=何 등 14음절), 남·여 요청에 반대 성별 글자(노아(남)=璐娥·루나(여)=壘羅),
+  `HanjaMeaning` 에 Meaning 전체(이삭 削 '깎을 삭, 채지 소, 칼집 초')가 실렸다. /search 이중 이름 탭은 카드 `Hanja` 가 비어(세리프 자리에 한글 이름) 한자가 태그 칩으로만
+  보였고, 지도에 같은 영어 이름이 두 번(12개 — 뒤쪽 블록) 있어 Sophia·Olivia·Hannah 카드가 두 장씩 나왔다. 고친 것: 대표 한자 = `HanjaSelector.Select`(요청의 용신 —
+  HarmonyEngine 과 같은 계산), 뜻 = 음절마다 `GlossForReading`(' + ' — 프런트 parseHanjaMeaning 이 /[+·]/ 로 자른다), 컨트롤러·SmartRecommendationService·RecommendationService 가
+  출생 시각을 넘김, /search 탭 카드 `Hanja` = 엔진 글자·태그는 EN 하나, `english_korean_names.json` 겹친 12개를 첫 항목 자리에 합침(Benjamin·Thomas 는 한글 목록 합집합 —
+  122→110항목, 한글 쌍 147→135, 기본 목록 6개(김·남궁 × 성별 3) 이름 그대로), /dual-name '카드의 한자와 다를 수 있어요' 안내를 '같은 조건으로 같은 한자' 안내로.
+  잰 값(스크래치 하네스 — 저장소 빌드 복사본 전후, 영어 이름 110 × 성별 3 × 출생일 4 × 시각 없음·09:30): /evaluate AssignedHanja 일치 62/1,272 → 1,200/1,200행(행 수 차이는 겹친 카드),
+  weak 칸 744(대안 있음 720) → 24(대안 없음 — 토 兎 뿐), 남·여 요청의 반대 성별 글자 216/848 → 0/800행(영어 이름 성별과 같은 요청 72/424 → 0/400), 뜻 조각 = GlossForReading
+  768 → 1,200/1,200(다중 훈 조각 504 → 0), 겹친 카드 요청 72/2,640 → 0, 같은 (성별·출생일·시각) 안에서 같은 음절이 이름마다 다른 글자 0 → 0. /search(이중 이름 후보가 있는 영어 이름 45 ×
+  성별 3 × 출생일 2 × 시각 2 = 540요청): 이중 이름 카드 Hanja 0/636 → 600/600, 같은 응답 standard 탭에도 든 127번 중 같은 한자 4 → 127, POST /recommendations 후보의
+  HanjaMeaning = 카드 Hanja 의 훈 0/127 → 127/127. 회귀 `DualNameEngineTests.DualName_*`·`Smart_DualNameTab_CardHanjaFilled_SameAsStandardTab`·
+  `Recommendation_DualCandidate_HanjaMeaning_IsGlossOfCardHanja`(기대값은 ScoringService·사전 FindByReading + 불용·뜻·weak 판정으로 테스트 안에서 따로 셈).
+  **남은 것**: ① 성별 '무관'(/dual-name 기본값 — 링크의 /evaluate 도 성별을 빼서 none 그대로 넘긴다, 화면 일치 우선 결정)에서 남자 영어 이름이 Female 글자를 받는다 —
+  184행 중 42행(노아 鷺雅·아론 雅惀·아담 雅倓·아이작 雅李作·안토니 安兎馜·요한·요나단 瑤(출생일에 따라)·리암 馣(2021-07-08), 옛 엔진 40행). 매핑 성별을 쓰면 글자는 맞지만
+  /evaluate(none)와 다시 갈라진다(링크에 성별을 실으면 점수의 성별 보너스도 바뀐다). ② 용신 배정이 obscure 글자를 앞세운다 — 피 髲 '다리'(피터·소피아)·암 頷 '끄덕일'(리암)·
+  루 慺·니 柅(남)·필립(남) 駜 '살찔'·립 粒 '낟알'. 피는 어느 경로든 皮 '가죽'/髲/被 '입을'(彼 '저'는 weak). ③ 토는 土·兎·兔 모두 weak 라 안토니 = 兎 '토끼'(대안 없음).
+  ④ 같은 영어 이름도 출생일·출생 시각에 따라 한자가 바뀐다(사이트 설계와 같음 — 시각 09:30 을 넣으면 1,320요청 중 121요청이 바뀜). ⑤ 영어 이름 없이 성별 '무관'으로 받는
+  기본 목록은 지도 파일 순서 앞 20개라 거의 남자 이름(16/20 — 지도에 gender 'none' 항목 0)인데 화면은 '성별에 맞는 이중 이름'이라 안내한다. ⑥ 데이터 한계 — 한글 음역 음절 123개 중
+  57개는 쓸 글자가 없어(레·클·스·트·엘·에 등) 영어 이름 110개 중 65개가 후보 0, 존(John)은 1음절이라 길이 검사로 빠진다
+- ~~**부모 이름 엔진 성씨 뜻**~~ (2026-10-28 부모 엔진 개편으로 해소 — 성씨 한자는 `SurnameData.RepresentativeHanja`, 뜻 매칭은 훈의 낱말 일치):
+  옛 엔진은 성씨 독음의 사전 글자 Take(2)(璞·博·最·催)를 적었고, 같은 개편에서 고친 것 — 어머니 성 + 어머니 이름(어머니 전체 이름)이 어머니 성·이름을 준 실행의
+  첫 후보 100%, 문소리·복합(b)이 이름 칸에 아버지 성을 넣어 3~4음절('김김춘리'), 두 부모 이름을 이어 뒤집은 4음절('김연서수민')·부모 이름 그대로·반복, '한 글자' =
+  사전 삽입 순서 앞 5·10·15자(춘·추·천·해·운), 부분 일치 뜻 매칭('사랑' 첫 카드 '폐총'·김 '금' ⊂ 임금), 의미융합의 본음 음절(민련·아녀), 세대연결의 사전 앞 10자·
+  '현대/전통적' 문구, 음운유전(0건), 성씨 자동이 부모 이름·키워드가 있어도 섞임, 사람 이름 꼴 방식 값, 공용 금칙어 미적용. 조사 하네스 입력 격자 1,386실행 전후
+  (스크래치 `pbfix/compare.py`): 3음절 이상 35.7% → 0, 첫 글자 = 아이 성 5.7% → 0, 부모 이름 그대로 2.3% → 0(이 값은 엔진이 성 칸 빈 전체 이름을 나누던 1차 —
+  나누기를 SmartRecommendationService 로 옮긴 1차 검증 뒤로는 나눠 보낸 실제 /search 흐름 0, 전체 이름을 이름 칸에 넣은 엔진 직접 호출(POST /recommendations/parent-based·
+  POST /recommendations, /parent-based 폼에서 성 칸을 비우고 '김민수'를 넣은 경우 — 격자 검색 구성 252실행) 174건(0.7%)·아이 전체 이름 = 부모 전체 이름 30건·첫 카드가
+  부모 이름인 실행 63(S03 '지훈' 42·S01 '민수' 21)·부모 이름 후보가 든 실행 150/252 — 2차 검증 뒤 0, 아래), 반복 3.2% → 0, 공용 금칙 4.0% → 0,
+  부정 음절·성+이름 부정 패턴 8.9%·10.4% → 0, 실명(20명 이상) 21.7% → 100%, 첫 후보 = 어머니 전체 이름 756/756 → 0, 첫 후보 실명 18.8% → 100%,
+  5개 미만 실행 36 → 0(후보 0 은 전후 0), 실행당 평균 38.1 → 19.6, 유행 이름 1.2% → 1.7%(1차 값 — 1차 검증 뒤 같은 격자를 다시 재면 1.3%, 상위 10은 2.3%·민서 253건,
+  2차 검증 뒤 아래). POST /recommendations 상위 10(성·키워드를 준 162요청):
+  부모 후보 카드의 한 글자 금칙 57·첫 글자 = 아이 성 37·반복 3 → 0, 1위가 부모 후보인 요청 16('이화'·'해지'·'아아') → 44(모두 실명).
+  ⚠️ 위 '첫 후보 = 어머니 전체 이름 756/756'은 조사 원본(cands/runs)을 다시 세면 819/819(어머니 성·이름을 준 13구성 × 63)이고, '후보 0 은 전후 0'은 격자에서만
+  맞았다(아래 1차 검증).
+  **1차 검증 뒤 고친 것(같은 날, 스크래치 `pbfix2` — 저장소 빌드 복사본 전후 하네스 `compare.py`, 입력은 조사 격자 + 현실·키워드·한쪽 부모·엣지·/search 꼴)**:
+  (1) 성별 — 배너·부모 글자 조합·키워드 이름이 성별을 보지 않아 격자 성별 지정 924실행의 배너 399(43%, 남아 315/462 — 남아 + 박지훈/최지은 → 은지 남 2·여 5,545,
+  김민수/이서연 → 수민), 현실 입력 배너 656/1,736·상위 10의 21.6% 가 반대 성별이었다 → 반대 성별로 기우는 실명(`NamingPrinciples.GenderLeanLabel`)은 본 목록에서 빼
+  예비 ④로만: 격자 배너 0/924·상위 10 0/8,816, 현실 배너 0/1,736·상위 10 0/17,022. (2) 후보 0개 — 격자 밖 흔한 입력: 키워드 30종 × 성 16 × 성별 3 1,440실행 중
+  272 → 22(남은 것 제갈 16·선우 남아 6 — 봄·꽃과 한글 없는 tree·Love·ㅋㅋ·123. 봄·꽃을 '뜻 없는 키워드'로 적었던 것은 틀렸다 — 아래 2차 검증 ⑤), 키워드 62종 × 성 5 × 3 930실행 55 → 0(5개 미만 214 → 23), 한쪽 부모만 180실행
+  18 → 0(5개 미만 38 → 0 — 김 병철·철·식·숙…), 현실 입력 5개 미만 6 → 0. 예비 경로 ①~④(엔진 목록). 숲·햇님·행복·기쁨·평화·평안 뜻 표, 두음 꼴 글자의 둘째 자리
+  본음(林 → 우림·예림 — 옛 검사는 두음 꼴만 봐 林이 한 번도 맞지 않았다), 명사형 기본형(따뜻함 → 따뜻하다·밝음 → 밝다·건강하게), 복성 성씨 뜻(남궁 '집'·황보 '클'·
+  선우 '곱다'), 박(朴) '나무'. (3) 동음 훈 거짓 설명 — '신의 손' 첫 카드 63/63 이빈 履賓('신 리'=신발·'손 빈'=손님), '겸손'(뜻 표 키 부분 일치) 手賓, '달' 주현 注懸·
+  甘, '하늘' 倡 '광대 창', '비' 彗, 성씨 석 廻 '돌 회' → 뜻 갈래 표·키 낱말 일치·'… 이름' 훈 제외: 격자 P14 履·賓 678/899 → 0/693(첫 카드 수안 — 手 '손 수';
+  神 '귀신 신'은 불용), 키워드 실행 '달' 注懸甘 640/720 → 0, '겸손' 手賓 145/205 → 0. 성씨 뜻 낱말은 그 성씨 독음 조각의 한 낱말 훈 + 사전 낱말만(張 '배 부를'을
+  배·부를로 쪼개지 않는다)·마(馬) '말'·국(鞠) '공'·채(蔡) '풀'·함(咸) '다'·석(石) '섬' 같은 동음도 표로 막고 閔 '근심할'·杜 '막을'·孔 '구멍' 같은 훈은 쓰지 않는다.
+  (4) /search 합류 — 프런트가 부모 성을 나눠 보내자 standard 탭·TopPick 에 부모 후보가 섞였다(검증 72요청: 상위 10의 33%, 1위·TopPick 46%) →
+  SmartRecommendationService 가 standard 요청에 부모 성·이름·키워드를 넘기지 않는다: 부모 입력 9종 × 성별 3 의 옛 꼴/새 꼴 비교에서 standard 상위 10이 다른 입력
+  21/27 → 0, 1위 16 → 0, TopPick 16 → 0, 새 꼴 standard 상위 10의 부모 라벨 카드 76(최대 7) → 0. (5) 짝 글자 훈 인용 59.7% → 0(위 '보이는 한자'). (6) 키워드 소리
+  그대로 첫 카드 423/1,168(36%) → 96/1,418(6.8% — 뜻 한자가 없는 키워드만: 김미래·김다정), 명사형 어미 소리(예음·다함·여름) 키워드 30종 실행 144·62종 실행 257 → 0('음악'의 '음'은 첫 음절이라 그대로), 낯선 글자 폴백(튼튼 獜駉) 215 → 0,
+  낱말 이름(서민 378·승리 168·우리 140) 741 → 0, 아이 성 메아리 배너 42 → 2(전체 0.5% 는 뒤로만). (7) 성 칸이 빈 전체 이름 나누기를 엔진에서 SmartRecommendationService
+  로 옮기고 프런트 규칙과 맞춤(남궁민 → 남궁 + 민·제갈량 → 제갈 + 량 — 옛 백엔드는 남 + 궁민·제 + 갈량으로 나눠 '어머니 성씨 '제'를 첫 글자로…' 거짓 설명), /parent-based 폼은 '이름 칸에는 성을 뺀 이름' 안내·
+  한글 없는 키워드 제출 전 안내(lib/parent-naming.ts keywordHasHangul), 카드 '이름의 결' 펼침의 설명 중복 제거, 옛 '신해솜모델' 라벨 null.
+  격자 실행당 평균 19.6 → 17.6(반대 성별·낱말 이름이 빠짐), 현실 24.0 → 21.8. POST /recommendations 직접 호출(162요청)은 합류 그대로 — 1위가 부모 후보 44 → 43.
+  **2차 검증 뒤 고친 것(같은 날, 스크래치 `pbfix3` — 저장소 빌드 복사본 전후 하네스 `compare.py`·`cmp_svc.py`·probe hanjacmp, 입력은 조사 격자 1,386 + /search 꼴 252 +
+  키워드 40종 × 성 17 × 성별 3 2,040 + 현실 2,604 + 한쪽 부모 180 + 엣지 81 + 키워드 30종 1,440·성씨만 483 + /search 54·POST /recommendations 162요청)**:
+  (1) 성 칸 없이 전체 이름(엔진 직접 호출) — 엔진은 그대로 나누지 않고(한울림 보호) 성 칸이 빈 3자 이상 이름의 나눈 이름 부분·성 + 이름을 거르기 목록(Ctx ParentGivens·
+  ParentFulls)에만 더한다: 격자 검색 구성 252실행의 부모 이름과 같은 후보 174 → 0, 아이 전체 이름 = 부모 전체 이름 30 → 0, 첫 카드가 부모 이름 63 → 0, 부모 이름 후보가
+  든 실행 150 → 0(나눠 보낸 실제 /search 흐름은 전후 0). (2) 키워드만 — 뜻 표에 이름 훈 낱말(봄 → 따뜻할·싹, 꽃 → 꽃부리, 꿈 → 바랄, 축복 → 복, 예술 '아름답다' → 재주 —
+  `茗 '차 싹'`은 SenseExcluded)과 예비 ⑤(엔진 목록): 2,040실행의 0개 8 → 0, 5개 미만 51 → 0(흔한 성 10개 1,200실행 25 → 0), 첫 카드 = 성씨 뜻 잇기 94 → 0(봄 47·꿈 16·
+  축복 16·꽃 15 — 김 + 봄 → 철민 '쇠'), 반대 성별 이름(성별 안내 붙음) 상위 10에 0 → 53(같은 성별로 5개가 안 되는 실행만 — 강 아이 + '강' + 딸의 예강·태강); 키워드 30종
+  1,440실행 0개 22 → 16(남은 것은 모두 한글 없는 tree·Love·ㅋㅋ·123 + 제갈·선우 — 폼이 제출 전에 막는다), 5개 미만 70 → 48. 반대 성별 예비 단계(⑤의 성별 완화·④)는
+  5개를 채울 만큼만 붙인다(한쪽 부모 180실행 상위 10의 반대 성별 101 → 53). (3) family-meaning 카드 한자 = /evaluate 배정(위 '보이는 한자') — 격자 상위 10 780/1,002 → 0/1,998,
+  현실 입력 상위 10 2,341/3,618 → 0/5,247(다른 장 수). (4) 키워드 두 자 카드의 약자(weak) 한자 — 키워드 40종 68장·30종 64장 → 0(약자는 한자를 보이지 않는 짝 글자 경로로만).
+  (5) 비실명 부모 글자 조합의 반대 성별(김 + 광식 + 딸 → 첫 카드 '식광') → 예비 ④: 한쪽 부모 첫 카드 반대 성별 1 → 0. (6) 낱말 이름 표 18 → 40개(이환·이산·이완·진리·경리·
+  현직·시월·성경·경성·찬양·동해·서해·대양·소중·희소·천하·해지·은총·환희·신비·영광·영웅 — 격자·키워드·현실 출력 덤프를 사람이 검수)와 끝 음절 '자'(영자·경자·순자·명자·정자 —
+  '사랑'의 慈 짝): 새 낱말 이름 격자 521·키워드 40종 551·현실 261 → 0, '-자' 이름 56·170·216 → 0. (7) 메아리 — 복성 첫 음절 = 이름 첫 글자(제갈제윤)는 공통 거르기에서 뺌
+  (격자 20·현실 5·키워드 3 → 0), 성의 두음 꼴 = 이름 첫 글자(이 + 리윤)는 뒤로(격자 상위 10 6 → 2, 현실 20 → 0). (8) 유행 이름은 목록에서도 뒤로(부모 첫 글자 잇기 '민서'):
+  격자 상위 10 2.25% → 0.04%(민서 253 → 6), 현실 0.87% → 0(전체 비율 1.29% → 1.27% 그대로). (9) 배너 주석 — 두 부모 이름에 다 있는 음절은 설명이 말한 부모로(위 '보이는 한자').
+  (10) 쓰지 않는 SpecialtyPage·SpecialtyBlocks 의 '작명 모델 8종 중 선택' 문구와 '작명 모델' 라디오를 지움(엔진이 하지 않는 선택). 실행당 평균 격자 17.60 → 17.51·현실
+  21.80 → 21.68·키워드 40종 10.83 → 11.34. POST /recommendations 162요청 1위가 부모 후보 43 → 43, /search 54요청 standard 상위 10 변경 0.
+  **남은 것**: ① standard 합류 — 웹 /search 는 끈 채, 켤지는 사용자 결정(켜면 위 33%·46% 규모). 직접 API 는 합류한다. ② 키워드 뜻 한자 두 자 카드는 /evaluate 배정과
+  다를 수 있다(격자 상위 10 124/130장 — 화면 안내 없음, 뜻으로 고른 글자라 용신으로 바꾸면 설명이 틀어진다). family-meaning 은 배정 글자의 훈을 그대로 인용해 약한 훈이 설명에
+  나올 수 있다(연 → 然 '그럴 연', 남아 요청의 '미' → 微 '작을 미'). ③ 낱말 이름 표 40개는 출력 덤프를 손으로 고른 것(하루·누리·아름·하늘·사랑처럼 이름으로 흔한 순우리말
+  낱말은 두지 않음) — 새 낱말 이름은 덤프로 다시 볼 것. ④ 부모 성 글자가 짝 글자로 우연히 들어가는 경우(0.7%)는 막지 않았다. ⑤ 0개 — 1차 기록의 '뜻 한자가 없는 키워드
+  (봄·꽃)'은 틀렸다: 꽃(榮·花·英)·꿈(夢)·봄(春)은 뜻 한자가 있었고, 0개는 반대 성별 제외(榮·花 Female 이라 남아 풀에서 빠짐)와 짝 실명 부족(夢 → 주몽·지몽이 남자 이름이라
+  제갈 여아 0, 春 → 춘X 실명 적음, 제갈 아이는 '갈'로 시작하는 이름을 못 씀)에서 나왔다(위 2차 (2)로 0). 남은 0개는 한글 없는 키워드 + 제갈·선우(폼이 막는 입력)와 성씨만 준
+  API 입력(성씨 뜻을 못 찾는 성이 97개 — 483실행 중 0개 271, 옛 211, 늘어난 60은 동음 훈을 막은 몫: 마 斗詞·빈 手·민 '근심할'·두 '막을' …). ⑥ 예비 ④·⑤의 반대 성별 이름은
+  '· 주로 남자 이름' 안내와 함께 5개를 채울 만큼만 낸다(김 철 + 딸 → 부용 다음 철민·민철 …). ⑦ 뜻 한자가 없는 키워드(미래·다정·우주·초록·태양)는 키워드 소리 그대로가 첫 카드다.
+  훈이 키워드 낱말과 다른 글자(山 '메 산')는 뜻 한자로 잡히지 않아 '산'은 소리 + 짝으로 채운다. ⑧ 뜻 갈래 표는 키워드 90여 종·관용구 24개·성씨 대표 한자 표 160여 항목의 매칭을
+  덤프해 손으로 고른 것 — 새 키워드·뜻 낱말을 더하면 같은 덤프(probe kwmatch·surn)로 동음 훈을 다시 볼 것(2차의 봄·꽃·꿈·축복·예술: 暖·溫·芽·春 / 英·榮·花 / 夢·希·望·冀 /
+  福·祉·祥·祚·禧 / 藝·才·技·術). ⑨ 성 칸 없이 전체 이름을 넣은 엔진 직접 호출은 거르기만 한다 — 생성은 '김민수'를 그대로 이름으로 써 성 글자가 재료가 되고 설명이 성 글자를
+  이름 글자로 인용한다(격자 검색 구성 888/3,738장 — "어머니 이름 첫 글자 '이'"). /parent-based 폼 안내와 /search 나누기가 막는 입력이다. ⑩ 어머니 성씨 소리 잇기는 같은
+  어머니 성이면 아이 성과 무관하게 같은 짝 목록이다(이 → 혜리·누리·태리·두리 — 격자 상위 10의 791장). 결정: 순서는 그대로 둔다 — 같은 입력에 같은 목록(결정성)이고,
+  쓸 수 있는 성 + 이름 소리 기준(NamingPrinciples.EvalSurnameFlow)은 받침 뒤 초성을 거칠게 봐(김 + 두리를 경음화 0.50) 다시 정렬하면 새 어색함이 생긴다.
+  회귀 `ParentBasedRealisticInputTests`(아이 성 = 아버지 성·패턴 DB 성·키워드만·본음·/search 꼴·공통 거르기 손 사례·ParentNameSplit 표·standard·TopPick 같음)·
+  `ParentBasedVerificationFixTests`(성별·예비 경로·동음 훈·짝 글자·키워드 순서·어미·낯선 글자·메아리 — 기대값은 NameCounts 원자료·손 표·사전 원문으로 따로 셈)·
+  `ParentBasedSecondReviewFixTests`(2차 — 성 칸 없는 전체 이름·키워드 5개 이상과 첫 카드·family-meaning 한자 = ScoringService.AssignedHanja·키워드 카드 약자·비실명 반대 성별·
+  낱말/'-자' 이름·복성 메아리·유행/두음 순서 — 기대값은 손으로 나눈 부모 이름·평가 경로·데이터 목록·손 표)·
+  `ParentBasedNamingEngineTests`·프런트 `tests/parent-naming.test.mjs`(코드 표·keywordHasHangul·familyMeaningRoles)·`tests/name-split.test.mjs`(splitParentName — 남궁민·제갈량·황보라)
 
 ### 프론트엔드
 - **한자 서체 범위**: 사이트 한자 폰트(layout.tsx next/font Noto Serif KR — Google 조각 373개)는 기본 영역 4,620/20,992자·확장 A/B 0자만 담는다

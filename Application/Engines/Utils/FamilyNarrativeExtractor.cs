@@ -3,19 +3,28 @@ using NameForm.Application.Engines.Data;
 namespace NameForm.Application.Engines.Utils;
 
 /// <summary>
-/// 가족의 서사 추출 유틸리티
-/// 부모의 성함에서 의미, 음운, 세대적 특성을 분석하여 가족의 서사를 추출
+/// 가족의 서사 추출 유틸리티 — 부모 기반 작명의 '부모 이름 뜻 잇기'(의미 융합)와 '부모 공통 글자 잇기'(세대 연결) 재료.
+/// 2026-10-28 개편: 음운 유전 서사는 조합 함수가 빈 껍데기라 한 건도 내지 않아 지웠다. 의미 융합은 음절마다 한자 한 자만 정하고
+/// (HanjaSelector.Select — 보이는 한자와 같은 선택기) 이을 때는 한자의 대표 독음이 아니라 부모 이름 음절을 쓴다(옛 코드는 h.Reading 이라
+/// 연→련·김→금·예→례 같은 본음 음절이 이름에 들어갔다). 세대 연결은 사전 앞 10자·'현대/전통적' 시대 문구 대신
+/// 부모 공통 글자 + 실명 짝 글자(RealNamePartners)다.
 /// </summary>
 public static class FamilyNarrativeExtractor
 {
     /// <summary>
-    /// 함수 1: 의미 융합 서사 추출
-    /// 부모 이름의 한자 의미를 분석하여 가족의 가치관, 철학, 정체성을 추출
-    /// 예: 아버지 "지혜" + 어머니 "사랑" -> "지혜로운 사랑"의 서사 -> "지애", "혜인" 등
+    /// 의미 융합 서사 — 부모 이름 음절마다 한자 한 자(HanjaSelector.Select, 요청 성별·용신)를 정하고 그 독음의 훈(GlossForReading)만 쓴다.
+    /// 부모 엔진은 요청 출생일·시각의 용신(1순위 용신·희신·기신)을 넘겨 /evaluate 배정(ScoringService.AssignedHanja)과 같은 글자를 고른다
+    /// (Select 는 음절마다 따로 고르므로 이름 '민서'의 배정 = '민'·'서' 각각의 배정). 용신이 없으면(null) 출생일 없는 선택과 같다.
+    /// 추천 조합(<see cref="FamilyNarrative.Combinations"/>)은 아버지 음절 하나 + 어머니 음절 하나(양쪽 순서)로, 두 글자의 카테고리가
+    /// 어울릴 때만(같은 카테고리, 또는 자연 + 덕목). 같은 음절을 두 번 쓴 조합(민민)은 뺀다.
     /// </summary>
     public static FamilyNarrative ExtractMeaningFusionNarrative(
-        string? fatherName, 
-        string? motherName)
+        string? fatherName,
+        string? motherName,
+        string gender = "none",
+        string? yongshinPrimary = null,
+        string? yongshinHee = null,
+        string? yongshinGi = null)
     {
         var narrative = new FamilyNarrative
         {
@@ -30,103 +39,50 @@ public static class FamilyNarrativeExtractor
             return narrative;
         }
 
-        var fatherMeanings = ExtractMeaningsFromName(fatherName);
-        var motherMeanings = ExtractMeaningsFromName(motherName);
+        var yongshin = (yongshinPrimary, yongshinHee, yongshinGi);
+        var fatherPicks = PickPerSyllable(fatherName, gender, fromFather: true, yongshin);
+        var motherPicks = PickPerSyllable(motherName, gender, fromFather: false, yongshin);
+        var allPicks = fatherPicks.Concat(motherPicks).ToList();
 
-        // 가족의 핵심 가치관 추출
-        var allMeanings = fatherMeanings.Concat(motherMeanings).Distinct().ToList();
-        
-        // 의미 카테고리 분석
-        var natureThemes = allMeanings.Where(m => m.Category == "자연").Select(m => m.Meaning).ToList();
-        var virtueThemes = allMeanings.Where(m => m.Category == "덕목").Select(m => m.Meaning).ToList();
-        var conceptThemes = allMeanings.Where(m => m.Category == "개념").Select(m => m.Meaning).ToList();
+        // 가족의 핵심 가치관 — 훈 문자열 단위로 겹치지 않게(옛 Distinct 는 참조 비교라 같은 뜻이 되풀이됐다)
+        var natureThemes = allPicks.Where(m => m.Category == "자연").Select(m => m.Gloss).Distinct().ToList();
+        var virtueThemes = allPicks.Where(m => m.Category == "덕목").Select(m => m.Gloss).Distinct().ToList();
+        var conceptThemes = allPicks.Where(m => m.Category == "개념").Select(m => m.Gloss).Distinct().ToList();
 
-        narrative.CoreValues.AddRange(virtueThemes.Take(3));
-        narrative.CoreValues.AddRange(conceptThemes.Take(2));
+        narrative.CoreValues.AddRange(virtueThemes.Take(3).Concat(conceptThemes.Take(2)).Distinct());
 
-        // 서사 구성
         if (virtueThemes.Any() && natureThemes.Any())
         {
             narrative.SuggestedThemes.Add($"{virtueThemes.First()}과 {natureThemes.First()}의 조화");
             narrative.NarrativeDescription = $"부모님의 '{virtueThemes.First()}' 정신과 '{natureThemes.First()}'의 아름다움이 조화를 이루는 이름";
         }
-        else if (fatherMeanings.Any() && motherMeanings.Any())
+        else if (fatherPicks.Any() && motherPicks.Any())
         {
-            var fatherTheme = fatherMeanings.First().Meaning;
-            var motherTheme = motherMeanings.First().Meaning;
+            var fatherTheme = fatherPicks.First().Gloss;
+            var motherTheme = motherPicks.First().Gloss;
             narrative.SuggestedThemes.Add($"{fatherTheme}과 {motherTheme}의 결합");
-            narrative.NarrativeDescription = $"아버지의 '{fatherTheme}'{KoreanUtils.GwaWa(fatherTheme)} 어머니의 '{motherTheme}'{KoreanUtils.IGa(motherTheme)} 만나 새로운 의미를 만들어내는 이름";
+            narrative.NarrativeDescription = $"아버지의 '{fatherTheme}'{KoreanUtils.GwaWa(KoreanUtils.JosaBase(fatherTheme))} 어머니의 '{motherTheme}'{KoreanUtils.IGa(KoreanUtils.JosaBase(motherTheme))} 만나 새로운 의미를 만들어내는 이름";
         }
 
-        // 추천 한자 조합 생성
-        narrative.RecommendedHanja = GenerateMeaningBasedCombinations(fatherMeanings, motherMeanings);
+        narrative.Combinations = GenerateMeaningBasedCombinations(fatherPicks, motherPicks);
+        narrative.RecommendedHanja = narrative.Combinations.Select(c => c.Name).ToList();
 
         return narrative;
     }
 
     /// <summary>
-    /// 함수 2: 음운 유전 서사 추출
-    /// 부모 이름의 음운 패턴(리듬, 초성, 모음)을 분석하여 가족의 음악적/리듬적 정체성 추출
-    /// 예: 아버지 "민수" (ㅁ-ㅣㄴ, ㅅ-ㅜ) + 어머니 "지은" (ㅈ-ㅣ, ㅇ-ㅡㄴ) 
-    /// -> 부드러운 리듬의 유전 -> "민지", "수은" 등
-    /// </summary>
-    public static FamilyNarrative ExtractPhoneticInheritanceNarrative(
-        string? fatherName,
-        string? motherName)
-    {
-        var narrative = new FamilyNarrative
-        {
-            Type = "음운유전",
-            CoreValues = new List<string>(),
-            SuggestedThemes = new List<string>(),
-            NarrativeDescription = string.Empty
-        };
-
-        if (string.IsNullOrEmpty(fatherName) && string.IsNullOrEmpty(motherName))
-        {
-            return narrative;
-        }
-
-        // 음운 패턴 분석
-        var fatherRhythm = AnalyzeRhythmPattern(fatherName);
-        var motherRhythm = AnalyzeRhythmPattern(motherName);
-
-        // 공통 음운 특성 추출
-        var commonInitials = fatherRhythm.Initials.Intersect(motherRhythm.Initials).ToList();
-        var commonVowels = fatherRhythm.Vowels.Intersect(motherRhythm.Vowels).ToList();
-        var rhythmType = DetermineRhythmType(fatherRhythm, motherRhythm);
-
-        narrative.CoreValues.Add(rhythmType);
-        if (commonInitials.Any())
-        {
-            narrative.CoreValues.Add($"공통 초성: {string.Join(", ", commonInitials.Take(2))}");
-        }
-        if (commonVowels.Any())
-        {
-            narrative.CoreValues.Add($"공통 모음: {string.Join(", ", commonVowels.Take(2))}");
-        }
-
-        // 서사 구성
-        narrative.SuggestedThemes.Add($"{rhythmType} 리듬의 계승");
-        narrative.NarrativeDescription = $"부모님의 '{rhythmType}'한 음운 특성을 이어받은 이름";
-
-        // 추천 음운 조합 생성
-        narrative.RecommendedHanja = GeneratePhoneticBasedCombinations(fatherRhythm, motherRhythm);
-
-        return narrative;
-    }
-
-    /// <summary>
-    /// 함수 3: 세대 연결 서사 추출
-    /// 부모 이름의 시대적 배경, 세대 특성, 문화적 맥락을 분석하여 세대 간 연결고리 추출
-    /// 예: 아버지 "영수" (1960년대 인기) + 어머니 "미영" (1980년대 인기)
-    /// -> 세대를 넘나드는 연결 -> "영미", "수영" 등
+    /// 세대 연결 서사 — 두 부모 이름에 함께 있는 글자(공통 음절)에 실명 짝 글자(RealNamePartners, 요청 성별·톤)를 앞·뒤로 붙인다.
+    /// 공통 글자가 없으면 빈 서사. 시대·세대 추정 문구('현대/현대적/전통적')는 근거가 없어 쓰지 않는다.
+    /// <paramref name="accept"/> 는 호출자의 품질 거르기(부모 엔진 공통 거르기), <paramref name="perSyllable"/> 는 공통 글자 하나·자리 하나당 짝 수.
     /// </summary>
     public static FamilyNarrative ExtractGenerationalBridgeNarrative(
         string? fatherName,
         string? motherName,
-        DateTime? fatherBirthYear = null,
-        DateTime? motherBirthYear = null)
+        string gender = "none",
+        string tone = "neutral",
+        Func<string, bool>? accept = null,
+        int perSyllable = 4,
+        Func<string, HanjaData.HanjaInfo?>? visibleHanja = null)
     {
         var narrative = new FamilyNarrative
         {
@@ -136,252 +92,109 @@ public static class FamilyNarrativeExtractor
             NarrativeDescription = string.Empty
         };
 
-        if (string.IsNullOrEmpty(fatherName) && string.IsNullOrEmpty(motherName))
+        var shared = SharedSyllables(fatherName, motherName);
+        if (shared.Count == 0)
         {
             return narrative;
         }
 
-        // 세대 특성 분석
-        var fatherGeneration = AnalyzeGeneration(fatherName, fatherBirthYear);
-        var motherGeneration = AnalyzeGeneration(motherName, motherBirthYear);
+        narrative.CoreValues.AddRange(shared);
+        var quoted = string.Join("·", shared.Select(s => $"'{s}'"));
+        narrative.SuggestedThemes.Add($"부모 공통 글자 {quoted}");
+        narrative.NarrativeDescription = $"아버지와 어머니 이름에 함께 있는 {quoted}{KoreanUtils.EulReul(shared[^1])} 잇는 이름";
 
-        // 세대 간 연결고리 찾기
-        var bridgeElements = FindGenerationalBridge(fatherGeneration, motherGeneration);
-
-        narrative.CoreValues.AddRange(bridgeElements.Themes);
-        narrative.SuggestedThemes.Add($"{fatherGeneration.Era}와 {motherGeneration.Era}의 연결");
-        narrative.NarrativeDescription = $"아버지 세대({fatherGeneration.Era})와 어머니 세대({motherGeneration.Era})의 특성을 모두 담은 이름";
-
-        // 추천 세대 조합 생성
-        narrative.RecommendedHanja = GenerateGenerationalCombinations(
-            fatherGeneration, motherGeneration, bridgeElements);
+        foreach (var s in shared)
+        {
+            var front = RealNamePartners.Find(s, anchorFirst: true, gender, tone, perSyllable, accept, visibleHanja);
+            var back = RealNamePartners.Find(s, anchorFirst: false, gender, tone, perSyllable, accept, visibleHanja);
+            // 앞·뒤 자리를 번갈아 — 한쪽 자리 이름만 몰리지 않게
+            for (int i = 0; i < Math.Max(front.Count, back.Count); i++)
+            {
+                if (i < front.Count) AddBridge(s, front[i]);
+                if (i < back.Count) AddBridge(s, back[i]);
+            }
+        }
+        narrative.RecommendedHanja = narrative.Bridges.Select(b => b.Name).ToList();
 
         return narrative;
+
+        void AddBridge(string sharedSyllable, RealNamePartners.Partner p)
+        {
+            if (narrative.Bridges.Any(b => b.Name == p.Name)) return;
+            narrative.Bridges.Add(new BridgeCombination(p.Name, sharedSyllable, p.Syllable, p.Hanja.Character, p.Gloss));
+        }
+    }
+
+    /// <summary>두 부모 이름(성 제외)에 함께 있는 한글 음절 — 아버지 이름 순서, 겹치지 않게.</summary>
+    public static List<string> SharedSyllables(string? fatherName, string? motherName)
+    {
+        if (string.IsNullOrEmpty(fatherName) || string.IsNullOrEmpty(motherName)) return new List<string>();
+        return fatherName.Where(IsHangulSyllable).Distinct()
+            .Where(c => motherName.Contains(c))
+            .Select(c => c.ToString())
+            .ToList();
     }
 
     #region Helper Methods
 
-    private static List<MeaningInfo> ExtractMeaningsFromName(string? name)
-    {
-        var meanings = new List<MeaningInfo>();
-        
-        if (string.IsNullOrEmpty(name))
-            return meanings;
+    private static bool IsHangulSyllable(char c) => c >= 0xAC00 && c <= 0xD7A3;
 
-        foreach (char c in name)
+    /// <summary>
+    /// 이름 음절마다 한자 한 자 — HanjaSelector.Select(음절, 성별, 용신)가 고른 글자가 이름에 쓸 수 있는 글자(불용 아님 + 뜻 있음)일 때만.
+    /// 사전 글자 전부(옛 UsableByReading 전체)를 보지 않으므로 한 음절의 여러 뜻이 서사에 섞이지 않는다.
+    /// </summary>
+    private static List<SyllablePick> PickPerSyllable(string? name, string gender, bool fromFather,
+        (string? Primary, string? Hee, string? Gi) yongshin)
+    {
+        var picks = new List<SyllablePick>();
+        if (string.IsNullOrEmpty(name)) return picks;
+
+        foreach (var c in name.Where(IsHangulSyllable).Distinct())
         {
-            // 이름에 쓸 수 있는 글자만(HanjaSelector.UsableByReading — 불용·뜻 없는 글자 제외, 관련도 순 유지) — 사전 글자 전부를 보면
-            // 불용 글자의 뜻(나=懦 '나약할'·우=愚 '어리석을' 등)이 '부모님의 … 정신' 서사 문장에 들어갈 수 있었다(2026-10-26 점수 정책과 같은 판정)
-            var hanjaList = HanjaSelector.UsableByReading(c.ToString());
-            foreach (var hanja in hanjaList)
-            {
-                if (!string.IsNullOrEmpty(hanja.Meaning))
-                {
-                    meanings.Add(new MeaningInfo
-                    {
-                        Character = hanja.Character,
-                        Reading = hanja.Reading,
-                        Meaning = hanja.Meaning,
-                        Category = hanja.Category
-                    });
-                }
-            }
+            var syllable = c.ToString();
+            var h = HanjaSelector.Select(syllable, gender, yongshin.Primary, yongshin.Hee, yongshin.Gi).FirstOrDefault();
+            if (h == null || !HanjaSelector.IsUsableNameHanja(h)) continue;
+            picks.Add(new SyllablePick(syllable, h.Character, HanjaData.GlossForReading(h.Meaning, syllable), h.Category, fromFather));
         }
 
-        return meanings;
+        return picks;
     }
 
-    private static RhythmPattern AnalyzeRhythmPattern(string? name)
+    private static List<MeaningCombination> GenerateMeaningBasedCombinations(
+        List<SyllablePick> fatherPicks,
+        List<SyllablePick> motherPicks)
     {
-        var pattern = new RhythmPattern
-        {
-            Initials = new List<string>(),
-            Vowels = new List<string>(),
-            HasFinalConsonant = false
-        };
+        var combinations = new List<MeaningCombination>();
 
-        if (string.IsNullOrEmpty(name))
-            return pattern;
-
-        foreach (char c in name)
+        foreach (var f in fatherPicks)
         {
-            var (initial, vowel, final) = KoreanUtils.Decompose(c);
-            pattern.Initials.Add(initial);
-            pattern.Vowels.Add(vowel);
-            if (!string.IsNullOrEmpty(final))
+            foreach (var m in motherPicks)
             {
-                pattern.HasFinalConsonant = true;
+                if (f.Syllable == m.Syllable) continue; // 같은 음절 반복(민민) 금지
+                if (!IsHarmoniousMeaning(f.Category, m.Category)) continue;
+                Add(new MeaningCombination(f.Syllable + m.Syllable, f, m));
+                Add(new MeaningCombination(m.Syllable + f.Syllable, m, f));
             }
-        }
-
-        return pattern;
-    }
-
-    private static string DetermineRhythmType(RhythmPattern father, RhythmPattern mother)
-    {
-        // 부드러운 초성: ㅁ, ㄴ, ㅇ, ㄹ
-        var softInitials = new[] { "ㅁ", "ㄴ", "ㅇ", "ㄹ" };
-        var strongInitials = new[] { "ㄱ", "ㄷ", "ㅂ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ" };
-
-        var fatherSoftCount = father.Initials.Count(i => softInitials.Contains(i));
-        var motherSoftCount = mother.Initials.Count(i => softInitials.Contains(i));
-
-        if (fatherSoftCount + motherSoftCount >= 3)
-            return "부드러운";
-        else if (fatherSoftCount + motherSoftCount <= 1)
-            return "강한";
-        else
-            return "균형잡힌";
-    }
-
-    private static GenerationInfo AnalyzeGeneration(string? name, DateTime? birthYear)
-    {
-        var info = new GenerationInfo
-        {
-            Name = name ?? string.Empty,
-            Era = "현대",
-            Characteristics = new List<string>(),
-            PopularHanja = new List<string>()
-        };
-
-        if (birthYear.HasValue)
-        {
-            var year = birthYear.Value.Year;
-            if (year < 1970)
-                info.Era = "전통적";
-            else if (year < 1990)
-                info.Era = "과도기";
-            else
-                info.Era = "현대적";
-        }
-
-        // 이름 패턴으로 세대 추정
-        if (!string.IsNullOrEmpty(name))
-        {
-            var commonOldEndings = new[] { "길", "복", "남", "숙", "순", "자", "영", "옥" };
-            var commonModernEndings = new[] { "준", "은", "유", "윤", "서", "하", "지", "연" };
-
-            if (commonOldEndings.Any(e => name.EndsWith(e)))
-            {
-                info.Era = "전통적";
-                info.Characteristics.Add("전통적 돌림자");
-            }
-            else if (commonModernEndings.Any(e => name.EndsWith(e)))
-            {
-                info.Era = "현대적";
-                info.Characteristics.Add("현대적 트렌드");
-            }
-        }
-
-        return info;
-    }
-
-    private static BridgeElements FindGenerationalBridge(GenerationInfo father, GenerationInfo mother)
-    {
-        var bridge = new BridgeElements
-        {
-            Themes = new List<string>(),
-            CommonHanja = new List<string>()
-        };
-
-        // 공통 테마 찾기
-        if (father.Characteristics.Any() && mother.Characteristics.Any())
-        {
-            bridge.Themes.Add("세대 간 조화");
-        }
-
-        // 이름에서 공통 한자 찾기
-        if (!string.IsNullOrEmpty(father.Name) && !string.IsNullOrEmpty(mother.Name))
-        {
-            var fatherChars = father.Name.ToCharArray();
-            var motherChars = mother.Name.ToCharArray();
-            var common = fatherChars.Intersect(motherChars).Select(c => c.ToString()).ToList();
-            bridge.CommonHanja.AddRange(common);
-        }
-
-        return bridge;
-    }
-
-    private static List<string> GenerateMeaningBasedCombinations(
-        List<MeaningInfo> fatherMeanings, 
-        List<MeaningInfo> motherMeanings)
-    {
-        var combinations = new List<string>();
-
-        foreach (var f in fatherMeanings.Take(3))
-        {
-            foreach (var m in motherMeanings.Take(3))
-            {
-                // 의미가 조화로운 조합 생성
-                if (IsHarmoniousMeaning(f, m))
-                {
-                    combinations.Add(f.Reading + m.Reading);
-                }
-            }
-        }
-
-        return combinations.Distinct().Take(10).ToList();
-    }
-
-    private static List<string> GeneratePhoneticBasedCombinations(
-        RhythmPattern father, 
-        RhythmPattern mother)
-    {
-        var combinations = new List<string>();
-
-        // 부모의 초성과 모음을 조합
-        foreach (var fInit in father.Initials.Take(2))
-        {
-            foreach (var mVowel in mother.Vowels.Take(2))
-            {
-                // 실제로는 초성+모음 조합이 유효한지 확인 필요
-                // 여기서는 간단히 예시만 제공
-            }
-        }
-
-        // 부모 이름의 첫 글자 조합
-        if (father.Initials.Any() && mother.Initials.Any())
-        {
-            // 실제 구현에서는 한자 사전을 통해 유효한 조합만 생성
         }
 
         return combinations;
-    }
 
-    private static List<string> GenerateGenerationalCombinations(
-        GenerationInfo father,
-        GenerationInfo mother,
-        BridgeElements bridge)
-    {
-        var combinations = new List<string>();
-
-        // 공통 한자 활용
-        foreach (var common in bridge.CommonHanja.Take(2))
+        void Add(MeaningCombination c)
         {
-            // 공통 한자와 다른 한자 조합 — 불용(ForbiddenNameHanjaSet)·뜻 없는 글자는 생성 풀에서 뺀다 — /name·/evaluate 와 같은 술어(HanjaSelector.IsUsableNameHanja, 2026-10-27)
-            var hanjaList = HanjaData.HanjaDictionary.Values.Where(HanjaSelector.IsUsableNameHanja).Take(10);
-            foreach (var h in hanjaList)
-            {
-                combinations.Add(common + h.Reading);
-                combinations.Add(h.Reading + common);
-            }
+            if (combinations.All(x => x.Name != c.Name)) combinations.Add(c);
         }
-
-        return combinations.Distinct().Take(10).ToList();
     }
 
-    private static bool IsHarmoniousMeaning(MeaningInfo m1, MeaningInfo m2)
+    private static bool IsHarmoniousMeaning(string? c1, string? c2)
     {
+        if (string.IsNullOrEmpty(c1) || string.IsNullOrEmpty(c2)) return false;
+
         // 자연 + 자연, 덕목 + 덕목, 개념 + 개념 조합이 조화로움
-        if (m1.Category == m2.Category)
+        if (c1 == c2)
             return true;
 
         // 자연 + 덕목 조합도 조화로움
-        if ((m1.Category == "자연" && m2.Category == "덕목") ||
-            (m1.Category == "덕목" && m2.Category == "자연"))
-            return true;
-
-        return false;
+        return (c1 == "자연" && c2 == "덕목") || (c1 == "덕목" && c2 == "자연");
     }
 
     #endregion
@@ -394,37 +207,22 @@ public static class FamilyNarrativeExtractor
         public List<string> CoreValues { get; set; } = new();
         public List<string> SuggestedThemes { get; set; } = new();
         public string NarrativeDescription { get; set; } = string.Empty;
+        /// <summary>추천 이름(2음절) — 의미 융합은 Combinations, 세대 연결은 Bridges 의 이름 순서 그대로</summary>
         public List<string> RecommendedHanja { get; set; } = new();
+        /// <summary>의미 융합 조합 — 음절마다 고른 한자·훈</summary>
+        public List<MeaningCombination> Combinations { get; set; } = new();
+        /// <summary>세대 연결 조합 — 공통 글자 + 실명 짝 글자</summary>
+        public List<BridgeCombination> Bridges { get; set; } = new();
     }
 
-    private class MeaningInfo
-    {
-        public string Character { get; set; } = string.Empty;
-        public string Reading { get; set; } = string.Empty;
-        public string Meaning { get; set; } = string.Empty;
-        public string Category { get; set; } = string.Empty;
-    }
+    /// <summary>부모 이름 음절 하나와 그 음절에 정한 한자 한 자(훈은 그 독음의 것).</summary>
+    public sealed record SyllablePick(string Syllable, string Character, string Gloss, string? Category, bool FromFather);
 
-    private class RhythmPattern
-    {
-        public List<string> Initials { get; set; } = new();
-        public List<string> Vowels { get; set; } = new();
-        public bool HasFinalConsonant { get; set; }
-    }
+    /// <summary>의미 융합 이름 하나 — First 가 이름 첫 음절.</summary>
+    public sealed record MeaningCombination(string Name, SyllablePick First, SyllablePick Second);
 
-    private class GenerationInfo
-    {
-        public string Name { get; set; } = string.Empty;
-        public string Era { get; set; } = string.Empty;
-        public List<string> Characteristics { get; set; } = new();
-        public List<string> PopularHanja { get; set; } = new();
-    }
-
-    private class BridgeElements
-    {
-        public List<string> Themes { get; set; } = new();
-        public List<string> CommonHanja { get; set; } = new();
-    }
+    /// <summary>세대 연결 이름 하나 — 공통 글자와 실명 짝 글자(보이는 한자·훈).</summary>
+    public sealed record BridgeCombination(string Name, string Shared, string Partner, string PartnerHanja, string PartnerGloss);
 
     #endregion
 }

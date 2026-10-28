@@ -1243,18 +1243,7 @@ function CategoryBanner({ cat }: { cat: UICategory }) {
           </div>
         </div>
       </div>
-      {cat.engineUsed && (
-        <div
-          style={{
-            fontFamily: "Inter, var(--font-sans)",
-            fontSize: 11,
-            color: "var(--color-text-3)",
-            letterSpacing: "0.04em",
-          }}
-        >
-          by {cat.engineUsed}
-        </div>
-      )}
+      {/* 내부 엔진 클래스 이름(by {cat.engineUsed})은 그리지 않는다 — 사용자에게 뜻이 없고 구현 이름이 드러난다(2026-10-28) */}
     </div>
   );
 }

@@ -23,12 +23,13 @@ public class Candidate
     public List<string> Reasons { get; set; } = new();
     
     /// <summary>
-    /// 작명 모델 태그 (예: "윤고은모델", "문소리모델", "신해솜모델", "이수지-박지수모델")
+    /// 부모 기반 작명 방식 코드 (예: "mother-surname", "parent-syllables" — 매핑 컬럼 varchar 50). 2026-10-28 전 행은 옛 방식 값이라
+    /// 읽는 쪽(RecommendationService.GetRecommendationAsync)이 ParentNamingModels.Normalize 로 바꾼다
     /// </summary>
     public string? NamingModel { get; set; }
     
     /// <summary>
-    /// 이름 분류 태그 ("의미중심" 또는 "음운중심")
+    /// 이름 분류 태그 ("의미중심"·"음운중심", 부모 기반 후보는 "서사중심"도 — varchar 20)
     /// </summary>
     public string? NameType { get; set; }
     

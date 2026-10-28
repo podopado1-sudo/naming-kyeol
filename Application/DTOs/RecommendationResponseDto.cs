@@ -15,12 +15,17 @@ public class CandidateDto
     public List<string> Reasons { get; set; } = new();
     
     /// <summary>
-    /// 작명 모델 태그 (예: "윤고은모델", "문소리모델", "신해솜모델", "이수지-박지수모델")
+    /// 부모 기반 작명 방식 코드 (부모 기반 후보만 — 예: "mother-surname", "parent-syllables", ParentNamingModels). 화면 문구는 <see cref="NamingLabel"/>
     /// </summary>
     public string? NamingModel { get; set; }
+
+    /// <summary>
+    /// 부모 기반 작명 방식의 사용자 라벨 (예: "어머니 성씨 잇기") — 태그에는 코드 대신 이 값을 쓴다
+    /// </summary>
+    public string? NamingLabel { get; set; }
     
     /// <summary>
-    /// 이름 분류 태그 ("의미중심" 또는 "음운중심")
+    /// 이름 분류 태그 ("의미중심"·"음운중심", 부모 기반 후보는 "서사중심"도)
     /// </summary>
     public string? NameType { get; set; }
     

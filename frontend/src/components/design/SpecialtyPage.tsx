@@ -56,7 +56,7 @@ export const MODE_META: Record<
     h1: "가족의 이야기를 잇는 이름",
     sub: "부모님의 이름에서 영감을 받아 가족의 서사를 이어가는 작명입니다.",
     explain:
-      "부모님의 이름에서 음운 요소(초성·받침), 한자 의미, 또는 가족의 이야기를 재료로 사용합니다. 작명 모델은 8종의 패턴 중 선택하거나 자동 추천 가능.",
+      "부모님의 이름 글자와 그 한자 뜻, 어머니 성씨, 스토리 키워드를 재료로 사용합니다. 방식은 입력에 맞춰 자동으로 정해지고, 결과 카드마다 방식 이름이 붙습니다.",
     cta: "부모 이름 기반 추천 받기",
   },
   rare: {
@@ -590,7 +590,6 @@ export function SpecialtyPage({
     fatherFirst: "",
     motherLast: "",
     motherFirst: "",
-    model: "auto",
     story: "",
   });
   const [rare, setRare] = useState<RareState>({

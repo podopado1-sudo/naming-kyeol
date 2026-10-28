@@ -15,9 +15,10 @@ export interface SmartRecommendationRequest {
   birthTime?: string;
   gender?: string;
   tone?: string;
+  /** 부모 성 — /search 는 성 포함 전체 이름 칸을 lib/name-split.ts splitParentName 으로 나눠 보낸다 */
   fatherSurname?: string;
   motherSurname?: string;
-  /** 부모 이름 — 하나라도 있으면 parent-based 카테고리 추가 */
+  /** 부모 이름(성 제외) — 하나라도 있으면 parent-based 카테고리 추가 */
   fatherName?: string;
   motherName?: string;
   storyKeyword?: string;
@@ -233,14 +234,24 @@ export interface ParentBasedRequest {
 }
 
 export interface ParentBasedCandidate {
-  /** 이름 부분 (성씨 제외) */
+  /** 이름 부분 (성씨 제외, 2음절) */
   name: string;
-  /** 작명 모델 (예: "윤고은모델", "문소리모델", "신해솜모델", "이수지-박지수모델") */
+  /**
+   * 작명 방식 중립 코드 (예: "mother-surname", "parent-syllables" — 백엔드 ParentNamingModels).
+   * 화면에 그대로 내지 않는다 — 칩 분류(lib/parent-naming.ts)에만 쓰고 문구는 namingLabel
+   */
   namingModel: string;
-  /** 이름 분류 — "의미중심" 또는 "음운중심" */
+  /** 사용자용 방식 이름 (예: "어머니 성씨 잇기", "부모 이름 글자 잇기") — 태그 문구 */
+  namingLabel?: string;
+  /** 계승 꼴 — "음운중심" · "의미중심" · "서사중심" (방식에서 정한다) */
   nameType: string;
   /** 생성 방식 설명 */
   description: string;
+  /**
+   * 설명이 풀이한 한자(음절마다 한 자) — 뜻을 잇는 방식(부모 이름 뜻·키워드 뜻·성씨 뜻)만, 나머지는 null.
+   * 출생일을 넣은 /evaluate 의 용신 배정 한자와 다를 수 있다
+   */
+  hanja?: string | null;
 }
 
 // ============================================================
@@ -302,9 +313,12 @@ export interface DualNameCandidate {
   koreanName: string;
   /** 영어 대응 이름 (예: "Philip") */
   englishEquivalent: string;
-  /** 한자 문자 목록 (예: ["筆", "立"]) */
+  /**
+   * 한자 문자 목록 — 음절마다 하나. 요청의 생년월일·출생 시각·성별로 /evaluate 와 같은 용신 배정을 한 글자라 같은 영어 이름도
+   * 조건마다 달라진다 (예: 필립 남자·2021-07-08·시각 없음 → ["弼", "粒"], 2026-10-28)
+   */
   hanjaCharacters: string[];
-  /** 한자 의미 조합 — 사전 충실형 (예: "붓 필 + 설 립") */
+  /** 한자 의미 조합 — 음절마다 그 독음의 훈 하나를 " + " 로 잇는다 (예: "도울 필 + 낟알 립(입)") */
   hanjaMeaning: string;
 }
 
