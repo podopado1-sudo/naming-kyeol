@@ -831,7 +831,7 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   오분류 정리 회귀: `Gender_OverriddenHanja_PopularNames_NoMismatch`(유찬·우빈·예찬·규빈·요한·휘찬·동균·학준 남 + 줄리 여 — /name 1순위 조합·발행 sc.no·/evaluate 출생일 없음
   세 곳에 '맞지 않음' 없음), `HanjaGenderOverrideTests.KeywordMisclassified_IsNeutral_ViaOverrideFile`(10자, 정수 코드포인트)·`SameLineCommonPair_ShareOneGender`·
   `HyeongCommonHanja_StayMale_ViaOverrideFile`(옛 이름 _NotOverridden)·키 코드포인트 순 단언. `Gender_ShownOppositeHanja_IsMismatch` 의 /evaluate 사례는 유찬 燦(이제 裕燦 0)에서 혜성(남) 惠星(惠 하드코딩 Female)으로 바꿨다.
-  배포 주의(오분류 정리 뒤 최종 수치 — 정리 전과 같다): 블로그 하엘 편 교체 캡처 `docs/naver-blog/images/mean03-hael-page-2026-10.png`(81점·+3·'잘 맞음')는 배포 뒤 78점·노트 없음으로
+  배포 주의(오분류 정리 뒤 최종 수치 — 정리 전과 같다): 블로그 하엘 편 교체 캡처(옛 `docs/naver-blog/images/mean03-hael-page-2026-10.png` — 10/29 정리로 저장소에서 지움, 지금 수정본은 `D:\MyDev\namingkyeol-blog\수정-하엘.txt`·사진 폴더)(81점·+3·'잘 맞음')는 배포 뒤 78점·노트 없음으로
   낡는다(수정 메모의 '(81점)'도). 발행 이름 편에 /name 캡처를 실었다면 점수 카드가 달라진다(희재 81→85·노트 사라짐, 한결 72→71·노트 둘 사라짐 — 본문은 점수를 인용하지 않음).
   재원(미발행 — 73→72·노트 둘 사라짐) 캡처는 배포 뒤에 뜰 것. 로아 86(+5 '잘 맞음') 캡처는 그대로, 하온 83 캡처는 값은 같고 점수 카드 빈 구분선(10/27 수정 전 화면)이 찍혀 있어 되살릴 때 다시 찍는다. 블로그 밖에서 점수를 인용했다면 운영 대비 요한 84→79·우빈 80→75·
   수빈 80→75·서빈 84→79·찬빈 80→75·유찬 75→70(형준·준형 80 그대로)
