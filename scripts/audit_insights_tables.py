@@ -3,7 +3,7 @@
 content/insights/*.md 의 표 행 가운데 /name 링크가 걸린 행을 현재 frontend/src/data/name-seo.json 과 비교한다.
 - 링크 slug 와 표시 이름, 수록 여부
 - '대표 한자' 칸 = 1순위 조합
-- '발음이 주는 느낌' 칸 = 대표 뜻(mean)
+- '대표 뜻' 칸(2026-11-03 전 이름 '발음이 주는 느낌') = 대표 뜻(mean)
 
 리포트 표의 숫자는 스크립트로 만들었지만 뜻 칸은 json 을 자동으로 따라가지 않는다. 10/7 대표 뜻 교체(187명)
 뒤에도 리포트 11칸이 옛 뜻("연꽃처럼…" 아래 然佑)을 싣고 있었다. /name 데이터를 재생성한 뒤에는 반드시 돌릴 것.
@@ -73,8 +73,9 @@ for path in sorted(glob.glob(os.path.join(FE, "content", "insights", "*.md"))):
             top = "".join(rec["combos"][0]) if rec.get("combos") else ""
             if hj != top:
                 mism.append((fn, i + 1, name, f"hanja {hj} != {top}"))
-        if "발음이 주는 느낌" in header:
-            mi = header.index("발음이 주는 느낌")
+        mean_col = "대표 뜻" if "대표 뜻" in header else "발음이 주는 느낌" if "발음이 주는 느낌" in header else None
+        if mean_col:
+            mi = header.index(mean_col)
             cur, want = cells[mi], rec.get("mean", "")
             if cur != want:
                 mism.append((fn, i + 1, name, f"mean {cur!r} -> {want!r}"))

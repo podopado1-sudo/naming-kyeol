@@ -31,7 +31,8 @@ export async function generateMetadata({
   if (!article) return {};
   const canonical = `/guide/${slug}`;
   return {
-    title: article.title,
+    // guide/layout.tsx 가 문자열 title('작명 가이드')을 정해 루트 템플릿('%s | 이름의 결')이 여기까지 오지 않는다 — 직접 붙인다(2026-11-03)
+    title: { absolute: `${article.title} | 이름의 결` },
     description: article.description,
     alternates: { canonical },
     openGraph: {
@@ -84,7 +85,7 @@ export default async function InsightPage({
     dateModified: article.updated,
     inLanguage: "ko-KR",
     mainEntityOfPage: canonical,
-    author: { "@type": "Organization", name: "이름의 결", url: SITE_URL },
+    author: { "@type": "Organization", name: "이름의 결", url: `${SITE_URL}/about#ai` },
     publisher: { "@type": "Organization", name: "이름의 결", url: SITE_URL },
   };
 
@@ -115,7 +116,7 @@ export default async function InsightPage({
           {article.title}
         </h1>
         <p className="mb-3 text-[15px] leading-relaxed text-text-2">{article.description}</p>
-        <p className="mb-10 text-xs text-text-2">
+        <p className="mb-1.5 text-xs text-text-2">
           <time dateTime={article.date}>{fmtDate(article.date)}</time>
           {article.updated !== article.date && (
             <>
@@ -124,6 +125,13 @@ export default async function InsightPage({
             </>
           )}
           {" · "}읽는 데 약 {article.readingMinutes}분
+        </p>
+        {/* 작성 방식 공개(2026-11-03) — 표의 수치는 프로그램이 계산, 본문은 AI 도구. 사람 검토 문장은 쓰지 않는다 */}
+        <p className="mb-10 text-xs text-text-2">
+          글·집계: 이름의 결 · 표의 수치는 프로그램이 계산하고 본문은 AI 도구로 씁니다{" "}
+          <Link href="/about#ai" className="text-teal underline underline-offset-2">
+            (작성 방식)
+          </Link>
         </p>
 
         <article className={PROSE} dangerouslySetInnerHTML={{ __html: article.html }} />

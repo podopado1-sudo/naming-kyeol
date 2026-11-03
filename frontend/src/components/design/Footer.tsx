@@ -180,7 +180,7 @@ export function Footer() {
 
         <Column title="서비스" links={SERVICE_LINKS} />
         <Column title="둘러보기" links={GUIDE_LINKS} />
-        <Column title="회사" links={COMPANY_LINKS} />
+        <Column title="안내" links={COMPANY_LINKS} />
       </div>
 
       <div

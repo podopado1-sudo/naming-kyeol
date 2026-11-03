@@ -120,6 +120,9 @@ const RAW = rawData as unknown as {
 const DATA = RAW.names;
 const COMBO_MEANS = RAW.comboMeans ?? {};
 
+/** 수록 기준 — 출생신고 minTotal 건 이상 이름 count 개(순위의 모집단, 개방 대기 이름 포함) */
+export const NAME_SEO_META = { minTotal: RAW.meta.minTotal, count: RAW.meta.count } as const;
+
 export type NameGender = "male" | "female" | "neutral";
 
 /** 남/녀 빈도 비율 (성별 기운 판정용) */

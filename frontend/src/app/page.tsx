@@ -15,7 +15,7 @@ import { getAllInsights, type InsightMeta } from "@/lib/insights";
  *
  * 데이터 리포트 목록(content/insights/*.md)을 빌드 타임에 읽어 정적 HTML에 싣는다 —
  * 홈에서 /guide/[slug]로 가는 링크가 0개라 심사 근거가 될 편집 글이 2클릭 아래에 묻혀 있었다(감사 AS-8).
- * 인터랙션(Hero 이동·반려동물 준비 중 모달)은 각 클라이언트 컴포넌트가 스스로 처리한다.
+ * 인터랙션(Hero 이동·카드 hover)은 각 클라이언트 컴포넌트가 스스로 처리한다.
  */
 export default function HomePage() {
   const reports = getAllInsights();
@@ -87,8 +87,8 @@ function InsightReports({ reports }: { reports: InsightMeta[] }) {
               lineHeight: 1.6,
             }}
           >
-            대법원 출생신고 통계와 인명용 한자 사전을 직접 집계해 쓴
-            리포트입니다.
+            대법원 출생신고 통계와 인명용 한자 사전을 집계해 쓴 리포트입니다.
+            표의 수치는 프로그램이 계산하고, 본문은 AI 도구로 씁니다.
           </p>
         </div>
         <Link

@@ -20,6 +20,7 @@ import {
   ohaengRelation,
   syllablesOf,
   toAestheticBreakdown,
+  NAME_SEO_META,
   type NameSeoRecord,
 } from "@/lib/name-seo";
 
@@ -70,7 +71,7 @@ const GENDER_LABEL: Record<string, string> = {
  *   ('히브리어로 신이 더하신다는')이라 '발음이 주는 느낌·한자에 따라' 대신 '어원'으로 표기한다. 뜻이 없으면(유래가 갈리는 이름·
  *   '-엘' 조어) 그 사실을 한 줄로 적는다. 서사(story)는 내지 않는다 — 한자 없는 이름인데 한자 훈으로 지은 문장이다
  *   (다엘 '은은한 차 향처럼'(茶)·에린 '옥빛처럼'·시엘 '처음 켜진 불빛처럼').
- * - hanja: 그 밖 — 대표 뜻은 발음이 주는 느낌, 정확한 뜻은 한자 조합에 따라.
+ * - hanja: 그 밖 — 대표 뜻은 한자 훈을 AI 도구로 풀어 쓴 한 줄(2026-11-03 전 안내는 '발음이 주는 느낌'), 정확한 뜻은 한자 조합에 따라.
  * pk·fx 는 겹치지 않는다.
  */
 type NameKind = "pure" | "foreign" | "hanja";
@@ -93,9 +94,10 @@ function meanNote(kind: NameKind, hasCombos: boolean): string {
       ? "이름이 주는 느낌을 풀어 쓴 것입니다. 한글 이름으로도 쓰는 이름이라, 아래 한자 조합은 한자로 쓸 때의 참고입니다."
       : "이름이 주는 느낌을 풀어 쓴 것이며, 한글 그대로 쓰는 이름입니다.";
   }
+  // 2026-11-03: 옛 '발음이 주는 느낌이며'는 출처를 잘못 말했다 — 대표 뜻은 한자 훈을 AI 도구로 풀어 쓴 문장(/about#ai)
   return hasCombos
-    ? "발음이 주는 느낌이며, 정확한 뜻은 아래 한자 조합에 따라 달라집니다."
-    : "발음이 주는 느낌이며, 정확한 뜻은 쓰는 한자에 따라 달라집니다.";
+    ? "한자의 뜻을 바탕으로 풀어 쓴 한 줄이며, 정확한 뜻은 아래 한자 조합에 따라 달라집니다."
+    : "이름이 주는 느낌을 풀어 쓴 한 줄이며, 이 이름은 한자 조합을 싣지 않았습니다.";
 }
 
 // ---------------------------------------------------------------
@@ -119,7 +121,7 @@ export async function generateMetadata({
     ? ""
     : foreign
       ? ` ${withJosa(name, "은/는")} ${rec.mean} 이름입니다.`
-      : ` ${withJosa(name, "은/는")} '${rec.mean}' 뜻을 담습니다.`;
+      : ` ${withJosa(name, "은/는")} '${rec.mean}' 뜻으로 풀이합니다.`;
   const scorePart = rec.sc ? ` 발음·미학 점수 ${rec.sc.t}점.` : "";
   const title = `${name} 이름 뜻 — 인기 순위·한자·의미`;
   const description = `${name}: ${GENDER_LABEL[gender]}.${meanPart} 출생신고 통계 기준 인기 순위와 남녀 비율${
@@ -290,13 +292,13 @@ function relatedInsights(
   if (rec.rm && rec.rm <= 50) {
     picks.push({
       slug: "boy-names-top50",
-      reason: `${withJosa(name, "은/는")} 남자 이름 ${rec.rm}위입니다. 상위 50개 이름과 그 흐름을 정리했습니다.`,
+      reason: `${withJosa(name, "은/는")} 남자 이름 ${rec.rm}위입니다. 상위 50개 이름과 그 분포를 정리했습니다.`,
     });
   }
   if (rec.rf && rec.rf <= 50) {
     picks.push({
       slug: "girl-names-top50",
-      reason: `${withJosa(name, "은/는")} 여자 이름 ${rec.rf}위입니다. 상위 50개 이름과 그 흐름을 정리했습니다.`,
+      reason: `${withJosa(name, "은/는")} 여자 이름 ${rec.rf}위입니다. 상위 50개 이름과 그 분포를 정리했습니다.`,
     });
   }
   // 리포트(unisex-names.md) 정의와 같은 조건: 반올림 전 남아 비율 35~65% + 출생신고 300건 이상.
@@ -317,6 +319,19 @@ function relatedInsights(
     });
   }
   const syl = syllablesOf(name);
+  // 2026-11-03: 최신 리포트 두 편으로 가는 문맥 링크(독음·이름 페이지에서 0개였다 — 점검 N1)
+  if (rec.combos && rec.combos.length > 0) {
+    picks.push({
+      slug: "resource-element-radicals",
+      reason: "위 한자 조합에 적은 자원오행을 부수로 어떻게 정하는지, 자료마다 값이 갈리는 글자는 어떻게 다루는지 정리했습니다.",
+    });
+  }
+  if (syl.length === 3) {
+    picks.push({
+      slug: "three-syllable-names",
+      reason: `${withJosa(name, "은/는")} 세 음절 이름입니다. 출생신고 30건 이상인 세 음절 이름을 모아 정리했습니다.`,
+    });
+  }
   picks.push({
     slug: "syllable-map",
     reason: `첫 음절 ‘${syl[0]}’, 끝 음절 ‘${syl[syl.length - 1]}’ — 이름에 많이 쓰이는 첫 음절·끝 음절 순위를 정리했습니다.`,
@@ -394,6 +409,13 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
               “{rec.story}”
             </p>
           )}
+          {/* 뜻 없이 서사만 있는 이름은 서사가 '이름 뜻' 제목 바로 아래에 놓여 뜻처럼 읽혔다(2026-11-03 점검 — 이플·세빛 등) */}
+          {rec.story && !rec.mean && kind === "hanja" && (
+            <p className="mt-2 text-sm text-text-2">
+              이 이름은 뜻풀이를 따로 적지 않았습니다. 위 문장은 한 음절에 맞는 한자의 훈을 바탕으로 AI 도구로 지은
+              한 줄입니다.
+            </p>
+          )}
         </div>
 
         {/* 인기 통계 */}
@@ -429,6 +451,11 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
               </>
             )}
             입니다.
+          </p>
+          {/* 출처·범위 표기(2026-11-03) — 원자료 정리본 randkid/name README: '2008 ~ 2019년 수치 합산' */}
+          <p className="mt-2 text-xs leading-relaxed text-text-2">
+            자료: 대법원 전자가족관계등록시스템 출생신고 이름 통계(2008~2019년 합산) · 출생신고{" "}
+            {NAME_SEO_META.minTotal}건 이상인 두·세 글자 이름 {NAME_SEO_META.count.toLocaleString()}개 기준 순위
           </p>
         </section>
 

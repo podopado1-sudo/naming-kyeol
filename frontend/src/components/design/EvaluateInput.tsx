@@ -69,7 +69,7 @@ export function EvaluateIntro() {
           lineHeight: 1.65,
         }}
       >
-        이름과 출생 정보를 입력하시면 미학·조화·희귀도를 분석합니다
+        이름과 출생 정보를 입력하시면 미학·조화·유니크 지수를 분석합니다
       </p>
 
       <aside

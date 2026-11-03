@@ -1,26 +1,25 @@
 /**
- * Categories — 라이프 컨텍스트 4개 카드 (아기/개명/회사명/반려동물)
+ * Categories — 라이프 컨텍스트 4개 카드 (아기/개명/회사명/이름 뜻)
  * Source: NameForm_design/src/Categories.jsx (Claude Design 산출물)
  *
  * 2026-10-21: 카드가 <a href="#"> + onClick→router.push라 크롤러가 /company 등을 따라가지
- * 못했다(감사 DD-1). 경로가 있는 카드는 실제 href의 next/link로, 경로가 없는 반려동물만
- * href="#" + 준비 중 모달을 유지한다. 모달은 홈이 서버 컴포넌트가 되며 여기로 옮겼다.
+ * 못했다(감사 DD-1). 모든 카드는 실제 href의 next/link다.
+ * 2026-11-03: 넷째 칸 '반려동물 이름 · Coming · 알림 받기'는 이메일을 받는 척만 하는 모달(저장·발송 없음 — 처리방침의
+ * '연락하지 않는다'와도 어긋남)이라 지우고, 운영 중인 이름 뜻 사전(/name)으로 바꿨다(4칸 그리드 유지).
  */
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
-import { ComingSoonModal } from "./ComingSoonModal";
 
-export type CategoryKey = "baby" | "rename" | "company" | "pet";
+export type CategoryKey = "baby" | "rename" | "company" | "meaning";
 
 export interface CategoryItem {
   key: CategoryKey;
   title: string;
   copy: string;
-  status: "live" | "coming";
-  /** 이동할 경로 — coming 카드는 없음 */
-  href?: string;
+  /** 이동할 경로 */
+  href: string;
   /** 하단 행동 문구 (기본: 자세히 보기) */
   cta?: string;
   /** 수묵화 톤 — 카드 좌상단에 큰 한자 한 글자 (lucide 아이콘 대체) */
@@ -34,7 +33,6 @@ const ITEMS: CategoryItem[] = [
     key: "baby",
     title: "아기 이름",
     copy: "첫 선물이 되는 이름",
-    status: "live",
     href: "/search",
     hanja: "兒",
     reading: "아이",
@@ -45,7 +43,6 @@ const ITEMS: CategoryItem[] = [
     key: "rename",
     title: "개명",
     copy: "지금 이름과 새 후보를 같은 기준으로",
-    status: "live",
     href: "/evaluate",
     cta: "이름 평가하기",
     hanja: "改",
@@ -55,24 +52,23 @@ const ITEMS: CategoryItem[] = [
     key: "company",
     title: "회사·가게 이름",
     copy: "오래 불릴 이름의 결",
-    status: "live",
     href: "/company",
     hanja: "商",
     reading: "상호",
   },
   {
-    key: "pet",
-    title: "반려동물 이름",
-    copy: "함께하는 이름",
-    status: "coming",
-    hanja: "寵",
-    reading: "반려",
+    key: "meaning",
+    title: "이름 뜻",
+    copy: "출생신고 통계와 한자로 읽는 이름",
+    href: "/name",
+    cta: "이름 뜻 사전",
+    hanja: "意",
+    reading: "뜻",
   },
 ];
 
 export function Categories() {
   const [hover, setHover] = useState<CategoryKey | null>(null);
-  const [petOpen, setPetOpen] = useState(false);
 
   return (
     <section
@@ -107,7 +103,6 @@ export function Categories() {
       <div className="sumi-grid-4">
         {ITEMS.map((it) => {
           const isHover = hover === it.key;
-          const isComing = it.status === "coming";
           const cardStyle: React.CSSProperties = {
             display: "flex",
             flexDirection: "column",
@@ -120,44 +115,21 @@ export function Categories() {
             transition: "all 280ms cubic-bezier(.2,.6,.2,1)",
             transform: isHover ? "translateY(-2px)" : "none",
             minHeight: 196,
-            // 준비 중 카드는 카드 전체 opacity(옛 0.78) 대신 큰 한자·제목 색만 옅게 — 'Coming'·읽기 음 11px text-3 글자가
-            // 반투명 탓에 3.33:1 로 AA 아래였다(2026-10-26 팔레트 #2 보완). 상태는 'Coming' 라벨이 글로 알린다
           };
           const hoverProps = {
             onMouseEnter: () => setHover(it.key),
             onMouseLeave: () => setHover(null),
           };
           const body = (
-            <CardBody item={it} isHover={isHover} isComing={isComing} />
+            <CardBody item={it} isHover={isHover} />
           );
-          return it.href ? (
+          return (
             <Link key={it.key} href={it.href} {...hoverProps} style={cardStyle}>
               {body}
             </Link>
-          ) : (
-            <a
-              key={it.key}
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setPetOpen(true);
-              }}
-              {...hoverProps}
-              style={cardStyle}
-            >
-              {body}
-            </a>
           );
         })}
       </div>
-
-      {petOpen && (
-        <ComingSoonModal
-          mode="pet"
-          open={true}
-          onClose={() => setPetOpen(false)}
-        />
-      )}
     </section>
   );
 }
@@ -165,11 +137,9 @@ export function Categories() {
 function CardBody({
   item: it,
   isHover,
-  isComing,
 }: {
   item: CategoryItem;
   isHover: boolean;
-  isComing: boolean;
 }) {
   return (
     <>
@@ -192,33 +162,13 @@ function CardBody({
           alignItems: "center",
           justifyContent: "center",
           transform: "rotate(-3deg)",
-          opacity: isHover && !isComing ? 1 : 0,
+          opacity: isHover ? 1 : 0,
           transition: "opacity 200ms",
         }}
       >
         名
       </span>
 
-      {isComing && (
-        <div
-          style={{
-            position: "absolute",
-            top: 14,
-            right: 14,
-            fontFamily: "var(--font-mono)",
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: "var(--color-text-3)",
-            border: "1px solid var(--color-ink-qing)",
-            padding: "2px 8px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Coming
-        </div>
-      )}
 
       {/* 한자 아이콘 — 수묵화: 큰 명조 한 글자 + 작은 한글 음 */}
       <div
@@ -226,7 +176,7 @@ function CardBody({
           fontFamily: "var(--font-serif)",
           fontSize: 44,
           fontWeight: 700,
-          color: isComing ? "var(--color-text-2)" : "var(--color-text)",
+          color: "var(--color-text)",
           lineHeight: 1,
           marginBottom: 18,
           display: "flex",
@@ -255,7 +205,7 @@ function CardBody({
           margin: 0,
           marginBottom: 8,
           letterSpacing: "-0.01em",
-          color: isComing ? "var(--color-text-2)" : "var(--color-text)",
+          color: "var(--color-text)",
         }}
       >
         {it.title}
@@ -283,7 +233,7 @@ function CardBody({
           letterSpacing: "0.02em",
         }}
       >
-        {isComing ? "알림 받기" : (it.cta ?? "자세히 보기")}
+        {it.cta ?? "자세히 보기"}
         <span
           style={{
             transition: "transform 180ms",

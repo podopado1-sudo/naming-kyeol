@@ -218,7 +218,7 @@ export function NotFoundScreen() {
   const items = [
     { label: "이름 추천 받기", href: "/search" },
     { label: "이름 평가 받기", href: "/evaluate" },
-    { label: "이름의 결에 대하여", href: "/" },
+    { label: "이름의 결에 대하여", href: "/about" },
   ];
 
   return (
@@ -314,7 +314,8 @@ export function NotFoundScreen() {
             ))}
           </div>
 
-          <CommonCTAs />
+          {/* 2026-11-03: 기본 둘째 버튼 '도움말 보기'는 href="#"(제자리)였다 — 404 에서는 작명 가이드로 */}
+          <CommonCTAs secondary="작명 가이드 보기" secondaryHref="/guide" />
         </Card>
       </div>
     </PaperBg>

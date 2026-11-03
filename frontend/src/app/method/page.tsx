@@ -87,7 +87,7 @@ const HARMONY_ROWS: PillarRow[] = [
   { label: "음양", weight: 10, detail: "이름 한자 획수의 홀짝(홀수 陽·짝수 陰) 균형" },
   { label: "발음오행", weight: 25, detail: "성씨와 이름 첫소리의 오행 흐름" },
   {
-    label: "전통 81수리(참고)",
+    label: "81수리(참고)",
     weight: 15,
     detail: "성씨·이름 획수로 본 네 격의 전통 길흉 — 참고 지표",
   },
@@ -244,6 +244,7 @@ export default function MethodPage() {
           <SectionEyebrow>01 · 분석의 세 축</SectionEyebrow>
           <SectionTitle>데이터 · 원칙 · 보수적 기준</SectionTitle>
           <div
+            className="nk-stack-mobile"
             style={{
               marginTop: 28,
               display: "grid",
@@ -254,7 +255,7 @@ export default function MethodPage() {
             <AxisCard
               icon={BarChart3}
               title="데이터 기반"
-              body={`대법원·네이버 인명용 한자 자료로 만든 ${fmt(HANJA_STATS.total)}자 사전 위에서 모든 후보가 만들어집니다. 부수·획수는 Unicode Unihan 18.0에서 가져오고, 강희자전 획수와 뜻을 직접 정리한 코어 ${fmt(HANJA_STATS.core)}자를 함께 씁니다.`}
+              body={`대법원·네이버 인명용 한자 자료로 만든 ${fmt(HANJA_STATS.total)}자 사전 위에서 모든 후보가 만들어집니다. 부수·획수는 Unicode Unihan 18.0에서 가져오고, 강희자전 획수와 뜻을 정리한 코어 ${fmt(HANJA_STATS.core)}자를 함께 씁니다.`}
             />
             <AxisCard
               icon={Compass}
@@ -287,6 +288,7 @@ export default function MethodPage() {
           </p>
 
           <div
+            className="nk-stack-mobile"
             style={{
               marginTop: 28,
               display: "grid",
@@ -310,6 +312,19 @@ export default function MethodPage() {
               textAccent="var(--color-gold-800)"
             />
           </div>
+          {/* 2026-11-03: 획수 출처(Unicode 총획수)와 원획법 차이를 밝힌다 — data/hanja_strokes.json, 浩 10·道 13(원획 11·16) */}
+          <p
+            style={{
+              marginTop: 16,
+              fontSize: 13,
+              lineHeight: 1.7,
+              color: "var(--color-text-3)",
+            }}
+          >
+            획수는 Unicode Unihan 18.0 총획수입니다. 부수를 본래 꼴로 세는 원획법(浩 11획·道
+            16획 등)과 다를 수 있고, 阝·艹가 든 몇 글자(院·陳·權 등)는 한국 자전 획수와도
+            다릅니다. 획수 조화·음양·81수리도 이 획수로 계산합니다.
+          </p>
         </section>
 
         {/* ── 전통 작명 원리 ────────────────────────────────── */}
@@ -317,6 +332,7 @@ export default function MethodPage() {
           <SectionEyebrow>03 · 전통 작명 원리</SectionEyebrow>
           <SectionTitle>알고리즘에 녹인 네 가지 원리</SectionTitle>
           <div
+            className="nk-stack-mobile"
             style={{
               marginTop: 28,
               display: "grid",
@@ -461,10 +477,13 @@ export default function MethodPage() {
           </p>
         </section>
 
-        {/* ── 리포트 방식 ───────────────────────────────────── */}
+        {/* ── 점수와 문장 ───────────────────────────────────── */}
+        {/* 2026-11-03: 옛 'AI는 이야기, 우리는 리포트'(AI 로 설명을 만들지 않는다)는 사실과 반대였다 — /name 의 뜻·서사·조합 뜻은
+            AI 도구로 쓴 문장이다. 무엇을 규칙으로 계산하고 무엇을 AI 로 쓰는지 나눠 적고 /about#ai 공개 문단으로 잇는다.
+            사람·전문가 검토 문장은 쓰지 않는다 */}
         <section style={{ marginBottom: 72 }}>
-          <SectionEyebrow>05 · 리포트 방식</SectionEyebrow>
-          <SectionTitle>AI는 이야기, 우리는 리포트</SectionTitle>
+          <SectionEyebrow>05 · 점수와 문장</SectionEyebrow>
+          <SectionTitle>점수는 규칙으로, 문장은 AI 도구로</SectionTitle>
           <p
             style={{
               marginTop: 12,
@@ -473,11 +492,17 @@ export default function MethodPage() {
               color: "var(--color-text-2)",
             }}
           >
-            많은 서비스가 AI로 감성적인 설명을 생성합니다. 이름의 결은 다른 방향을
-            선택했습니다. 점수와 근거를 명시하는 리포트 형식으로, 왜 좋은 이름인지를
-            숫자로 설명합니다.
+            점수와 그 근거는 위 공식대로 프로그램이 계산해 숫자로 보여 줍니다. 이름 뜻
+            사전의 한 줄 뜻·서사와 한자 조합 뜻은 AI 도구로 지은 문장이며(한자 이름은 한자 훈,
+            순우리말 이름은 낱말 뜻, 외래 이름은 어원을 바탕으로), 점수 계산에는 쓰지
+            않습니다. 자세한 내용은{" "}
+            <Link href="/about#ai" style={inlineLink}>
+              소개 페이지의 &lsquo;만드는 방식&rsquo;
+            </Link>
+            에 적었습니다.
           </p>
           <div
+            className="nk-stack-mobile"
             style={{
               marginTop: 28,
               display: "grid",
@@ -485,137 +510,107 @@ export default function MethodPage() {
               gap: 18,
             }}
           >
-            {/* AI 방식 */}
-            <div
-              style={{
-                background: "var(--color-surface-2)",
-                border: "1px solid var(--color-divider)",
-                borderRadius: "var(--radius-lg)",
-                padding: "22px 22px 24px",
-              }}
-            >
+            {[
+              {
+                key: "rule",
+                icon: FileText,
+                title: "규칙으로 계산",
+                lines: [
+                  "미학 점수 — 발음 30·리듬 25·음절 15·세대 중립 15·의미 10",
+                  "조화 점수 — 자원오행 보완·획수 조화·음양·발음오행·81수리",
+                  "근거 줄 — 받침 수, 부족한 오행과 그 오행 부수의 한자처럼 점수를 정한 이유",
+                ],
+                tail: "→ 모든 항목에 수치와 근거 병기",
+                tint: true,
+              },
+              {
+                key: "ai",
+                icon: Bot,
+                title: "AI 도구로 쓴 문장",
+                lines: [
+                  "이름 뜻 한 줄·서사 — 이름 뜻 사전·창의 작명 결과에 실린 문장",
+                  "한자 조합 뜻 — 한자 훈을 이어 풀어 쓴 한 줄",
+                  "가이드·리포트 본문 — 표의 수치는 프로그램이 계산",
+                ],
+                tail: "→ 점수 계산에는 쓰지 않음",
+                tint: false,
+              },
+            ].map(({ key, icon: Icon, title, lines, tail, tint }) => (
               <div
+                key={key}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginBottom: 14,
+                  background: tint ? "var(--color-teal-50)" : "var(--color-surface-2)",
+                  border: tint
+                    ? "1.5px solid var(--color-teal)"
+                    : "1px solid var(--color-divider)",
+                  borderRadius: "var(--radius-lg)",
+                  padding: "22px 22px 24px",
                 }}
               >
-                <Bot size={18} strokeWidth={1.5} color="var(--color-text-3)" />
                 <div
                   style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    letterSpacing: "0.04em",
-                    color: "var(--color-text-3)",
-                    textTransform: "uppercase",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 14,
                   }}
                 >
-                  AI 서술형
+                  <Icon
+                    size={18}
+                    strokeWidth={1.5}
+                    color={tint ? "var(--color-teal)" : "var(--color-text-3)"}
+                  />
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      letterSpacing: "0.04em",
+                      // 작은 글씨는 글자 전용 짙은 토큰 — teal 은 teal-50 위 4.15:1, teal-800 은 4.93:1(CLAUDE.md 컬러 토큰)
+                      color: tint ? "var(--color-teal-800)" : "var(--color-text-3)",
+                    }}
+                  >
+                    {title}
+                  </div>
                 </div>
-              </div>
-              <p
-                style={{
-                  fontSize: 13.5,
-                  lineHeight: 1.8,
-                  color: "var(--color-text-2)",
-                  margin: 0,
-                  fontStyle: "italic",
-                }}
-              >
-                &ldquo;이 이름은 부드럽고 따뜻한 느낌을 주며, 자연의 생동감을 담고 있어
-                아이의 밝은 미래를 상징합니다.&rdquo;
-              </p>
-              <div
-                style={{
-                  marginTop: 14,
-                  fontSize: 12,
-                  color: "var(--color-text-3)",
-                  lineHeight: 1.6,
-                }}
-              >
-                → 수치 없음 · 근거 없음 · 검증 불가
-              </div>
-            </div>
-
-            {/* 리포트 방식 */}
-            <div
-              style={{
-                background: "var(--color-teal-50)",
-                border: "1.5px solid var(--color-teal)",
-                borderRadius: "var(--radius-lg)",
-                padding: "22px 22px 24px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginBottom: 14,
-                }}
-              >
-                <FileText
-                  size={18}
-                  strokeWidth={1.5}
-                  color="var(--color-teal)"
-                />
+                <ul
+                  style={{
+                    margin: 0,
+                    padding: 0,
+                    listStyle: "none",
+                    display: "grid",
+                    gap: 8,
+                  }}
+                >
+                  {lines.map((line) => {
+                    const [metric, detail] = line.split(" — ");
+                    return (
+                      <li
+                        key={line}
+                        style={{
+                          fontSize: 13,
+                          lineHeight: 1.6,
+                          color: "var(--color-text)",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>{metric}</span>
+                        {detail ? ` — ${detail}` : ""}
+                      </li>
+                    );
+                  })}
+                </ul>
                 <div
                   style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    letterSpacing: "0.04em",
-                    color: "var(--color-teal)",
-                    textTransform: "uppercase",
+                    marginTop: 14,
+                    fontSize: 12,
+                    color: tint ? "var(--color-teal-800)" : "var(--color-text-3)",
+                    lineHeight: 1.6,
                   }}
                 >
-                  이름의 결 리포트
+                  {tail}
                 </div>
               </div>
-              <ul
-                style={{
-                  margin: 0,
-                  padding: 0,
-                  listStyle: "none",
-                  display: "grid",
-                  gap: 8,
-                }}
-              >
-                {[
-                  "발음 87점 — 받침 0개 / 부드러운 자음 비율 100%",
-                  "리듬 22점 — 2음절 약강 패턴 / 단조로움 없음",
-                  "자원오행 보완 — 사주에 부족한 水 → 氵 부수 한자로 보강",
-                  "세대 중립 — 연대 편향 이름 리스트 미포함",
-                ].map((line) => {
-                  const [metric, detail] = line.split(" — ");
-                  return (
-                    <li
-                      key={line}
-                      style={{
-                        fontSize: 13,
-                        lineHeight: 1.6,
-                        color: "var(--color-text)",
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
-                      <span style={{ fontWeight: 600 }}>{metric}</span>
-                      {detail ? ` — ${detail}` : ""}
-                    </li>
-                  );
-                })}
-              </ul>
-              <div
-                style={{
-                  marginTop: 14,
-                  fontSize: 12,
-                  color: "var(--color-teal)",
-                  lineHeight: 1.6,
-                }}
-              >
-                → 모든 항목에 수치와 근거 병기
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
@@ -681,6 +676,7 @@ export default function MethodPage() {
           >
             <li>· 코어 데이터 — 강희자전 획수와 뜻을 정리한 {fmt(HANJA_STATS.core)}자 (이름의 결 내부 정리)</li>
             <li>· 대법원·네이버 인명용 한자 자료</li>
+            <li>· 출생신고 이름 통계 — 대법원 전자가족관계등록시스템 &lsquo;선호하는 출생자 이름 현황&rsquo; 2008~2019년 합산(정리본 github.com/randkid/name), 출생신고 30건 이상인 두·세 글자 이름</li>
             <li>· Unicode Unihan 데이터베이스 18.0 — 부수(kRSUnicode)·총획수(kTotalStrokes)</li>
             <li>· 자원오행 부수표 — 김만태 「이름의 음양오행 구성 원리」 부수표, 공개된 작명 실무 자료 3곳의 부수별 집계(2026-10)</li>
             <li>· 자원오행 연구 — 이재승·김만태(2018) 「한국 성씨한자의 자원오행에 대한 고찰」, 이재승(2024) 「인명 한자 214 부수의 자원에 의한 성명학적 오행 배속」(초록)</li>

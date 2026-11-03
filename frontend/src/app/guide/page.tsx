@@ -99,7 +99,7 @@ export default function GuidePage() {
               데이터로 읽는 이름
             </div>
             <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "var(--color-text-2)", margin: "0 0 14px" }}>
-              대법원 출생신고 통계 2008~2019(약 497만 건)와 인명용 한자 사전을 직접 집계해 쓴 리포트입니다.
+              대법원 출생신고 통계 2008~2019(약 497만 건)와 인명용 한자 사전을 집계해 쓴 리포트입니다. 표의 수치는 프로그램이 계산하고, 본문은 AI 도구로 씁니다.
             </p>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 10 }}>
               {INSIGHTS.map((a) => (
@@ -262,7 +262,7 @@ export default function GuidePage() {
             <MethodRow
               tag="3"
               title="혼합형"
-              body="첫 글자는 순우리말, 다음 글자는 한자(또는 반대). 자유롭게 조합할 수 있어 최근 선호도가 높습니다."
+              body="첫 글자는 순우리말, 다음 글자는 한자(또는 반대). 두 갈래를 자유롭게 조합할 수 있습니다."
               example="하준 — ‘하늘’의 ‘하’ + 준걸 俊"
             />
             <MethodRow
@@ -279,9 +279,9 @@ export default function GuidePage() {
             />
           </ol>
           <p style={{ marginTop: 8 }}>
-            NameForm은 다섯 가지 모두 지원합니다.{" "}
-            <Link href="/search" style={inlineLink}>이름 찾기</Link>에서 옵션을
-            켜고 끌 수 있어요.
+            이름의 결은 이 가운데 한자형·순우리말형·부모 이름 기반·영어 이름 연동을 지원합니다.{" "}
+            <Link href="/search" style={inlineLink}>이름 찾기</Link>에서 순우리말·부모 이름·영어
+            이름 옵션을 켜고 끌 수 있어요.
           </p>
         </Chapter>
 
@@ -292,6 +292,7 @@ export default function GuidePage() {
             다만 ‘사주로 이름을 만든다’는 접근은 권하지 않습니다.
           </p>
           <div
+            className="nk-stack-mobile"
             style={{
               marginTop: 20,
               display: "grid",
@@ -319,7 +320,7 @@ export default function GuidePage() {
             />
           </div>
           <Aside icon={Compass}>
-            NameForm은 미학 70% + 조화 30% 비율로 점수를 매깁니다. 사주는 좋은 이름을 더
+            이름의 결은 미학 70% + 조화 30% 비율로 점수를 매깁니다. 사주는 좋은 이름을 더
             좋게 다듬는 ‘보조 축’이지, 이름을 결정하는 ‘유일한 축’이 아닙니다.
           </Aside>
           <p>
@@ -350,7 +351,7 @@ export default function GuidePage() {
             </li>
           </ul>
           <Aside icon={Users}>
-            NameForm <Link href="/required-char" style={inlineLink}>필수 글자 포함</Link>{" "}
+            이름의 결의 <Link href="/required-char" style={inlineLink}>필수 글자 포함</Link>{" "}
             기능으로 항렬자를 지정하면 그 글자가 들어간 후보만 추천받을 수 있어요.
           </Aside>
         </Chapter>
@@ -377,7 +378,7 @@ export default function GuidePage() {
             </li>
             <li>
               <strong>너무 흔한 이름</strong>: 같은 학교·직장에 동명이인이 여러 명일 가능성을
-              세대별 빈도 데이터로 확인하세요.
+              이름 뜻 사전의 출생신고 통계로 확인하세요.
             </li>
             <li>
               <strong>너무 어려운 한자</strong>: 본인이 평생 써야 하는 이름. 컴퓨터·핸드폰
@@ -390,6 +391,7 @@ export default function GuidePage() {
         <Chapter id="etc" num="07" title="회사명 · 반려동물 이름">
           <p>아기 이름과는 결이 다른 두 가지를 간단히 짚어둡니다.</p>
           <div
+            className="nk-stack-mobile"
             style={{
               marginTop: 20,
               display: "grid",
@@ -411,7 +413,7 @@ export default function GuidePage() {
             <a href="/company" style={{ color: "var(--color-teal)" }}>
               상호 작명
             </a>
-            에서 바로 지어보실 수 있어요. 반려동물 이름 추천은 준비 중입니다.
+            에서 바로 지어보실 수 있어요.
           </Aside>
         </Chapter>
 
@@ -635,6 +637,7 @@ function FourAxisGrid() {
   ];
   return (
     <div
+      className="nk-stack-mobile"
       style={{
         marginTop: 22,
         marginBottom: 8,

@@ -66,7 +66,11 @@ function mapResponse(
     return {
       key,
       label: set.theme,
-      description: set.themeDescription,
+      // 백엔드 공유의미 설명이 영문 카테고리 코드를 그대로 싣는다("'NATURE' 의미를 공유하는 이름 세트" — TwinNameEngine).
+      // 카테고리는 엔진 내부 글자 기준이라 보이는 한자와 다를 수 있어 이름을 붙이지 않고 일반 문장으로 바꾼다(2026-11-03)
+      description: /'[A-Z_]+'/.test(set.themeDescription ?? "")
+        ? "뜻 갈래(자연·덕목 등)가 같은 한자들의 소리로 지은 이름 세트"
+        : set.themeDescription,
       coherence: set.coherenceScore,
       coherenceNote: coherenceNote(set.coherenceScore),
       shared: { type: sharedType, value: sharedValue },

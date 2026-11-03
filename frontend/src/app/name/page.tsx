@@ -50,6 +50,10 @@ export default function NameIndexPage() {
   const latestCohort = drip.length
     ? drip.filter((d) => d.publishedAt === drip[drip.length - 1].publishedAt)
     : [];
+  const fmtKoDate = (iso: string) => {
+    const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+    return `${y}년 ${m}월 ${d}일`;
+  };
 
   return (
     <>
@@ -95,8 +99,8 @@ export default function NameIndexPage() {
               새로 실린 이름
             </h2>
             <p className="mb-4 text-xs text-text-2">
-              사전에 새로 추가된 이름 {latestCohort.length}개 — 매주 일요일
-              갱신됩니다.
+              {/* 2026-11-03: '매주 일요일 갱신됩니다'는 드립 정지(12/27까지) 동안 사실이 아니었다 — 날짜를 데이터에서 그린다 */}
+              {fmtKoDate(latestCohort[0].publishedAt)}에 사전에 새로 실린 이름 {latestCohort.length}개입니다.
             </p>
             <div className="flex flex-wrap gap-1.5">
               {latestCohort.map(({ name }) => (

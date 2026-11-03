@@ -370,10 +370,8 @@ test("결과 화면 점수 타일 라벨(11px)·강점/약점 제목(13px)은 �
   }
 });
 
-test("홈 준비 중 카드·푸터 '준비 중' 배지 — 반투명·검정 8% 바탕 위 text-3 가 4.5:1 아래로 내려가지 않는다", (t) => {
-  const cats = read("src", "components", "design", "Categories.tsx");
-  assert.doesNotMatch(cats, /opacity: isComing \? 0\.78 : 1/, "카드 전체 opacity 0.78 은 'Coming' 10px text-3 를 3.33:1 로 만든다");
-  t.diagnostic(`옛 Coming 카드: text-3 @0.78 / 종이 ${r2(contrast(tint(TEXT_3, 0.78, PAPER), PAPER))}:1`);
+// 2026-11-03: 홈 준비 중(Coming) 카드는 지웠다(Categories — 이메일을 받는 척만 하던 모달 제거) — 푸터 배지만 남는다
+test("푸터 '준비 중' 배지 — 검정 8% 바탕 위 text-3 가 4.5:1 아래로 내려가지 않는다", (t) => {
   const footer = read("src", "components", "design", "Footer.tsx");
   const soon = /color: "var\(--color-text-3\)",[\s\S]*?background: "([^"]+)",[\s\S]*?준비 중/.exec(footer);
   assert.ok(soon, "Footer '준비 중' 배지를 찾지 못했다");

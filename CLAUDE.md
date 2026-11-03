@@ -11,6 +11,12 @@
 
 > 🚀 **운영 중**: https://namingkyeol.com (2026-05-20 출범) — Vercel(프론트) + Render Free(백엔드 API) + Supabase PostgreSQL(서울). 상세 인프라는 `SESSION_HANDOFF.md` 참조.
 
+> 📝 **AI 사용 공개 (2026-11-03 애드센스 재검토 전 점검)**: 이름 뜻·서사·조합 뜻·글자 풀이·가이드·리포트 본문은 AI 도구로 쓴 문장이고, 사이트는 이를
+> `/about#ai`(만드는 방식)·`/method` §05('점수는 규칙으로, 문장은 AI 도구로')·리포트 머리 줄로 공개한다. 옛 /method 'AI는 이야기, 우리는 리포트'
+> (AI 를 안 쓴다)는 사실과 반대여서 지웠다. **사람·전문가가 검토·감수한다는 문장, '운영자는 글마다 읽지 않는다' 같은 문장은 쓰지 않는다**(실제로
+> 하지 않는 일 — 같은 사용자의 꽃전보·시험달력과 같은 결정). 개인정보처리방침은 실제 처리(이름 추천 기록 DB·서버 로그 평문 이름·처리 위탁/국외·문의 메일)와
+> 맞춰 두었으니 저장·로그·호스팅을 바꾸면 방침도 함께 고치고 시행일을 올릴 것
+
 ### 백엔드
 - **언어:** C# (.NET 10.0)
 - **프레임워크:** ASP.NET Core Web API
@@ -702,8 +708,8 @@ pk(순우리말) 이름 서사는 음절별 한자 훈 글로스로 지어 한�
   위계 text-1 18.70 > text-2 9.37 > text-3 5.45. 옛 값은 `--color-ink-dan` 에 남아 비텍스트 선(/method '미상' 점선·SmartResultRare 1px 선)에만 쓴다
 - **글자색과 표지색을 나누는 자리**: FIVE_EL `color`(막대·왼쪽 테두리, 옛 값) / `text`(글자 — 글자 자리에 `.color` 를 쓰면 테스트 실패), ScoreTile `color`(32~44px 숫자) /
   `label`(11px), 쌍둥이 CoherenceHero `color`(30px 점수·원 그래프) / `chipText`, /method ScoreBlock `accent`(막대) / `textAccent`(배점 숫자), SmartResultParent
-  bridge `color`(강조 글자) / `lineColor`(연결선·주석 알약 테두리 — gold-600 그대로). 카드 전체 `opacity` 로 상태를 알리지 않는다(/hanja 흐린 카드는 큰 글리프만,
-  홈 준비 중 카드는 큰 한자·제목만 text-2 — 반투명이 작은 글씨를 AA 아래로 끌어내린다). 오행 火·土 글자는 /hanja 배지와 FIVE_EL 칩이 같은 토큰, CIEDE2000 ΔE 15.9(옛 7.2·8.1)
+  bridge `color`(강조 글자) / `lineColor`(연결선·주석 알약 테두리 — gold-600 그대로). 카드 전체 `opacity` 로 상태를 알리지 않는다(/hanja 흐린 카드는 큰 글리프만
+  — 반투명이 작은 글씨를 AA 아래로 끌어내린다). 오행 火·土 글자는 /hanja 배지와 FIVE_EL 칩이 같은 토큰, CIEDE2000 ΔE 15.9(옛 7.2·8.1)
 
 ### 타이포 (한국어 특화 3종)
 - **Pretendard** — 한글 본문/제목
@@ -1034,15 +1040,16 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   /method '미상' 칩·XCircle·배점 숫자·text-3, 같은 날 보완으로 쌍둥이 'SET COHERENCE' 칩·/hanja 흐린 카드(전체 opacity → 글리프만)·ScoreTile 라벨(high)·
   강점/약점 제목·희귀 성씨 카드 희귀도 별·홈 준비 중 카드·푸터 '준비 중' 배지를 고쳤다. 남은 것:
   ScoreTile mid 라벨(조화·유니크 11px) score-mid-700 종이 위 10% 틴트 4.47:1(흰 위 4.65 — 더 짙은 score-mid 글자 토큰이 필요), teal #2e7d7a/teal-50 4.15:1
-  (SmartResultParent 팔레트 칩 등), CompanyResult 스타일 라벨 `${tint}1a` 위 tint 글자(안 잼), 입력 화면 오류 상자 #C45A4C/8% 틴트 3.87:1(/analysis·/dual-name·/twin·
-  ComingSoonModal — red 색이라 amber-warm-700 규칙 밖), text-3 은 navy-100 4.24·gold-100 4.28:1(지금 그 바탕에 올린 곳 없음 — 쓰게 되면 surface-2 등으로).
+  (SmartResultParent 팔레트 칩 등), CompanyResult 스타일 라벨 `${tint}1a` 위 tint 글자(안 잼), 입력 화면 오류 상자 #C45A4C/8% 틴트 3.87:1(/analysis·/dual-name·/twin
+  — red 색이라 amber-warm-700 규칙 밖), text-3 은 navy-100 4.24·gold-100 4.28:1(지금 그 바탕에 올린 곳 없음 — 쓰게 되면 surface-2 등으로).
   디자인 결정: 오행 글자색이 화면마다 다르다 — /hanja 배지 木 Tailwind teal-700 과 /evaluate 칩 金 teal-800 이 ΔE00 3.9 로 같은 청록(팔레트 #2 전에도 4.4),
   배지 金 은 정의되지 않은 `text-navy-700`(부모 글자색 상속 #14120f)·칩 金 teal-800, 水 배지 #4a6f99·칩 #1E3A5F — 다섯 원소를 한 글자 토큰으로 맞추면 /hanja 배지
   색상이 바뀐다(火·土 만 같은 토큰). FIVE_EL 칩 木·金 ΔE 13.0(원래 13.1 — 벌리려면 金 색상 이동). 갈색 의미 채널이 가깝다 — 土 글자 gold-800 ↔ 경고·'이견 있음'
   amber-warm-700 ΔE 7.6(옛 13.1)·火 amber-warm-600 ↔ 경고 9.4, 디자이너 리터럴 #6F5421(RarityChip 등 13곳) ↔ gold-800 4.7(한 토큰으로 합칠지). Top Pick 머리말의
   gold-800(짙은 올리브 — 옛 밝은 골드 인상과 다름)은 디자인 확인 대상. 수치는 `tests/palette-contrast.test.mjs` 진단 줄
-- **반려동물 작명 미구현**: `/guide` 7장과 Home Categories의 `pet` 카드는 ComingSoonModal 안내.
-  (회사명은 2026-08-28 `/company`로 출시 — `ComingSoonMode` 타입은 `"pet"`만 남음)
+- **반려동물 작명 없음**: 2026-11-03 애드센스 재검토 전 점검에서 홈 Categories 넷째 칸 '반려동물 이름 · Coming · 알림 받기'를
+  이름 뜻 사전(/name, 큰 한자 意)으로 바꾸고, 이메일을 받는 척만 하던(저장·발송 없음) ComingSoonModal 을 지웠다. /guide 7장은 반려동물 이름
+  요령만 적고 기능 안내('준비 중')는 하지 않는다. '준비 중'·'알림 받기'처럼 없는 기능을 약속하는 화면을 다시 두지 말 것
 - **업종 쌍 결과 겹침 최대 71%**: 의미 축 12개로 업종 18개를 표현하면 한 축을 평균 6개
   업종이 공유한다. `food/agri`·`fashion/culture`처럼 인접 업종은 축 재배치만으로 더
   갈라지지 않는다. 근본 해결은 축을 늘리거나 업종별 고유 어휘를 두는 것
