@@ -7,11 +7,13 @@
 // - C5(입력 화면): 칸 줄 HanjaSlots · 고르기 패널 HanjaPickerPanel · 입력 폼 EvaluateInput · EvaluateClient 의 입력 쪽.
 // - C6(결과 화면): '이 이름의 한자' 블록 HanjaSummaryBlock · 관계 칩 OhaengRelationChip · 결과 화면 EvaluateResult ·
 //   후보 표 EvalBody · EvaluateClient 의 제자리 재계산 · /favorites 의 한자 줄.
-// 뒤 단계가 이 파일에 더할 것: 설명 글 EvaluateHanjaGuide 와 robots·메타·/name·/ohaeng 링크(C7).
-// 그때 NEW_COMPONENTS·NEW_TEXT_FILES 에 파일을 더하면 같은 검사가 걸린다.
+// - C7 앞 절반(착지·문구·방침): 설명 글 EvaluateHanjaGuide(서버 컴포넌트) · 메타(layout.tsx) · /ohaeng 한자 예의 '맞춰 보기' ·
+//   개인정보처리방침 · sitemap·robots. 맨 아래 묶음.
+// 뒤 단계가 이 파일에 더할 것: /name 조합 카드의 '이 한자로 평가'(rel="nofollow")와 /hanja 인덱스·독음·글자 상세의 링크(C7 뒤 절반).
+// 새 화면 파일을 만들면 NEW_COMPONENTS·NEW_TEXT_FILES 에 더한다 — 같은 검사가 걸린다.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { ROOT, contrast, hexRgb, read as readRaw, tint, token, utilityColor } from "./color-utils.mjs";
@@ -39,11 +41,19 @@ const RESULT = ["src", "app", "evaluate", "EvaluateResult.tsx"];
 const FAVORITES = ["src", "app", "favorites", "page.tsx"];
 const SUMMARY_TEXT = ["src", "lib", "hanja-summary-text.ts"];
 const RECALC = ["src", "lib", "hanja-recalc.ts"];
+// 착지·문구·방침(C7 앞 절반)
+const GUIDE = ["src", "app", "evaluate", "EvaluateHanjaGuide.tsx"];
+const PAGE = ["src", "app", "evaluate", "page.tsx"];
+const LAYOUT = ["src", "app", "evaluate", "layout.tsx"];
+const OHAENG_RESULT = [...DESIGN, "OhaengResult.tsx"];
+const PRIVACY = ["src", "app", "privacy", "page.tsx"];
+const SITEMAP = ["src", "app", "sitemap.ts"];
+const ROBOTS = ["src", "app", "robots.ts"];
 
 /** 이 기능이 새로 만든 화면 컴포넌트 — 흐림·역할·격자 규칙을 건다 */
-const NEW_COMPONENTS = [SLOTS, PANEL, BLOCK];
+const NEW_COMPONENTS = [SLOTS, PANEL, BLOCK, GUIDE];
 /** 이 기능이 새로 쓰는 문장이 든 파일 — 금지 문장·고정 조사 꼴을 건다(기존 문장은 범위 밖이다 — 설계 §9) */
-const NEW_TEXT_FILES = [SLOTS, PANEL, TEXT, STORE, ["src", "lib", "hanja-pick.ts"], BLOCK, CHIP, SUMMARY_TEXT, RECALC];
+const NEW_TEXT_FILES = [SLOTS, PANEL, TEXT, STORE, ["src", "lib", "hanja-pick.ts"], BLOCK, CHIP, SUMMARY_TEXT, RECALC, GUIDE];
 
 const name = (p) => p.at(-1);
 /** 주석을 뺀 코드(블록 주석·줄 주석·JSX 주석) — 규칙을 설명하는 주석의 낱말에 걸리지 않게 */
@@ -74,7 +84,7 @@ test("클라이언트 화면이 큰 정적 JSON 을 읽는 서버 전용 모듈�
 });
 
 test("이름·한자·생년월일을 콘솔·브라우저 저장소·분석 이벤트에 싣지 않는다", () => {
-  for (const p of [SLOTS, PANEL, STORE, TEXT, BLOCK, CHIP, SUMMARY_TEXT, RECALC]) {
+  for (const p of [SLOTS, PANEL, STORE, TEXT, BLOCK, CHIP, SUMMARY_TEXT, RECALC, GUIDE]) {
     const src = code(read(...p));
     for (const re of [/console\./, /localStorage/, /sessionStorage/, /sendBeacon/, /gtag\(/, /document\.title/, /document\.cookie/]) {
       assert.doesNotMatch(src, re, `${name(p)}: ${re}`);
@@ -92,7 +102,7 @@ test("음절 파일을 받는 곳은 저장소 모듈 하나 — 주소는 lib/h
   assert.deepEqual(fetches, ["HANJA_PICK_INDEX", "url"]);
   assert.match(store, /const url = syllableFile\(syllable\);\s*if \(!url\) return Promise\.resolve\(null\);/);
   // 화면 컴포넌트는 직접 fetch 하지 않는다(판정 API 는 lib/api 의 hanjaResolve)
-  for (const p of [SLOTS, PANEL, INPUT, TEXT, BLOCK, CHIP, BODY, SUMMARY_TEXT, RECALC]) assert.doesNotMatch(code(read(...p)), /\bfetch\(/, name(p));
+  for (const p of [SLOTS, PANEL, INPUT, TEXT, BLOCK, CHIP, BODY, SUMMARY_TEXT, RECALC, GUIDE]) assert.doesNotMatch(code(read(...p)), /\bfetch\(/, name(p));
 });
 
 test("이름을 칠 때는 음절 파일을 받지 않는다 — 받는 자리는 주소로 온 한자·들고 온 글자·붙여넣기 셋과 패널", () => {
@@ -188,7 +198,7 @@ test("변수 뒤에 조사를 붙이지 않는다 — 끼워 넣은 값(따옴�
   // JSX 에 끼운 값({slot.syllable}’를)도 같은 꼴이다
   const fixedJsx = /\}[’」](을|를|은|는|이|가|와|과|로|으로|나|이나)[\s,.<]/;
   assert.match("‘{slot.syllable}’를 넣어", fixedJsx);
-  for (const p of [SLOTS, PANEL, INPUT, BLOCK, BODY, RESULT]) assert.doesNotMatch(code(read(...p)), fixedJsx, name(p));
+  for (const p of [SLOTS, PANEL, INPUT, BLOCK, BODY, RESULT, GUIDE, OHAENG_RESULT]) assert.doesNotMatch(code(read(...p)), fixedJsx, name(p));
   for (const p of NEW_TEXT_FILES) {
     const src = code(read(...p));
     assert.doesNotMatch(src, fixed, name(p));
@@ -388,7 +398,7 @@ test("칸 줄은 조합이 끝난 값으로 다시 그린다 — 조합 끝에 �
 });
 
 test("새 파일들이 있다", () => {
-  for (const p of [SLOTS, PANEL, STORE, TEXT, BLOCK, CHIP, SUMMARY_TEXT, RECALC]) assert.ok(existsSync(join(ROOT, ...p)), name(p));
+  for (const p of [SLOTS, PANEL, STORE, TEXT, BLOCK, CHIP, SUMMARY_TEXT, RECALC, GUIDE]) assert.ok(existsSync(join(ROOT, ...p)), name(p));
 });
 
 // ═════════════════════════════════════════════════════════════
@@ -654,4 +664,268 @@ test("패널의 오행 거르기 칩 — 생년월일 결과가 있으면 용신
   assert.match(read(...BLOCK), /elementFit=\{birthDateProvided \? fit : null\}/);
   // 입력 폼(아직 평가 전)은 주지 않는다
   assert.doesNotMatch(read(...INPUT), /elementFit/);
+});
+
+// ═════════════════════════════════════════════════════════════
+// 착지·문구·방침(C7 앞 절반) — 메타 · 설명 글 · /ohaeng 링크 · 개인정보처리방침 · sitemap·robots
+// ═════════════════════════════════════════════════════════════
+
+/** 줄바꿈·들여쓰기를 빈칸 하나로 — JSX 본문의 문장을 줄 나눔과 무관하게 견준다 */
+const flat = (src) => src.replace(/\s+/g, " ");
+const cp = (n) => String.fromCodePoint(n);
+/** 음절 후보 파일(커밋된 정적 파일)에서 그 글자가 실린 음절들 */
+function syllablesOf(character) {
+  const dir = join(ROOT, "public", "data", "hanja-pick", "v1");
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".json") && f !== "index.json")
+    .map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")))
+    .filter((file) => file.hanja.some((h) => h.character === character))
+    .map((file) => file.syllable)
+    .sort();
+}
+const pickIndex = () => JSON.parse(readFileSync(join(ROOT, "public", "data", "hanja-pick", "v1", "index.json"), "utf8"));
+
+test("메타 — 제목 앞머리 '이름 평가'는 그대로, 뒤에 '아기 이름 한자 정하기'(U9 (가)). 화면이 하지 않는 일(추천·짓는 법)을 약속하지 않는다", () => {
+  const layout = read(...LAYOUT);
+  const meta = /export const metadata: Metadata = \{([\s\S]*?)\n\};/.exec(layout);
+  assert.ok(meta, "layout.tsx 의 metadata 를 찾지 못했다");
+  assert.match(meta[1], /^\s*title: "이름 평가 · 아기 이름 한자 정하기",$/m);
+  assert.match(meta[1], /description:\s*"아기 이름 한자 정하기 — 정한 한글 이름의 음절마다 인명용 한자를 선택해 뜻·자원오행·획수를 비교하고,/);
+  assert.match(meta[1], /alternates: \{ canonical: "\/evaluate" \},/);
+  // openGraph 는 얕은 병합 — 루트 값(이미지·siteName·locale)을 펼친 뒤 덮는다(CLAUDE.md)
+  assert.match(meta[1], /openGraph: \{\s*\.\.\.BASE_OPEN_GRAPH,\s*title: "이름 평가 · 아기 이름 한자 정하기 — 이름의 결",/);
+  assert.match(meta[1], /url: "\/evaluate",/);
+  for (const re of [/추천/, /짓는/, /고르기/, /풀이/]) assert.doesNotMatch(meta[1], re, `메타에 ${re}`);
+  // h1 은 그대로다(검색 유입 보호) — 소개 문장만 한 줄 더했다
+  assert.match(read(...INPUT), /<h1\b[\s\S]*?마음에 둔 이름,\s*<br \/>\s*어떤 결인지 알려드릴게요\s*<\/h1>/);
+  assert.equal([...read(...INPUT).matchAll(/<h1\b/g)].length, 1);
+});
+
+test("설명 글은 서버 컴포넌트 — page.tsx 가 그려 EvaluateClient 에 prop 으로 넘긴다(클라이언트가 import 하지 않는다)", () => {
+  const guide = read(...GUIDE);
+  assert.doesNotMatch(guide, /^\s*["']use client["']/m);
+  assert.match(guide, /<section aria-labelledby="hanja-guide" style=\{section\}>\s*<h2 id="hanja-guide" style=\{title\}>\s*아기 이름 한자 정하기 — 음절마다 인명용 한자 선택·비교\s*<\/h2>/);
+  assert.equal([...guide.matchAll(/<h2\b/g)].length, 1);
+  assert.doesNotMatch(code(guide), /<h1\b/);
+  // 서버 쪽: page.tsx 는 서버 컴포넌트이고 설명 글을 그려서 넘긴다
+  const page = read(...PAGE);
+  assert.doesNotMatch(page, /^\s*["']use client["']/m);
+  assert.match(page, /import \{ EvaluateHanjaGuide \} from "\.\/EvaluateHanjaGuide";/);
+  assert.match(page, /<EvaluateClient guide=\{<EvaluateHanjaGuide \/>\} \/>/);
+  // 클라이언트 쪽: 받은 것을 입력 화면 맨 아래(점수 설명 뒤)에 둘 뿐이다 — 그 파일을 import 하지 않는다(서버에서 파일을 읽는 모듈이다)
+  const client = code(read(...CLIENT));
+  assert.match(client, /export function EvaluateClient\(\{ guide \}: \{ guide\?: ReactNode \}\) \{/);
+  assert.match(client, /<EvaluateAbout \/>\s*\{guide\}\s*<\/main>/);
+  assert.equal([...client.matchAll(/\{guide\}/g)].length, 1, "설명 글은 입력 화면에만 — 결과 화면에는 그리지 않는다");
+  for (const p of [SLOTS, PANEL, INPUT, CLIENT, BLOCK, CHIP, BODY, RESULT, FAVORITES, OHAENG_RESULT]) {
+    const src = code(read(...p));
+    assert.doesNotMatch(src, /EvaluateHanjaGuide/, name(p));
+    assert.doesNotMatch(src, /public\/data\//, name(p));
+  }
+  // 소개 문장의 안쪽 링크가 설명 글 제목으로 내려간다(id 는 한 곳)
+  assert.match(read(...INPUT), /<a\s+href="#hanja-guide"[\s\S]*?>\s*한자 고르는 법\s*<\/a>/);
+  assert.equal([...guide.matchAll(/id="hanja-guide"/g)].length, 1);
+  assert.match(guide, /scrollMarginTop: 88,/);
+  // #hanja-guide 는 들고 온 글자 해시가 아니다 — 화면 상태가 지우거나 읽지 않는다(값 검사는 hanja-pick.test.mjs parsePickHash)
+  assert.match(read("src", "lib", "hanja-pick.ts"), /if \(!body\.startsWith\("pick="\)\) return null;/);
+});
+
+test("설명 글의 숫자는 index.json 에서 읽는다 — 글에 숫자를 손으로 적지 않는다", () => {
+  const guide = code(read(...GUIDE));
+  // 읽는 법은 데이터 리포트(lib/insights.ts)와 같다 — 빌드 때 process.cwd() 아래의 파일을 읽는다(화면이 fetch 로 받는 것과 같은 파일)
+  assert.match(guide, /const PICK_INDEX_FILE = path\.join\(process\.cwd\(\), "public", "data", "hanja-pick", "v1", "index\.json"\);/);
+  assert.ok(existsSync(join(ROOT, "public", "data", "hanja-pick", "v1", "index.json")));
+  assert.match(read("src", "lib", "hanja-pick.ts"), /export const HANJA_PICK_INDEX = `\$\{HANJA_PICK_BASE\}\/index\.json`;/);
+  assert.match(read("src", "lib", "insights.ts"), /const DIR = path\.join\(process\.cwd\(\), "content", "insights"\);/);
+  // 꼴이 다르면 빌드를 멈춘다 — 빈 값으로 문장을 내보내지 않는다
+  assert.match(
+    guide,
+    /const index = parsePickIndex\(JSON\.parse\(fs\.readFileSync\(PICK_INDEX_FILE, "utf8"\)\)\);\s*if \(!index\) throw new Error\([^)]*\);\s*return guideFacts\(index\);/
+  );
+  assert.match(guide, /const facts = readGuideFacts\(\);/);
+  const body = flat(guide);
+  assert.ok(body.includes('인명용 한자{" "} {num(facts.characters)}자가 {num(facts.syllables)}개 음절에 실려 있어요'));
+  assert.ok(body.includes("많게는 {num(facts.widest.count)}자(‘{facts.widest.syllable}’)예요"));
+  assert.ok(body.includes("빼기로 정한 {num(facts.forbidden)}자예요"));
+  assert.ok(body.includes("‘먼저 보여 드리는 글자’({num(facts.common)}자)는"));
+  // 지금 색인의 값이 글자로 박혀 있지 않다(쉼표 꼴 포함) — 한자 데이터를 바꿔 다시 덤프하면 글이 따라가야 한다
+  const index = pickIndex();
+  const widest = Math.max(...Object.values(index.syllables).map((s) => s.all));
+  for (const n of [index.counts.characters, index.counts.syllables, index.counts.pairs, index.counts.forbidden, index.counts.common, widest]) {
+    for (const text of new Set([String(n), n.toLocaleString("ko-KR")])) {
+      assert.doesNotMatch(guide, new RegExp(`(?<![\\d.,])${text}(?![\\d,])`), `설명 글에 숫자 ${text} 가 적혀 있다`);
+    }
+  }
+  // 덤프 값의 뜻(글자 수·음절 수·가장 많은 음절)은 hanja-pick-text.test.mjs 가 음절 파일을 직접 세어 견준다
+});
+
+test("설명 글의 사실 — 예로 든 글자의 독음은 음절 파일과 같고, 배점은 같은 화면의 점수 설명과 같다", () => {
+  const guide = flat(read(...GUIDE));
+  // 예로 든 세 글자(오얏 리 · 연꽃 련 · 아름다울 나) — 코드포인트로 적어 음절 파일과 대조한다. 셋째 글자는 '나'뿐이라 '라' 칸에 못 넣는다
+  const [li, ryeon, na] = [cp(0x674e), cp(0x84ee), cp(0x5a1c)];
+  assert.deepEqual(syllablesOf(li), ["리", "이"]);
+  assert.deepEqual(syllablesOf(ryeon), ["련", "연"]);
+  assert.deepEqual(syllablesOf(na), ["나"]);
+  assert.ok(
+    guide.includes(
+      `<span style={hanja}>${li}</span>는 ‘리’와 ‘이’ 칸에, <span style={hanja}>${ryeon}</span>은 ‘련’과 ‘연’ 칸에 모두 넣을 수 있고, 이름의 첫 글자인지 뒤 글자인지는 가리지 않아요. 지정된 발음이 ‘나’뿐인{" "} <span style={hanja}>${na}</span>는 ‘라’ 칸에 넣을 수 없습니다.`
+    ),
+    "두음 문단의 예가 바뀌었다 — 음절 파일로 다시 확인할 것"
+  );
+  // 글의 한자는 이 셋뿐이다(다른 글자를 예로 더하면 위 대조에 넣을 것)
+  const hanjaInText = [...code(read(...GUIDE)).matchAll(new RegExp(`[${cp(0x3400)}-${cp(0x9fff)}]`, "g"))].map((m) => m[0]).sort();
+  assert.deepEqual(hanjaInText, [li, ryeon, na].sort());
+  // ‘봄’·‘빛’ 은 후보 파일이 없는 음절(칸이 잠긴다)
+  const index = pickIndex();
+  for (const syllable of ["봄", "빛"]) assert.ok(!(syllable in index.syllables), `${syllable} 음절에 후보 파일이 있다`);
+  assert.ok(guide.includes("‘봄’·‘빛’처럼 인명용 한자 독음이 아닌 음절은 칸이 잠겨 있어 한글로만 둡니다."));
+  // 배점 — 같은 화면의 '점수는 이렇게 매겨요'(EvaluateAbout)와 같은 수
+  const about = flat(read(...INPUT));
+  assert.ok(about.includes("자원오행 보완 30·획수 조화 20·음양 10·발음오행 25·전통 81수리 15점이에요."));
+  assert.ok(about.includes("종합 점수는 미학 70%와 조화 30%를 더한 값이고"));
+  assert.ok(guide.includes("자원오행 보완(30)·획수 조화(20)·음양(10)·전통 81수리(15)를 그 한자로 다시 계산합니다."));
+  assert.ok(guide.includes("발음오행(25)과 미학 점수의 발음·리듬·음절·세대 중립·의미 항목은 한글 이름으로 매기므로 한자를 바꿔도 같아요"));
+  assert.ok(guide.includes("종합 점수는 미학 70%와 조화 30%를 더한 값이에요."));
+  // 조화의 성별 보정은 글자마다 +5/−3 — 백엔드 산식의 두 줄
+  assert.ok(guide.includes(`조화의 성별 보정(글자마다 +5/${cp(0x2212)}3)`));
+  const harmony = readFileSync(join(ROOT, "..", "Application", "Engines", "HarmonyEngine.cs"), "utf8");
+  const bonus = /int CalculateGenderBonus\([\s\S]*?\n {4}\}/.exec(harmony);
+  assert.ok(bonus, "HarmonyEngine.CalculateGenderBonus 를 찾지 못했다");
+  assert.deepEqual([...bonus[0].matchAll(/bonus ([+-])= (\d+);/g)].map((m) => `${m[1]}${m[2]}`).sort(), ["+5", "-3"]);
+  // 관계 칩·꼬리표의 낱말은 화면이 쓰는 말 그대로
+  assert.ok(guide.includes("글자 사이의 자원오행 관계(상생·비화·상극)는 점수인가요?"));
+  const relation = read("src", "lib", "ohaeng-relation.ts");
+  for (const word of ["· 상생", "· 비화(같은 기운)", "· 상극"]) assert.ok(relation.includes(word), word);
+});
+
+test("설명 글 — 법규 사실은 확인한 대로만(설계 §20): 혼용 이름은 현행 예규, 사전에 없는 글자는 단정하지 않고, 대법원 조회는 이름만", () => {
+  const raw = read(...GUIDE);
+  const guide = flat(code(raw));
+  // 혼용 — 입력·결과 화면의 고지(MIXED_SCRIPT_NOTICE)와 같은 예규·같은 결론
+  assert.ok(
+    guide.includes(
+      "현행 가족관계등록예규(제638호)는 한글과 한자를 섞어 적은 출생신고도 수리할 수 있다고 정하고 있어요(2026년 11월 확인). 한자로 적는 글자는 인명용 한자여야 합니다."
+    )
+  );
+  const notice = read(...TEXT);
+  assert.match(notice, /현행 가족관계등록예규\(제638호\)는 이렇게 섞어 적은 출생신고도 수리할 수 있다고 정하고 있어요\. 한자로 적는 글자는 인명용 한자여야 합니다\./);
+  // 사전에 없는 글자 — 서버의 400 문장과 같은 뜻(사전에 없음 ≠ 인명용 아님, 후보 목록에서 먼저, 대법원 조회는 한글 음 한 글자로)
+  assert.ok(guide.includes("사전에 없다고 인명용 한자가 아니라는 뜻은 아닙니다."));
+  assert.ok(guide.includes("대법원 전자가족관계등록시스템의 ‘인명용 한자 조회’에서 한글 음 한 글자를 넣어 확인할 수 있습니다."));
+  const backend = readFileSync(join(ROOT, "..", "Application", "Engines", "Utils", "HanjaInput.cs"), "utf8");
+  assert.ok(backend.includes("사전에 없다고 인명용 한자가 아니라는 뜻은 아닙니다."));
+  assert.ok(backend.includes("한글 음 한 글자를 넣어 확인할 수 있습니다."));
+  // 두음 — 조회 화면 안내문의 요지
+  assert.ok(guide.includes("한자는 지정된 발음으로만 쓸 수 있고, 첫소리가 ㄴ·ㄹ인 한자는 소리 나는 바에 따라 ㅇ·ㄴ으로 쓸 수 있습니다."));
+  // 대법원 조회는 이름만 적는다 — 바깥 링크가 없다(그 사이트의 링크 유의사항)
+  const hrefs = [...raw.matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
+  assert.deepEqual(hrefs, ["/ohaeng", "/method", "/about#ai"]);
+  assert.doesNotMatch(code(raw), /scourt|efamily|https?:\/\//);
+  assert.match(read("src", "app", "about", "page.tsx"), /id="ai"/);
+  // 쓰지 않는 말 — 글자를 넣어 조회(조회 화면에는 글자 칸이 없다) · 사전이 목록 전체인 듯한 말 · 자리 제한 · 길흉을 판정하지 않는다는 단정
+  for (const re of [/글자를 넣어 조회/, /인명용 한자 전(체|부)/, /모든 인명용 한자/, /첫 글자에만/, /길흉은 판정하지/, /일 때가 많/]) {
+    assert.doesNotMatch(guide, re, String(re));
+  }
+  // 맺음 — 81수리의 길흉 분류는 사실 서술로만, AI 사용 공개로 잇는다
+  assert.ok(guide.includes("전통 81수리의 길흉 분류는 조화 점수 15점에만 들어가는 참고 지표이고, 이름으로 운세를 풀이하지는 않습니다."));
+  assert.ok(guide.includes("화면의 문장은 AI 도구로 썼어요("));
+});
+
+test("설명 글·'맞춰 보기'의 작은 글씨 링크는 글자 전용 짙은 청록 — 종이·흰 카드에서 4.5:1 을 넘는다", (t) => {
+  const teal800 = hexRgb(token("color-teal-800-token"));
+  const guide = read(...GUIDE);
+  assert.match(guide, /const link: CSSProperties = \{\s*color: "var\(--color-teal-800\)",/);
+  assert.doesNotMatch(code(guide), /var\(--color-teal\)/, "13.5px 링크에 밝은 청록을 쓰지 않는다");
+  assert.match(guide, /const paragraph: CSSProperties = \{[^}]*fontSize: 13\.5,[^}]*color: "var\(--color-text-2\)",/);
+  assert.match(read(...INPUT), /href="#hanja-guide"\s*style=\{\{\s*color: "var\(--color-teal-800\)",/);
+  assert.match(read(...OHAENG_RESULT), /const pickLink: CSSProperties = \{[^}]*minHeight: 44,[^}]*fontSize: 12\.5,[^}]*color: "var\(--color-teal-800\)",/);
+  for (const [label, fg, bg] of [
+    ["설명 글·소개 문장의 링크 teal-800 / 종이", teal800, PAPER],
+    ["설명 글 본문 text-2 / 종이", hexRgb(token("color-text-2-token")), PAPER],
+    ["/ohaeng '맞춰 보기' teal-800 / 흰 카드", teal800, WHITE],
+  ]) {
+    const ratio = contrast(fg, bg);
+    t.diagnostic(`${label}: ${ratio.toFixed(2)}:1`);
+    assert.ok(ratio >= AA, `${label} ${ratio.toFixed(2)}:1`);
+  }
+});
+
+test("/ohaeng 한자 예의 '맞춰 보기' — 글자와 독음만 해시에 실어 새 창으로, 이름(aria-label)에 글자", () => {
+  const raw = read(...OHAENG_RESULT);
+  const result = code(raw);
+  assert.match(result, /import \{ evaluatePickHref \} from "@\/lib\/hanja-pick";/);
+  const item = functionBody(raw, "HanjaItem");
+  assert.match(
+    item,
+    /<a\s+href=\{evaluatePickHref\(item\.character, item\.readings\)\}\s+target="_blank"\s+rel="noopener"\s+aria-label=\{`\$\{item\.character\} 한자로 이름 맞춰 보기`\}\s+style=\{pickLink\}\s*>\s*맞춰 보기\s*<\/a>/
+  );
+  assert.equal([...result.matchAll(/<a\b/g)].length, 1, "풀 페이지 이동(<a>)은 이 링크 하나");
+  // 넘기는 것은 응답의 글자·독음뿐 — 생년월일·시각·출생지를 싣지 않는다(이 칸은 그 값을 받지도 않는다)
+  assert.match(item, /^function HanjaItem\(\{ item \}: \{ item: ElementHanjaItem \}\) \{/);
+  for (const re of [/birth/i, /\bdata\./, /saju/i]) assert.doesNotMatch(item, re, `HanjaItem 에 ${re}`);
+  // 안내 한 줄 — 한자 예가 있을 때만, 새 창·생년월일을 넘기지 않음을 적는다
+  assert.ok(
+    flat(raw).includes(
+      "{data.elementHanja.some((g) => !g.isGishin && g.hanja.length > 0) && ( <p style={{ ...smallNote, marginTop: 16 }}> ‘맞춰 보기’는 이름 평가를 새 창으로 열어요. 생년월일은 넘기지 않으니, 이름 평가에서 다시 넣으면 이 한자가 필요한 오행을 채우는지 점수와 함께 볼 수 있어요. </p> )}"
+    )
+  );
+  // '다음 단계'의 이름 평가 줄
+  assert.ok(raw.includes('body="이름 한자의 자원오행·발음오행·수리를 무료로 분석합니다. 한자를 직접 골라 맞춰 볼 수 있어요."'));
+  // 링크가 닿는 곳: 해시로만 읽는다(위 '들고 온 글자' 테스트) — 주소 모양은 값으로
+  assert.match(read("src", "lib", "hanja-pick.ts"), /return `\/evaluate#\$\{pick\}&as=\$\{syllables\.map\(encodeURIComponent\)\.join\(","\)\}`;/);
+});
+
+test("개인정보처리방침 — 고른 한자·판정 요청·음절 파일 요청·광고 요청의 화면 주소(설계 §10-4·§10-5, U15 (가))", () => {
+  const policy = flat(read(...PRIVACY));
+  // 1항 입력값 — 고른 한자, 목록에 없는 글자의 판정 요청
+  assert.ok(policy.includes("<strong>추천·평가·분석·오행 찾기 입력값</strong>: 성씨, 이름, 이름·성씨에 고른 한자, 출생일(시), 출생지(시·도), 성별, 선호 톤,"));
+  assert.ok(
+    policy.includes(
+      "&lsquo;이름 평가&rsquo;(/evaluate)의 한자 칸에 목록에 없는 한자를 직접 넣으면 그 한자 한 글자와 칸의 음절을 계산 서버로 보내 그 칸에 넣을 수 있는 글자인지 확인하며, 이 값도 데이터베이스와 서버 로그에 남기지 않습니다."
+    )
+  );
+  // 1항 자동 수집 — 음절 파일 요청. '이름 전체가 아니다'라고 쓰지 않는다(칸을 여러 개 열면 그만큼 남는다)
+  assert.ok(policy.includes("이름 평가에서 한자 칸을 열거나 한자를 넣으면 그 음절의 한자 후보 목록 파일을 받으며, 그 요청 주소에 음절이 문자 코드로 들어갑니다)"));
+  assert.doesNotMatch(flat(code(read(...PRIVACY))), /이름 전체가 아니/);
+  // 1항 브라우저 저장 — 즐겨찾기에 고른 한자
+  assert.ok(policy.includes("출생일·출생 시각·성별·톤·고른 한자·점수는 이용자 브라우저(localStorage)에만 저장되며"));
+  assert.match(read("src", "lib", "favorites.ts"), /hanja\?: string;[\s\S]*?lastHanja\?: string;/);
+  // 5항 — 광고 요청에 화면 주소가 포함될 수 있다(단정하지 않는다 — 실제 전송은 확인하지 못했다)
+  assert.ok(policy.includes("광고를 불러오는 요청에는 광고가 실리는 화면의 주소가 포함될 수 있습니다(1항에 적은 대로 도구 화면의 주소에는 입력값이 들어갈 수 있습니다)."));
+
+  // 방침이 말한 대로인가 — 판정 API 는 값을 로그·사용 통계에 남기지 않는다(실행 확인은 백엔드 테스트의 수집 로거)
+  const ctrlDir = join(ROOT, "..", "Api", "Controllers");
+  const hanjaCtrl = readFileSync(join(ctrlDir, "HanjaController.cs"), "utf8");
+  const places = [...hanjaCtrl.matchAll(/_logger\.Log\w+\(\s*(?:ex\s*,\s*)?\$?"([^"]*)"/g)].flatMap((m) => [...m[1].matchAll(/\{(\w+)\}/g)].map((x) => x[1]));
+  assert.deepEqual([...new Set(places)].sort(), ["ErrorType", "StackTrace"]);
+  assert.doesNotMatch(hanjaCtrl.replace(/\/\/.*$/gm, ""), /_usageTracker|TrackAsync/);
+  // '서버 로그' 항목은 한자를 들지 않는다 → 어느 컨트롤러 로그 템플릿에도 한자 자리가 없다
+  const serverLogItem = /<strong>서버 로그<\/strong>:([\s\S]*?)<\/li>/.exec(read(...PRIVACY));
+  assert.ok(serverLogItem);
+  assert.doesNotMatch(serverLogItem[1], /한자/);
+  let templates = 0;
+  for (const f of readdirSync(ctrlDir).filter((x) => x.endsWith(".cs"))) {
+    const src = readFileSync(join(ctrlDir, f), "utf8");
+    for (const [, tpl] of src.matchAll(/_logger\.Log\w+\(\s*(?:ex\s*,\s*)?\$?"([^"]*)"/g)) {
+      templates++;
+      assert.doesNotMatch(tpl, /\{[^}]*(Hanja|hanja)[^}]*\}/, `${f}: ${tpl}`);
+    }
+  }
+  assert.ok(templates >= 20, `로그 템플릿 ${templates}개만 찾음`);
+  // 음절 파일 주소에는 음절이 코드로 들어간다
+  assert.match(read("src", "lib", "hanja-pick.ts"), /export const HANJA_PICK_BASE = "\/data\/hanja-pick\/v1";/);
+});
+
+test("sitemap·robots — /evaluate 는 바뀐 날을 자기 lastModified 로(방침·오행 찾기와 같은 배포일), 정적 후보 파일은 수집하지 않게", () => {
+  const sitemap = read(...SITEMAP);
+  const dateOf = (path) =>
+    new RegExp(`\\{ path: "${path}", priority: [\\d.]+, changeFrequency: "\\w+", lastModified: "(\\d{4}-\\d{2}-\\d{2})" \\}`).exec(sitemap)?.[1];
+  assert.ok(dateOf("evaluate"), "evaluate 줄에 lastModified 가 없다");
+  assert.equal(dateOf("evaluate"), dateOf("privacy"), "방침과 같은 날(같은 배포)");
+  assert.equal(dateOf("evaluate"), dateOf("ohaeng"));
+  assert.match(sitemap, /\{ path: "evaluate", priority: 0\.8, changeFrequency: "monthly", lastModified: "/);
+  const robots = read(...ROBOTS);
+  assert.match(robots, /const STATIC_DATA = "\/data\/";/);
+  assert.equal([...robots.matchAll(/disallow: \["\/favorites", "\/api\/", STATIC_DATA, \.\.\.TOOL_QUERY_VARIANTS\],/g)].length, 2);
+  assert.match(robots, /const TOOL_QUERY_VARIANTS = \[[^\]]*"\/evaluate\?"[^\]]*\];/);
 });

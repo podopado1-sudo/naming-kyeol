@@ -36,7 +36,7 @@
  *   본 조합으로 돌아갈 때는 서버를 부르지 않는다. 점수는 늘 응답의 값이다 — 화면에서 만들지 않는다.
  */
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 
 import {
@@ -119,7 +119,11 @@ function choiceWord(choice: HanjaChoice): Pick<RecalcErrorView, "kind" | "charac
   return { kind: choice.kind, character: choice.kind === "hanja" ? choice.fact.character : null };
 }
 
-export function EvaluateClient() {
+/**
+ * @param guide 입력 화면 맨 아래에 두는 설명 글 — 서버 컴포넌트(EvaluateHanjaGuide)를 page.tsx 가 그려서 넘긴다.
+ *   여기서 import 하지 않는다(그 파일은 서버에서 음절 색인을 파일로 읽는다 — node:fs). 결과 화면에는 그리지 않는다.
+ */
+export function EvaluateClient({ guide }: { guide?: ReactNode }) {
   const [shown, setShown] = useState<Shown | null>(null);
   const [loading, setLoading] = useState(false);
   const [slow, setSlow] = useState(false);
@@ -508,6 +512,7 @@ export function EvaluateClient() {
             fieldError={fieldError}
           />
           <EvaluateAbout />
+          {guide}
         </main>
       )}
 

@@ -159,7 +159,20 @@ export function EvaluateIntro() {
           lineHeight: 1.65,
         }}
       >
-        아기 이름 한자를 정하는 중이라면 음절마다 인명용 한자를 직접 골라 넣을 수 있어요.
+        아기 이름 한자를 정하는 중이라면 음절마다 인명용 한자를 직접 골라 넣을 수 있어요.{" "}
+        {/* 같은 화면 맨 아래의 설명 글(app/evaluate/EvaluateHanjaGuide.tsx 의 h2)로 내려간다 — 설계 §9-2·§12-2 */}
+        <a
+          href="#hanja-guide"
+          style={{
+            color: "var(--color-teal-800)",
+            fontWeight: 500,
+            textDecoration: "underline",
+            textUnderlineOffset: 3,
+            whiteSpace: "nowrap",
+          }}
+        >
+          한자 고르는 법
+        </a>
       </p>
 
       <aside

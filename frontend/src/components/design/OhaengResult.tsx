@@ -9,6 +9,9 @@
  * - 한자 정보는 응답만 쓴다 — lib/hanja-seo.ts·lib/name-seo.ts·HanjaCharCard 를 import 하지 않는다(큰 JSON 이 클라이언트 번들에 실린다).
  * - 링크는 쿼리 없는 맨 경로(/hanja/{독음}·/search·/evaluate·/hanja). 생년월일은 화면에만 — 문서 제목·URL·저장소에 두지 않는다
  *   (tests/ohaeng-privacy.test.mjs).
+ * - 한자 예 칸의 '맞춰 보기'(2026-11 한자 입력 — 설계 docs/plan-hanja-input-2026-11.md §11-3)는 그 글자 하나를 해시에 실어
+ *   이름 평가를 **새 창**으로 연다(lib/hanja-pick.ts evaluatePickHref — `/evaluate#pick=글자&as=독음`, 쿼리 없음). 이 결과는 주소·저장소에
+ *   남지 않아 같은 창에서 떠나면 사라지기 때문이다. 생년월일·시각·출생지는 넘기지 않는다 — 글자와 독음은 응답 값이지 입력값이 아니다.
  * - 기신은 따로 내세우지 않는다 — 없는 오행이 기신일 때만 그 묶음 자리에 한 줄(gishinNote).
  */
 "use client";
@@ -18,6 +21,7 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 
 import { FIVE_EL, type FiveElement } from "./DetailPrimitives";
 import { RESOURCE_GRADE_INFO } from "./resource-grade";
+import { evaluatePickHref } from "@/lib/hanja-pick";
 import {
   BRANCH_ELEMENT,
   ELEMENTS,
@@ -82,6 +86,19 @@ const link: CSSProperties = {
   color: "var(--color-teal)",
   textDecoration: "underline",
   textUnderlineOffset: 3,
+};
+
+/** 한자 예 칸 바닥의 '맞춰 보기' — 칸 폭 전체·높이 44px 누름 영역. 작은 글씨라 글자 전용 짙은 청록(흰 카드 위) */
+const pickLink: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 44,
+  borderTop: "1px solid var(--color-divider)",
+  fontSize: 12.5,
+  fontWeight: 500,
+  color: "var(--color-teal-800)",
+  textDecoration: "none",
 };
 
 export function OhaengResult({
@@ -200,6 +217,13 @@ export function OhaengResult({
                 <HanjaGroup key={g.element} group={g} yongshin={saju.yongshin?.primaryYongshin ?? ""} />
               ))}
             </div>
+            {/* 한자 예가 하나라도 있을 때만(없는 오행이 기신이면 한자 예를 비운다 — 그때는 링크도 없다) */}
+            {data.elementHanja.some((g) => !g.isGishin && g.hanja.length > 0) && (
+              <p style={{ ...smallNote, marginTop: 16 }}>
+                ‘맞춰 보기’는 이름 평가를 새 창으로 열어요. 생년월일은 넘기지 않으니, 이름 평가에서 다시 넣으면 이 한자가 필요한
+                오행을 채우는지 점수와 함께 볼 수 있어요.
+              </p>
+            )}
           </div>
         )}
 
@@ -221,7 +245,7 @@ export function OhaengResult({
               href="/evaluate"
               lead="이미 정한 이름이 있다면"
               title="이름 평가"
-              body="이름 한자의 자원오행·발음오행·수리를 무료로 분석합니다."
+              body="이름 한자의 자원오행·발음오행·수리를 무료로 분석합니다. 한자를 직접 골라 맞춰 볼 수 있어요."
             />
             <NextStep
               href="/hanja"
@@ -433,32 +457,46 @@ function HanjaItem({ item }: { item: ElementHanjaItem }) {
       style={{
         border: "1px solid var(--color-divider)",
         borderRadius: "var(--radius-md)",
-        padding: "10px 8px 9px",
         textAlign: "center",
         minWidth: 0,
+        // 칸마다 훈 줄 수가 달라도 '맞춰 보기'가 칸 바닥에 나란히 놓이게 — 위 묶음이 남는 높이를 가져간다
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      <div
-        style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 600, color: "var(--color-text)", lineHeight: 1.2 }}
-      >
-        {item.character}
-      </div>
-      <div style={{ fontSize: 13, marginTop: 4 }}>
-        {joinNodes(
-          item.readings.map((r) => (
-            <Link key={r} href={hanjaHref(r)} style={link} aria-label={`${item.character} ‘${r}’ 독음 한자 보기`}>
-              {r}
-            </Link>
-          )),
-          " · ",
+      <div style={{ flex: "1 1 auto", padding: "10px 8px 8px" }}>
+        <div
+          style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 600, color: "var(--color-text)", lineHeight: 1.2 }}
+        >
+          {item.character}
+        </div>
+        <div style={{ fontSize: 13, marginTop: 4 }}>
+          {joinNodes(
+            item.readings.map((r) => (
+              <Link key={r} href={hanjaHref(r)} style={link} aria-label={`${item.character} ‘${r}’ 독음 한자 보기`}>
+                {r}
+              </Link>
+            )),
+            " · ",
+          )}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--color-text-2)", marginTop: 3, wordBreak: "keep-all" }}>{item.gloss}</div>
+        {exception && (
+          <div style={{ fontSize: 11, color: "var(--color-text-3)", marginTop: 3 }} title={RESOURCE_GRADE_INFO.X.tip}>
+            {RESOURCE_GRADE_INFO.X.label}
+          </div>
         )}
       </div>
-      <div style={{ fontSize: 12, color: "var(--color-text-2)", marginTop: 3, wordBreak: "keep-all" }}>{item.gloss}</div>
-      {exception && (
-        <div style={{ fontSize: 11, color: "var(--color-text-3)", marginTop: 3 }} title={RESOURCE_GRADE_INFO.X.tip}>
-          {RESOURCE_GRADE_INFO.X.label}
-        </div>
-      )}
+      {/* 이 글자를 들고 이름 평가로(새 창). 풀 페이지 이동(<a>) — 해시만 싣고 쿼리는 없다. 칸마다 글이 같아 이름(aria-label)에 글자를 넣는다 */}
+      <a
+        href={evaluatePickHref(item.character, item.readings)}
+        target="_blank"
+        rel="noopener"
+        aria-label={`${item.character} 한자로 이름 맞춰 보기`}
+        style={pickLink}
+      >
+        맞춰 보기
+      </a>
     </li>
   );
 }

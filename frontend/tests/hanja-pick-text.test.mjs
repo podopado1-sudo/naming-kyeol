@@ -5,6 +5,8 @@
 // 한자는 코드포인트로 적는다(U(0x745E)) — 소스에 호환 한자·보이지 않는 글자를 글자로 두지 않는다(hanja-pick.test.mjs 가 이 파일도 훑는다).
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import "./resolve-ts.mjs";
 
@@ -12,6 +14,7 @@ const {
   MIXED_SCRIPT_NOTICE,
   SLOTS_EMPTY_GUIDE,
   avoidedGroupIntro,
+  guideFacts,
   hangulOnlyHelp,
   isMixedScript,
   judgeTimeoutNote,
@@ -248,4 +251,58 @@ test("나눠 넣은 결과 — 넣은 수 한 줄, 건너뛴 글자마다 한 �
   assert.equal(none.status, null);
   assert.equal(none.alerts.length, 1);
   assert.deepEqual(pasteReport([], []), { placed: 0, status: null, alerts: [] });
+});
+
+// ============================================================
+// 설명 글의 숫자(app/evaluate/EvaluateHanjaGuide.tsx) — 설계 §9-6
+// ============================================================
+
+test("설명 글의 숫자 — index.json 의 값을 그대로, 가장 많은 음절은 글자 수가 가장 큰 음절(같으면 가나다 순으로 앞)", () => {
+  const index = {
+    version: 1,
+    counts: { characters: 30, syllables: 4, pairs: 33, forbidden: 5, common: 2 },
+    syllables: { 하: { all: 7, usable: 6 }, 나: { all: 12, usable: 9 }, 다: { all: 12, usable: 12 }, 몰: { all: 2, usable: 0, autoEmpty: true } },
+    surnames: {},
+  };
+  assert.deepEqual(guideFacts(index), {
+    characters: 30,
+    syllables: 4,
+    forbidden: 5,
+    common: 2,
+    // '쓸 수 있는 글자' 수(usable)가 아니라 패널 머리와 같은 그 음절의 글자 전체(all) — 나(12·9)가 다(12·12)보다 앞선다
+    widest: { syllable: "나", count: 12 },
+  });
+  // 음절이 하나도 없으면 그 문장을 쓰지 않는다
+  assert.equal(guideFacts({ ...index, syllables: {} }).widest, null);
+});
+
+test("설명 글의 숫자가 뜻하는 것 — 커밋된 음절 파일을 직접 세어 견준다(글의 문장이 참인지)", () => {
+  // 기대값은 guideFacts·index.json 을 거치지 않고 음절 파일 489개에서 따로 센다
+  const dir = fileURLToPath(new URL("../public/data/hanja-pick/v1/", import.meta.url));
+  const files = readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "index.json");
+  const characters = new Set();
+  const forbidden = new Set();
+  const common = new Set();
+  let widest = { syllable: "", count: 0 };
+  const sizes = [];
+  for (const f of files) {
+    const file = JSON.parse(readFileSync(dir + f, "utf8"));
+    sizes.push(file.hanja.length);
+    if (file.hanja.length > widest.count) widest = { syllable: file.syllable, count: file.hanja.length };
+    for (const h of file.hanja) {
+      characters.add(h.character);
+      if (h.forbidden) forbidden.add(h.character);
+      if (h.common) common.add(h.character);
+    }
+  }
+  const facts = guideFacts(JSON.parse(readFileSync(dir + "index.json", "utf8")));
+  // '인명용 한자 N자가 M개 음절에 실려 있어요'
+  assert.equal(facts.characters, characters.size);
+  assert.equal(facts.syllables, files.length);
+  // '한 음절에 고를 수 있는 글자는 많게는 K자(‘유’)예요' — 가장 많은 음절은 하나뿐이다(둘이면 글의 문장을 고쳐야 한다)
+  assert.deepEqual(facts.widest, widest);
+  assert.equal(sizes.filter((n) => n === widest.count).length, 1, "글자가 가장 많은 음절이 둘 이상이다");
+  // '이름에 피하는 글자 … N자' · '먼저 보여 드리는 글자(N자)'
+  assert.equal(facts.forbidden, forbidden.size);
+  assert.equal(facts.common, common.size);
 });

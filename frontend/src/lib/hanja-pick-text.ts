@@ -10,7 +10,7 @@
  * - 성씨 칸은 훈을 읽지 않고, 이름용 판정(인명용 한자·출생신고)을 말하지 않는다 — 성씨는 인명용 한자 제한을 받지 않는다(설계 §20-4).
  * - 사전에 없는 글자를 두고 출생신고 가부를 단정하지 않는다(설계 §20-3).
  */
-import { acceptedSyllablesOf, isHangulSyllables, type HanjaSlot, type PasteStep } from "./hanja-pick";
+import { acceptedSyllablesOf, isHangulSyllables, type HanjaPickIndex, type HanjaSlot, type PasteStep } from "./hanja-pick";
 import { noHanjaSyllableNote } from "./no-hanja";
 
 // ============================================================
@@ -225,4 +225,38 @@ export function pasteReport(steps: readonly PasteStep[], dropped: readonly strin
   }
   if (dropped.length > 0) alerts.push(`칸보다 글자가 많아 뒤의 ${dropped.length}자는 넣지 않았어요.`);
   return { placed, status: placed > 0 ? `한자 ${placed}자를 칸에 나눠 넣었어요.` : null, alerts };
+}
+
+// ============================================================
+// 설명 글(app/evaluate/EvaluateHanjaGuide.tsx) — 설계 §9-6·§12-2
+// ============================================================
+
+/** 설명 글에 적는 숫자 — 모두 커밋된 index.json 의 값이다(글에 숫자를 손으로 적지 않는다) */
+export interface GuideFacts {
+  /** 사전에 실린 글자 수 */
+  characters: number;
+  /** 후보 파일이 있는 음절 수 */
+  syllables: number;
+  /** 이름에 피하는 글자 수 */
+  forbidden: number;
+  /** 먼저 보여 드리는 글자 수 */
+  common: number;
+  /** 고를 수 있는 글자가 가장 많은 음절과 그 수(패널 머리의 '고를 수 있는 글자 n자'와 같은 값 — 그 음절 파일의 글자 전체) */
+  widest: { syllable: string; count: number } | null;
+}
+
+/** index.json → 설명 글의 숫자. 가장 많은 음절이 여럿이면 가나다(코드포인트) 순으로 앞선 음절 */
+export function guideFacts(index: HanjaPickIndex): GuideFacts {
+  let widest: GuideFacts["widest"] = null;
+  for (const syllable of Object.keys(index.syllables).sort()) {
+    const count = index.syllables[syllable].all;
+    if (!widest || count > widest.count) widest = { syllable, count };
+  }
+  return {
+    characters: index.counts.characters,
+    syllables: index.counts.syllables,
+    forbidden: index.counts.forbidden,
+    common: index.counts.common,
+    widest,
+  };
 }

@@ -35,7 +35,7 @@ const ROUTES: Array<{
 
   // 핵심 추천 도구
   { path: "search", priority: 0.8, changeFrequency: "monthly" },
-  { path: "evaluate", priority: 0.8, changeFrequency: "monthly" },
+  { path: "evaluate", priority: 0.8, changeFrequency: "monthly", lastModified: "2026-11-25" }, // 음절별 한자 칸·설명 글 '아기 이름 한자 정하기'·메타(2026-11 한자 입력 — 날짜는 같은 배포일 자리표시)
   { path: "analysis", priority: 0.8, changeFrequency: "monthly" },
 
   // 보조 추천 도구
@@ -56,7 +56,7 @@ const ROUTES: Array<{
   // 운영 페이지
   { path: "about", priority: 0.4, changeFrequency: "yearly" },
   { path: "contact", priority: 0.4, changeFrequency: "yearly" },
-  { path: "privacy", priority: 0.3, changeFrequency: "yearly", lastModified: "2026-11-25" }, // 출생지 항목·오행 찾기 입력값
+  { path: "privacy", priority: 0.3, changeFrequency: "yearly", lastModified: "2026-11-25" }, // 출생지 항목·오행 찾기 입력값·이름 평가의 한자 입력
 
   // 한자 사전 인덱스
   { path: "hanja", priority: 0.8, changeFrequency: "monthly" },

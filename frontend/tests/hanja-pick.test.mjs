@@ -1220,6 +1220,14 @@ test("새 소스·테스트에 호환 한자·BMP 밖 글자·보이지 않는 �
     "../src/app/favorites/page.tsx",
     "./hanja-recalc.test.mjs",
     "./hanja-summary-text.test.mjs",
+    // 착지·문구·방침(C7 앞 절반) — 설명 글은 한자 세 글자를 본문에 적는다(통합 한자여야 한다)
+    "../src/app/evaluate/EvaluateHanjaGuide.tsx",
+    "../src/app/evaluate/page.tsx",
+    "../src/app/evaluate/layout.tsx",
+    "../src/components/design/OhaengResult.tsx",
+    "../src/app/privacy/page.tsx",
+    "../src/app/sitemap.ts",
+    "./note-polarity.test.mjs",
   ];
   for (const rel of files) {
     const hits = [];

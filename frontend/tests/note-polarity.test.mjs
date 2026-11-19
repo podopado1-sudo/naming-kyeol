@@ -4,6 +4,8 @@
 // 감점·주의·참고(true)인지 좋은 점(false)인지는 문장 뜻을 보고 손으로 정했다(2026-10-21 검토 FE-EVAL-4·FTE-8).
 // 2026-10-22 S7: HarmonyEngine.cs 의 지금 문구로 다시 맞췄다(S4 획수 조화 감산 노트·S5a 수리 획수 안내).
 // 2026-10-26: B3 로 없어진 '획수 자료 미검수 글자 포함 — 획수 조화 점수 보수적 산출'과 S4·S5b 전 옛 문구(LEGACY_CASES)를 뺐다.
+// 2026-11 한자 입력(설계 docs/plan-hanja-input-2026-11.md §9-5): 사용자가 한자를 고른 요청의 수리 기준 노트(세 조각을 이은 문장)와
+// '한자 없이 한글로' 비운 칸이 있을 때의 대체 문장 셋을 더했다. 모두 지금 키워드('참고'·'추정'·'기본값'·'감산')가 잡아 중립 막대다 — 키워드 목록은 그대로.
 // 키워드가 백엔드 문자열에 아직 있는지·사례 낱말이 백엔드 문구에 있는지를 아래 대조 테스트가 본다 — 노트를 더하거나
 // 바꾸면 여기 사례와 lib/note-polarity.ts 키워드를 같이 고칠 것.
 import { test } from "node:test";
@@ -73,6 +75,30 @@ const CASES = [
   ["성별 선호도 불일치 (-2)", true],
   ["배정할 한자가 없어 기본값을 사용했습니다", true],
   ["일부 음절에 배정할 한자가 없어 획수 기반 추정을 사용했습니다", true],
+
+  // ── 한자를 고른 요청(2026-11 한자 입력) — 수리 기준 노트 = 이름 조각 + 성씨 조각 + 획수 조각(HarmonyEngine.SuriBasisNoteForPicks) ──
+  // 이름 조각 셋(모두 고름 · 고른 것과 자동이 섞임 · 모두 자동)과 성씨 조각 넷(고름 · 기본으로 두는 한자 · 추정 · 정하지 못함)이 한 번씩 들게 했다.
+  // 한자를 전부 골라 '추정'이 사라져도 획수 조각의 '참고'가 남아 중립 막대다
+  [
+    "이름 획수는 고른 한자로 셌어요. 성씨 획수는 고른 한자(李)로 셌어요. 획수는 유니코드 총획 기준이라 작명소의 원획과 다를 수 있으니 수리는 참고로 봐 주세요.",
+    true,
+  ],
+  [
+    "이름 획수는 고른 한자와 자동으로 고른 한자를 함께 셌어요. 자동으로 고른 글자는 추정이라 실제 한자가 다르면 수리가 달라질 수 있어요. 성씨는 기본으로 두는 한자(李)로 추정했어요. 획수는 유니코드 총획 기준이라 작명소의 원획과 다를 수 있으니 수리는 참고로 봐 주세요.",
+    true,
+  ],
+  [
+    "이름 획수는 자동으로 고른 한자로 추정했어요. 실제 한자가 다르면 수리가 달라질 수 있어요. 성씨 한자는 추정이에요. 획수는 유니코드 총획 기준이라 작명소의 원획과 다를 수 있으니 수리는 참고로 봐 주세요.",
+    true,
+  ],
+  [
+    "이름 획수는 고른 한자로 셌어요. 성씨는 한자를 정하지 못한 글자가 있어 성씨 획수를 빼고 셌어요. 획수는 유니코드 총획 기준이라 작명소의 원획과 다를 수 있으니 수리는 참고로 봐 주세요.",
+    true,
+  ],
+  // ── 사용자가 '한자 없이 한글로' 비운 칸이 있을 때 — 위 대체값 두 문장과 획수 조화 감산 문장을 대신한다 ──
+  ["한자를 두지 않아 기본값을 사용했습니다", true],
+  ["한자를 두지 않은 음절이 있어 획수 기반 추정을 사용했습니다", true],
+  ["한자를 두지 않은 음절이 있어 획수 조화를 낮춰 계산했습니다 (감산)", true],
 ];
 
 for (const [note, caution] of CASES) {
@@ -145,5 +171,54 @@ test("사례 표의 노트가 지금 백엔드 문구에서 왔다 — 없어진
         `사례 "${note}" 의 '${word}' 가 백엔드 노트 문자열에 없다 — 없어진 노트라면 사례를 지울 것`
       );
     }
+  }
+});
+
+// ── 한자를 고른 요청의 수리 기준 노트(2026-11 한자 입력) ──────────────────────────
+// 위 낱말 대조는 사례의 낱말이 백엔드 어딘가에 있는지만 본다. 조립 문장은 조각을 통째로 견준다 — 사례가 백엔드 조각을
+// '이름 조각 + 빈칸 + 성씨 조각 + 빈칸 + 획수 조각' 순서로 이은 것과 글자 그대로 같아야 한다(보간 자리의 한자는 사례의 李).
+test("한자를 고른 요청의 수리 기준 노트 사례는 백엔드 조각을 그대로 이은 문장이다", () => {
+  const { literals } = backendSource();
+  const has = (text) => literals.includes(text);
+  const namePieces = [
+    "이름 획수는 고른 한자로 셌어요.",
+    "이름 획수는 고른 한자와 자동으로 고른 한자를 함께 셌어요. 자동으로 고른 글자는 추정이라 실제 한자가 다르면 수리가 달라질 수 있어요.",
+    "이름 획수는 자동으로 고른 한자로 추정했어요. 실제 한자가 다르면 수리가 달라질 수 있어요.",
+  ];
+  // 보간이 든 조각은 백엔드 리터럴의 {식} 자리를 사례의 한자로 바꿔 견준다
+  const filled = literals.map((l) => l.replace(/\{[^}]*\}/g, "李"));
+  const surnamePieces = [
+    "성씨 획수는 고른 한자(李)로 셌어요.",
+    "성씨는 기본으로 두는 한자(李)로 추정했어요.",
+    "성씨 한자는 추정이에요.",
+    "성씨는 한자를 정하지 못한 글자가 있어 성씨 획수를 빼고 셌어요.",
+  ];
+  const tail = "획수는 유니코드 총획 기준이라 작명소의 원획과 다를 수 있으니 수리는 참고로 봐 주세요.";
+  for (const piece of namePieces) assert.ok(has(piece), `이름 조각이 백엔드에 없다: ${piece}`);
+  for (const piece of surnamePieces) assert.ok(filled.includes(piece), `성씨 조각이 백엔드에 없다: ${piece}`);
+  assert.ok(filled.includes(`李 李 ${tail}`), "획수 조각(조립 문장의 끝)이 백엔드에 없다");
+
+  const assembled = CASES.map(([note]) => note).filter((note) => note.endsWith(tail));
+  assert.equal(assembled.length, 4);
+  const usedName = new Set();
+  const usedSurname = new Set();
+  for (const note of assembled) {
+    const name = namePieces.find((piece) => note.startsWith(`${piece} `));
+    assert.ok(name, `이름 조각으로 시작하지 않는다: ${note}`);
+    const rest = note.slice(name.length + 1, note.length - tail.length - 1);
+    assert.ok(surnamePieces.includes(rest), `가운데가 성씨 조각이 아니다: ${rest}`);
+    usedName.add(name);
+    usedSurname.add(rest);
+  }
+  assert.equal(usedName.size, namePieces.length, "이름 조각 셋이 한 번씩 들어야 한다");
+  assert.equal(usedSurname.size, surnamePieces.length, "성씨 조각 넷이 한 번씩 들어야 한다");
+  // 비운 칸의 대체 문장 셋도 리터럴 그대로
+  for (const text of [
+    "한자를 두지 않아 기본값을 사용했습니다",
+    "한자를 두지 않은 음절이 있어 획수 기반 추정을 사용했습니다",
+    "한자를 두지 않은 음절이 있어 획수 조화를 낮춰 계산했습니다 (감산)",
+  ]) {
+    assert.ok(has(text), `백엔드에 없다: ${text}`);
+    assert.ok(CASES.some(([note, caution]) => note === text && caution === true), `사례 표에 없다: ${text}`);
   }
 });
