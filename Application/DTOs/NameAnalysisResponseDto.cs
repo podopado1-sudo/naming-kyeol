@@ -74,7 +74,15 @@ public class SajuChartDto
     public string StrongestElement { get; set; } = string.Empty;
     public string DayMaster { get; set; } = string.Empty;
     public string BirthplaceName { get; set; } = string.Empty;
+
+    /// <summary>진태양시 보정값(분, 반올림) — 실제로 쓴 값. 출생 시각이 없으면 0</summary>
     public int CorrectionMinutes { get; set; }
+
+    /// <summary>진태양시 보정을 했는지 — 출생 시각이 없으면 false(날짜 그대로, 보정 없음). 2026-11 P0</summary>
+    public bool CorrectionApplied { get; set; }
+
+    /// <summary>시각 없이 넣은 날 안에 12절 절입 순간이 있으면 그 절기 이름(예: "입춘"), 아니면 null. 2026-11 P0</summary>
+    public string? TermOnBirthDay { get; set; }
 
     /// <summary>용신 분석 결과 (억부법 + 조후법)</summary>
     public YongshinDto? Yongshin { get; set; }
@@ -119,8 +127,14 @@ public class SajuPillarDto
     public string StemName { get; set; } = string.Empty;    // 갑
     public string BranchChar { get; set; } = string.Empty;  // 子
     public string BranchName { get; set; } = string.Empty;  // 자
-    public string FiveElement { get; set; } = string.Empty; // 木
-    public string YinYang { get; set; } = string.Empty;     // 陽
+    public string FiveElement { get; set; } = string.Empty; // 木 — 천간(StemChar)의 오행
+    public string YinYang { get; set; } = string.Empty;     // 陽 — 천간의 음양
+
+    /// <summary>
+    /// 지지(BranchChar)의 오행 — <c>SajuData.Branches</c> 조회만(2026-11 /ohaeng 추가, 계산 없음).
+    /// /saju/elements 원국 표가 지지 글자에 색을 입히려고 쓴다. /name-analysis 응답에도 실리지만 프런트는 읽지 않는다(추가만).
+    /// </summary>
+    public string BranchFiveElement { get; set; } = string.Empty; // 水
 }
 
 public class HanjaBreakdownDto

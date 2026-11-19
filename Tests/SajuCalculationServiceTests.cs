@@ -38,6 +38,24 @@ public class SajuCalculationServiceTests
         Assert.Equal("午", chart.HourPillar.BranchChar);
     }
 
+    /// <summary>
+    /// 진태양시 보정은 경도로 소수 분까지 계산한다(서울 −32.08분) — 화면·설명 글의 '약 32분'은 반올림한 값이다
+    /// (2026-11-19 반박 검토: 계산을 반올림 정수 분으로 바꾸지 않고 화면에 '약'을 붙이기로 — 설계 docs/plan-ohaeng-2026-11.md §1-2·§16).
+    /// 그래서 시 경계 1분에서는 화면의 '−32분'으로 손계산한 시와 실제 시주가 다르다: 서울 13:32 → 12:59:55 → 午시(반올림 −32분이면 13:00 未시).
+    /// 계산을 반올림 정수로 바꾸면 이 테스트가 실패한다 — 그때는 설명 글·결과 화면의 '약'과 이 테스트를 함께 고칠 것.
+    /// </summary>
+    [Theory]
+    [InlineData("seoul", 13, 32, "午")]  // −32.08분 → 12:59:55
+    [InlineData("seoul", 13, 33, "未")]  // → 13:00:55
+    [InlineData("incheon", 13, 33, "午")] // −33.2분 → 12:59:48
+    [InlineData("busan", 13, 23, "午")]  // −23.68분 → 12:59:19
+    [InlineData("busan", 13, 24, "未")]  // → 13:00:19
+    public void CalculateChart_SolarCorrection_UsesFractionalMinutes_AtHourBoundary(string place, int hh, int mm, string expectedBranch)
+    {
+        var chart = _service.CalculateChart(new DateTime(2000, 6, 15), new TimeSpan(hh, mm, 0), place);
+        Assert.Equal(expectedBranch, chart.HourPillar!.BranchChar);
+    }
+
     // ============================================================
     // 기본 동작 검증
     // ============================================================

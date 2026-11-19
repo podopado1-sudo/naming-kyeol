@@ -602,6 +602,7 @@ builder.Services.AddScoped<INameReversalEngine, NameReversalEngine>();
 builder.Services.AddScoped<INameAnalysisService, NameAnalysisService>();
 builder.Services.AddScoped<ISajuCalculationService, SajuCalculationService>();
 builder.Services.AddScoped<IYongshinCalculationService, YongshinCalculationService>();
+builder.Services.AddScoped<ISajuElementsService, SajuElementsService>(); // 부족한 오행 찾기 /api/v1/saju/elements (2026-11)
 builder.Services.AddScoped<ITwinNameEngine, TwinNameEngine>();
 builder.Services.AddScoped<ITwinNameService, TwinNameService>();
 builder.Services.AddScoped<IDualNameEngine, DualNameEngine>();

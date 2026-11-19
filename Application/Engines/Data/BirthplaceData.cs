@@ -42,4 +42,10 @@ public static class BirthplaceData
         string.IsNullOrEmpty(code)
             ? Default
             : Birthplaces.FirstOrDefault(b => b.Code == code) ?? Default;
+
+    /// <summary>
+    /// 목록에 있는 시·도 코드인지(대소문자 그대로 비교 — 호출부가 Trim·소문자로 맞춘다). <see cref="Find"/> 는 모르는 코드를 조용히 서울로 바꾸므로
+    /// (기존 호출처 보호 — 그대로 둔다) 모르는 코드를 400 으로 막는 곳(/saju/elements, 2026-11)이 먼저 이것으로 확인한다.
+    /// </summary>
+    public static bool IsKnownCode(string code) => Birthplaces.Any(b => b.Code == code);
 }

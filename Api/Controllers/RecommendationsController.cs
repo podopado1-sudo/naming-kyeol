@@ -96,8 +96,10 @@ public class RecommendationsController : ControllerBase
                 return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
             }
 
-            _logger.LogInformation("이름 추천 요청: 성={LastName}, 성별={Gender}, 톤={Tone}, 생년월일={BirthDate}",
-                request.LastName, request.Gender, request.Tone, request.BirthDate);
+            // 생년월일은 로그에 남기지 않는다 — 개인정보처리방침 '서버 로그' 항목(성씨·이름·영어 이름·성별·톤 등과 추천 1위 이름)에 출생일이 없다
+            // (2026-11-19 D4 권고안 — 설계 docs/plan-ohaeng-2026-11.md §8·§16, frontend/tests/ohaeng-privacy.test.mjs 가 모든 컨트롤러 로그 템플릿을 본다)
+            _logger.LogInformation("이름 추천 요청: 성={LastName}, 성별={Gender}, 톤={Tone}",
+                request.LastName, request.Gender, request.Tone);
 
             var result = await _recommendationService.CreateRecommendationAsync(request);
 

@@ -1012,6 +1012,15 @@ public class ToolAccuracyRegressionTests
             ValidationMessages(new RequiredCharRequest { LastName = "김", RequiredChar = "준서", BirthDate = "2021-05-05" }));
         Assert.Equal(new[] { "생년월일은 YYYY-MM-DD 형식이어야 합니다." },
             ValidationMessages(new CreateRecommendationRequestDto { LastName = "김", BirthDate = "2021-05-05T00" }));
+        // /saju/elements(부족한 오행 찾기, 2026-11) — NameAnalysisRequestDto 와 같은 문구
+        Assert.Equal(new[] { "생년월일은 필수입니다." }, ValidationMessages(new SajuElementsRequestDto { BirthDate = "" }));
+        Assert.Equal(new[] { "생년월일은 YYYY-MM-DD 형식이어야 합니다." },
+            ValidationMessages(new SajuElementsRequestDto { BirthDate = "1990-03-15T" }));
+        Assert.Equal(new[] { "출생 시각은 HH:mm 또는 HH:mm:ss 형식이어야 합니다." },
+            ValidationMessages(new SajuElementsRequestDto { BirthDate = "1990-03-15", BirthTime = "14:30:00.0" }));
+        Assert.Equal(new[] { "출생지 코드는 20자 이내여야 합니다." },
+            ValidationMessages(new SajuElementsRequestDto { BirthDate = "1990-03-15", BirthplaceCode = new string('a', 21) }));
+        Assert.Empty(ValidationMessages(new SajuElementsRequestDto { BirthDate = "1990-03-15", BirthTime = "14:30", BirthplaceCode = "busan" }));
     }
 
     private static string ErrorOf<T>(ActionResult<T> result)
@@ -1048,6 +1057,24 @@ public class ToolAccuracyRegressionTests
         Assert.Equal("성씨는 필수입니다.", ErrorOf(await twin.GenerateTwinNames(new TwinNameRequestDto { LastName = " " })));
         Assert.Equal("생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다.", ErrorOf(await twin.GenerateTwinNames(
             new TwinNameRequestDto { LastName = "이", BirthDate = "2021-13-45" })));
+
+        // /saju/elements(부족한 오행 찾기, 2026-11 설계 §2-3) — 검증에서 바로 돌려주는 경로라 서비스·추적기는 쓰이지 않는다(null)
+        var saju = new SajuController(null!, NullLogger<SajuController>.Instance, null!);
+        async Task<string> SajuError(string birthDate, string? birthTime = null, string? birthplaceCode = null) =>
+            ErrorOf(await saju.FindElements(
+                new SajuElementsRequestDto { BirthDate = birthDate, BirthTime = birthTime, BirthplaceCode = birthplaceCode }));
+        Assert.Equal("생년월일은 필수입니다.", await SajuError(" "));
+        foreach (var bad in new[] { "2021-13-45", "2021-5-5", "2021-05-05T00", "1990/03/15", "abc" })
+            Assert.Equal("생년월일은 YYYY-MM-DD 형식이어야 합니다. (예: 2024-01-15)", await SajuError(bad));
+        Assert.Equal("생년월일은 1900년 1월 1일 이후로 넣어 주세요.", await SajuError("1899-12-31"));
+        var tomorrowKst = DateTime.UtcNow.AddHours(9).Date.AddDays(1).ToString("yyyy-MM-dd");
+        Assert.Equal("생년월일은 오늘까지의 날짜로 넣어 주세요.", await SajuError(tomorrowKst));
+        // 지금 /name-analysis 는 '25:00'을 조용히 버리고 '1.02:00'은 날짜를 하루 민다 — 여기서는 막는다
+        foreach (var bad in new[] { "25:00", "24:00", "1.02:00", "abc", "14:3", "-01:00", "14:60" })
+            Assert.Equal("출생 시각은 HH:mm 형식이어야 합니다. (예: 14:30)", await SajuError("1990-03-15", bad));
+        // 모르는 출생지를 조용히 서울로 바꾸지 않는다
+        foreach (var bad in new[] { "mars", "seoul1", "부산" })
+            Assert.Equal("출생지는 목록에 있는 시·도 가운데 하나여야 합니다.", await SajuError("1990-03-15", "14:30", bad));
     }
 
     [Fact]

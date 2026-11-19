@@ -118,7 +118,7 @@ public class NameAnalysisService : INameAnalysisService
         {
             var chart = _sajuCalculationService.CalculateChart(birthDateParsed.Value, birthTime, request.BirthplaceCode);
             var yongshinResult = _yongshinCalculationService.Calculate(chart);
-            sajuDto = MapToSajuDto(chart, yongshinResult, hanjaBreakdown);
+            sajuDto = SajuDtoMapper.ToDto(chart, yongshinResult, hanjaBreakdown);
         }
 
         // 10. 음령오행 분석
@@ -146,64 +146,7 @@ public class NameAnalysisService : INameAnalysisService
         };
     }
 
-    private static SajuChartDto MapToSajuDto(
-        Domain.Models.Saju.SajuChart chart,
-        Domain.Models.Saju.YongshinResult? yongshinResult,
-        List<HanjaBreakdownDto> hanjaBreakdown) => new()
-    {
-        YearPillar        = MapPillar(chart.YearPillar),
-        MonthPillar       = MapPillar(chart.MonthPillar),
-        DayPillar         = MapPillar(chart.DayPillar),
-        HourPillar        = chart.HourPillar != null ? MapPillar(chart.HourPillar) : null,
-        FiveElementCount  = chart.FiveElementCount,
-        MissingElements   = chart.MissingElements,
-        StrongestElement  = chart.StrongestElement,
-        DayMaster         = chart.DayMaster,
-        BirthplaceName    = chart.BirthplaceName,
-        CorrectionMinutes = chart.CorrectionMinutes,
-        Yongshin          = yongshinResult != null
-            ? MapYongshinDto(yongshinResult, hanjaBreakdown)
-            : null,
-    };
-
-    private static YongshinDto MapYongshinDto(
-        Domain.Models.Saju.YongshinResult r,
-        List<HanjaBreakdownDto> hanjaBreakdown)
-    {
-        // 화면에 보이는 이 이름의 한자(음절별 큰 카드 = 점수가 쓴 배정 한자) 중 용신 오행 글자가 있으면 true —
-        // 추천 랭킹 자원오행 +8 과 같은 정의(RankerEngine.AssignedHanjaHasElement, 2026-10-26 결정 ③).
-        // 옛 규칙은 음절별 후보 10개 중 하나라도 그 오행이면 true 라, 큰 카드·점수 한자와 무관하게 거의 늘 '부합'이 떴다
-        // (은찬 恩燦 火火 · 용신 木 도 '부합').
-        bool? nameFits = hanjaBreakdown.Count > 0
-            ? RankerEngine.AssignedHanjaHasElement(
-                hanjaBreakdown.Select(b => b.PossibleHanja.FirstOrDefault()?.Character).ToList(),
-                r.PrimaryYongshin)
-            : null;
-
-        return new YongshinDto
-        {
-            Strength            = r.Strength.ToString(),
-            StrengthScore       = r.StrengthScore,
-            EokbuYongshin       = r.EokbuYongshin,
-            JohuYongshin        = r.JohuYongshin,
-            PrimaryYongshin     = r.PrimaryYongshin,
-            Heeshin             = r.Heeshin,
-            Gishin              = r.Gishin,
-            StrengthDescription = r.StrengthDescription,
-            YongshinReason      = r.YongshinReason,
-            NameFitsYongshin    = nameFits,
-        };
-    }
-
-    private static SajuPillarDto MapPillar(SajuPillar p) => new()
-    {
-        StemChar   = p.StemChar,
-        StemName   = p.StemName,
-        BranchChar = p.BranchChar,
-        BranchName = p.BranchName,
-        FiveElement = p.FiveElement,
-        YinYang    = p.YinYang,
-    };
+    // 사주 원국·용신 → DTO 매핑은 SajuDtoMapper(2026-11 /ohaeng 과 공용 — 옛 private MapToSajuDto·MapYongshinDto·MapPillar 를 본문 그대로 옮김)
 
     /// <summary>
     /// 음령오행 분석: 초성 기반 오행 분류
