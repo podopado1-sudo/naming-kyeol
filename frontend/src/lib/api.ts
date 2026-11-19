@@ -25,6 +25,8 @@ import type {
   RequiredCharCandidate,
   SajuElementsRequest,
   SajuElementsResponse,
+  HanjaResolveRequest,
+  HanjaResolveResponse,
 } from "./types";
 import { josa, type JosaPair } from "./josa";
 
@@ -50,14 +52,54 @@ const SERVER_ERROR_MESSAGE =
 const BAD_REQUEST_MESSAGE =
   "요청을 처리하지 못했어요. 입력한 내용을 확인하고 다시 시도해 주세요.";
 
-/** 화면에 그대로 띄울 수 있는 문장을 담은 API 오류. status 0 = 응답 없음(연결 실패·시간 초과) */
+/**
+ * 400 본문이 가리키는 자리 — 한자 입력 검증(POST /recommendations/evaluate 의 nameHanja·lastNameHanja)이
+ * { error, code, target, slot } 으로 싣는다(2026-11 한자 입력 — docs/plan-hanja-input-2026-11.md §4-4).
+ */
+export interface ApiErrorDetail {
+  /** name_not_hangul · name_hanja_count · surname_hanja_count · surname_none · not_hanja · not_in_dictionary · reading_mismatch */
+  code?: string;
+  /** 이름 칸 쪽인가 성씨 칸 쪽인가 */
+  target?: "name" | "surname";
+  /** 문제가 난 칸(0부터). -1 이면 칸 하나의 문제가 아니다(한글 검사·글자 수) — 화면은 칸을 열지 않고 문장만 띄운다 */
+  slot?: number;
+}
+
+/**
+ * 화면에 그대로 띄울 수 있는 문장을 담은 API 오류. status 0 = 응답 없음(연결 실패·시간 초과).
+ * code·target·slot 은 400 본문에 그 값이 있을 때만 실린다 — 화면이 틀린 칸을 열고 aria-invalid 를 거는 데 쓴다.
+ * 없는 응답(다른 엔드포인트·프레임워크의 ProblemDetails)에서는 셋 다 undefined 이고, 기존 `catch (err) { err.message }` 는 그대로 돈다.
+ */
 export class ApiError extends Error {
   readonly status: number;
+  readonly code?: string;
+  readonly target?: "name" | "surname";
+  readonly slot?: number;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, detail: ApiErrorDetail = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = detail.code;
+    this.target = detail.target;
+    this.slot = detail.slot;
+  }
+}
+
+/** 400 본문에서 code·target·slot 을 읽는다. 다른 상태·JSON 이 아닌 본문·값의 꼴이 다르면 싣지 않는다 */
+function detailFor(status: number, body: string): ApiErrorDetail {
+  if (status !== 400) return {};
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (!parsed || typeof parsed !== "object") return {};
+    const { code, target, slot } = parsed as { code?: unknown; target?: unknown; slot?: unknown };
+    const detail: ApiErrorDetail = {};
+    if (typeof code === "string" && code) detail.code = code;
+    if (target === "name" || target === "surname") detail.target = target;
+    if (typeof slot === "number" && Number.isInteger(slot)) detail.slot = slot;
+    return detail;
+  } catch {
+    return {};
   }
 }
 
@@ -117,6 +159,9 @@ const FIELD_LABELS: Readonly<Record<string, string>> = {
   count: "개수",
   // /saju/elements(부족한 오행 찾기) — 백엔드 문구는 한국어로 시작하지만 프레임워크 기본 문구가 필드명으로 시작할 때를 대비
   birthplacecode: "출생지",
+  // /recommendations/evaluate 의 한자 필드(2026-11) — 같은 대비
+  namehanja: "이름 한자",
+  lastnamehanja: "성씨 한자",
 };
 
 /** 영문 필드명 뒤 조사 → 한글 이름 받침에 맞춰 다시 고를 짝 */
@@ -158,7 +203,7 @@ async function send<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new ApiError(messageFor(res.status, text), res.status);
+      throw new ApiError(messageFor(res.status, text), res.status, detailFor(res.status, text));
     }
     return (await res.json()) as T;
   } catch (err) {
@@ -269,6 +314,19 @@ export function sajuElements(
   req: SajuElementsRequest
 ): Promise<SajuElementsResponse> {
   return request("/saju/elements", req);
+}
+
+/**
+ * 한자 한 글자의 판정(/evaluate 고르기 패널의 직접 입력) — 후보 목록에 없는 글자가 왜 안 되는지(독음 불일치 · 이 사이트 사전에 없음 · 한자가 아님).
+ * 판정 결과는 모두 200 이고 화면은 `message` 를 칸 아래 안내로 쓴다(오류 띠가 아니다).
+ * - `text` 에는 **뽑은 한자 한 코드포인트만** 싣는다(lib/hanja-pick.ts firstHanCodePoint) — 붙여 넣은 원문을 보내지 않는다.
+ * - 성씨 패널은 `target: "surname"` 으로 부른다(문장이 성씨용이고 이름용 표시가 빠진다).
+ * - 평가·추천의 'expensive' 리미터(분 20회)와 따로, 전역 리미터(분 60회)만 받는다. 5초에서 기다리기를 끝내는 것은 패널이 한다(이 모듈의 60초 한도는 그대로).
+ */
+export function hanjaResolve(
+  req: HanjaResolveRequest
+): Promise<HanjaResolveResponse> {
+  return request("/hanja/resolve", req);
 }
 
 // 상호 작명 (회사명 · 가게명 · 브랜드명)

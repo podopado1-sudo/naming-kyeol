@@ -564,6 +564,133 @@ export interface NameEvaluationRequest {
   birthTime?: string;
   gender?: string;
   tone?: string;
+  /**
+   * 이름 한자(선택, 2026-11 한자 입력) — 글자 수 = 이름 글자 수. 자리마다 한자 한 글자 / `*` 자동 / `-` 한자 없이 한글로.
+   * 지정이 없으면 필드를 보내지 않는다. 이름·성씨가 한글 음절(가~힣)만일 때만 보낸다(아니면 400 name_not_hangul).
+   * 주소·저장에 쓰는 꼴(끝의 `*` 생략)과 다르다 — lib/hanja-pick.ts apiHanjaFields 가 전체 길이로 푼다
+   */
+  nameHanja?: string;
+  /** 성씨 한자(선택) — 글자 수 = 성씨 글자 수. 자리마다 한자 / `*`(기본으로 두는 한자). `-` 는 받지 않는다 */
+  lastNameHanja?: string;
+}
+
+// ------------------------------------------------------------
+// 한자 입력(/evaluate 음절별 한자 고르기, 2026-11) — 백엔드 Application/DTOs/HanjaFactDto.cs 와 1:1
+// (설계 docs/plan-hanja-input-2026-11.md §4). API 응답은 모든 필드를 싣는다. 음절별 정적 후보 파일
+// (public/data/hanja-pick/v1)은 기본값(false·빈 목록)인 필드를 빼고 싣는다 — lib/hanja-pick.ts toHanjaFact 가 채운다.
+// ------------------------------------------------------------
+
+/** 한자 한 글자의 사실 — 화면이 그대로 그리는 값만(점수·길흉 판정 없음) */
+export interface HanjaFact {
+  /** 글자 — 늘 통합 한자 */
+  character: string;
+  /** 그 음절로 읽는 훈 한 조각('상서 서', '오얏 리(이)'). 한글 훈이 없으면 "" */
+  gloss: string;
+  /** 부수 기준 자원오행 木·火·土·金·水 — 미상이면 "" */
+  fiveElement: string;
+  /** 자원오행 등급 R 확정 · V 이견 있음 · X 예외 적용 · U 미상 */
+  resourceGrade: string;
+  /** V 등급의 이유(V 가 아니면 빈 목록) */
+  vReasons: string[];
+  /** 총획수(유니코드 kTotalStrokes — 작명소의 원획과 다를 수 있다) */
+  strokeCount: number;
+  /** 음양 陽·陰 — 획수 홀짝(홀수 陽) */
+  yinYang: string;
+  /** 먼저 보여 드리는 글자 — 사이트가 이름 글자로 꼽아 둔 목록(사용 통계가 아니다). 성씨 글자에는 늘 false */
+  common: boolean;
+  /** 이름에 피하는 글자(불용) — 계산은 하되 화면이 표시한다. 성씨 글자에는 늘 false */
+  forbidden: boolean;
+  /** 사전에 뜻 풀이(한글 훈)가 있는가 */
+  hasMeaning: boolean;
+  /** CJK 기본 영역(U+4E00~9FFF)인가 — 거짓이면 '확장 한자'(기기에 따라 안 보일 수 있다) */
+  basic: boolean;
+}
+
+/** 이름 글자의 자원오행이 맡는 역할 — 조화 점수의 자원오행 보완이 쓴 조건 그대로(백엔드 ElementFit.RolesOf) */
+export type HanjaFill = "yongshin" | "heeshin" | "gishin" | "lacking" | "excessive";
+
+/** default = 기본으로 두는 성씨 한자(대표 한자 표) · user = 고른 한자(한 글자라도) · estimated = 표에 없는 성씨라 독음으로 추정 */
+export type SurnameHanjaSource = "default" | "user" | "estimated";
+
+/** user = 고른 한자 · auto = 자동으로 고른 한자 · none = 사용자가 한자 없이 둠 · unavailable = 자동인데 쓸 수 있는 인명용 한자가 없는 음절 */
+export type SyllableHanjaSource = "user" | "auto" | "none" | "unavailable";
+
+/** 출생일로만 정해지는 오행 쪽 사정(한자와 무관) — 조화 점수가 쓴 값 그대로 */
+export interface ElementFit {
+  /** 용신·희신·기신 오행 — 용신을 구하지 못했으면 세 값이 null */
+  yongshin: string | null;
+  heeshin: string | null;
+  gishin: string | null;
+  /** 사주에 부족한 오행(개수가 평균 미만 — /ohaeng 의 '없는 오행'(0개)보다 넓다) */
+  lacking: string[];
+  /** 사주에 많은 오행(개수가 평균의 1.5배 초과) */
+  excessive: string[];
+  /** 사주 글자의 오행 개수(출생 시각이 없으면 여섯 글자) */
+  counts: Record<string, number>;
+}
+
+/** 성씨 한자 — 수리(81수리)의 성씨 획수에만 쓰인다 */
+export interface SurnameHanja {
+  /** 성씨 한글(앞뒤 공백을 뗀 값) */
+  hangul: string;
+  source: SurnameHanjaSource;
+  /** 수리에 쓴 성씨 획수(복성은 합). 정하지 못하면 0 */
+  strokes: number;
+  /** 성씨 글자마다 한 항목. 한 글자라도 정하지 못하면 빈 목록. forbidden·common 은 늘 false — 화면은 훈도 그리지 않는다 */
+  chars: HanjaFact[];
+}
+
+/** 이름 음절 하나의 한자 */
+export interface SyllableHanja {
+  syllable: string;
+  source: SyllableHanjaSource;
+  /** 출생일이 없거나 한자가 없으면 빈 목록 */
+  fills: HanjaFill[];
+  /** 계산에 쓴 한자 — none·unavailable 이면 null */
+  hanja: HanjaFact | null;
+}
+
+/**
+ * /evaluate 응답의 '이 이름의 한자' — 성씨·음절마다 계산에 쓴 한자와 출처, 용신·부족 오행 역할.
+ * 한자를 지정하지 않은 요청에도 실린다(userHanja false). 이름이나 성씨가 한글 음절만이 아니면 응답에서 null 이다.
+ */
+export interface HanjaSummary {
+  /** 사용자가 한자를 정한 요청인가(이름 칸을 고르거나 비웠거나, 성씨 한자를 골랐다) */
+  userHanja: boolean;
+  /** 서버가 받아들인 이름 한자의 정규 꼴(전체 길이 — 칸마다 통합 한자 / `*` / `-`). 지정이 없으면 "" */
+  nameHanja: string;
+  /** 서버가 받아들인 성씨 한자의 정규 꼴 — 지정이 없으면(대표 한자와 같은 글자 포함) "" */
+  lastNameHanja: string;
+  surname: SurnameHanja;
+  syllables: SyllableHanja[];
+  /** 출생일이 없으면 null */
+  elementFit: ElementFit | null;
+}
+
+/** POST /api/v1/hanja/resolve 요청 — 글자 한 자의 판정. text 에는 뽑은 한자 한 코드포인트만 싣는다(붙여 넣은 원문을 보내지 않는다) */
+export interface HanjaResolveRequest {
+  text: string;
+  /** 넣으려는 칸의 음절(한글 음절 한 글자). 비우면 독음 판정 없이 글자만 찾는다 */
+  syllable?: string;
+  /** "surname" 이면 성씨 칸의 판정 — 안내 문장이 성씨용이고 forbidden·common 이 늘 false 다. 그 밖·생략은 이름 칸 */
+  target?: "name" | "surname";
+}
+
+export type HanjaResolveStatus = "ok" | "reading_mismatch" | "not_in_dictionary" | "not_hanja";
+
+/** POST /api/v1/hanja/resolve 응답 — 조회라서 판정 결과는 모두 200 이다 */
+export interface HanjaResolveResponse {
+  status: HanjaResolveStatus;
+  /** 정리·정규화한 글자(통합 한자). 한자가 아니면 null */
+  character: string | null;
+  /** 사전 항목 — 사전에 없으면 null */
+  hanja: HanjaFact | null;
+  /** 이 글자를 넣을 수 있는 음절(지정 독음과 그 두음 꼴) */
+  acceptedSyllables: string[];
+  /** ok 가 아닐 때의 안내 문장(화면이 그대로 띄운다) */
+  message: string | null;
+  /** 사전에 없는 글자에 권하는, 꼴만 다른 등재 글자(없으면 null) */
+  suggestion: HanjaFact | null;
 }
 
 export interface AestheticBreakdown {
@@ -617,6 +744,11 @@ export interface HanjaCandidate {
   confidenceGrade?: string;
   /** 자원오행 판정 근거 한 줄(부수 근거 — 예: "手·扌(손 수) 부수 → 木") */
   rationale?: string;
+  /**
+   * 이 글자를 그 음절 칸의 한자로 골랐을 때의 글자 사실(2026-11 한자 입력) — hanjaSummary·음절 후보 파일과 같은 꼴·같은 값.
+   * 후보 표의 '이 글자로'가 고른 글자를 응답을 기다리는 동안 그대로 그리는 데 쓴다. 옛 백엔드면 없다
+   */
+  fact?: HanjaFact | null;
 }
 
 export interface HanjaSyllable {
@@ -653,6 +785,11 @@ export interface NameEvaluationResponse {
   aesthetic: AestheticBreakdown;
   harmony: HarmonyBreakdown;
   hanjaCandidates: HanjaSyllable[];
+  /**
+   * 이 이름의 한자(2026-11 한자 입력) — 한자를 지정하지 않은 요청에도 실린다. 이름·성씨가 한글 음절만이 아니면 null,
+   * 옛 백엔드(배포 순서가 어긋난 동안)면 필드가 없다 — 어느 쪽이든 화면은 블록을 그리지 않는다
+   */
+  hanjaSummary?: HanjaSummary | null;
   summary: string;
   strengths: string[];
   cautions: string[];

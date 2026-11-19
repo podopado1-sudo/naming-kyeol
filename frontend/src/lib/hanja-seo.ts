@@ -96,14 +96,9 @@ const DATA = (() => {
  */
 const GRADE_RANK: Record<string, number> = { R: 0, X: 1, V: 2, U: 3 };
 
-/** 오행 상생 관계: key가 생(生)하는 오행 */
-export const ELEMENT_GENERATES: Record<string, string> = {
-  木: "火",
-  火: "土",
-  土: "金",
-  金: "水",
-  水: "木",
-};
+// 오행 상생 표(ELEMENT_GENERATES)는 JSON 없는 순수 모듈 lib/ohaeng-relation.ts 로 옮겼다(2026-11 — 클라이언트 화면도 쓴다).
+// 기존 import 가 그대로 살도록 여기서 다시 내보낸다.
+export { ELEMENT_GENERATES } from "./ohaeng-relation";
 
 /** 오행 한글 표기 */
 export const ELEMENT_KO: Record<string, string> = {

@@ -1588,3 +1588,51 @@ curl -s https://namingkyeol.com/robots.txt | grep "/data/"
 - 독립 재구현(구현 파일을 보지 않고 이 설계서로 쓴 파이썬 — 스크래치 `indep/rules.py`)과 다시 대조: 판정 84,608건·입력 검증 23,321건 차이 0(문장 포함), 정규 꼴 왕복 13,731건 한 번에 수렴.
 - 지정 없는 요청 15,192건: `hanjaSummary` 와 후보 표의 `fact` 를 떼면 한자 입력 전(4e26e0e) 응답과 직렬화까지 같다. C3 커밋과는 `fact` 만 다르다.
 - 정적 파일 490개: 두 번 돌려 바이트 차이 0, 프런트 사전(`hanja-seo.json`)의 뜻 유무·불용 표시와 전수 일치(U+39B3 불일치 해소).
+
+---
+
+## 22. 구현 기록 — 프런트 C4 (2026-11-20, lib)
+
+프런트 lib 단계(§18 C4)에서 정한 것을 적는다. **앞 절(§8·§10·§13-3)과 어긋나면 이 절이 이긴다.** 화면(C5~C7)은 아직 없다 — 새 컴포넌트·문구·진입 링크는 손대지 않았다. 백엔드 파일도 고치지 않았다.
+
+### 22-1. 만든 것
+
+- `lib/hanja-pick.ts`(순수) — §8-1 이 적은 함수 전부와 아래 '더한 것'. `lib/ohaeng-relation.ts`(순수) — 옮긴 셋(`ELEMENT_GENERATES`·`ohaengRelation`·`OhaengKind`, 글자 그대로) + `ELEMENT_CONTROLS`·`ohaengRelationName`·`rolesOf`. `lib/hanja-seo.ts`·`lib/name-seo.ts` 는 다시 내보낸다.
+- `app/evaluate/evaluate-params.ts`(`hanja`·`lastHanja`), `lib/favorites.ts`(한자 조합 키·`favoriteKey`), `lib/api.ts`(`hanjaResolve`, `ApiError.code`·`target`·`slot`, `FIELD_LABELS` 두 줄 — `request()` 는 그대로), `lib/types.ts`(`HanjaFact`·`HanjaSummary`·`ElementFit`·`HanjaResolveRequest/Response`·`HanjaFill`, 요청 두 필드, `candidates[].fact`).
+- 화면 파일은 둘에만 닿았다: `EvaluateInput.tsx` 의 타입 둘(`EvalSubmitPayload`·`InitialSeed`)에 선택 필드 `hanja`·`lastHanja`(동작 변화 없음), `favorites/page.tsx` 의 '제거'·'다시 보기' 주소·React key 에 한자(키가 바뀌어 안 고치면 다른 조합이 지워진다). 목록 줄에 한자를 **보이는** 일은 아직이다(22-3).
+- 타입은 백엔드 DTO 와 로컬 서버의 실제 응답으로 맞췄다: API 응답은 `HanjaFact` 의 모든 필드를 싣고(`vReasons: []`·불리언·`null` 포함), 기본값을 빼는 것은 정적 후보 파일뿐이다(`toHanjaFact` 가 채운다).
+- 테스트: `npm test` 289 → **362**(건너뜀 0). 새 파일 `hanja-pick`(44)·`ohaeng-relation`(8)·`favorites-key`(5)·`hanja-api`(8), `evaluate-params` +8, 공용 헬퍼 `tests/resolve-ts.mjs`(확장자 없는 상대 import 를 푸는 훅 — `ohaeng.test.mjs` 의 것과 같다). `tsc --noEmit`·`lint` 통과.
+
+### 22-2. 설계와 달라진 점
+
+| 무엇 | 설계 | 지금 | 까닭 |
+|---|---|---|---|
+| `rolesOf` 의 자리 | §8-1 `hanja-pick.ts` / §13-3 은 `ohaeng-relation` 테스트 | 정의는 `ohaeng-relation.ts`, `hanja-pick.ts` 가 같은 함수를 다시 내보낸다 | 두 절이 갈렸다. 오행 쪽 모듈에 두고 양쪽에서 쓸 수 있게 |
+| `ohaengRelationName` 의 모르는 값 | '판정은 `ohaengRelation` 과 같다' | 木火土金水 밖의 값은 `unknown`(옛 함수는 '극') | 25쌍의 판정은 같다. 모르는 값에 상극이라고 적지 않는다 |
+| 홀로 남은 서로게이트 | `toWellFormed()` 뒤 U+FFFD 제거 | 코드포인트를 돌며 짝 없는 서로게이트를 지운다. U+FFFD 글자는 지우지 않는다 | `toWellFormed` 는 최근에 들어온 메서드라 없는 브라우저가 있다 — 순회는 어디서나 돈다. U+FFFD 는 서버 본문을 깨지 않는다(서버가 '한자가 아님'으로 끝낸다) |
+| 한자 판정 | `isHanCodePoint` 하나 | `isHanCodePoint`(서버 여섯 범위) + `isHanAfterClean`(정리 뒤 호환 블록에 남은 배정되지 않은 42개는 한자가 아님 — 서버 `Lookup` 과 같다) | §5-1 7번을 화면도 지킨다. 붙여넣기·주소 값·해시가 이 판정을 쓴다 |
+| 공백 목록 | '공백류' | 유니코드 White_Space 25개를 범위로 적는다(자바스크립트 `\s` 는 U+0085 를 빼고 U+FEFF 를 넣는다) | 로컬 서버 `/hanja/resolve` 로 33개 지움·10개 남김을 실측해 표로 고정 |
+| `encodeHanjaParam(slots)` 등 | 칸을 받는다 | 표시 글자 배열(한자 / `*` / `-`)을 받는다. 칸 → 표시 글자는 `marksOf(칸 줄)` | 주소 값·응답 정규 꼴·칸이 같은 함수를 쓰게 |
+| 성씨의 `-` | '`-` 가 있으면 `""`' | `decodeHanjaParam`·`canonicalHanja` 의 `{ allowNone: false }` | 같은 함수로 두 필드를 다룬다 |
+| `deriveSlots` 의 결과 | 칸 목록 | `{ surname, name }` — 줄마다 `[]`(값이 비었음) / `null`(한글 음절만이 아님 → 직전 줄 유지) / 칸들. **두 줄은 서로 독립**이다 | `/name` 조합 링크는 성 없이 이름·한자만 온다(§3-5) — 이름 줄이 성씨 없이도 서야 한다 |
+| 칸 상태 | §3-1 표 | `picked`·`carried`·`checking`·`none`·`default`·`auto`·`hangul`(쓸 글자 0자 — 열 수 있음)·`locked`(후보 파일 없음), 칸마다 `mark`·`openable` | 화면 문구(자동·한글·기본 한자)는 C5 가 상태에서 고른다 |
+| `choices` 의 값 | 고른 글자 / '한자 없이', [자동으로 고르기]는 키 삭제 | `{ kind: "auto" }` 도 둘 수 있다 | 들고 온 글자(`#pick`)가 든 칸은 키를 지우면 그 글자가 다시 들어온다 — 그 칸을 자동으로 되돌릴 방법이 필요하다. 키 삭제도 그대로 된다 |
+| `spreadPaste(칸, 시작, 글자들)` | 인자 셋 | 넷째 인자 `files`, 결과 `{ steps(placed·rejected·pending·locked), dropped }` | '그 음절 목록에 있는 글자만'을 순수 함수 안에서 판정 |
+| `syllableFile` | 주소 | 한글 음절 한 글자가 아니면 `null` | 낱자모·빈 값으로 주소를 만들지 않게 |
+| `evaluatePickHref` | `/evaluate#pick=瑞&as=서` | 값을 퍼센트 인코딩해 낸다(`#pick=%E7%91%9E&as=%EC%84%9C`). `parsePickHash` 는 두 꼴을 다 읽는다 | 메신저가 한자·한글에서 링크를 끊는 것을 줄인다(인앱 브라우저 확인은 §13-4 그대로) |
+| `evaluateHref` 의 인자 | `EvalInput` | `EvalLinkInput`(한자 두 값이 없어도 된다) | 한자를 모르는 호출부(`rare-surname/page.tsx`)를 고치지 않으려고 |
+| 주소 한자의 정리(§10-1) | 길이·글자 검사 | + 그 값의 주인(이름·성씨)이 한글 음절만이 아니면 버리고, **상대 쪽에 한글 음절 밖의 글자가 있으면 둘 다 버린다**(상대 쪽이 비어 있는 것은 괜찮다) | 서버가 한자를 받지 않는 입력(`name_not_hangul`)이라 화면이 필드를 보내지 않는다(§8-2) — 주소·서명에만 남으면 쓰이지 않은 한자가 쓰인 것처럼 보인다 |
+| `evaluate-params.ts` 의 import | — | `../../lib/hanja-pick` 상대 경로(별칭 `@/` 아님). `evaluate-params.test.mjs` 는 훅을 건 뒤 동적 import 로 읽는다(기존 단언은 그대로) | `node --test` 가 그 파일을 바로 읽는다 |
+| `comboFacts` | 획수 합·음양 | `{ elements, yinYang, strokeSum }` — `strokeSum` 은 앞 두 글자에 한자·획수가 다 있을 때만(아니면 `null`) | 한자 없는 칸의 어림값(5획)을 사실처럼 적지 않는다 |
+
+**더한 함수**(§8-1 에 없음 — 모두 순수, 테스트 있음): `apiHanjaFields`(주소 꼴 → 요청 두 필드, §8-2 의 '보내지 않는' 조건 포함)·`hanjaFromSummary`(응답 정규 꼴 → 주소 꼴)·`marksOf`·`hanCharsOf`·`asSurnameFact`(성씨 칸에 넣는 글자에서 이름용 표시를 뗀다)·`toHanjaFact`·`parsePickFile`·`parsePickIndex`·`groupCandidates`(패널의 세 묶음 — 파일 순서 그대로 ①②③ 이고 ①+② = `index.json` 의 `usable`)·`checkSeed`(주소로 온 한자를 음절 파일로 검사 — §8-5)·`pickSyllablesIn`·`confirmedPickReadings`(§8-6 의 띠)·`blockView`(§13-3) 와 `PendingHanja`. `lib/favorites.ts` 에 `favoriteKey`.
+
+### 22-3. 다음 단계가 알아야 할 것 · 확인한 것
+
+- **`EvaluateClient` 는 아직 한자 필드를 보내지 않는다**(C6 의 몫 — `evaluate({ …, ...apiHanjaFields(input) })`, 응답 뒤 `hanjaFromSummary` 로 주소·서명 다시 쓰기, `handleReset` 의 `hanja: ""`). 그때까지 주소의 `hanja=` 는 서명과 주소에만 실리고 계산에는 쓰이지 않는다.
+- `EvaluateResult` 의 저장(`toggleFavorite`·`useIsFavorite`)에 한자 넘기기와 `/favorites` 목록 줄의 한자 표시는 C6·C7 — 지금은 같은 이름·생년월일의 두 조합이 목록에서 같은 줄로 보인다(저장 경로가 아직 없어 실제로는 생기지 않는다).
+- `deriveSlots` 는 `index`(index.json)를 못 받았으면 기본 상태를 모두 '자동'·열 수 있음으로 둔다 — 잠긴 칸이 잠깐 '자동'으로 보이지 않게 하려면 색인을 받은 뒤에 칸 줄을 그린다.
+- 로컬 서버(worktree HEAD `8195353` 빌드)로 확인한 것: 주소 꼴 → `apiHanjaFields` → `/evaluate` 가 8가지 입력(둘째 칸만·`-`·성씨 한자·호환 코드·복성 한 글자·잠긴 칸의 `-`·두음 꼴)에서 모두 200 이고, 응답 정규 꼴을 `hanjaFromSummary` 로 되돌려 다시 보내면 같은 정규 꼴이 온다. 응답의 `fills` 는 전 음절에서 `rolesOf(자원오행, elementFit)` 와 같다.
+- 정적 파일 대조(테스트로 고정): 파일의 (글자, 음절) 10,027쌍 = `hanja-seo.json` 독음 9,977쌍에 `acceptedSyllablesOf` 를 건 쌍(양쪽으로 같다), 파일의 뜻 유무·불용 표시·획수·자원오행 = `hanja-seo.json`, 묶음 수 = `index.json`.
+- 개발 서버(`next dev --webpack`)로 열어 본 것: `/name/서윤`(관계 칩이 나온다 — 옮긴 함수는 원문과 글자 그대로 같다)·`/hanja/瑞`·`/evaluate`(주소로 들어온 평가와 폼 제출이 한 번씩만 돌고, 한자 없는 주소 꼴은 예전과 같다)·`/favorites`(한자 조합 줄의 '다시 보기' 주소에 `hanja`·`lastHanja` 가 실리고, '제거'가 그 조합만 지운다).
+- **확인하지 못한 것**: `next build` 전체(3,865쪽 HTML 대조는 §19 대로 C7 에서), 실기 브라우저의 해시 인코딩과 인앱 브라우저(§13-4), 운영 이미지에서 공백·정규화 목록이 로컬과 같은지(§16).

@@ -1,5 +1,5 @@
 import rawData from "@/data/name-seo.json";
-import { ELEMENT_GENERATES, initialConsonantOf } from "@/lib/hanja-seo";
+import { initialConsonantOf } from "@/lib/hanja-seo";
 import type { AestheticBreakdown } from "@/lib/types";
 
 /**
@@ -73,19 +73,9 @@ export function toAestheticBreakdown(sc: NameScoreBreakdown): AestheticBreakdown
   };
 }
 
-export type OhaengKind = "생" | "비화" | "극" | "unknown";
-
-/** 두 오행(木火土金水)의 관계 — 상생/비화/상극. 한자 조합의 오행 조화 표시용. */
-export function ohaengRelation(e1?: string, e2?: string): {
-  kind: OhaengKind;
-  label: string;
-} {
-  if (!e1 || !e2) return { kind: "unknown", label: "" };
-  if (ELEMENT_GENERATES[e1] === e2) return { kind: "생", label: `${e1}生${e2} · 상생` };
-  if (ELEMENT_GENERATES[e2] === e1) return { kind: "생", label: `${e2}生${e1} · 상생` };
-  if (e1 === e2) return { kind: "비화", label: `${e1}${e1} · 비화(같은 기운)` };
-  return { kind: "극", label: "상극(기운이 부딪침)" };
-}
+// 두 오행의 관계(ohaengRelation·OhaengKind)는 JSON 없는 순수 모듈 lib/ohaeng-relation.ts 로 옮겼다(2026-11 — 클라이언트 화면도 쓴다).
+// 기존 import 가 그대로 살도록 여기서 다시 내보낸다.
+export { ohaengRelation, type OhaengKind } from "./ohaeng-relation";
 
 /** 한자 뜻의 다중 훈음("슬기로울 지/지혜 지") 중 첫 훈음만. */
 export function firstGloss(meaning?: string): string {

@@ -4,7 +4,7 @@ import { Heart, X } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
-import { removeFavorite, useFavorites, type FavoriteName } from "@/lib/favorites";
+import { favoriteKey, removeFavorite, useFavorites, type FavoriteName } from "@/lib/favorites";
 import { splitFullName } from "@/lib/name-split";
 
 export default function FavoritesPage() {
@@ -68,7 +68,7 @@ export default function FavoritesPage() {
           >
             {items.map((f) => (
               <li
-                key={`${f.fullName}|${f.birthDate ?? ""}|${f.savedAt}`}
+                key={`${favoriteKey(f)}|${f.savedAt}`}
                 style={{
                   background: "var(--color-surface)",
                   border: "1px solid var(--color-divider)",
@@ -108,7 +108,7 @@ export default function FavoritesPage() {
                 </a>
                 <button
                   type="button"
-                  onClick={() => removeFavorite(f.fullName, f.birthDate)}
+                  onClick={() => removeFavorite(f.fullName, f.birthDate, f.hanja, f.lastHanja)}
                   aria-label="제거"
                   style={{
                     appearance: "none",
@@ -198,6 +198,9 @@ function buildEvaluateUrl(f: FavoriteName) {
   const { lastName, name } = nameParts(f);
   if (lastName) params.set("lastName", lastName);
   if (name) params.set("name", name);
+  // 고른 한자(주소 꼴)가 저장돼 있으면 같은 조합으로 다시 연다 — evaluate-params evaluateHref 와 같은 자리(name 바로 뒤)
+  if (f.hanja) params.set("hanja", f.hanja);
+  if (f.lastHanja) params.set("lastHanja", f.lastHanja);
   if (f.birthDate) params.set("birthDate", f.birthDate);
   if (f.birthTime) params.set("birthTime", f.birthTime);
   if (f.gender) params.set("gender", f.gender);

@@ -25,6 +25,10 @@ export type EvalSubmitPayload = {
   birthTime?: string;
   gender: "남" | "여" | "중립" | "";
   tone: "부드러운" | "중립" | "강한" | "";
+  /** 고른 이름 한자(선택, 2026-11 한자 입력) — 칸마다 한 글자 / `*` 자동 / `-` 한자 없이. evaluate-params 가 주소 꼴로 정리한다 */
+  hanja?: string;
+  /** 고른 성씨 한자(선택) — 칸마다 한 글자 / `*` */
+  lastHanja?: string;
 };
 
 /** 폼 초기값 — 비어 있는 성별·톤("")은 미선택으로 시작한다 */
@@ -35,6 +39,10 @@ export interface InitialSeed {
   birthTime?: string;
   gender?: EvalSubmitPayload["gender"];
   tone?: EvalSubmitPayload["tone"];
+  /** 주소·이전 평가에서 온 이름 한자(주소 꼴) — 폼이 칸마다 그 음절 후보로 검사한 뒤 쓴다 */
+  hanja?: string;
+  /** 주소·이전 평가에서 온 성씨 한자(주소 꼴) */
+  lastHanja?: string;
 }
 
 // ============================================================
