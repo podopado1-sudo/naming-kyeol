@@ -1960,7 +1960,7 @@ public static class HanjaData
     {
         if (string.IsNullOrEmpty(character)) return null;
         if (HanjaDictionary.TryGetValue(character, out var info)) return info;
-        // 사전은 호환 한자를 통합 한자 항목에 병합해 두므로, IME 가 낸 호환 코드(김→金 U+F90A)는 통합 쪽으로 찾는다
+        // 사전은 호환 한자를 통합 한자 항목에 병합해 두므로, IME 가 낸 호환 코드(금→金 U+F90A — 김은 통합 코드 U+91D1)는 통합 쪽으로 찾는다
         var unified = ToUnifiedHanja(character);
         return unified != character && HanjaDictionary.TryGetValue(unified, out info) ? info : null;
     }

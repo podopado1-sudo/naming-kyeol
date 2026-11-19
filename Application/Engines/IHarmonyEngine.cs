@@ -41,10 +41,13 @@ public interface IHarmonyEngine
     /// <summary>
     /// 상세 분석 포함 조화 점수 계산
     /// </summary>
+    /// <param name="picks">사용자가 정한 한자(/evaluate 한자 입력 — 2026-11). null 이면 지정 없음: 예전처럼 전 음절을 자동 배정하고
+    /// 노트 문장도 그대로다. 있으면 자동 배정을 똑같이 먼저 구한 뒤 사용자가 정한 칸만 덮어쓴다.</param>
     Task<HarmonyBreakdown> CalculateScoreWithBreakdownAsync(
         string name,
         string lastName,
         DateTime birthDate,
         string gender,
-        TimeSpan? birthTime = null);
+        TimeSpan? birthTime = null,
+        NameForm.Application.Engines.Utils.HanjaPicks? picks = null);
 }

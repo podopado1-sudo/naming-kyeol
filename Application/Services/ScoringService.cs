@@ -29,7 +29,8 @@ public class ScoringService : IScoringService
         DateTime? birthDate,
         string gender,
         string tone,
-        TimeSpan? birthTime = null)
+        TimeSpan? birthTime = null,
+        HanjaPicks? picks = null)
     {
         // 정규화 — 어떤 호출자가 "Female"/"Male"/"Neutral" 같이 보내도 동일하게 처리
         var normalizedGender = NormalizeGender(gender);
@@ -42,7 +43,7 @@ public class ScoringService : IScoringService
         if (birthDate.HasValue)
         {
             harmony = await _harmonyEngine.CalculateScoreWithBreakdownAsync(
-                firstName, lastName, birthDate.Value, normalizedGender, birthTime);
+                firstName, lastName, birthDate.Value, normalizedGender, birthTime, picks);
         }
         else
         {
@@ -58,9 +59,18 @@ public class ScoringService : IScoringService
         // 화면에 보이는 배정 한자 — 출생일이 있으면 조화가 고른 것(용신 배정), 없으면 기본 배정(HanjaSelector.DefaultAssignment — 2음절 이름은
         // /name 1순위 조합, 그 밖은 Select 용신 없음 · 2026-10-27 O2). 이 목록 하나를 미학 성별 판정과 호출부의 표시(CanonicalNameScore.AssignedHanja)가
         // 함께 쓴다 — 따로 다시 고르지 않는다.
-        IReadOnlyList<HanjaData.HanjaInfo?> assignedHanja = harmony.SelectedHanja is { Count: > 0 } selected
-            ? selected
-            : HanjaSelector.DefaultAssignment(firstName, normalizedGender);
+        // 사용자가 한자를 정한 요청(picks — 2026-11 한자 입력)은 출생일이 있으면 조화가 이미 덮어쓴 목록을 주고, 없으면 여기서 기본 배정에
+        // 사용자가 정한 칸만 덮어쓴다. picks 가 null 이면 예전과 같은 목록이다.
+        IReadOnlyList<HanjaData.HanjaInfo?> assignedHanja;
+        if (harmony.SelectedHanja is { Count: > 0 } selected)
+        {
+            assignedHanja = selected;
+        }
+        else
+        {
+            var defaultHanja = HanjaSelector.DefaultAssignment(firstName, normalizedGender);
+            assignedHanja = picks?.ApplyTo(defaultHanja) ?? defaultHanja;
+        }
 
         // birthDate.Year를 넘겨 세대 적합도 보정을 활성화 (신생아=출생연도 기준).
         // 출생일이 없으면 birthYear=null → 세대 적합 자동 skip (미학 엔진이 이미 지원).

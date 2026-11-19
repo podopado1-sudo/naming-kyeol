@@ -53,8 +53,13 @@ public class HarmonyEngine : IHarmonyEngine
         string lastName,
         DateTime birthDate,
         string gender,
-        TimeSpan? birthTime = null)
+        TimeSpan? birthTime = null,
+        HanjaPicks? picks = null)
     {
+        // picks(2026-11 한자 입력) — 사용자가 /evaluate 에서 정한 한자. null 이면 지정 없음이고, 아래 모든 분기가 예전 문장·예전 값 그대로다
+        // (Tests/HarmonyAutoPathPinTests 가 그때의 산식 사본과 격자로 대조한다). 있을 때 달라지는 곳은 넷: 배정 목록 덮어쓰기,
+        // 수리의 성씨 획수·기준 노트, 사용자가 비운 칸 때문에 생기는 대체값 노트 세 문장. 배점·산식은 같다.
+        bool userLeftBlank = picks?.AnyNone == true;
         var breakdown = new HarmonyBreakdown();
 
         // 용신을 먼저 계산해 한자 '배정'에 반영(단일 진실의 원천: HanjaSelector).
@@ -74,7 +79,10 @@ public class HarmonyEngine : IHarmonyEngine
         catch { /* 용신 계산 실패 → 용신 없이 인명 빈출/성별 기준으로만 선택 */ }
 
         // 각 음절에서 한자 선택 — 점수·표시·저장이 공유할 단일 결과
-        var selectedHanja = HanjaSelector.Select(name, gender, yPrimary, yHee, yGi);
+        // 자동 배정을 예전과 똑같이 먼저 구하고, 사용자가 정한 칸만 덮어쓴다(고름 → 그 글자, 한자 없음 → null). 자동 칸은 다른 칸에서
+        // 무엇을 골랐는지 보지 않는다(다시 맞춰 고르지 않는다).
+        var autoHanja = HanjaSelector.Select(name, gender, yPrimary, yHee, yGi);
+        var selectedHanja = picks?.ApplyTo(autoHanja) ?? autoHanja;
         breakdown.SelectedHanja = selectedHanja;
         bool anyFallback = selectedHanja.Any(h => h == null);
 
@@ -88,7 +96,10 @@ public class HarmonyEngine : IHarmonyEngine
             breakdown.PronunciationElementScore = CalculatePronunciationElementScore(lastName, name, breakdown.Notes);
             breakdown.SuriSagyeokScore = 7;             // fallback 중간값
             breakdown.GenderBonus = 0;
-            breakdown.Notes.Add("배정할 한자가 없어 기본값을 사용했습니다");
+            // 사용자가 비운 칸이 있으면 '배정할 한자가 없어'는 맞지 않는 말이다(한자가 없는 것이 아니라 두지 않았다)
+            breakdown.Notes.Add(userLeftBlank
+                ? "한자를 두지 않아 기본값을 사용했습니다"
+                : "배정할 한자가 없어 기본값을 사용했습니다");
             breakdown.TotalScore = Math.Max(0, Math.Min(100,
                 breakdown.FiveElementScore + breakdown.ResourceElementScore +
                 breakdown.YinYangScore + breakdown.PronunciationElementScore +
@@ -100,7 +111,7 @@ public class HarmonyEngine : IHarmonyEngine
         breakdown.FiveElementScore = CalculateFiveElementScore(selectedHanja, birthDate, birthTime, breakdown.Notes);
 
         // 2. 획수 조화 (20점 만점) — 이름 두 글자 획수 합의 구간 (필드명 ResourceElementScore 는 호환으로 유지)
-        breakdown.ResourceElementScore = CalculateResourceElementScore(selectedHanja, name, breakdown.Notes);
+        breakdown.ResourceElementScore = CalculateResourceElementScore(selectedHanja, name, breakdown.Notes, userLeftBlank);
 
         // 3. 음양 균형 평가 (10점 만점)
         breakdown.YinYangScore = CalculateYinYangScore(selectedHanja, breakdown.Notes);
@@ -109,7 +120,7 @@ public class HarmonyEngine : IHarmonyEngine
         breakdown.PronunciationElementScore = CalculatePronunciationElementScore(lastName, name, breakdown.Notes);
 
         // 5. 수리사격 (원형이정) 평가 (15점 만점)
-        breakdown.SuriSagyeokScore = CalculateSuriSagyeokScore(lastName, selectedHanja, breakdown.Notes);
+        breakdown.SuriSagyeokScore = CalculateSuriSagyeokScore(lastName, selectedHanja, breakdown.Notes, picks);
 
         // 6. gender 보정
         breakdown.GenderBonus = CalculateGenderBonus(selectedHanja, gender);
@@ -123,10 +134,13 @@ public class HarmonyEngine : IHarmonyEngine
 
         // fallback 표시 — 한자가 없는 음절(순우리말 음절 쁨·봄, 글자가 모두 불용인 음절 괵·몰 — 2026-10-26 '남긴 칸' 처리)이 하나라도 있을 때.
         //   옛 문구 '한자 정보를 찾지 못해'는 불용으로 뺀 음절(사전에는 있음)에 맞지 않아 '배정할 한자가 없어'로 바꿨다
+        //   사용자가 '한자 없이 한글로' 비운 칸이 있으면(2026-11 한자 입력) 그 사실대로 적는다 — 극성 키워드 '추정'은 그대로다
         if (anyFallback)
         {
             breakdown.UsedFallback = true;
-            breakdown.Notes.Add("일부 음절에 배정할 한자가 없어 획수 기반 추정을 사용했습니다");
+            breakdown.Notes.Add(userLeftBlank
+                ? "한자를 두지 않은 음절이 있어 획수 기반 추정을 사용했습니다"
+                : "일부 음절에 배정할 한자가 없어 획수 기반 추정을 사용했습니다");
         }
 
         int raw = breakdown.FiveElementScore
@@ -283,7 +297,8 @@ public class HarmonyEngine : IHarmonyEngine
     private int CalculateResourceElementScore(
         List<HanjaInfo?> selectedHanja,
         string name,
-        List<string> notes)
+        List<string> notes,
+        bool userLeftBlank = false)
     {
         var strokeCounts = new List<int>();
         var hasUnknownStroke = false;
@@ -316,10 +331,14 @@ public class HarmonyEngine : IHarmonyEngine
         // 획수 자료 신뢰도 가중치 — 획수를 모르는 글자(기본값 5로 채운 음절)가 섞일 때만 감산한다.
         // 획수 있음: 1.0 (Core 여부 무관 — 옛 Core 아님 ×0.85 는 2026-10-26 폐기, 위 주석)
         // 획수 미상: 0.75 (큰 감산)
+        // 사용자가 비운 칸(userLeftBlank)도 같은 길을 탄다 — 5획으로 채우고 ×0.75. 합산에 쓰는 것은 앞 두 글자뿐이라 셋째 칸을 비우면
+        // 합은 그대로인데 ×0.75 만 걸린다(산식은 그대로 두고 노트 문장만 가른다 — 비운 칸에 '획수 정보 부족'은 맞지 않는 말).
         if (hasUnknownStroke)
         {
             score = (int)Math.Round(score * 0.75);
-            notes.Add("일부 한자 획수 정보 부족 — 획수 조화 신뢰도 감산");
+            notes.Add(userLeftBlank
+                ? "한자를 두지 않은 음절이 있어 획수 조화를 낮춰 계산했습니다 (감산)"
+                : "일부 한자 획수 정보 부족 — 획수 조화 신뢰도 감산");
         }
 
         return score;
@@ -528,12 +547,16 @@ public class HarmonyEngine : IHarmonyEngine
         _ => 2
     };
 
-    private int CalculateSuriSagyeokScore(string lastName, List<HanjaInfo?> selectedHanja, List<string> notes)
+    private int CalculateSuriSagyeokScore(string lastName, List<HanjaInfo?> selectedHanja, List<string> notes, HanjaPicks? picks = null)
     {
         // 성씨 획수 — 성씨 대표 한자 표(이 → 李 7획, 복성은 두 글자 합). 2026-10-22 S5a 전에는 성씨 첫 글자 독음의
         // 관련도 1순위 한자를 썼다(이 → 11획, 박 → 16획, 남궁 → '남' 한 글자만 — 감사 BT-3). 표에 없는 성씨만 그 방식으로 추정한다.
         var surname = SurnameData.ResolveStrokes(lastName);
         int s = surname.Strokes;
+        // 사용자가 성씨 한자를 골랐으면(2026-11 한자 입력) 그 글자들의 획수 합 — 한 글자라도 못 정했으면 0(ResolveStrokes 와 같은 규칙).
+        // 사용자가 비운 이름 칸은 아래에서 0획으로 센다(첫 칸을 비우면 '원격 0(보통)') — 획수 조화의 5획 가정과 다르지만 산식은 그대로 둔다.
+        if (picks?.Surname is { } pickedSurname)
+            s = pickedSurname.Any(h => h == null || h.StrokeCount <= 0) ? 0 : pickedSurname.Sum(h => h!.StrokeCount);
         var nameStrokes = selectedHanja.Select(h => h?.StrokeCount ?? 0).ToList();
 
         // 획수 불명 글자가 과반이면 스킵
@@ -564,19 +587,62 @@ public class HarmonyEngine : IHarmonyEngine
         notes.Add($"수리사격(전통 81수리, 참고): 원격 {won}({GradeLabel(wonGrade)}) · 형격 {hyeong}({GradeLabel(hyeongGrade)}) · " +
                   $"이격 {i}({GradeLabel(iGrade)}) · 정격 {jeong}({GradeLabel(jeongGrade)})");
 
-        // 이 엔진의 한자는 늘 HanjaSelector가 자동 배정한 것이다(평가 입력에 한자 선택이 없음) —
+        // 한자를 지정하지 않은 요청(picks == null)의 한자는 모두 HanjaSelector가 자동 배정한 것이다 —
         // 순우리말 이름(제갈하늘 → 荷+乻)에도 획수 수리가 매겨지므로, 기준 한자와 달라질 수 있음을 함께 알린다.
         // 성씨는 대표 한자 표에 있으면 그 한자를 밝히고(가장 흔한 한자로 본 것이라 다른 본관 한자면 달라진다),
         // 표에 없으면 독음으로 고른 추정이라고 말한다. 두 문장 모두 '추정'을 담아 화면 노트 극성(주의)이 그대로다.
+        // 한자를 지정한 요청(2026-11 한자 입력)은 무엇을 고르고 무엇이 자동인지에 맞춰 세 조각을 이어 쓴다(SuriBasisNoteForPicks).
         if (selectedHanja.Any(h => h != null))
-            notes.Add(surname.FromTable && s > 0
-                ? $"획수는 성씨의 가장 흔한 한자({surname.Hanja})와 이름 음절에 자동으로 고른 한자로 추정했어요. " +
-                  "실제 한자가 다르면 수리가 달라질 수 있어요."
-                : "획수는 성씨와 이름 음절에 자동으로 고른 한자 기준이에요(성씨 한자도 추정이에요). " +
-                  "실제 한자가 다르면 수리가 달라질 수 있어요.");
+        {
+            if (picks == null)
+                notes.Add(surname.FromTable && s > 0
+                    ? $"획수는 성씨의 가장 흔한 한자({surname.Hanja})와 이름 음절에 자동으로 고른 한자로 추정했어요. " +
+                      "실제 한자가 다르면 수리가 달라질 수 있어요."
+                    : "획수는 성씨와 이름 음절에 자동으로 고른 한자 기준이에요(성씨 한자도 추정이에요). " +
+                      "실제 한자가 다르면 수리가 달라질 수 있어요.");
+            else
+                notes.Add(SuriBasisNoteForPicks(picks, selectedHanja, surname, s));
+        }
 
         // 16점 만점 → 15점 만점 환산 (Math.Round로 일관성)
         return (int)Math.Round(totalPoints * (15.0 / 16.0));
+    }
+
+    /// <summary>
+    /// 한자를 지정한 요청의 수리 기준 노트 — 이름 조각 + 성씨 조각 + 획수 조각을 빈칸 하나로 잇는다(설계서 §9-5 (1)).
+    /// 경우 수(이름 3 × 성씨 3)를 문장 아홉 개로 쓰지 않으려는 꼴이다. 획수 조각에 늘 '참고'가 들어가 화면 노트 극성이 중립이고,
+    /// 길흉을 단정하는 말은 쓰지 않는다. 문장은 이 파일에 리터럴로 둔다 — 프런트 tests/note-polarity.test.mjs 가 이 파일의 문자열을 직접 읽는다.
+    /// </summary>
+    private static string SuriBasisNoteForPicks(
+        HanjaPicks picks, List<HanjaInfo?> selectedHanja, SurnameData.SurnameStrokes surname, int surnameStrokes)
+    {
+        // 계산에 쓴 이름 글자(한자가 있는 칸)가 고른 것인지 자동인지 — 비운 칸은 글자가 없어 세지 않는다
+        bool usedPicked = false, usedAuto = false;
+        for (int i = 0; i < selectedHanja.Count; i++)
+        {
+            if (selectedHanja[i] == null) continue;
+            if (i < picks.Name.Count && picks.Name[i].Kind == HanjaPickKind.Picked) usedPicked = true;
+            else usedAuto = true;
+        }
+
+        string namePart = usedPicked && !usedAuto
+            ? "이름 획수는 고른 한자로 셌어요."
+            : usedPicked
+                ? "이름 획수는 고른 한자와 자동으로 고른 한자를 함께 셌어요. 자동으로 고른 글자는 추정이라 실제 한자가 다르면 수리가 달라질 수 있어요."
+                : "이름 획수는 자동으로 고른 한자로 추정했어요. 실제 한자가 다르면 수리가 달라질 수 있어요.";
+
+        string surnamePart;
+        if (picks.Surname != null)
+            // 복성에서 한 글자만 골랐는데 나머지 자리의 한자를 정하지 못하면(표 밖 성씨의 한자 독음 없는 음절) 성씨 획수는 0 이다
+            surnamePart = surnameStrokes > 0
+                ? $"성씨 획수는 고른 한자({picks.SurnameText})로 셌어요."
+                : "성씨는 한자를 정하지 못한 글자가 있어 성씨 획수를 빼고 셌어요.";
+        else
+            surnamePart = surname.FromTable && surnameStrokes > 0
+                ? $"성씨는 기본으로 두는 한자({surname.Hanja})로 추정했어요."
+                : "성씨 한자는 추정이에요.";
+
+        return $"{namePart} {surnamePart} 획수는 유니코드 총획 기준이라 작명소의 원획과 다를 수 있으니 수리는 참고로 봐 주세요.";
     }
 
     // ===== gender 보정 =====
@@ -594,6 +660,11 @@ public class HarmonyEngine : IHarmonyEngine
         foreach (var hanja in selectedHanja)
         {
             if (hanja == null) continue;
+            // 쓸 수 없는 글자(불용·뜻 없음)의 성별 값은 세지 않는다 — 미학 성별 보너스(AestheticEngine.EvaluateGenderBonus)와 같은 조건이고
+            // 2026-10-26 점수 정책('불용 글자는 어디서도 세지 않는다')과 맞춘 것이다(2026-11 한자 입력 — 사용자가 불용 글자를 고를 수 있게 되면서
+            // 같은 글자를 미학은 0, 조화는 +5/−3 으로 세게 됐다: 여아 '미' 칸의 媚). 자동 배정 결과는 그대로다 — HanjaSelector.Select 는 불용 글자를
+            // 고르지 않고, 뜻 없는 글자는 모두 성별 Neutral 이다(EvaluateUserHanjaTests 가 이 두 데이터 사실을 단언한다).
+            if (!HanjaSelector.IsUsableNameHanja(hanja)) continue;
             if (hanja.GenderPref == GenderPreference.Neutral) continue;
 
             if (hanja.GenderPref == genderPref)

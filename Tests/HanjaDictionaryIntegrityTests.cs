@@ -77,7 +77,8 @@ public class HanjaDictionaryIntegrityTests
     [InlineData(0x2F996, 0x82E6)]  // 苦 (호환 보충 블록)
     public void FindByCharacter_CompatCodepoint_ResolvesToUnifiedEntry(int compat, int unified)
     {
-        // 한국어 IME 는 김→金 을 호환 코드(U+F90A)로 낸다 — 병합 뒤에도 찾아져야 한다(RequiredChar 항렬자 입력 등)
+        // 한국어 IME 는 금→金 을 호환 코드(U+F90A)로 낸다(김→金 은 통합 코드 U+91D1 — 윈도우 입력기 사전 실측, Tests/TestData/win-ime-compat.json)
+        // — 병합 뒤에도 찾아져야 한다(RequiredChar 항렬자 입력 등)
         var hit = HanjaData.FindByCharacter(Cp(compat));
 
         Assert.NotNull(hit);

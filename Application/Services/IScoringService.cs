@@ -40,11 +40,14 @@ public class CanonicalNameScore
 /// </summary>
 public interface IScoringService
 {
+    /// <param name="picks">사용자가 정한 한자(/evaluate 한자 입력 — 2026-11). null 이면 지정 없음(예전과 같은 경로·같은 결과).
+    /// 있으면 자동 배정(출생일 있음: 용신 배정, 없음: 기본 배정)을 먼저 구한 뒤 사용자가 정한 칸만 덮어쓴 목록이 AssignedHanja 가 된다.</param>
     Task<CanonicalNameScore> EvaluateAsync(
         string firstName,
         string lastName,
         DateTime? birthDate,
         string gender,
         string tone,
-        TimeSpan? birthTime = null);
+        TimeSpan? birthTime = null,
+        NameForm.Application.Engines.Utils.HanjaPicks? picks = null);
 }

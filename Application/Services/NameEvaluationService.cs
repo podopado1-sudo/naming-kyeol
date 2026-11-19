@@ -24,10 +24,12 @@ public class NameEvaluationService : INameEvaluationService
 
     public async Task<NameEvaluationResultDto> EvaluateNameAsync(
         string name, string lastName, DateTime? birthDate, string gender, string tone,
-        TimeSpan? birthTime = null)
+        TimeSpan? birthTime = null,
+        HanjaPicks? picks = null)
     {
         // 단일 진실의 원천 — 모든 점수가 여기서 나옴
-        var score = await _scoringService.EvaluateAsync(name, lastName, birthDate, gender, tone, birthTime);
+        // picks(2026-11 한자 입력) — 사용자가 정한 한자. null 이면 아래가 모두 예전 경로다.
+        var score = await _scoringService.EvaluateAsync(name, lastName, birthDate, gender, tone, birthTime, picks);
 
         // 점수가 쓴 배정 한자 — MeaningNote·후보 표 첫 칸이 추천 카드와 같은 한자를 설명하게 한다.
         // 출생일이 있으면 조화의 용신 배정, 없으면 HanjaSelector.DefaultAssignment(2음절은 /name 1순위 조합, 그 밖은 용신 없는 Select —
@@ -43,7 +45,18 @@ public class NameEvaluationService : INameEvaluationService
             ScoringService.NormalizeGender(gender),
             ScoringService.NormalizeTone(tone),
             score.Aesthetic.GenerationFit,
-            selectedHanja);
+            selectedHanja,
+            // 한자를 정한 요청에서는 '한자 예' 폴백(그 음절의 표시 1순위 글자)을 끈다 — 고르지 않은 글자가 메모·강점 줄에 나오지 않게
+            hanjaFallback: picks == null);
+
+        // 한자를 정한 요청인데 적을 뜻이 없을 때(계산에 쓴 글자 중 뜻 있는 것이 없음) — 엔진의 문구('이름에 쓸 만한 인명용 한자 없음'·
+        // '한자 매칭 없음')는 사용자가 정한 결과에 맞지 않는 말이라 가른다. 고른 칸이 하나라도 있으면 '뜻 풀이 없음',
+        // 고른 칸 없이 비운 칸이 있으면 '한글 이름으로 둠', 둘 다 아니면(성씨만 고른 순우리말 이름) 엔진 문구 그대로.
+        if (picks != null && !selectedHanja.Any(h => h != null && !string.IsNullOrEmpty(h.Meaning)))
+        {
+            if (picks.AnyPicked) explanation.MeaningNote = ExplanationEngine.UserNoGlossMeaningNote;
+            else if (picks.AnyNone) explanation.MeaningNote = ExplanationEngine.UserNoHanjaMeaningNote;
+        }
 
         // 종합 줄은 화면의 '종합' 타일(FinalScore)과 같은 값으로 — 출생일이 없으면 조화는 '미산정'.
         ExplanationEngine.AlignOverall(explanation, score.FinalScore, score.AestheticScore, score.HarmonyScore,
@@ -140,9 +153,10 @@ public class NameEvaluationService : INameEvaluationService
                 .OrderBy(h => HanjaData.IsWeakGivenNameHanja(h.Character) ? 1 : 0)
                 .ToList();
 
-            // 배정 한자는 뜻이 있을 때만 앞세운다(의미 메모와 같은 조건 — 뜻 없는 글자는 메모에도 안 나온다).
+            // 배정 한자는 쓸 수 있는 글자(불용 아님 + 뜻 있음)일 때만 앞세운다 — 뜻 없는 글자는 메모에도 안 나오고, 사용자가 고른 불용 글자는
+            // 계산에는 쓰되 이 '한자 후보' 표에 넣지 않는다(2026-11 한자 입력). 자동 배정은 불용 글자를 고르지 않아 예전 조건(뜻 있음)과 결과가 같다.
             var pick = assigned != null && i < assigned.Count ? assigned[i] : null;
-            if (pick != null && !string.IsNullOrEmpty(pick.Meaning))
+            if (pick != null && HanjaSelector.IsUsableNameHanja(pick))
             {
                 hanjaList.RemoveAll(h => h.Character == pick.Character);
                 hanjaList.Insert(0, pick);

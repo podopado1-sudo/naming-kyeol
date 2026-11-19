@@ -35,6 +35,8 @@ public interface IExplanationEngine
     /// </summary>
     /// <param name="selectedHanja">점수(Harmony)가 실제 배정한 한자 — 전달 시 MeaningNote가
     /// 그 한자로 표시되어 추천 카드와 평가 페이지가 일관된다. 미전달 시 정제 폴백.</param>
+    /// <param name="hanjaFallback">배정 한자가 없거나 뜻이 빈 음절을 그 음절의 표시 1순위 글자('한자 예')로 메울지. 사용자가 한자를 정한
+    /// /evaluate 요청(2026-11 한자 입력)은 false — 고르지 않은 글자가 의미 메모·강점 줄에 나오지 않게 한다. 기본값 true 는 예전 동작.</param>
     Task<ExplanationResult> GenerateDetailedReasonsAsync(
         string name,
         string? lastName,
@@ -44,7 +46,8 @@ public interface IExplanationEngine
         string gender,
         string tone,
         GenerationFitResult? generationFit,
-        IReadOnlyList<HanjaInfo?>? selectedHanja = null);
+        IReadOnlyList<HanjaInfo?>? selectedHanja = null,
+        bool hanjaFallback = true);
 }
 
 /// <summary>

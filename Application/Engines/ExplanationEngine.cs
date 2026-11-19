@@ -57,7 +57,8 @@ public class ExplanationEngine : IExplanationEngine
         int aestheticScore, int harmonyScore, int rarityScore,
         string gender, string tone,
         GenerationFitResult? generationFit,
-        IReadOnlyList<HanjaInfo?>? selectedHanja = null)
+        IReadOnlyList<HanjaInfo?>? selectedHanja = null,
+        bool hanjaFallback = true)
     {
         int overall = BlendOverall(aestheticScore, harmonyScore);
         var toneLabel = NormalizeTone(tone);
@@ -66,11 +67,11 @@ public class ExplanationEngine : IExplanationEngine
         {
             Summary = BuildSummary(overall, aestheticScore, harmonyScore, toneLabel),
             // 강점의 한자 뜻도 MeaningNote와 같은 배정 한자로 — 한 화면에서 書+蓮 / 瑞+硏처럼 갈리던 것(EV-3).
-            Strengths = BuildStrengths(name, lastName, aestheticScore, harmonyScore, rarityScore, generationFit, selectedHanja, overall),
+            Strengths = BuildStrengths(name, lastName, aestheticScore, harmonyScore, rarityScore, generationFit, selectedHanja, overall, hanjaFallback),
             Cautions = BuildCautions(name, lastName, aestheticScore, rarityScore, generationFit),
             PronunciationNote = BuildPronunciationNote(name, lastName, aestheticScore),
             // 한자 뜻 — 점수(Harmony)가 실제 배정한 한자로 표시(추천 카드와 일관). 없으면 정제 폴백.
-            MeaningNote = BuildMeaningEvidence(name, selectedHanja),
+            MeaningNote = BuildMeaningEvidence(name, selectedHanja, hanjaFallback),
             ToneReason = BuildToneReason(name, toneLabel)
         };
 
@@ -89,6 +90,12 @@ public class ExplanationEngine : IExplanationEngine
 
     /// <summary>의미 메모 — 이름의 어느 음절에도 쓸 만한 한자가 없고, 그중 사전 독음이 있는 음절이 있을 때(글자가 모두 불용)</summary>
     public const string NoUsableHanjaMeaningNote = "이름에 쓸 만한 인명용 한자 없음 — 한글로 두기를 권해요";
+
+    /// <summary>의미 메모 — 사용자가 한자를 정한 요청(2026-11 한자 입력)에서 적을 뜻이 없고, 고른 한자 없이 '한자 없이 한글로' 비운 칸이 있을 때.</summary>
+    public const string UserNoHanjaMeaningNote = "한자 없이 한글 이름으로 두었어요";
+
+    /// <summary>의미 메모 — 사용자가 한자를 골랐지만 계산에 쓴 글자 어느 것에도 사전 뜻 풀이가 없을 때.</summary>
+    public const string UserNoGlossMeaningNote = "고른 한자에 사전 뜻 풀이가 없어 뜻을 적지 못했어요";
 
     /// <summary>'기본기 갖춤' 강점 줄의 꼬리 — <see cref="AlignOverall"/>가 이 줄의 종합 점수를 다시 쓴다.</summary>
     private const string BasicsTail = "점 — 기본기 갖춤";
@@ -157,7 +164,7 @@ public class ExplanationEngine : IExplanationEngine
         string name, string? lastName,
         int aestheticScore, int harmonyScore, int rarityScore,
         GenerationFitResult? generationFit,
-        IReadOnlyList<HanjaInfo?>? selectedHanja, int overall)
+        IReadOnlyList<HanjaInfo?>? selectedHanja, int overall, bool hanjaFallback = true)
     {
         var strengths = new List<string>();
 
@@ -195,10 +202,13 @@ public class ExplanationEngine : IExplanationEngine
         // '강점'으로 올리는 건 모든 음절 한자가 인명 빈출(CommonNameHanja)이고 약한 글자(weak)가 아닐 때만 —
         // 배정이 菻(쑥 림)·雌(암컷 자)처럼 이름 뜻으로 약한 글자를 고르면 그 줄은 MeaningNote에만 남긴다(BT-6).
         // 긍정 조건이라 weak 세트에 아직 없는 글자(雌)도 막는다. 점수·MeaningNote는 그대로(표시만).
-        var resolved = ResolveMeaningHanja(name, selectedHanja);
+        // 쓸 수 없는 글자(불용)도 강점에 올리지 않는다 — 자동 배정은 늘 쓸 수 있는 글자라 결과가 같고, 사용자가 고른 불용 글자가
+        // 빈출 셋에 들어 있더라도 막는 방어선이다(2026-11 한자 입력. 지금 데이터는 빈출 셋 ∩ 불용 셋 = 0).
+        var resolved = ResolveMeaningHanja(name, selectedHanja, hanjaFallback);
         var meaning = FormatMeaningEvidence(resolved.Reps);
         bool strongMeaning = resolved.Reps.Count == name.Length
-            && resolved.Reps.All(r => HanjaData.IsCommonNameHanja(r.Hanja.Character) && !HanjaData.IsWeakGivenNameHanja(r.Hanja.Character));
+            && resolved.Reps.All(r => HanjaData.IsCommonNameHanja(r.Hanja.Character) && !HanjaData.IsWeakGivenNameHanja(r.Hanja.Character)
+                && HanjaSelector.IsUsableNameHanja(r.Hanja));
         if (strongMeaning && meaning.Contains("+"))
             strengths.Add(meaning);
 
@@ -356,8 +366,8 @@ public class ExplanationEngine : IExplanationEngine
     // MeaningEvidence — 한자 정보 + 카테고리 조합
     // ═══════════════════════════════════════════════════════════════
 
-    private static string BuildMeaningEvidence(string name, IReadOnlyList<HanjaInfo?>? preselected = null)
-        => FormatMeaningEvidence(ResolveMeaningHanja(name, preselected).Reps);
+    private static string BuildMeaningEvidence(string name, IReadOnlyList<HanjaInfo?>? preselected = null, bool allowFallback = true)
+        => FormatMeaningEvidence(ResolveMeaningHanja(name, preselected, allowFallback).Reps);
 
     /// <summary>
     /// 음절별 표시 한자 — 점수(HarmonyEngine)가 배정한 한자가 있으면 그것, 없으면 폴백(음절별 표시 후보 1순위).
@@ -365,9 +375,10 @@ public class ExplanationEngine : IExplanationEngine
     /// (한자 없는 음절이 빠져 인덱스로는 맞출 수 없다).
     /// UsedFallback: 표시 한자 중 하나라도 폴백이면 true — 그 줄은 이 이름의 한자가 아니라 '예'다.
     /// 한자가 없는 음절은 Reps에서 빠진다(Reps.Count &lt; name.Length).
+    /// allowFallback 이 false 면 폴백을 하지 않는다 — 사용자가 한자를 정한 요청에서 비운 칸·뜻 없는 글자 칸에 고르지 않은 글자가 끼지 않게(2026-11 한자 입력).
     /// </summary>
     private static (List<(HanjaInfo Hanja, string Syllable)> Reps, bool UsedFallback) ResolveMeaningHanja(
-        string name, IReadOnlyList<HanjaInfo?>? preselected)
+        string name, IReadOnlyList<HanjaInfo?>? preselected, bool allowFallback = true)
     {
         var reps = new List<(HanjaInfo Hanja, string Syllable)>();
         bool usedFallback = false;
@@ -384,6 +395,8 @@ public class ExplanationEngine : IExplanationEngine
                 reps.Add((pre, syllable));
                 continue;
             }
+
+            if (!allowFallback) continue;
 
             // 폴백: 표시 후보 정렬(HanjaSelector.OrderForDisplay — 불용·뜻 없는 글자 제외, 빈출·비약자 우선)의 1순위.
             // /name-analysis 후보 카드(AnalyzeHanja — 출생일 없는 경로)와 같은 정렬이라 '한자 예' 줄이 큰 카드와 같은 글자를 든다(2026-10-26 B8 — API-3).
