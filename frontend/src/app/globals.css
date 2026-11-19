@@ -992,3 +992,43 @@
     border-bottom: none;
   }
 }
+
+/* =========================================================
+   한자 고르기 패널 (components/design/HanjaPickerPanel.tsx — 2026-11 한자 입력)
+   - 높이를 막고 목록 영역만 스크롤한다(한 음절에 100자가 넘는 목록이 폼 사이에 끼어들지 않게).
+     dvh 를 모르는 브라우저는 앞줄의 vh 를 쓴다.
+   - 머리(제목·닫기·찾기)는 스크롤 영역 밖이라 늘 보인다 — 붙여 두는(sticky) 방식과 달리 키보드로 거슬러 올라갈 때
+     포커스가 머리 밑에 가리지 않는다. 화면이 낮으면(가로로 눕힌 휴대폰) 머리가 패널 높이를 다 차지하므로 패널 전체를 스크롤한다.
+   - 목록·성씨 격자의 글자는 기기 서체(명조 계열)로 그린다 — 사이트 한자 서체(Noto Serif KR)는 유니코드 조각으로 나뉘어 있어
+     '유' 음절 138자를 그리려면 조각 27개·1.7MB 를 새로 받고, 그러고도 75자는 그 서체에 없어 기기 서체로 그려진다
+     (2026-11-20 개발 서버 실측 — 기준은 요청 10개·300KB). 고른 글자(칸)는 .font-hanja 그대로다.
+   ========================================================= */
+.hanja-picker-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: min(70vh, 560px);
+  max-height: min(70dvh, 560px);
+  overflow: hidden;
+}
+.hanja-picker-head {
+  flex: 0 0 auto;
+}
+.hanja-picker-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.hanja-picker-glyph {
+  font-family: "Batang", "AppleMyungjo", "Noto Serif CJK KR", "Source Han Serif K", serif;
+}
+@media (max-height: 560px) {
+  .hanja-picker-panel {
+    display: block;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .hanja-picker-body {
+    overflow-y: visible;
+  }
+}

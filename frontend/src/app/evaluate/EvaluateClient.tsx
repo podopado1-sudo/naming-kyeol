@@ -15,20 +15,31 @@
  *   우리가 쓴 URL이 watcher로 되돌아올 때 재평가하지 않도록 urlSigRef로 '지금 URL이 뜻하는 입력'을 기억한다.
  * - 예전의 key 리마운트(EvaluateInner key=searchParams)는 쓰지 않는다 — replace 때마다 결과가 날아간다.
  *   대신 서명 비교로 다른 이름이 오면 재평가, 파라미터 없는 /evaluate로 오면 빈 폼으로 돌린다.
+ *
+ * 한자 입력(2026-11 — docs/plan-hanja-input-2026-11.md §8-2·§8-5·§8-6)
+ * - 폼에서 고른 한자(input.hanja·lastHanja — 주소 꼴)를 요청의 nameHanja·lastNameHanja 로 싣는다(lib/hanja-pick.ts apiHanjaFields).
+ * - 해시 `#pick=글자&as=독음`(/hanja 글자 상세·/ohaeng 한자 예에서 온다)은 PickHashWatcher 가 읽고 주소에서 지운다.
+ *   들고 온 글자는 입력 폼에만 쓴다 — 서명에 넣지 않고, 결과 화면이거나 주소가 자동 평가를 뜻하면 버린다.
+ *   링크에 적힌 독음의 음절 파일에 그 글자가 실제로 있을 때만 폼에 넘긴다(주소에 적힌 낱말을 그대로 화면에 옮기지 않는다).
+ * - 서버가 한자 칸을 틀렸다고 알려 주면(400 의 target·slot) 하단 띠가 아니라 폼의 그 칸 아래에 문장을 적는다(fieldError).
  */
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import {
   EvaluateAbout,
   EvaluateInputPage,
   EvaluateIntro,
+  type EvalFieldError,
+  type EvalPick,
   type EvalSubmitPayload,
   type InitialSeed,
 } from "@/components/design/EvaluateInput";
-import { evaluate } from "@/lib/api";
-import type { NameEvaluationResponse } from "@/lib/types";
+import { ApiError, evaluate } from "@/lib/api";
+import { apiHanjaFields, confirmedPickReadings, parsePickHash, type PendingPick } from "@/lib/hanja-pick";
+import { requestPickFile, usePickStore } from "@/lib/hanja-pick-store";
+import type { HanjaFact, NameEvaluationResponse } from "@/lib/types";
 
 import {
   canAutoEvaluate,
@@ -60,17 +71,40 @@ export function EvaluateClient() {
   const [seed, setSeed] = useState<InitialSeed | undefined>(undefined);
   // 폼은 seed를 초기값으로만 읽으므로, seed를 바꿀 때 key를 올려 새로 마운트한다
   const [formKey, setFormKey] = useState(0);
+  // 서버가 틀렸다고 알려 준 한자 칸 — 폼이 그 칸을 열고 문장을 적는다
+  const [fieldError, setFieldError] = useState<EvalFieldError | null>(null);
+  // 해시로 들고 온 글자(주소에 적힌 그대로 — 음절 파일로 확인하기 전)
+  const [pendingPick, setPendingPick] = useState<PendingPick | null>(null);
+  const pickStore = usePickStore();
 
   // 마지막 요청 번호 — 늦게 도착한 이전 응답이 새 결과를 덮지 않게 한다
   const reqIdRef = useRef(0);
   // 지금 URL이 뜻하는(=이미 처리한) 입력의 서명. 초기값은 파라미터 없는 /evaluate
   const urlSigRef = useRef(EMPTY_SIG);
+  // 결과 화면인가 — 들고 온 글자(#pick)는 입력 폼에만 쓴다
+  const resultShownRef = useRef(false);
+  useEffect(() => {
+    resultShownRef.current = shown !== null;
+  }, [shown]);
+
+  // 들고 온 글자는 링크에 적힌 독음의 음절 파일에 실제로 있을 때만 폼에 넘긴다 — 띠에는 확인된 독음만 적는다.
+  // 파일을 받지 못한 독음은 확인할 수 없으므로 없는 것으로 본다(손으로 고친 주소·사전에 없는 글자와 같이 버린다)
+  const confirmedPick = useMemo<EvalPick | null>(() => {
+    if (!pendingPick) return null;
+    const files = new Map<string, readonly HanjaFact[]>(pickStore.files);
+    for (const reading of pendingPick.readings) {
+      if (!files.has(reading) && pickStore.failed.has(reading)) files.set(reading, []);
+    }
+    const { ready, readings } = confirmedPickReadings(pendingPick, files);
+    return ready && readings.length > 0 ? { character: pendingPick.character, readings } : null;
+  }, [pendingPick, pickStore.files, pickStore.failed]);
 
   const run = useCallback(
     async (input: EvalInput) => {
       const id = ++reqIdRef.current;
       setShown(null);
       setError(null);
+      setFieldError(null);
       setSlow(false);
       setLoading(true);
       try {
@@ -81,6 +115,8 @@ export function EvaluateClient() {
           birthTime: input.birthTime || undefined,
           gender: input.gender,
           tone: input.tone,
+          // 고른 한자 — 주소 꼴을 이름·성씨 길이로 풀어 전체 길이로(瑞 → 瑞*). 지정이 없거나 한글 음절만이 아니면 싣지 않는다
+          ...apiHanjaFields(input),
         });
         if (id !== reqIdRef.current) return;
         setShown({ data, input });
@@ -90,6 +126,11 @@ export function EvaluateClient() {
         window.scrollTo({ top: 0 });
       } catch (err) {
         if (id !== reqIdRef.current) return;
+        if (err instanceof ApiError && err.status === 400 && err.target) {
+          // 한자 칸의 오류 — 폼의 그 칸 아래에 적는다(하단 띠에만 뜨면 어느 칸이 틀렸는지 알 수 없다)
+          setFieldError({ id, target: err.target, slot: err.slot ?? -1, message: err.message });
+          return;
+        }
         setError(
           err instanceof Error ? err.message : "평가 중 오류가 발생했어요."
         );
@@ -122,15 +163,29 @@ export function EvaluateClient() {
       setLoading(false);
       setSlow(false);
       setError(null);
+      setFieldError(null);
     },
     [run]
   );
 
   function handleSubmit(payload: EvalSubmitPayload) {
+    // 들고 온 글자는 제출할 때까지만 — 칸에 들어갔다면 payload 의 hanja 에 이미 실려 있다
+    setPendingPick(null);
     void run(inputFromPayload(payload));
   }
 
+  // 해시로 글자를 들고 왔다(PickHashWatcher) — 입력 폼에만 쓴다
+  const handlePick = useCallback((pick: PendingPick) => {
+    if (resultShownRef.current) return;
+    // 주소가 자동 평가를 뜻하면(성·이름이 다 있다) 버린다 — 곧 결과 화면으로 넘어간다
+    if (canAutoEvaluate(inputFromParams(new URLSearchParams(window.location.search)))) return;
+    setPendingPick(pick);
+    // 링크에 적힌 독음의 음절 파일(입력값이 아니라 링크에서 온 값이다) — 그 글자가 들어 있는지 확인한다
+    for (const reading of pick.readings) void requestPickFile(reading);
+  }, []);
+
   // '다른 이름 평가하기' — 성·출생일·성별·톤은 이어 쓰고 이름만 비운다 (같은 아이의 후보 비교가 흔한 흐름)
+  // 성씨 한자는 이어 쓰고 이름 한자는 이름과 함께 비운다
   function handleReset() {
     const last = shown?.input;
     reqIdRef.current++;
@@ -138,7 +193,8 @@ export function EvaluateClient() {
     setLoading(false);
     setSlow(false);
     setError(null);
-    setSeed(last ? { ...seedFromInput(last), firstName: "" } : undefined);
+    setFieldError(null);
+    setSeed(last ? { ...seedFromInput(last), firstName: "", hanja: "" } : undefined);
     setFormKey((k) => k + 1);
     urlSigRef.current = EMPTY_SIG;
     replaceUrl("/evaluate");
@@ -157,6 +213,7 @@ export function EvaluateClient() {
       <Suspense fallback={null}>
         <SearchParamsWatcher onChange={handleUrl} />
       </Suspense>
+      <PickHashWatcher onPick={handlePick} />
 
       {shown ? (
         <EvaluateResultView
@@ -174,6 +231,9 @@ export function EvaluateClient() {
             seed={seed}
             onSubmit={handleSubmit}
             loading={loading}
+            pick={confirmedPick}
+            onPickDismiss={() => setPendingPick(null)}
+            fieldError={fieldError}
           />
           <EvaluateAbout />
         </main>
@@ -219,6 +279,26 @@ export function EvaluateClient() {
  */
 function replaceUrl(href: string) {
   window.history.replaceState(null, "", href);
+}
+
+/**
+ * 해시로 들고 온 글자(`#pick=글자&as=독음`)를 읽어 부모에 알리는 빈 컴포넌트 — 마운트 때와 hashchange 때.
+ * 읽은 해시는 주소에서 지운다(새로고침·주소 복사에 남지 않게). `pick=` 으로 시작하지 않는 해시(#hanja-guide)와
+ * 읽을 수 없는 값은 건드리지 않는다(lib/hanja-pick.ts parsePickHash). 해시는 서버로 가지 않는다.
+ */
+function PickHashWatcher({ onPick }: { onPick: (pick: PendingPick) => void }) {
+  useEffect(() => {
+    const read = () => {
+      const pick = parsePickHash(window.location.hash);
+      if (!pick) return;
+      replaceUrl(window.location.pathname + window.location.search);
+      onPick(pick);
+    };
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, [onPick]);
+  return null;
 }
 
 /**

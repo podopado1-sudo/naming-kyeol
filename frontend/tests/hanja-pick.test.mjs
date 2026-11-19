@@ -55,8 +55,10 @@ const {
   parsePickIndex,
   pickSyllablesIn,
   rolesOf,
+  seedChoices,
   sortForSurname,
   spreadPaste,
+  surnameDefaultAt,
   syllableFile,
   toApiHanja,
   toHanjaFact,
@@ -810,6 +812,75 @@ test("checkSeed: 주소로 온 한자를 칸마다 그 음절 파일로 검사�
   assert.equal(checkSeed("name", "", SEO, files), null);
 });
 
+test("seedChoices: 주소로 온 한자 → 칸 선택 — 맞는 글자만 선택이 되고, 맞지 않는 글자·기다리는 칸은 따로 돌려준다", () => {
+  const files = filesFor("서", "윤", "유");
+  // /name 조합 링크 꼴 — 성 없이 이름과 한자만
+  const combo = seedChoices({ lastName: "", firstName: "서윤", hanja: SEO + YUN }, files);
+  assert.deepEqual([...combo.choices.keys()], [choiceKey("name", 0, "서"), choiceKey("name", 1, "윤")]);
+  assert.equal(combo.choices.get(choiceKey("name", 0, "서")).fact.gloss, "상서 서");
+  assert.deepEqual(combo.pending, []);
+  assert.deepEqual(combo.rejected, []);
+  // 그 선택으로 칸을 파생하면 고른 한자로 선다(직접 고른 것과 같은 꼴)
+  const derived = deriveSlots({ lastName: "", firstName: "서윤" }, combo.choices, null, index, files);
+  assert.deepEqual(marksOf(derived.name), [SEO, YUN]);
+  assert.deepEqual(derived.name.map((s) => s.state), ["picked", "picked"]);
+
+  // 자동(*)은 선택이 아니고, '-' 는 '한자 없이', 맞지 않는 글자는 rejected(칸은 비어 자동이 된다)
+  const mixed = seedChoices({ lastName: "유", firstName: "서윤", hanja: `${YUN}-`, lastHanja: LIU }, files);
+  assert.deepEqual(mixed.choices.get(choiceKey("name", 1, "윤")), { kind: "none" });
+  assert.equal(mixed.choices.has(choiceKey("name", 0, "서")), false);
+  assert.deepEqual(mixed.rejected, [{ key: choiceKey("name", 0, "서"), target: "name", index: 0, syllable: "서", character: YUN }]);
+  // 성씨 한자 — 이름용 표시를 뗀 글자 사실
+  const liu = mixed.choices.get(choiceKey("surname", 0, "유"));
+  assert.equal(liu.kind, "hanja");
+  assert.equal(liu.fact.character, LIU);
+  assert.equal(liu.fact.forbidden, false);
+  assert.equal(seedChoices({ lastName: "", firstName: "서윤", hanja: "*" + YUN }, files).choices.size, 1);
+
+  // 음절 파일을 아직 못 받은 칸은 pending — 선택도 거절도 아니다
+  const waiting = seedChoices({ lastName: "", firstName: "서윤", hanja: SEO + YUN }, filesFor("서"));
+  assert.deepEqual([...waiting.choices.keys()], [choiceKey("name", 0, "서")]);
+  assert.deepEqual(waiting.pending, [{ key: choiceKey("name", 1, "윤"), target: "name", index: 1, syllable: "윤", character: YUN }]);
+  assert.deepEqual(waiting.rejected, []);
+
+  // 한자가 없거나, 한글 음절만이 아닌 쪽은 건너뛴다(다른 쪽은 그대로 읽는다)
+  assert.equal(seedChoices({ lastName: "이", firstName: "서윤" }, files).choices.size, 0);
+  assert.equal(seedChoices({ lastName: "이", firstName: "서ㅇ", hanja: SEO }, files).choices.size, 0);
+  const half = seedChoices({ lastName: "유", firstName: "서ㅇ", hanja: SEO, lastHanja: LIU }, files);
+  assert.deepEqual([...half.choices.keys()], [choiceKey("surname", 0, "유")]);
+  // 길이가 안 맞는 값은 통째로 버린다
+  const long = seedChoices({ lastName: "", firstName: "서윤", hanja: SEO + YUN + YUN }, files);
+  assert.equal(long.choices.size + long.pending.length + long.rejected.length, 0);
+});
+
+test("surnameDefaultAt: 성씨의 그 자리에 기본으로 두는 한자 — 색인의 대표 한자 표, 없으면 null", () => {
+  assert.equal(surnameDefaultAt(index, "이", 0), LI);
+  assert.equal(surnameDefaultAt(index, "유", 0), RYU);
+  assert.equal(surnameDefaultAt(index, " 유 ", 0), RYU, "앞뒤 공백은 뗀다");
+  // 복성은 자리마다
+  assert.equal(surnameDefaultAt(index, "남궁", 0), NAM);
+  assert.equal(surnameDefaultAt(index, "남궁", 1), GUNG);
+  assert.equal(surnameDefaultAt(index, "남궁", 2), null);
+  // 표에 없는 성씨·빈 값·색인을 못 받았을 때
+  assert.equal(surnameDefaultAt(index, "궉", 0), null);
+  assert.equal(surnameDefaultAt(index, "", 0), null);
+  assert.equal(surnameDefaultAt(null, "이", 0), null);
+  assert.equal(surnameDefaultAt(undefined, "이", 0), null);
+  // 표의 글자 수가 성씨 글자 수와 다르면 자리로 읽지 않는다(두 음절 성씨에 한 글자만 적힌 표 — 첫 자리에 그 글자를 넣지 않는다)
+  const lopsided = { ...index, surnames: { ...index.surnames, 가나: NAM, 다: NAM + GUNG } };
+  assert.equal(surnameDefaultAt(lopsided, "가나", 0), null);
+  assert.equal(surnameDefaultAt(lopsided, "가나", 1), null);
+  assert.equal(surnameDefaultAt(lopsided, "다", 0), null);
+  // 객체의 기본 속성 이름을 성씨 표의 항목으로 읽지 않는다
+  assert.equal(surnameDefaultAt(index, "constructor", 0), null);
+  assert.equal(surnameDefaultAt(index, "toString", 0), null);
+  // deriveSlots 의 성씨 기본 한자와 같은 값이다(표의 161 성씨 전수)
+  for (const name of Object.keys(index.surnames)) {
+    const derived = deriveSlots({ lastName: name, firstName: "" }, NO_CHOICES, null, index, NO_FILES);
+    assert.deepEqual(derived.surname.map((s) => s.character), [...name].map((_, i) => surnameDefaultAt(index, name, i)), name);
+  }
+});
+
 test("spreadPaste: 그 칸부터 차례로 — 성씨에서 시작하면 이름으로 넘어가고, 후보에 없는 자리는 건너뛴다", () => {
   const derived = deriveSlots({ lastName: "유", firstName: "서윤" }, NO_CHOICES, null, index, NO_FILES);
   const slots = [...derived.surname, ...derived.name];
@@ -1129,6 +1200,16 @@ test("새 소스·테스트에 호환 한자·BMP 밖 글자·보이지 않는 �
     "./evaluate-params.test.mjs",
     "./hanja-api.test.mjs",
     "./resolve-ts.mjs",
+    // 입력 화면(C5)
+    "../src/lib/hanja-pick-store.ts",
+    "../src/lib/hanja-pick-text.ts",
+    "../src/components/design/HanjaSlots.tsx",
+    "../src/components/design/HanjaPickerPanel.tsx",
+    "../src/components/design/EvaluateInput.tsx",
+    "../src/app/evaluate/EvaluateClient.tsx",
+    "./hanja-pick-text.test.mjs",
+    "./hanja-pick-store.test.mjs",
+    "./evaluate-hanja-pages.test.mjs",
   ];
   for (const rel of files) {
     const hits = [];

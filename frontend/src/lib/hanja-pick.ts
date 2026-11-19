@@ -510,6 +510,21 @@ function slotsFor(
 }
 
 /**
+ * 성씨의 `position` 번째 글자에 기본으로 두는 한자(대표 한자 표 — index.json `surnames`). 표에 없는 성씨면 null.
+ * 표의 글자 수가 성씨 글자 수와 같을 때만 자리로 읽는다(복성 '남궁' → 南·宮).
+ */
+export function surnameDefaultAt(
+  index: HanjaPickIndex | null | undefined,
+  lastName: string,
+  position: number
+): string | null {
+  const name = lastName.trim();
+  if (!index || !Object.prototype.hasOwnProperty.call(index.surnames, name)) return null;
+  const chars = [...index.surnames[name]];
+  return chars.length === name.length ? (chars[position] ?? null) : null;
+}
+
+/**
  * 칸 상태를 파생한다 — 조합이 끝난 성·이름(`settled`), 직접 고른 것(`choices`), 들고 온 글자(`pendingPick`),
  * 색인(`index`), 받아 둔 음절 파일(`files`)에서 매번 계산한다. 지나온 중간 값(ㅅ → 서 → 성 → 서유 → 서윤)과 무관하다.
  *
@@ -534,9 +549,7 @@ export function deriveSlots(
   const firstName = settled.firstName.trim();
   const hasFile = (syllable: string) => !index || syllable in index.syllables;
 
-  const tableChars = index && lastName in index.surnames ? [...index.surnames[lastName]] : [];
-  const surnameDefault = (i: number) =>
-    tableChars.length === lastName.length ? (tableChars[i] ?? null) : null;
+  const surnameDefault = (i: number) => surnameDefaultAt(index, lastName, i);
 
   const surname = slotsFor(lastName, (syllable, i) => {
     const openable = hasFile(syllable);
@@ -663,6 +676,56 @@ export function checkSeed(
     if (!fact) return { status: "rejected", character: mark };
     return { status: "ok", fact: target === "surname" ? asSurnameFact(fact) : fact };
   });
+}
+
+export interface SeedSlotRef {
+  /** 선택 저장 키(choiceKey) */
+  key: string;
+  target: SlotTarget;
+  index: number;
+  syllable: string;
+  character: string;
+}
+
+export interface SeedChoices {
+  /** 그 음절 후보로 확인된 칸 — 직접 고른 것과 같은 꼴(같은 자리·같은 음절이 돌아오면 되살아난다) */
+  choices: Map<string, HanjaChoice>;
+  /** 그 음절 파일을 아직 받지 못한 칸 */
+  pending: SeedSlotRef[];
+  /** 그 음절 후보에 없어 비운 칸 — 화면이 알린다 */
+  rejected: SeedSlotRef[];
+}
+
+/**
+ * 주소로 들어온 한자(시드)를 칸 선택으로 바꾼다 — 칸마다 그 음절 파일로 검사해(checkSeed) 맞는 글자만 선택이 된다.
+ * 맞지 않는 글자는 선택이 되지 않아 칸이 비고(자동), `rejected` 로 돌려준다. 파일을 아직 못 받은 칸은 `pending`.
+ * 성씨·이름 가운데 한글 음절만이 아닌 쪽은 건너뛴다.
+ */
+export function seedChoices(
+  seed: { lastName: string; firstName: string; hanja?: string | null; lastHanja?: string | null },
+  files: PickFiles
+): SeedChoices {
+  const result: SeedChoices = { choices: new Map(), pending: [], rejected: [] };
+  const rows: [SlotTarget, string, string | null | undefined][] = [
+    ["surname", seed.lastName.trim(), seed.lastHanja],
+    ["name", seed.firstName.trim(), seed.hanja],
+  ];
+  for (const [target, text, hanja] of rows) {
+    const checks = checkSeed(target, text, hanja, files);
+    if (!checks) continue;
+    checks.forEach((check, index) => {
+      const syllable = text[index];
+      const key = choiceKey(target, index, syllable);
+      if (check.status === "ok") result.choices.set(key, { kind: "hanja", fact: check.fact });
+      else if (check.status === "none") result.choices.set(key, { kind: "none" });
+      else if (check.status === "pending") {
+        result.pending.push({ key, target, index, syllable, character: check.character });
+      } else if (check.status === "rejected") {
+        result.rejected.push({ key, target, index, syllable, character: check.character });
+      }
+    });
+  }
+  return result;
 }
 
 export interface PasteStep {

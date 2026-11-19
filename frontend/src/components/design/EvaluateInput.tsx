@@ -10,12 +10,56 @@
  *     정적 HTML에 실리도록 EvaluateIntro / EvaluateAbout으로 분리 — 예전에는 페이지 전체가
  *     useSearchParams Suspense 안이라 크롤러에게 '로딩 중...'만 보였다(감사 AS-3·DD-3).
  *     미니 푸터의 죽은 링크(href="#" 소개·문의)는 사이트 Footer의 /about·/contact로 대체(UX-3).
+ *   - 2026-11: 이름 Section 에 음절별 한자 칸(HanjaSlots)과 고르기 패널(HanjaPickerPanel) — docs/plan-hanja-input-2026-11.md
+ *     §3-1·§8-6, 구현 기록 §23. 칸 상태는 저장하지 않고 (조합이 끝난 성·이름, 고른 것, 들고 온 글자)에서 매번 계산한다.
+ *     음절 후보 파일은 이름을 칠 때 받지 않는다(칸을 열 때·주소로 온 한자·들고 온 글자·붙여넣기 — tests/evaluate-hanja-pages.test.mjs).
  */
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { BookOpen, Leaf, Music } from "lucide-react";
+
+import {
+  deriveSlots,
+  isHangulSyllables,
+  marksOf,
+  pickSyllablesIn,
+  seedChoices,
+  spreadPaste,
+  surnameDefaultAt,
+  type HanjaChoice,
+  type HanjaSlot,
+} from "@/lib/hanja-pick";
+import { getPickSnapshot, requestPickFile, requestPickIndex, usePickStore } from "@/lib/hanja-pick-store";
+import {
+  MIXED_SCRIPT_NOTICE,
+  PANEL_LOAD_FAILED,
+  SLOTS_EMPTY_GUIDE,
+  SLOTS_HINT,
+  SLOTS_JAMO_NOTE,
+  SLOTS_PREPARING,
+  SLOTS_TITLE,
+  isMixedScript,
+  pasteReport,
+  pickBannerText,
+  seedRejectedNote,
+  slotNote,
+  type PasteReport,
+} from "@/lib/hanja-pick-text";
+import type { HanjaFact } from "@/lib/types";
+
+import { HanjaPickerPanel } from "./HanjaPickerPanel";
+import { HanjaSlots, slotButtonId, slotKey } from "./HanjaSlots";
 
 export type EvalSubmitPayload = {
   lastName: string;
@@ -43,6 +87,34 @@ export interface InitialSeed {
   hanja?: string;
   /** 주소·이전 평가에서 온 성씨 한자(주소 꼴) */
   lastHanja?: string;
+}
+
+/** 해시(`/evaluate#pick=…&as=…`)로 들고 온 글자 — 독음은 음절 파일로 확인된 것만 넘긴다 */
+export interface EvalPick {
+  character: string;
+  readings: string[];
+}
+
+/**
+ * 서버가 한자 칸을 틀렸다고 알려 준 오류(400 본문의 target·slot — lib/api.ts ApiError).
+ * slot 이 -1 이면 칸 하나의 문제가 아니다(한글 검사·글자 수) — 칸을 열지 않고 문장만 띄운다.
+ */
+export interface EvalFieldError {
+  /** 오류마다 다른 번호 — 같은 오류로 칸을 두 번 열지 않게 */
+  id: number;
+  target: "name" | "surname";
+  slot: number;
+  message: string;
+}
+
+/** 조합이 끝나지 않은 값으로 칸 줄을 맞추기까지의 틈(ms) — 조합 이벤트를 내지 않는 자판은 짧게, 조합 중에는 입력이 멈춘 뒤에 */
+const SETTLE_MS = 300;
+const SETTLE_COMPOSING_MS = 700;
+
+/** 칸 줄을 만들 수 있는 값인가 — 비었거나 한글 음절(가~힣)만. 낱자모가 남았으면 null(직전 칸 줄을 그대로 둔다) */
+function settleable(value: string): string | null {
+  const text = value.trim();
+  return text === "" || isHangulSyllables(text) ? text : null;
 }
 
 // ============================================================
@@ -78,6 +150,16 @@ export function EvaluateIntro() {
         }}
       >
         이름과 출생 정보를 입력하시면 미학·조화·유니크 지수를 분석합니다
+      </p>
+      <p
+        style={{
+          fontSize: 14,
+          color: "var(--color-text-2)",
+          margin: "8px 0 0",
+          lineHeight: 1.65,
+        }}
+      >
+        아기 이름 한자를 정하는 중이라면 음절마다 인명용 한자를 직접 골라 넣을 수 있어요.
       </p>
 
       <aside
@@ -229,11 +311,19 @@ export function EvaluateInputPage({
   seed,
   onSubmit,
   loading = false,
+  pick = null,
+  onPickDismiss,
+  fieldError = null,
 }: {
   seed?: InitialSeed;
   onSubmit?: (payload: EvalSubmitPayload) => void;
   /** 평가 요청 중 — 버튼을 잠가 중복 요청(사용량·분당 20회 리미터 소모)을 막는다 (감사 UX-1) */
   loading?: boolean;
+  /** 들고 온 글자(#pick) — 이름에 그 글자로 읽는 음절이 있으면 그 칸에 들어간다. 띠를 닫거나 제출할 때까지 유지된다 */
+  pick?: EvalPick | null;
+  onPickDismiss?: () => void;
+  /** 서버가 틀렸다고 알려 준 한자 칸 — 그 칸을 열고 문장을 칸 줄 아래에 적는다 */
+  fieldError?: EvalFieldError | null;
 }) {
   const [lastName, setLastName] = useState(seed?.lastName ?? "");
   const [firstName, setFirstName] = useState(seed?.firstName ?? "");
@@ -246,6 +336,275 @@ export function EvaluateInputPage({
 
   const [openBirthHelp, setOpenBirthHelp] = useState(false);
   const [openToneHelp, setOpenToneHelp] = useState(false);
+
+  // ──────────────────────────────────────────────────────────
+  // 한자 칸 (2026-11 한자 입력 — docs/plan-hanja-input-2026-11.md §8-6)
+  //
+  // 칸 상태는 저장하지 않고 매번 계산한다: (조합이 끝난 성·이름, 고른 것, 들고 온 글자, 색인, 받아 둔 음절 파일) → deriveSlots.
+  // 이름 칸은 한글 조합 중에도 값마다 onChange 가 온다(ㅅ → 서 → 성 → 서유 → 서윤). 칸을 '고쳐 쓰는 저장 값'으로 두면
+  // '서'에 넣은 글자가 '성'에서 사라지고 돌아오지 않는다 — 파생이면 지나온 중간 값과 무관하다.
+  // ──────────────────────────────────────────────────────────
+  const uid = useId();
+  const slotsTitleId = `${uid}-hanja-title`;
+  const panelId = `${uid}-hanja-panel`;
+  const slotBase = `${uid}-hanja-slot`;
+  const errorId = `${uid}-hanja-error`;
+  const noteBase = `${uid}-hanja-note`;
+
+  const store = usePickStore();
+  // 색인은 이름과 무관한 고정 주소다 — 폼이 뜰 때 한 번 받는다(잠긴 칸·성씨 기본 한자를 안다)
+  useEffect(() => {
+    void requestPickIndex();
+  }, []);
+
+  // 사용자가 직접 고른 것만 — 키는 (성씨·이름, 자리, 음절). 같은 자리·같은 음절이 돌아오면 되살아난다
+  const [userChoices, setUserChoices] = useState<ReadonlyMap<string, HanjaChoice>>(() => new Map());
+  // 열린 칸(한 번에 하나)
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  // 서버 오류 — 그 오류로 칸을 여는 일이 끝났는가(ackedError) · 문장을 접었는가(hiddenError)
+  const [ackedError, setAckedError] = useState<number | null>(null);
+  const [hiddenError, setHiddenError] = useState<number | null>(null);
+  // 여러 글자를 나눠 넣은 결과
+  const [paste, setPaste] = useState<PasteReport | null>(null);
+  const [focusRequest, setFocusRequest] = useState<{ id: string; n: number } | null>(null);
+
+  // 조합이 끝난 성·이름 — 칸 줄은 이 값으로만 다시 그린다. 낱자모가 남은 값은 받지 않고 직전 값을 둔다(unsettled 로 알린다)
+  const [settled, setSettled] = useState(() => ({
+    lastName: settleable(seed?.lastName ?? "") ?? "",
+    firstName: settleable(seed?.firstName ?? "") ?? "",
+  }));
+  const [unsettled, setUnsettled] = useState(() => ({
+    lastName: settleable(seed?.lastName ?? "") === null,
+    firstName: settleable(seed?.firstName ?? "") === null,
+  }));
+  const composingRef = useRef(false);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(
+    () => () => {
+      clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = undefined;
+    },
+    []
+  );
+
+  function commitSettle(next: { lastName: string; firstName: string }) {
+    clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = undefined;
+    const last = settleable(next.lastName);
+    const first = settleable(next.firstName);
+    setSettled((prev) => {
+      const lastName = last ?? prev.lastName;
+      const firstName = first ?? prev.firstName;
+      return lastName === prev.lastName && firstName === prev.firstName ? prev : { lastName, firstName };
+    });
+    setUnsettled((prev) =>
+      prev.lastName === (last === null) && prev.firstName === (first === null)
+        ? prev
+        : { lastName: last === null, firstName: first === null }
+    );
+  }
+
+  /**
+   * 칸 줄을 지금 값에 맞출 때를 잡는다 — 조합이 끝나면(compositionend) 바로, 조합 이벤트 없이 바뀌면 조금 뒤,
+   * 조합 중이면 입력이 멈춘 뒤에. 마지막 음절은 다른 키를 누르기 전까지 조합이 끝나지 않으므로(서윤의 '윤'),
+   * 조합 중에도 입력이 멈추면 맞춘다 — 안 그러면 다른 곳을 누를 때까지 마지막 칸이 생기지 않는다.
+   */
+  function scheduleSettle(next: { lastName: string; firstName: string }) {
+    clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = setTimeout(
+      () => commitSettle(next),
+      composingRef.current ? SETTLE_COMPOSING_MS : SETTLE_MS
+    );
+  }
+
+  function changeName(field: "lastName" | "firstName", value: string) {
+    if (field === "lastName") setLastName(value);
+    else setFirstName(value);
+    if (fieldError) setHiddenError(fieldError.id);
+    scheduleSettle({ lastName, firstName, [field]: value });
+  }
+
+  // 주소로 들어온 한자(시드) — 칸마다 그 음절 후보로 검사해 맞는 글자만 선택으로 쓴다
+  const seedLast = seed?.lastName ?? "";
+  const seedFirst = seed?.firstName ?? "";
+  const seedHanja = seed?.hanja ?? "";
+  const seedLastHanja = seed?.lastHanja ?? "";
+  const seeded = useMemo(
+    () =>
+      seedChoices(
+        { lastName: seedLast, firstName: seedFirst, hanja: seedHanja, lastHanja: seedLastHanja },
+        store.files
+      ),
+    [seedLast, seedFirst, seedHanja, seedLastHanja, store.files]
+  );
+  // 음절 파일은 이름을 칠 때 받지 않는다(제출 전에 음절이 요청 주소에 남지 않게 — 설계 §10-4). 받는 때는
+  // ⓐ 칸을 열 때(패널) ⓑ 들고 온 글자가 들어갈 음절이 이름에 있을 때 ⓒ 주소로 한자가 온 칸 ⓔ 붙여 넣은 글자를 나눠 넣을 자리.
+  useEffect(() => {
+    // ⓒ — 그 이름은 이미 주소에 있다. 받지 못한 음절은 다시 부르지 않는다(칸을 열면 다시 받는다)
+    for (const item of seeded.pending) {
+      if (!store.failed.has(item.syllable)) void requestPickFile(item.syllable);
+    }
+  }, [seeded, store.failed]);
+
+  const pickCharacter = pick?.character ?? "";
+  const pickReadings = pick ? pick.readings.join(",") : "";
+  useEffect(() => {
+    // ⓑ
+    if (!pickCharacter) return;
+    const carried = { character: pickCharacter, readings: pickReadings.split(",") };
+    for (const syllable of pickSyllablesIn(carried, settled.firstName)) void requestPickFile(syllable);
+  }, [pickCharacter, pickReadings, settled.firstName]);
+
+  // 선택 = 주소로 온 한자(확인된 것) 위에 직접 고른 것을 덮는다
+  const choices = useMemo(() => new Map([...seeded.choices, ...userChoices]), [seeded, userChoices]);
+  const derived = useMemo(
+    () => deriveSlots(settled, choices, pick, store.index, store.files),
+    [settled, choices, pick, store.index, store.files]
+  );
+  // 주소로 온 한자를 확인하는 동안(그 음절 파일을 받는 중) 그 칸은 '확인 중'
+  const waitingKeys = new Set(
+    seeded.pending
+      .filter((item) => !store.failed.has(item.syllable) && !userChoices.has(item.key))
+      .map((item) => item.key)
+  );
+  const asShown = (slot: HanjaSlot): HanjaSlot =>
+    waitingKeys.has(slotKey(slot)) ? { ...slot, state: "checking", character: null, fact: null } : slot;
+  const surnameSlots = (derived.surname ?? []).map(asShown);
+  const nameSlots = (derived.name ?? []).map(asShown);
+  const allSlots = [...surnameSlots, ...nameSlots];
+  // 색인을 받은 뒤에 칸 줄을 그린다 — 잠긴 칸이 잠깐 '자동'으로 보이지 않게(받지 못했으면 색인 없이 그린다)
+  const slotsReady = store.index !== null || store.indexFailed;
+
+  const shownError = fieldError && fieldError.id !== hiddenError ? fieldError : null;
+  const errorSlot =
+    shownError && shownError.slot >= 0
+      ? ((shownError.target === "name" ? nameSlots : surnameSlots)[shownError.slot] ?? null)
+      : null;
+  const errorKey = errorSlot ? slotKey(errorSlot) : null;
+  const effectiveOpenKey = shownError && errorKey && shownError.id !== ackedError ? errorKey : openKey;
+  const openSlot = allSlots.find((slot) => slot.openable && slotKey(slot) === effectiveOpenKey) ?? null;
+
+  // 패널을 닫으면(고르기·닫기·Esc) 그 칸 버튼으로 포커스를 돌려놓는다 — 문서가 줄어 화면이 아래로 떨어지지 않게
+  useEffect(() => {
+    if (!focusRequest) return;
+    const button = document.getElementById(focusRequest.id);
+    button?.focus({ preventScroll: true });
+    button?.scrollIntoView({ block: "nearest" });
+  }, [focusRequest]);
+
+  // 서버가 틀린 칸을 알려 주면(주소로 들어온 자동 평가의 400) 그 문장이 보이는 자리로 옮긴다 — 폼 맨 위에서는 칸 줄이 화면 밖일 수 있다
+  const fieldErrorId = fieldError?.id;
+  useEffect(() => {
+    if (fieldErrorId === undefined) return;
+    document.getElementById(errorId)?.scrollIntoView({ block: "center" });
+  }, [fieldErrorId, errorId]);
+
+  function focusSlot(slot: HanjaSlot) {
+    setFocusRequest((prev) => ({ id: slotButtonId(slotBase, slot), n: (prev?.n ?? 0) + 1 }));
+  }
+
+  function settleError(hide: boolean) {
+    if (!fieldError) return;
+    setAckedError(fieldError.id);
+    if (hide) setHiddenError(fieldError.id);
+  }
+
+  function toggleSlot(slot: HanjaSlot) {
+    const key = slotKey(slot);
+    settleError(false);
+    setPaste(null);
+    setOpenKey(effectiveOpenKey === key ? null : key);
+  }
+
+  function closePanel() {
+    if (!openSlot) return;
+    settleError(false);
+    setOpenKey(null);
+    focusSlot(openSlot);
+  }
+
+  /** 고른 글자 → 선택. 성씨 칸에서 기본 한자를 고르면 '기본 한자로'와 같다(서버가 지정 없음으로 접는 값이다) */
+  function choiceFor(slot: HanjaSlot, fact: HanjaFact): HanjaChoice {
+    if (slot.target === "surname" && surnameDefaultAt(store.index, settled.lastName, slot.index) === fact.character) {
+      return { kind: "auto" };
+    }
+    return { kind: "hanja", fact };
+  }
+
+  function applyChoice(slot: HanjaSlot, choice: HanjaChoice) {
+    // '자동으로 고르기'도 키를 지우지 않고 값으로 둔다 — 지우면 주소로 온 한자·들고 온 글자가 다시 들어온다
+    setUserChoices((prev) => new Map(prev).set(slotKey(slot), choice));
+    settleError(true);
+    setPaste(null);
+    setOpenKey(null);
+    focusSlot(slot);
+  }
+
+  /**
+   * 들고 온 글자가 들어가 있는 칸을 고른 한자로 굳힌다 — 들고 온 글자는 띠를 닫거나 제출하면 사라지는데,
+   * 그때 이미 칸에 들어간 글자까지 사라지면 안 된다(닫기는 안내를 접는 것이고, 제출이 실패하면 폼으로 돌아온다).
+   */
+  function keepCarried(slots: readonly HanjaSlot[] | null) {
+    const carried = (slots ?? []).filter((slot) => slot.state === "carried" && slot.fact);
+    if (carried.length === 0) return;
+    setUserChoices((prev) => {
+      const next = new Map(prev);
+      for (const slot of carried) if (slot.fact) next.set(slotKey(slot), { kind: "hanja", fact: slot.fact });
+      return next;
+    });
+  }
+
+  function dismissPick() {
+    keepCarried(nameSlots);
+    onPickDismiss?.();
+  }
+
+  /** 여러 글자를 붙여 넣었다 — 그 칸부터 차례로(성씨 칸에서 시작하면 이름으로 넘어간다). ⓔ 나눠 넣을 자리의 음절 파일을 받는다 */
+  async function spreadFrom(startSlot: HanjaSlot, characters: string[]) {
+    const start = allSlots.findIndex((slot) => slotKey(slot) === slotKey(startSlot));
+    if (start < 0) return;
+    const targets = allSlots.slice(start, start + characters.length).filter((slot) => slot.openable);
+    await Promise.all(targets.map((slot) => requestPickFile(slot.syllable)));
+    const { steps, dropped } = spreadPaste(allSlots, start, characters, getPickSnapshot().files);
+    setUserChoices((prev) => {
+      const next = new Map(prev);
+      for (const step of steps) {
+        if (step.status === "placed" && step.fact) next.set(slotKey(step.slot), choiceFor(step.slot, step.fact));
+      }
+      return next;
+    });
+    settleError(true);
+    setPaste(pasteReport(steps, dropped));
+    setOpenKey(null);
+    focusSlot(startSlot);
+  }
+
+  // 칸 줄 아래의 안내 — 잠긴 칸·쓸 글자가 없는 칸의 까닭(음절마다 한 줄)
+  const slotNotes: { id: string; text: string }[] = [];
+  const noteIdOf = new Map<string, string>();
+  for (const slot of allSlots) {
+    const text = slotNote(slot);
+    if (!text) continue;
+    let note = slotNotes.find((item) => item.text === text);
+    if (!note) {
+      note = { id: `${noteBase}-${slotNotes.length}`, text };
+      slotNotes.push(note);
+    }
+    noteIdOf.set(slotKey(slot), note.id);
+  }
+  const describedBy = (slot: HanjaSlot) => {
+    const key = slotKey(slot);
+    return [noteIdOf.get(key), key === errorKey ? errorId : undefined].filter(Boolean).join(" ") || undefined;
+  };
+
+  // 주소로 온 한자 가운데 그 음절 후보에 없어 비운 칸(지금 칸 줄에 그 자리·그 음절이 있고, 직접 고르지 않았을 때)
+  const liveKeys = new Set(allSlots.map(slotKey));
+  const seedRejected = seeded.rejected.filter(
+    (item) => liveKeys.has(item.key) && !userChoices.has(item.key) && item.key !== errorKey
+  );
+  const seedUnchecked = seeded.pending.some(
+    (item) => store.failed.has(item.syllable) && liveKeys.has(item.key) && !userChoices.has(item.key)
+  );
 
   // SSR 안전: useEffect로 style inject
   useEffect(() => {
@@ -270,15 +629,76 @@ export function EvaluateInputPage({
   const canSubmit =
     lastValid && firstValid && lastName.trim() !== "" && firstName.trim() !== "";
 
+  // 낱자모가 남아 칸을 만들지 못한 값(한글 입력 자체가 틀린 값은 위의 '한글로 입력해주세요'가 알린다)
+  const jamoPending = (unsettled.firstName && firstValid) || (unsettled.lastName && lastValid);
+
   function handleSubmit() {
     if (!canSubmit || loading) return;
-    onSubmit?.({ lastName, firstName, birth, birthTime, gender, tone });
+    // 제출 직전에는 지금 값으로 칸을 다시 계산한다(조합이 끝나기를 기다리지 않는다). 한글 음절만이 아닌 쪽은 한자를 싣지 않는다
+    const now = deriveSlots({ lastName, firstName }, choices, pick, store.index, store.files);
+    keepCarried(now.name);
+    onSubmit?.({
+      lastName,
+      firstName,
+      birth,
+      birthTime,
+      gender,
+      tone,
+      hanja: marksOf(now.name).join(""),
+      lastHanja: marksOf(now.surname).join(""),
+    });
   }
 
   const buttonReady = canSubmit && !loading;
 
   return (
     <>
+      {/* 들고 온 글자(#pick)의 띠 — 음절 파일로 확인된 글자만 여기까지 온다 */}
+      {pick && (
+        <div
+          style={{
+            maxWidth: 560,
+            margin: "0 auto 12px",
+            boxSizing: "border-box",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "8px 8px 8px 16px",
+            background: "var(--color-teal-50)",
+            border: "1px solid var(--color-teal-100)",
+            borderRadius: "var(--radius-md)",
+            fontSize: 13.5,
+            lineHeight: 1.6,
+            color: "var(--color-text)",
+          }}
+        >
+          <span role="status" style={{ flex: 1, minWidth: 0, wordBreak: "keep-all" }}>
+            {pickBannerText(pick.character, pick.readings, settled.firstName)}
+          </span>
+          <button
+            type="button"
+            onClick={dismissPick}
+            style={{
+              appearance: "none",
+              flex: "0 0 auto",
+              minWidth: 52,
+              minHeight: 44,
+              padding: "0 10px",
+              background: "transparent",
+              border: "1px solid var(--color-teal)",
+              borderRadius: "var(--radius-sm)",
+              fontFamily: "var(--font-sans)",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "var(--color-text)",
+              cursor: "pointer",
+            }}
+          >
+            닫기
+          </button>
+        </div>
+      )}
+
       {/* Form card — 수묵화 톤: 직선 + 모서리 ㄱㄴ + sumi-form (underline 입력) */}
       <div
         className="sumi-card sumi-form"
@@ -298,14 +718,30 @@ export function EvaluateInputPage({
           >
             <Input
               value={lastName}
-              onChange={setLastName}
+              onChange={(v) => changeName("lastName", v)}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={(v) => {
+                composingRef.current = false;
+                commitSettle({ lastName: v, firstName });
+              }}
+              onBlur={() => commitSettle({ lastName, firstName })}
               placeholder="예: 김"
               invalid={!lastValid}
               ariaLabel="성"
             />
             <Input
               value={firstName}
-              onChange={setFirstName}
+              onChange={(v) => changeName("firstName", v)}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={(v) => {
+                composingRef.current = false;
+                commitSettle({ lastName, firstName: v });
+              }}
+              onBlur={() => commitSettle({ lastName, firstName })}
               placeholder="예: 서윤"
               invalid={!firstValid}
               ariaLabel="이름"
@@ -321,6 +757,109 @@ export function EvaluateInputPage({
           )}
           <div style={{ marginTop: 14 }}>
             <NamePreview lastName={lastName} firstName={firstName} />
+          </div>
+
+          {/* 한자 칸 — 늘 보인다(접는 것은 고르기 패널뿐). 이름을 넣기 전에는 안내 한 줄 */}
+          <div
+            style={{ marginTop: 16 }}
+            onKeyDown={(e) => {
+              // 칸에 포커스가 있을 때의 Esc — 패널 안의 Esc 는 패널이 받는다
+              if (e.key === "Escape" && !e.nativeEvent.isComposing && openSlot) closePanel();
+            }}
+          >
+            {allSlots.length > 0 && slotsReady && (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "baseline",
+                    gap: "2px 8px",
+                    marginBottom: 10,
+                  }}
+                >
+                  <span
+                    id={slotsTitleId}
+                    style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}
+                  >
+                    {SLOTS_TITLE}
+                  </span>
+                  <span style={{ fontSize: 12.5, color: "var(--color-text-2)", lineHeight: 1.5 }}>
+                    {SLOTS_HINT}
+                  </span>
+                </div>
+                <HanjaSlots
+                  surname={surnameSlots}
+                  name={nameSlots}
+                  idBase={slotBase}
+                  openKey={openSlot ? slotKey(openSlot) : null}
+                  panelId={panelId}
+                  labelledBy={slotsTitleId}
+                  invalidKey={errorKey}
+                  describedBy={describedBy}
+                  onToggle={toggleSlot}
+                />
+              </>
+            )}
+            {allSlots.length > 0 && !slotsReady && (
+              <p role="status" style={slotGuideStyle}>
+                {SLOTS_PREPARING}
+              </p>
+            )}
+            {nameSlots.length === 0 && !jamoPending && <p style={slotGuideStyle}>{SLOTS_EMPTY_GUIDE}</p>}
+            {jamoPending && <p style={slotGuideStyle}>{SLOTS_JAMO_NOTE}</p>}
+
+            {slotsReady &&
+              slotNotes.map((note) => (
+                <p key={note.id} id={note.id} style={slotNoteStyle}>
+                  {note.text}
+                </p>
+              ))}
+            {shownError && (
+              <p id={errorId} role="alert" style={slotAlertStyle}>
+                {shownError.message}
+              </p>
+            )}
+            {seedRejected.map((item) => (
+              <p key={item.key} role="alert" style={slotAlertStyle}>
+                {seedRejectedNote(item.character, item.syllable)}
+              </p>
+            ))}
+            {seedUnchecked && (
+              <p role="alert" style={slotAlertStyle}>
+                {PANEL_LOAD_FAILED}
+              </p>
+            )}
+            {paste?.status && (
+              <p role="status" style={slotNoteStyle}>
+                {paste.status}
+              </p>
+            )}
+            {paste?.alerts.map((text, i) => (
+              <p key={i} role="alert" style={slotAlertStyle}>
+                {text}
+              </p>
+            ))}
+            {isMixedScript(nameSlots) && <p style={slotNoteStyle}>{MIXED_SCRIPT_NOTICE}</p>}
+
+            {openSlot && slotsReady && (
+              <HanjaPickerPanel
+                key={slotKey(openSlot)}
+                id={panelId}
+                slot={openSlot}
+                representative={
+                  openSlot.target === "surname"
+                    ? surnameDefaultAt(store.index, settled.lastName, openSlot.index)
+                    : null
+                }
+                forbiddenCount={store.index?.counts.forbidden ?? null}
+                onPick={(fact) => applyChoice(openSlot, choiceFor(openSlot, fact))}
+                onAuto={() => applyChoice(openSlot, { kind: "auto" })}
+                onNone={openSlot.target === "name" ? () => applyChoice(openSlot, { kind: "none" }) : undefined}
+                onClose={closePanel}
+                onSpread={(characters) => void spreadFrom(openSlot, characters)}
+              />
+            )}
           </div>
         </Section>
 
@@ -635,12 +1174,19 @@ function Divider() {
 function Input({
   value,
   onChange,
+  onCompositionStart,
+  onCompositionEnd,
+  onBlur,
   placeholder,
   invalid,
   ariaLabel,
 }: {
   value: string;
   onChange: (v: string) => void;
+  /** 한글 조합 시작·끝 — 칸 줄은 조합이 끝난 값으로만 다시 그린다(끝날 때 그때의 값을 넘긴다) */
+  onCompositionStart?: () => void;
+  onCompositionEnd?: (v: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   invalid?: boolean;
   ariaLabel?: string;
@@ -651,6 +1197,9 @@ function Input({
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
+      onCompositionStart={onCompositionStart}
+      onCompositionEnd={(e) => onCompositionEnd?.(e.currentTarget.value)}
+      onBlur={onBlur}
       style={{
         appearance: "none",
         width: "100%",
@@ -907,6 +1456,21 @@ function InfoRow({
     </li>
   );
 }
+
+/** 한자 칸 줄의 안내(이름을 넣기 전·낱자모가 남음·준비 중) */
+const slotGuideStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 12.5,
+  lineHeight: 1.6,
+  color: "var(--color-text-2)",
+  wordBreak: "keep-all",
+};
+
+/** 칸 줄 아래의 안내 한 줄(잠긴 칸의 까닭·나눠 넣은 결과·혼용 고지) */
+const slotNoteStyle: CSSProperties = { ...slotGuideStyle, marginTop: 8 };
+
+/** 칸 줄 아래의 오류 문장(role="alert") — 작은 글씨는 amber-warm-700 */
+const slotAlertStyle: CSSProperties = { ...slotNoteStyle, color: "var(--color-amber-warm-700)" };
 
 const helpToggleStyle: CSSProperties = {
   marginTop: 12,
