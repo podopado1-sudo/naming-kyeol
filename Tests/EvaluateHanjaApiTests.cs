@@ -823,6 +823,10 @@ public class EvaluateHanjaApiTests
         Assert.Equal(new[] { "yongshin", "heeshin", "gishin", "lacking", "excessive", "counts" }, Names(summary.GetProperty("elementFit")));
         Assert.Equal(FiveElements, Names(summary.GetProperty("elementFit").GetProperty("counts")));
 
+        // 후보 표의 글자마다 같은 꼴의 글자 사실(fact)이 실린다
+        var candidate = doc.RootElement.GetProperty("hanjaCandidates")[0].GetProperty("candidates")[0];
+        Assert.Equal(factNames, Names(candidate.GetProperty("fact")));
+
         Assert.True(summary.GetProperty("userHanja").GetBoolean());
         Assert.Equal(Cp(0x745E) + "*", summary.GetProperty("nameHanja").GetString());
         Assert.Equal("", summary.GetProperty("lastNameHanja").GetString());
@@ -890,13 +894,137 @@ public class EvaluateHanjaApiTests
         Assert.Equal("", fact.Gloss);
         Assert.False(fact.HasMeaning);
 
-        // 사전의 모든 글자 — 던지지 않고, 음양은 획수 홀짝이다
+        // 사전에 영문 뜻만 있는 글자(로더가 Unihan 뜻을 채워 둔 글자 — 지금 U+39B3) — 훈이 아니라서 뜻 없는 글자와 같게 싣는다.
+        // 자료가 고쳐져 그런 글자가 없어져도 꾸며 만든 항목으로 같은 규칙을 본다
+        var foreignOnly = HanjaData.GetAllHanja().Where(h => !string.IsNullOrEmpty(h.Meaning) && !Regex.IsMatch(h.Meaning, "[가-힣]")).ToList();
+        foreignOnly.Add(new HanjaInfo { Character = Cp(0x745E), Reading = "서", Meaning = "auspicious; felicitous omen" });
+        foreach (var hanja in foreignOnly)
+        {
+            var english = HanjaFactMapper.ToFact(hanja, hanja.Reading);
+            Assert.Equal("", english.Gloss);
+            Assert.False(english.HasMeaning);
+        }
+
+        // 사전의 모든 글자 — 던지지 않고, 음양은 획수 홀짝이다. 훈은 한글이거나 비어 있다(영문 뜻이 화면에 나가지 않는다)
         foreach (var hanja in HanjaData.GetAllHanja())
         {
             var each = HanjaFactMapper.ToFact(hanja, null);
             Assert.Equal(hanja.StrokeCount % 2 == 1 ? "陽" : "陰", each.YinYang);
             Assert.Equal(hanja.Character, each.Character);
+            Assert.Equal(each.HasMeaning, each.Gloss.Length > 0);
+            if (each.HasMeaning)
+                Assert.True(Regex.IsMatch(each.Gloss, "[가-힣]") && !Regex.IsMatch(each.Gloss, "[A-Za-z]"), $"U+{char.ConvertToUtf32(hanja.Character, 0):X4} 훈 '{each.Gloss}'");
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 후보 표의 글자 사실 · hanjaSummary 를 만들다 실패했을 때
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// '한자 후보' 표의 글자마다 글자 사실(fact)이 실린다 — hanjaSummary·음절 후보 파일과 같은 함수의 값(훈은 그 음절로 읽는 한 조각).
+    /// 화면이 표에서 '이 글자로'를 누른 글자를 응답을 기다리지 않고 그릴 때 쓴다(표의 meaning 은 훈 전체라 그 음절의 훈을 따로 고를 수 없다).
+    /// </summary>
+    [Fact]
+    public async Task HanjaCandidates_CarryTheFact_SameAsMapperAndSummary()
+    {
+        var api = NewApi();
+        int facts = 0, firstCells = 0;
+        var cases = new (string Name, string LastName, string? NameHanja)[]
+        {
+            ("서윤", "이", null),
+            ("임유", "김", Cp(0x6797) + "*"),      // 林 을 '임' 칸에 — 두음 꼴 칸의 훈('수풀 림(임)')
+            ("한빛", "김", null),                  // 빛: 후보 0개
+            ("연우", "박", Cp(0x5747) + "*"),      // 均 을 '연' 칸에 — 보충 표 독음의 훈
+        };
+        foreach (var (name, lastName, nameHanja) in cases)
+            foreach (var date in new[] { null, "2024-03-15" })
+            {
+                var response = OkBody(await api.Controller.EvaluateName(Request(name, lastName, date, gender: "female", nameHanja: nameHanja)));
+                Assert.Equal(name.Length, response.HanjaCandidates.Count);
+                for (int i = 0; i < name.Length; i++)
+                {
+                    var group = response.HanjaCandidates[i];
+                    var syllable = name[i].ToString();
+                    foreach (var candidate in group.Candidates)
+                    {
+                        facts++;
+                        Assert.NotNull(candidate.Fact);
+                        var expected = HanjaFactMapper.ToFact(Hanja(char.ConvertToUtf32(candidate.Character, 0)), syllable);
+                        Assert.Equal(Json(expected), Json(candidate.Fact!));
+                        Assert.Equal(candidate.Character, candidate.Fact!.Character);
+                        Assert.Equal(candidate.StrokeCount, candidate.Fact.StrokeCount);
+                        Assert.Equal(candidate.FiveElement ?? "", candidate.Fact.FiveElement);
+                        Assert.False(candidate.Fact.Forbidden);          // 표에는 이름에 피하는 글자가 없다
+                        Assert.Contains(candidate.Fact.Gloss, candidate.Meaning);   // 그 음절의 훈은 훈 전체의 한 조각이다
+                    }
+
+                    // 표의 첫 칸이 계산에 쓴 글자면 그 사실이 hanjaSummary 의 그 음절과 글자 그대로 같다
+                    var shown = response.HanjaSummary!.Syllables[i].Hanja;
+                    if (shown != null && group.Candidates.Count > 0 && group.Candidates[0].Character == shown.Character)
+                    {
+                        firstCells++;
+                        Assert.Equal(Json(shown), Json(group.Candidates[0].Fact!));
+                    }
+                }
+            }
+        Assert.True(facts >= 30 && firstCells >= 10, $"글자 사실 {facts}건·첫 칸 대조 {firstCells}건 — 검사가 비어 있다");
+
+        // 고른 글자가 표 맨 앞에 서고 훈이 그 칸의 음절로 골라진다
+        var picked = OkBody(await api.Controller.EvaluateName(Request("임유", "김", nameHanja: Cp(0x6797) + "*")));
+        Assert.Equal(Cp(0x6797), picked.HanjaCandidates[0].Candidates[0].Character);
+        Assert.Equal("수풀 림(임)", picked.HanjaCandidates[0].Candidates[0].Fact!.Gloss);
+    }
+
+    /// <summary>채점 결과를 그대로 돌려주되 배정 한자 목록만 없애는 채점 서비스 — hanjaSummary 를 만드는 코드가 실패하는 경우를 만든다.</summary>
+    private sealed class BrokenAssignmentScoring(IScoringService inner) : IScoringService
+    {
+        public async Task<CanonicalNameScore> EvaluateAsync(
+            string firstName, string lastName, DateTime? birthDate, string gender, string tone,
+            TimeSpan? birthTime = null, HanjaPicks? picks = null)
+        {
+            var score = await inner.EvaluateAsync(firstName, lastName, birthDate, gender, tone, birthTime, picks);
+            score.AssignedHanja = null!;
+            return score;
+        }
+    }
+
+    /// <summary>
+    /// hanjaSummary 를 만들다 예외가 나도 평가는 그대로 나간다(덧붙이는 필드 하나 때문에 지금 되는 요청을 500 으로 만들지 않는다).
+    /// 다만 조용히 사라지지 않게 로그에 예외 종류와 난 자리를 남긴다 — 이름·성씨·한자·생년월일·예외 문구는 싣지 않는다.
+    /// </summary>
+    [Fact]
+    public async Task Summary_BuildFailure_KeepsTheEvaluation_AndLogsOnlyTheExceptionType()
+    {
+        var scoring = new ScoringService(new AestheticEngine(), new HarmonyEngine(_saju, _yongshin), new RarityScoringEngine());
+        var logger = new CollectingLogger<NameEvaluationService>();
+        var broken = new NameEvaluationService(new BrokenAssignmentScoring(scoring), new ExplanationEngine(), logger);
+
+        var result = await broken.EvaluateNameAsync("서윤", "이", DateTime.Parse("2024-03-15"), "female", "neutral");
+        Assert.Null(result.HanjaSummary);
+        Assert.True(result.FinalScore > 0);
+        Assert.Equal(2, result.HanjaCandidates.Count);
+
+        Assert.Equal(1, logger.Count);
+        Assert.Contains(logger.Texts, t => t.Contains("NullReferenceException"));
+        foreach (var text in logger.Texts)
+        {
+            Assert.False(HasHan(text), $"로그에 한자: {text}");
+            Assert.DoesNotContain("서윤", text);
+            Assert.DoesNotContain("2024-03-15", text);
+            Assert.DoesNotContain("Object reference", text);   // 예외 문구(입력값이 섞일 수 있는 자리)는 싣지 않는다
+        }
+
+        // 로거 없이 만든 서비스(테스트·도구)도 던지지 않는다
+        var silent = new NameEvaluationService(new BrokenAssignmentScoring(scoring), new ExplanationEngine());
+        Assert.Null((await silent.EvaluateNameAsync("서윤", "이", null, "none", "neutral")).HanjaSummary);
+
+        // 정상 경로는 로그를 쓰지 않는다 — 이름이 한글 음절만이 아니어서 null 인 것은 실패가 아니다
+        var quiet = new CollectingLogger<NameEvaluationService>();
+        var healthy = new NameEvaluationService(scoring, new ExplanationEngine(), quiet);
+        Assert.NotNull((await healthy.EvaluateNameAsync("서윤", "이", DateTime.Parse("2024-03-15"), "female", "neutral")).HanjaSummary);
+        Assert.Null((await healthy.EvaluateNameAsync("서 윤", "이", null, "none", "neutral")).HanjaSummary);
+        Assert.Equal(0, quiet.Count);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1002,6 +1130,88 @@ public class EvaluateHanjaApiTests
         Assert.Equal(0, logger.Count);
     }
 
+    /// <summary>
+    /// 성씨 칸의 판정(target = "surname") — 판정은 이름 칸과 같고, 안내 문장이 성씨용이며(인명용 한자·출생신고 이야기를 하지 않는다 — 성씨는 그 제한을
+    /// 받지 않는다) 글자 사실에 이름용 표시(이름에 피하는 글자·먼저 보여 드리는 글자)를 싣지 않는다. 평가 응답의 성씨 글자와 같은 규칙이다.
+    /// </summary>
+    [Fact]
+    public void Resolve_SurnameTarget_UsesSurnameWording_AndOmitsNameQualityFlags()
+    {
+        var logger = new CollectingLogger<HanjaController>();
+        var controller = new HanjaController(logger);
+        HanjaResolveResponseDto Call(string text, string? syllable, string? target)
+        {
+            var result = controller.Resolve(new HanjaResolveRequestDto { Text = text, Syllable = syllable, Target = target });
+            return Assert.IsType<HanjaResolveResponseDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        }
+
+        // 劉 U+5289 — 흔한 성씨 한자인데 사이트가 이름에는 피하는 글자로 둔다
+        Assert.True(HanjaData.IsForbiddenNameHanja(Cp(0x5289)));
+        var asName = Call(Cp(0x5289), "유", null);
+        var asSurname = Call(Cp(0x5289), "유", "surname");
+        Assert.Equal("ok", asName.Status);
+        Assert.Equal("ok", asSurname.Status);
+        Assert.True(asName.Hanja!.Forbidden);
+        Assert.False(asSurname.Hanja!.Forbidden);
+        Assert.Equal(asName.Hanja.StrokeCount, asSurname.Hanja.StrokeCount);
+        Assert.Equal(asName.Hanja.FiveElement, asSurname.Hanja.FiveElement);
+        Assert.Equal(asName.AcceptedSyllables, asSurname.AcceptedSyllables);
+        Assert.Null(asSurname.Message);
+
+        // 瑞 U+745E — 이름 칸에서는 먼저 보여 드리는 글자, 성씨 칸('서')에는 그 표시도 싣지 않는다
+        Assert.True(Call(Cp(0x745E), "서", "name").Hanja!.Common);
+        Assert.False(Call(Cp(0x745E), "서", "surname").Hanja!.Common);
+
+        // 정확히 "surname" 일 때만 성씨 칸 — 그 밖의 값·생략은 이름 칸으로 본다(새 오류를 만들지 않는다)
+        foreach (var target in new string?[] { null, "", "name", "SURNAME", " surname", "성씨" })
+            Assert.True(Call(Cp(0x5289), "유", target).Hanja!.Forbidden, $"target '{target}'");
+
+        // 문장 — 사전에 없는 글자(晩)·독음 불일치(潤 을 '유' 칸에)
+        var missing = Call(Cp(0x6669), "유", "surname");
+        Assert.Equal("not_in_dictionary", missing.Status);
+        Assert.Equal(
+            "이 사이트 사전에 없는 글자라서 이 글자로는 성씨 획수를 세지 못해요. " +
+            "모양만 조금 다른 같은 글자가 실려 있을 수 있으니 ‘유’ 칸의 후보 목록에서 먼저 찾아보세요. " +
+            "비워 두면 기본으로 두는 성씨 한자로 계산해요.", missing.Message);
+        var mismatch = Call(Cp(0x6F64), "유", "surname");
+        Assert.Equal("reading_mismatch", mismatch.Status);
+        Assert.Equal(
+            $"‘{Cp(0x6F64)}’ 글자는 이 사이트 사전에 실린 독음(윤)이 ‘유’ 칸과 맞지 않아요. ‘유’ 음절로 읽는 한자를 넣어 주세요. " +
+            "비워 두면 기본으로 두는 성씨 한자로 계산해요.", mismatch.Message);
+        foreach (var message in new[] { missing.Message!, mismatch.Message! })
+        {
+            Assert.DoesNotContain("인명용", message);
+            Assert.DoesNotContain("출생신고", message);
+            Assert.True(IsKoreanSentence(message), message);
+        }
+
+        // 평가의 입력 검증이 성씨 칸에 내는 문장과 같다(같은 함수)
+        Assert.Equal(HanjaInput.Resolve("서윤", "유", null, Cp(0x6669)).Problem!.Message, missing.Message);
+        Assert.Equal(HanjaInput.Resolve("서윤", "유", null, Cp(0x6F64)).Problem!.Message, mismatch.Message);
+        // 같은 입력을 이름 칸으로 물으면 이름용 문장(§20-3 확정 문구)이다
+        Assert.Equal(HanjaInput.NotInDictionaryMessage('유'), Call(Cp(0x6669), "유", null).Message);
+        Assert.Contains("인명용 독음(윤)", Call(Cp(0x6F64), "유", null).Message);
+
+        Assert.Equal(0, logger.Count);
+    }
+
+    /// <summary>그 음절로 읽는 한자가 사전에 없는 칸(봄)에 한자를 넣으면 — '그 음절로 읽는 한자를 넣어 주세요'라고 하지 않는다(따를 수 없는 안내).</summary>
+    [Fact]
+    public void Resolve_SyllableWithoutAnyHanja_SaysTheSyllableHasNoHanja()
+    {
+        var controller = new HanjaController(new CollectingLogger<HanjaController>());
+        var judged = ResolveOk(controller, Cp(0x6625), "봄");   // 春
+        Assert.Equal("reading_mismatch", judged.Status);
+        Assert.Equal(new[] { "춘" }, judged.AcceptedSyllables.Take(1));
+        Assert.Equal($"‘{Cp(0x6625)}’ 글자의 인명용 독음(춘)이 ‘봄’ 칸과 맞지 않아요. 이 음절은 인명용 한자 독음이 아니어서 한글로만 써요.", judged.Message);
+
+        // 호환 블록의 배정되지 않은 코드(U+FA6E)는 글자가 아니다 — '사전에 없는 글자' 안내를 붙이지 않는다
+        var unassigned = ResolveOk(controller, Cp(0xFA6E), "김");
+        Assert.Equal("not_hanja", unassigned.Status);
+        Assert.Null(unassigned.Character);
+        Assert.Equal("한자 한 글자를 넣어 주세요.", unassigned.Message);
+    }
+
     [Fact]
     public void Resolve_LengthAndSyllableLimits_Return400_InKorean()
     {
@@ -1027,7 +1237,7 @@ public class EvaluateHanjaApiTests
 
     private sealed class FailingHanjaController(ILogger<HanjaController> logger, string exceptionMessage) : HanjaController(logger)
     {
-        protected override HanjaJudgement Judge(string text, char? syllable)
+        protected override HanjaJudgement Judge(string text, char? syllable, bool surname)
             => throw new InvalidOperationException(exceptionMessage + text);
     }
 

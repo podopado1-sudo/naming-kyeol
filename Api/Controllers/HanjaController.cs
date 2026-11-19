@@ -51,7 +51,10 @@ public class HanjaController : ControllerBase
                 syllable = request.Syllable[0];
             }
 
-            return Ok(HanjaFactMapper.ToResolveResponse(Judge(request.Text, syllable), syllable));
+            // 성씨 칸의 판정인가 — 정확히 "surname" 일 때만. 그 밖의 값은 이름 칸으로 본다(새 오류를 만들지 않는다)
+            bool surname = string.Equals(request.Target, HanjaInput.TargetSurname, StringComparison.Ordinal);
+
+            return Ok(HanjaFactMapper.ToResolveResponse(Judge(request.Text, syllable, surname), syllable, surname));
         }
         catch (Exception ex)
         {
@@ -62,5 +65,5 @@ public class HanjaController : ControllerBase
     }
 
     /// <summary>판정 함수 — 테스트가 실패 경로(500)를 확인할 수 있게 갈아 끼울 자리로 둔다.</summary>
-    protected virtual HanjaJudgement Judge(string text, char? syllable) => HanjaInput.Judge(text, syllable);
+    protected virtual HanjaJudgement Judge(string text, char? syllable, bool surname) => HanjaInput.Judge(text, syllable, surname);
 }

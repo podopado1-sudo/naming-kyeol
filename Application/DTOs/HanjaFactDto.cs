@@ -12,7 +12,7 @@ public class HanjaFactDto
 {
     /// <summary>글자 — 늘 통합 한자(호환 한자·이체 선택자로 들어와도 사전의 통합 꼴)</summary>
     public string Character { get; set; } = "";
-    /// <summary>그 음절로 읽는 훈 한 조각('상서 서', '오얏 리(이)'). 맞는 조각이 없으면 첫 훈, 뜻이 없으면 빈 문자열</summary>
+    /// <summary>그 음절로 읽는 훈 한 조각('상서 서', '오얏 리(이)'). 맞는 조각이 없으면 첫 훈, 한글 훈이 없으면 빈 문자열</summary>
     public string Gloss { get; set; } = "";
     /// <summary>부수 기준 자원오행 木·火·土·金·水 — 미상이면 빈 문자열</summary>
     public string FiveElement { get; set; } = "";
@@ -28,7 +28,7 @@ public class HanjaFactDto
     public bool Common { get; set; }
     /// <summary>이름에 피하는 글자(불용) — 계산은 하되 화면이 표시한다. 성씨 글자에는 늘 false</summary>
     public bool Forbidden { get; set; }
-    /// <summary>사전에 뜻 풀이가 있는가</summary>
+    /// <summary>사전에 뜻 풀이(한글 훈)가 있는가 — 사전에 영문 뜻만 있는 글자는 거짓이다</summary>
     public bool HasMeaning { get; set; }
     /// <summary>CJK 기본 영역(U+4E00~9FFF)인가 — 거짓이면 기기에 따라 글자가 안 보일 수 있다('확장 한자')</summary>
     public bool Basic { get; set; }
@@ -103,6 +103,12 @@ public class HanjaResolveRequestDto
     /// <summary>넣으려는 칸의 음절(선택) — 한글 음절 한 글자. 비우면 독음 판정 없이 글자만 찾는다</summary>
     [StringLength(1, ErrorMessage = "음절은 한글 한 글자로 넣어 주세요.")]
     public string? Syllable { get; set; }
+
+    /// <summary>
+    /// 넣으려는 칸의 종류(선택) — "surname" 이면 성씨 칸: 판정은 같고, 안내 문장이 성씨용이며(인명용 한자 이야기를 하지 않는다)
+    /// 글자 사실에 이름용 표시(forbidden·common)를 싣지 않는다. 그 밖의 값·생략은 이름 칸("name")으로 본다
+    /// </summary>
+    public string? Target { get; set; }
 }
 
 /// <summary>POST /api/v1/hanja/resolve 응답 — 조회라서 판정 결과는 모두 200 이다.</summary>

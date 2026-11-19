@@ -79,7 +79,8 @@ public static class HanjaPickDump
                 if (fact.Common) common.Add(fact.Character);
             }
             pairs += facts.Count;
-            entries.Add((syllable, facts.Count, candidates.Count(HanjaSelector.IsUsableNameHanja), HanjaInput.AutoIsEmpty(syllable)));
+            // usable = 첫 묶음(쓸 수 있는 글자)의 글자 수 — 파일의 표시로 세면 '이름에 피하는 글자가 아니고 뜻 풀이가 있는 글자' 수와 같다
+            entries.Add((syllable, facts.Count, candidates.Count(HanjaInput.IsListedAsUsable), HanjaInput.AutoIsEmpty(syllable)));
 
             files.Add((FileNameFor(syllable), Json(writer =>
             {

@@ -13,13 +13,18 @@ public class NameEvaluationService : INameEvaluationService
 {
     private readonly IScoringService _scoringService;
     private readonly IExplanationEngine _explanationEngine;
+    private readonly ILogger<NameEvaluationService>? _logger;
 
+    /// <param name="logger">선택 — 응답에 덧붙이는 hanjaSummary 를 만들다 실패했을 때 흔적(예외 종류·난 자리)을 남기는 데만 쓴다.
+    /// 없어도 평가는 같다(테스트·도구는 두 인자로 만든다). DI 는 등록된 로거를 넣는다</param>
     public NameEvaluationService(
         IScoringService scoringService,
-        IExplanationEngine explanationEngine)
+        IExplanationEngine explanationEngine,
+        ILogger<NameEvaluationService>? logger = null)
     {
         _scoringService = scoringService;
         _explanationEngine = explanationEngine;
+        _logger = logger;
     }
 
     public async Task<NameEvaluationResultDto> EvaluateNameAsync(
@@ -149,8 +154,9 @@ public class NameEvaluationService : INameEvaluationService
     /// 오행 역할은 조화가 쓴 <see cref="ElementFit"/>, 성씨 획수는 수리와 같은 규칙. 여기서 한자를 다시 고르지 않는다.
     /// ⚠️ 어떤 이름·성씨 문자열에도 예외를 내지 않는다 — 한자를 지정하지 않은 기존 요청에도 실리는 필드라, 여기서 던지면 지금 되는 요청이 500 이 된다.
     /// 지정 없는 요청은 이름이 한글인지 검사하지 않으므로(낱자모·공백·한자·이모지가 올 수 있다) 한글 음절만이 아니면 null 을 돌려준다.
+    /// 이름·성씨가 한글 음절만인데 null 이면 이 함수의 버그다 — 그때는 로그에 예외 종류와 난 자리만 남긴다(이름·한자·예외 문구는 싣지 않는다).
     /// </summary>
-    private static HanjaSummaryDto? BuildHanjaSummary(string name, string lastName, CanonicalNameScore score, HanjaPicks? picks)
+    private HanjaSummaryDto? BuildHanjaSummary(string name, string lastName, CanonicalNameScore score, HanjaPicks? picks)
     {
         try
         {
@@ -192,9 +198,12 @@ public class NameEvaluationService : INameEvaluationService
                 ElementFit = HanjaFactMapper.ToDto(fit),
             };
         }
-        catch
+        catch (Exception ex)
         {
-            // 덧붙이는 필드 하나 때문에 평가 전체를 실패시키지 않는다(화면은 이 필드가 없으면 블록을 그리지 않는다)
+            // 덧붙이는 필드 하나 때문에 평가 전체를 실패시키지 않는다(화면은 이 필드가 없으면 블록을 그리지 않는다).
+            // 다만 조용히 사라지면 버그를 찾을 단서가 없다 — 예외 종류와 난 자리만 남긴다. 예외 문구에는 이름·한자가 섞일 수 있어 싣지 않는다
+            // (예: KeyNotFoundException 의 'The given key …'). 이름·성씨·한자·생년월일도 템플릿에 넣지 않는다.
+            _logger?.LogError("hanjaSummary 를 만들지 못했습니다: {ErrorType}\n{StackTrace}", ex.GetType().FullName, ex.StackTrace);
             return null;
         }
     }
@@ -280,6 +289,9 @@ public class NameEvaluationService : INameEvaluationService
                     ResourceGrade   = h.ResourceGrade,
                     VReasons        = h.VReasons.ToList(),
                     Rationale       = string.IsNullOrEmpty(h.Rationale) ? null : h.Rationale,
+                    // 이 글자를 그 음절 칸에 넣었을 때의 글자 사실 — hanjaSummary·음절 후보 파일과 같은 함수·같은 값(2026-11 한자 입력).
+                    // 화면이 표의 '이 글자로'를 누른 글자를 응답을 기다리지 않고 바로 그릴 수 있게 싣는다
+                    Fact            = HanjaFactMapper.ToFact(h, syllable),
                 })
                 .ToList();
 

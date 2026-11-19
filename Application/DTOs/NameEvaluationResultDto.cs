@@ -142,6 +142,11 @@ public class HanjaCandidateDto
     public List<string> VReasons { get; set; } = new();
     /// <summary>자원오행 판정 근거 한 줄 (부수 근거 — 예: "手·扌(손 수) 부수 → 木". S4 전에는 뜻 기반 문장이었다)</summary>
     public string? Rationale { get; set; }
+    /// <summary>
+    /// 이 글자를 그 음절 칸의 한자로 골랐을 때의 글자 사실(2026-11 한자 입력) — <see cref="HanjaSummaryDto"/>·음절 후보 파일과 같은 꼴·같은 값이다
+    /// (훈은 그 음절로 읽는 한 조각). 화면이 후보 표에서 고른 글자를 응답을 기다리는 동안 그대로 그리는 데 쓴다. 덧붙인 필드라 예전 소비자는 영향이 없다
+    /// </summary>
+    public HanjaFactDto? Fact { get; set; }
 }
 
 /// <summary>

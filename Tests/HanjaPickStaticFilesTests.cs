@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using NameForm.Application.Engines;
 using NameForm.Application.Engines.Data;
 using NameForm.Application.Engines.Utils;
@@ -387,6 +388,46 @@ public class HanjaPickStaticFilesTests
             $"불용 {forbiddenSeen}·뜻 없음 {noMeaningSeen}·먼저 보여 드리는 글자 {commonSeen} — 세 묶음이 다 나와야 검사가 된다");
     }
 
+    /// <summary>
+    /// 패널에 그대로 보이는 훈 — 뜻 풀이가 있는 글자(hasMeaning)의 gloss 는 한글이 있고 영문자가 없다. 뜻 풀이가 없는 글자는 gloss 가 빈 문자열이다.
+    /// 사전 로더는 한글 뜻이 없는 글자에 Unihan 영문 뜻을 채워 두는데(U+39B3 'to cultivate, …'), 그 글이 한글 훈 사이에 '쓸 수 있는 글자'로 실리지 않는다.
+    /// </summary>
+    [Fact]
+    public void SyllableFiles_GlossIsKoreanOrEmpty_NoForeignDefinitionLeaks()
+    {
+        var problems = new List<string>();
+        int withGloss = 0, withoutGloss = 0;
+        foreach (var (syllable, file) in SyllableFiles(ReadDisk()))
+            foreach (var fact in Facts(file))
+            {
+                string gloss = fact["gloss"]!.GetValue<string>();
+                bool hasMeaning = Flag(fact, "hasMeaning");
+                string where = $"{syllable} U+{char.ConvertToUtf32(Character(fact), 0):X4} '{gloss}'";
+                if (hasMeaning)
+                {
+                    withGloss++;
+                    if (!Regex.IsMatch(gloss, "[가-힣]")) problems.Add($"{where}: 훈에 한글이 없다");
+                    if (Regex.IsMatch(gloss, "[A-Za-z]")) problems.Add($"{where}: 훈에 영문자가 있다");
+                }
+                else
+                {
+                    withoutGloss++;
+                    if (gloss.Length != 0) problems.Add($"{where}: 뜻 풀이 없는 글자인데 훈이 적혀 있다");
+                }
+            }
+        Assert.True(problems.Count == 0, $"{problems.Count}건 — {Redump}\n" + string.Join("\n", problems.Take(20)));
+        Assert.True(withGloss > 9000 && withoutGloss > 0, $"훈 있는 쌍 {withGloss}·없는 쌍 {withoutGloss} — 검사가 비어 있다");
+
+        // U+39B3(재) — 사전 뜻은 영문뿐이다. '재' 파일에서 뜻 풀이 없는 글자로 실린다
+        var english = HanjaData.FindByCharacter(Cp(0x39B3));
+        if (english != null && !Regex.IsMatch(english.Meaning ?? "", "[가-힣]"))
+        {
+            var fact = Facts(SyllableFiles(ReadDisk())['재']).Single(f => Character(f) == Cp(0x39B3));
+            Assert.False(Flag(fact, "hasMeaning"));
+            Assert.Equal("", fact["gloss"]!.GetValue<string>());
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // ⑮ · ⑦ index.json — 수 · 음절 표 · autoEmpty · 성씨 표
     // ═══════════════════════════════════════════════════════════════
@@ -450,7 +491,9 @@ public class HanjaPickStaticFilesTests
 
             int usable = entry["usable"]!.GetValue<int>();
             if (usable != facts.Count(f => !Flag(f, "forbidden") && Flag(f, "hasMeaning"))) problems.Add($"{syllable}: usable {usable} · 파일의 표시로 센 값과 다름");
-            if (usable != candidates.Count(HanjaSelector.IsUsableNameHanja)) problems.Add($"{syllable}: usable {usable} · 지금 쓸 수 있는 글자 수와 다름");
+            // 사전 쪽에서 따로 센 값 — 이름에 피하는 글자가 아니고 뜻에 한글 훈이 있는 글자(사전에 영문 뜻만 있는 글자는 뜻 풀이 없는 글자로 싣는다)
+            int expectedUsable = candidates.Count(h => !HanjaData.IsForbiddenNameHanja(h.Character) && Regex.IsMatch(h.Meaning ?? "", "[가-힣]"));
+            if (usable != expectedUsable) problems.Add($"{syllable}: usable {usable} · 지금 쓸 수 있는 글자 수 {expectedUsable} 와 다름");
 
             bool expectedAutoEmpty = HanjaInput.AutoIsEmpty(syllable);
             bool written = entry.ContainsKey("autoEmpty");

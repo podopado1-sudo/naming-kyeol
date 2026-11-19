@@ -14,6 +14,8 @@ namespace NameForm.Tests;
 /// 기대값은 검사 대상 함수가 아니라 코드포인트 숫자·사전 원자료·유니코드 정규화·프런트 사전 파일로 따로 센다.
 /// ⚠️ 호환 한자(U+F900~FAFF·U+2F800~2FA1F)와 BMP 밖 글자는 글자로 적지 않는다 — 코드포인트 숫자(<see cref="Cp"/>)만 쓴다
 /// (글자 리터럴이 편집 도구의 NFC 정규화로 통합 한자로 바뀐 전력이 있다). 주석의 한자는 모두 통합 한자다.
+/// 보이지 않는 글자(전각 공백·폭 없는 문자·이체 선택자)와 조합형 자모(NFD)도 같은 까닭으로 유니코드 이스케이프로만 적는다 — 편집 도구가 지우거나
+/// NFC 로 합치면 단언은 통과한 채 검사 내용만 사라진다.
 /// </summary>
 public class HanjaInputTests
 {
@@ -142,9 +144,9 @@ public class HanjaInputTests
     {
         string seo = Cp(0x745E), yun = Cp(0x6F64);   // 瑞 · 潤
         Assert.Equal(string.Empty, HanjaInput.Strip(null));
-        Assert.Equal(string.Empty, HanjaInput.Strip(" \t　​﻿"));
+        Assert.Equal(string.Empty, HanjaInput.Strip(" \t\u3000\u200B\uFEFF"));
         // 가운데 공백(반각·전각)·폭 없는 문자·이체 선택자(BMP U+FE00~FE0F, 보충 U+E0100~E01EF)
-        Assert.Equal(seo + yun, HanjaInput.Strip($" {seo}︀ 　​‌‍{yun}{Cp(0xE0100)}﻿️{Cp(0xE01EF)}"));
+        Assert.Equal(seo + yun, HanjaInput.Strip($" {seo}\uFE00 \u3000\u200B\u200C\u200D{yun}{Cp(0xE0100)}\uFEFF\uFE0F{Cp(0xE01EF)}"));
         // 표시 글자는 남는다
         Assert.Equal("*-", HanjaInput.Strip(" * - "));
     }
@@ -153,7 +155,7 @@ public class HanjaInputTests
     public void Find_VariationSelectorAndKangxiRadical_AreNormalized()
     {
         // U+674E 李 + U+FE00 — 이체 선택자가 붙으면 NFKC 뒤에도 남아 한 글자 판정에서 떨어진다 → 먼저 지운다
-        var (picks, problem) = HanjaInput.Resolve("이", "김", Cp(0x674E) + "︀", null);
+        var (picks, problem) = HanjaInput.Resolve("이", "김", Cp(0x674E) + "\uFE00", null);
         Assert.Null(problem);
         Assert.Equal(Cp(0x674E), picks!.Name[0].Hanja!.Character);
 
@@ -167,6 +169,71 @@ public class HanjaInputTests
         // 범위 밖 글자는 건드리지 않는다
         Assert.Equal(0x745E, HanjaInput.NormalizeRune(R(0x745E)).Value);
         Assert.Equal(0x328A, HanjaInput.NormalizeRune(R(0x328A)).Value);
+    }
+
+    /// <summary>
+    /// 호환 한자 블록(U+F900~FAFF·U+2F800~2FA1F) 안의 배정되지 않은 코드포인트(U+FA6E·U+FADA~FAFF 등)는 글자가 아니다 — '사전에 없는 글자'가 아니라
+    /// '한자가 아님'으로 끝난다(사전에 없는 글자의 안내 — 모양만 다른 같은 글자를 찾아보라 — 가 글자 아닌 코드에 붙지 않게).
+    /// 블록 안의 통합 한자 12자(정규형이 자기 자신)는 한자다. 기대값은 유니코드 분류(배정 여부)로 따로 센다.
+    /// </summary>
+    [Fact]
+    public void CompatibilityBlock_UnassignedCodePoints_AreNotHanja_ButItsUnifiedIdeographsAre()
+    {
+        int unassigned = 0, unified = 0;
+        foreach (var (from, to) in new[] { (0xF900, 0xFAFF), (0x2F800, 0x2FA1F) })
+            for (int cp = from; cp <= to; cp++)
+            {
+                var text = Cp(cp);
+                var category = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(text, 0);
+                var judged = HanjaInput.Judge(text, '김');
+                var (_, problem) = HanjaInput.Resolve("김", "이", text, null);
+
+                if (category == System.Globalization.UnicodeCategory.OtherNotAssigned)
+                {
+                    unassigned++;
+                    Assert.True(judged.Status == HanjaInput.CodeNotHanja, $"U+{cp:X4} 판정 {judged.Status}");
+                    Assert.Null(judged.Character);
+                    Assert.Null(judged.Suggestion);
+                    Assert.Null(HanjaInput.Find(R(cp)));
+                    Assert.Equal(HanjaInput.CodeNotHanja, problem!.Code);
+                    continue;
+                }
+
+                // 배정된 글자는 한자다(사전에 있든 없든 '한자가 아님'은 아니다)
+                Assert.True(judged.Status != HanjaInput.CodeNotHanja, $"U+{cp:X4} 판정 {judged.Status}");
+                if (text.Normalize(NormalizationForm.FormKC) == text)
+                {
+                    // 정규형이 자기 자신인 글자 = 블록 안의 통합 한자. 정규 꼴 글자가 그 코드 그대로다
+                    unified++;
+                    Assert.Equal(text, judged.Character);
+                    Assert.NotEqual(HanjaInput.CodeNotHanja, problem?.Code);
+                }
+            }
+        Assert.Equal(12, unified);
+        Assert.True(unassigned >= 40, $"배정되지 않은 코드 {unassigned}개 — 검사가 비어 있다");
+    }
+
+    /// <summary>
+    /// 글자 조회는 정규화를 한 번만 하고 사전을 바로 찾는다 — 그 결과가 사전의 공용 조회(HanjaData.FindByCharacter — 사전에 없으면 정규화를 한 번 더 건다)와
+    /// 같은지 한자 영역 전체에서 본다. 다른 것은 위 테스트의 배정되지 않은 호환 코드뿐이어야 하는데, 그런 코드는 어느 쪽으로도 사전에 없다.
+    /// </summary>
+    [Fact]
+    public void Find_AgreesWithTheDictionaryLookup_OverEveryHanCodePoint()
+    {
+        int checkedCount = 0, hits = 0;
+        foreach (var (from, to) in new[] { (0x3400, 0x4DBF), (0x4E00, 0x9FFF), (0xF900, 0xFAFF), (0x20000, 0x2EBEF), (0x2F800, 0x2FA1F), (0x30000, 0x323AF) })
+            for (int cp = from; cp <= to; cp++)
+            {
+                HanjaInfo? expected;
+                try { expected = HanjaData.FindByCharacter(Cp(cp)); }
+                catch (ArgumentException) { continue; }   // 배정되지 않은 코드포인트를 거절하는 정규화 구현 — 그런 환경에서는 공용 조회가 던진다
+                var actual = HanjaInput.Find(R(cp));
+                if (!ReferenceEquals(expected, actual)) Assert.Fail($"U+{cp:X4}: 공용 조회 {expected?.Character ?? "없음"} · Find {actual?.Character ?? "없음"}");
+                checkedCount++;
+                if (actual != null) hits++;
+            }
+        Assert.True(checkedCount > 90000, $"대조한 코드포인트 {checkedCount}");
+        Assert.True(hits >= HanjaData.GetAllHanja().Count, $"찾은 글자 {hits}");
     }
 
     [Theory]
@@ -248,7 +315,7 @@ public class HanjaInputTests
         new object[] { "서 윤" },                            // 공백
         new object[] { " 서윤" },
         new object[] { "ㅅ윤" },                             // 낱자모
-        new object[] { "서윤" },                   // 조합형 자모(NFD)
+        new object[] { "\u1109\u1165윤" },                   // 조합형 자모(NFD)
         new object[] { char.ConvertFromUtf32(0x745E) + "윤" }, // 한자
         new object[] { "서\U0001F600" },                     // 이모지(서로게이트 쌍)
         new object[] { "Seo" },
@@ -269,7 +336,7 @@ public class HanjaInputTests
         }
 
         // 같은 이름이라도 한자 필드가 없으면 검사하지 않는다 — 지금처럼 통과
-        foreach (var (nameHanja, lastNameHanja) in new (string?, string?)[] { (null, null), ("", ""), (" 　", "​"), (null, "") })
+        foreach (var (nameHanja, lastNameHanja) in new (string?, string?)[] { (null, null), ("", ""), (" \u3000", "\u200B"), (null, "") })
         {
             var (picks, problem) = HanjaInput.Resolve(name, "이", nameHanja, lastNameHanja);
             Assert.Null(picks);
@@ -307,10 +374,10 @@ public class HanjaInputTests
         Assert.False(HanjaInput.IsHangulSyllables(""));
         Assert.False(HanjaInput.IsHangulSyllables("서 윤"));
         Assert.False(HanjaInput.IsHangulSyllables("ㅅ"));
-        Assert.False(HanjaInput.IsHangulSyllables("서"));
+        Assert.False(HanjaInput.IsHangulSyllables("\u1109\u1165"));
         Assert.False(HanjaInput.IsHangulSyllables("서" + Cp(0x745E)));
-        Assert.False(HanjaInput.IsHangulSyllables("힤"));   // 힣 바로 다음
-        Assert.False(HanjaInput.IsHangulSyllables("꯿"));   // 가 바로 앞
+        Assert.False(HanjaInput.IsHangulSyllables("\uD7A4"));   // 힣 바로 다음
+        Assert.False(HanjaInput.IsHangulSyllables("\uABFF"));   // 가 바로 앞
     }
 
     [Fact]
@@ -436,10 +503,104 @@ public class HanjaInputTests
         var (_, problem) = HanjaInput.Resolve("서윤", "이", Cp(0x5747) + "*", null);
         Assert.Equal($"‘{Cp(0x5747)}’ 글자의 인명용 독음(균·연)이 ‘서’ 칸과 맞지 않아요. ‘서’ 음절로 읽는 한자를 넣어 주세요.", problem!.Message);
 
-        // 성씨 칸도 같은 꼴
+        // 성씨 칸 — '인명용 독음'이라고 쓰지 않는다(성씨는 인명용 한자 제한을 받지 않는다 — 설계서 §20-4). 이 사전에 실린 독음이라고 적고,
+        // 비워 두면 어떻게 되는지로 맺는다
         (_, problem) = HanjaInput.Resolve("서윤", "이", null, Cp(0x6F64));
         Assert.Equal(HanjaInput.TargetSurname, problem!.Target);
-        Assert.Equal($"‘{Cp(0x6F64)}’ 글자의 인명용 독음(윤)이 ‘이’ 칸과 맞지 않아요. ‘이’ 음절로 읽는 한자를 넣어 주세요.", problem.Message);
+        Assert.Equal(
+            $"‘{Cp(0x6F64)}’ 글자는 이 사이트 사전에 실린 독음(윤)이 ‘이’ 칸과 맞지 않아요. ‘이’ 음절로 읽는 한자를 넣어 주세요. " +
+            "비워 두면 기본으로 두는 성씨 한자로 계산해요.", problem.Message);
+    }
+
+    /// <summary>
+    /// 그 음절로 읽는 한자가 사전에 하나도 없는 칸(봄·빛 — 화면이 잠그는 칸, 성씨 궉)에는 '그 음절로 읽는 한자를 넣어 주세요'라고 하지 않는다
+    /// — 따를 수 없는 안내다. 이름 칸은 후보 표의 안내와 같은 말, 성씨 칸은 사전에 그 음절 한자가 없다는 사실로 맺는다.
+    /// </summary>
+    [Fact]
+    public void ReadingMismatchMessage_SyllableWithoutAnyHanja_DoesNotAskForOne()
+    {
+        // 전제 — 사전 원자료로 따로 센다: 봄·빛·궉 으로 읽는 글자가 없다(지정 독음과 그 두음 꼴 어느 쪽으로도)
+        foreach (char syllable in "봄빛궉")
+        {
+            Assert.DoesNotContain(HanjaData.GetAllHanja(), h => new[] { h.Reading }.Concat(h.AlternateReadings)
+                .Any(r => r[0] == syllable || RequiredCharEngine.ApplyInitialDueum(r[0]) == syllable));
+            Assert.False(HanjaInput.HasCandidates(syllable));
+            Assert.Empty(HanjaInput.CandidatesFor(syllable));
+        }
+        foreach (char syllable in "서임녹연")   // 임·녹 은 두음 꼴로, 연 은 보충 표(均)로도 후보가 는다
+            Assert.True(HanjaInput.HasCandidates(syllable));
+
+        // 이름 칸 — 春(춘)을 '봄' 칸에
+        var (_, problem) = HanjaInput.Resolve("봄", "김", Cp(0x6625), null);
+        Assert.Equal(HanjaInput.CodeReadingMismatch, problem!.Code);
+        Assert.Equal($"‘{Cp(0x6625)}’ 글자의 인명용 독음(춘)이 ‘봄’ 칸과 맞지 않아요. 이 음절은 인명용 한자 독음이 아니어서 한글로만 써요.", problem.Message);
+        Assert.EndsWith(HanjaSelector.NoHanjaReadingNote + ".", problem.Message);   // 후보 표의 안내와 같은 말
+        Assert.DoesNotContain("넣어 주세요", problem.Message);
+        Assert.Equal(problem.Message, HanjaInput.Judge(Cp(0x6625), '봄').Message);
+
+        // 성씨 칸 — 鴌 U+9D0C 은 성씨로 '궉'이라 읽지만 이 사전의 독음은 '봉'뿐이다. 글자가 틀렸다고 하지 않고 사전의 한계로 적는다
+        var gwok = HanjaData.FindByCharacter(Cp(0x9D0C))!;
+        Assert.Equal(new[] { "봉" }, HanjaInput.AcceptedSyllables(gwok));
+        (_, problem) = HanjaInput.Resolve("서윤", "궉", null, Cp(0x9D0C));
+        Assert.Equal(HanjaInput.CodeReadingMismatch, problem!.Code);
+        Assert.Equal(HanjaInput.TargetSurname, problem.Target);
+        Assert.Equal(
+            $"‘{Cp(0x9D0C)}’ 글자는 이 사이트 사전에 실린 독음(봉)이 ‘궉’ 칸과 맞지 않아요. " +
+            "이 사이트 사전에는 ‘궉’ 음절로 읽는 한자가 없어 이 칸의 성씨 한자는 정할 수 없어요.", problem.Message);
+        Assert.Equal(problem.Message, HanjaInput.Judge(Cp(0x9D0C), '궉', surname: true).Message);
+        // 같은 글자·같은 칸이라도 이름 칸의 판정이면 이름용 문장이다
+        Assert.Contains("인명용 독음(봉)", HanjaInput.Judge(Cp(0x9D0C), '궉').Message);
+    }
+
+    /// <summary>
+    /// 성씨 칸의 문장에는 인명용 한자·출생신고 이야기가 없다 — 성씨는 인명용 한자 제한을 받지 않는다(설계서 §20-4).
+    /// 이름 칸의 문장(§20-3 확정 문구)은 그대로다.
+    /// </summary>
+    [Fact]
+    public void SurnameSlotMessages_DoNotSpeakOfNameHanjaRules()
+    {
+        // 사전에 없는 글자 — 유 + 晩 U+6669
+        var (_, problem) = HanjaInput.Resolve("서윤", "유", null, Cp(0x6669));
+        Assert.Equal(HanjaInput.CodeNotInDictionary, problem!.Code);
+        Assert.Equal(HanjaInput.TargetSurname, problem.Target);
+        Assert.Equal(
+            "이 사이트 사전에 없는 글자라서 이 글자로는 성씨 획수를 세지 못해요. " +
+            "모양만 조금 다른 같은 글자가 실려 있을 수 있으니 ‘유’ 칸의 후보 목록에서 먼저 찾아보세요. " +
+            "비워 두면 기본으로 두는 성씨 한자로 계산해요.", problem.Message);
+        Assert.Equal(problem.Message, HanjaInput.Judge(Cp(0x6669), '유', surname: true).Message);
+        Assert.Equal(
+            "이 사이트 사전에 없는 글자라서 이 글자로는 성씨 획수를 세지 못해요. " +
+            "모양만 조금 다른 같은 글자가 실려 있을 수 있으니 후보 목록에서 먼저 찾아보세요. " +
+            "비워 두면 기본으로 두는 성씨 한자로 계산해요.", HanjaInput.Judge(Cp(0x6669), null, surname: true).Message);
+
+        var surnameMessages = new[]
+        {
+            problem.Message,
+            HanjaInput.Judge(Cp(0x6669), null, surname: true).Message!,
+            HanjaInput.Resolve("서윤", "유", null, Cp(0x6F64)).Problem!.Message,          // 독음 불일치
+            HanjaInput.Resolve("서윤", "궉", null, Cp(0x9D0C)).Problem!.Message,          // 독음 불일치 — 그 음절 한자가 사전에 없음
+            HanjaInput.Resolve("서윤", "남궁", null, "*" + Cp(0x5357)).Problem!.Message,  // 복성의 둘째 칸
+        };
+        foreach (var message in surnameMessages)
+        {
+            Assert.True(IsKoreanOnlyMessage(message), message);
+            Assert.EndsWith(".", message);
+            foreach (var banned in new[] { "인명용", "출생신고", "대길", "대흉", "길하", "흉하", "검수", "감수", "쓸 수 없는 글자", "목록에 없는 글자" })
+                Assert.DoesNotContain(banned, message);
+        }
+        Assert.Equal(surnameMessages.Length, surnameMessages.Distinct().Count());
+
+        // 판정(코드·글자·권하는 글자)은 이름 칸과 같다 — 문장만 다르다
+        var asName = HanjaInput.Judge(Cp(0x6669), '만');
+        var asSurname = HanjaInput.Judge(Cp(0x6669), '만', surname: true);
+        Assert.Equal(asName.Status, asSurname.Status);
+        Assert.Equal(asName.Character, asSurname.Character);
+        Assert.Same(asName.Suggestion, asSurname.Suggestion);
+        Assert.NotEqual(asName.Message, asSurname.Message);
+        // 맞는 글자면 문장이 없다 — 劉 U+5289 를 '유' 칸에
+        var ok = HanjaInput.Judge(Cp(0x5289), '유', surname: true);
+        Assert.Equal(HanjaInput.StatusOk, ok.Status);
+        Assert.Null(ok.Message);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -521,8 +682,9 @@ public class HanjaInputTests
                     problems.Add($"'{syllable}' {h.Character}: {problem?.Code ?? "다른 항목"}");
             }
 
-            // 세 묶음 — 묶음 번호가 줄어드는 자리가 없다
-            static int GroupOf(HanjaInfo h) => HanjaData.IsForbiddenNameHanja(h.Character) ? 1 : string.IsNullOrEmpty(h.Meaning) ? 2 : 0;
+            // 세 묶음 — 묶음 번호가 줄어드는 자리가 없다. 뜻 풀이가 있는가는 '뜻에 한글이 있는가'로 따로 센다
+            // (사전에 영문 뜻만 있는 글자는 뜻 풀이 없는 글자 묶음이다 — 아래 CandidatesFor_MeaningWithoutHangul_IsListedAsNoMeaning)
+            static int GroupOf(HanjaInfo h) => HanjaData.IsForbiddenNameHanja(h.Character) ? 1 : Regex.IsMatch(h.Meaning ?? "", "[가-힣]") ? 0 : 2;
             var groups = candidates.Select(GroupOf).ToList();
             Assert.True(groups.SequenceEqual(groups.OrderBy(g => g)), $"'{syllable}' 묶음 순서");
 
@@ -535,7 +697,7 @@ public class HanjaInputTests
                 .ThenBy(h => h.Character, StringComparer.Ordinal)
                 .ToList();
             Assert.True(usable.SequenceEqual(expectedUsable), $"'{syllable}' 쓸 수 있는 글자 순서");
-            Assert.True(usable.SequenceEqual(HanjaSelector.OrderForDisplay(candidates)), $"'{syllable}' OrderForDisplay 와 다름");
+            Assert.True(usable.SequenceEqual(HanjaSelector.OrderForDisplay(candidates).Where(h => GroupOf(h) == 0)), $"'{syllable}' OrderForDisplay 와 다름");
 
             // 불용·뜻 없는 글자는 코드포인트 순
             foreach (int g in new[] { 1, 2 })
@@ -548,6 +710,46 @@ public class HanjaInputTests
         Assert.True(problems.Count == 0, $"{problems.Count}건:\n" + string.Join("\n", problems.Take(20)));
         Assert.True(syllables >= 480, $"후보가 있는 음절 {syllables}개");
         Assert.True(total >= 9977, $"(음절, 글자) 쌍 {total}개 — 프런트 사전 쌍보다 적을 수 없다");
+    }
+
+    /// <summary>
+    /// 사전 뜻에 한글이 없는 글자(사전 로더가 Unihan 영문 뜻을 채워 둔 글자 — 지금 U+39B3 한 자)는 후보 목록에서 '뜻 풀이 없는 글자' 묶음에 선다.
+    /// 영문 뜻이 한글 훈 사이에 '쓸 수 있는 글자'로 보이지 않게 — /hanja 사전(hanja-seo.json 의 m 없음)과 같은 판정이다.
+    /// 엔진의 쓸 수 있는 글자 정의(HanjaSelector.IsUsableNameHanja)는 그대로다(자동 배정·점수는 바뀌지 않는다).
+    /// </summary>
+    [Fact]
+    public void CandidatesFor_MeaningWithoutHangul_IsListedAsNoMeaning()
+    {
+        var foreignOnly = HanjaData.GetAllHanja()
+            .Where(h => !string.IsNullOrEmpty(h.Meaning) && !Regex.IsMatch(h.Meaning, "[가-힣]"))
+            .ToList();
+
+        foreach (var h in foreignOnly)
+        {
+            Assert.False(HanjaInput.HasKoreanGloss(h));
+            Assert.False(HanjaInput.IsListedAsUsable(h));
+            foreach (var syllable in HanjaInput.AcceptedSyllables(h))
+            {
+                var candidates = HanjaInput.CandidatesFor(syllable[0]);
+                int at = candidates.IndexOf(h);
+                Assert.True(at >= 0, $"U+{char.ConvertToUtf32(h.Character, 0):X4} 가 '{syllable}' 후보에 없다");
+                // 이 글자 뒤에는 한글 훈이 있는 비불용 글자가 오지 않는다(맨 뒤 묶음)
+                Assert.DoesNotContain(candidates.Skip(at), c => !HanjaData.IsForbiddenNameHanja(c.Character) && Regex.IsMatch(c.Meaning ?? "", "[가-힣]"));
+                // 그래도 넣으면 받는다 — 목록에 있는 글자는 입력 검증을 통과한다
+                Assert.Null(HanjaInput.Resolve(syllable, "김", h.Character, null).Problem);
+            }
+        }
+
+        // 사전의 모든 글자 — 한글 훈이 있는가 = 뜻에 한글 음절이 있는가, 첫 묶음에 서는가 = 불용이 아니고 한글 훈이 있는가
+        foreach (var h in HanjaData.GetAllHanja())
+        {
+            bool hangul = Regex.IsMatch(h.Meaning ?? "", "[가-힣]");
+            Assert.Equal(hangul, HanjaInput.HasKoreanGloss(h));
+            Assert.Equal(hangul && !HanjaData.IsForbiddenNameHanja(h.Character), HanjaInput.IsListedAsUsable(h));
+        }
+
+        // 지금 자료에서 이 경우인 글자: U+39B3(재) — 자료에서 뜻을 고치면 이 줄만 바꾼다(위 단언은 글자가 0자여도 맞다)
+        Assert.Equal(new[] { 0x39B3 }, foreignOnly.Select(h => char.ConvertToUtf32(h.Character, 0)).OrderBy(x => x));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -772,7 +974,7 @@ public class HanjaInputTests
         var cases = new (string Name, string LastName, string? NameHanja, string? LastNameHanja)[]
         {
             ("이서", "김", Cp(0xF9E1) + "*", null),                            // 호환 코드 → 통합 한자
-            ("서윤", "이", Cp(0x745E) + "︀ " + Cp(0x6F64), Cp(0xF9E1)),   // 이체 선택자·공백, 대표 성씨(접힘)
+            ("서윤", "이", Cp(0x745E) + "\uFE00 " + Cp(0x6F64), Cp(0xF9E1)),   // 이체 선택자·공백, 대표 성씨(접힘)
             ("서윤", "남궁", Cp(0x745E) + "*", Cp(0x5357) + "*"),              // 복성 한 글자만(표와 같아 접힘)
             ("서윤", "남궁", "*" + Cp(0x6F64), Cp(0x7537) + "*"),              // 복성 한 글자만(표와 다름 — 채운 글자가 실린다)
             ("서윤", "탕", Cp(0x745E) + "-", SurnameData.ResolveStrokes("탕").Hanja),   // 표 밖 성씨, '한자 없음'

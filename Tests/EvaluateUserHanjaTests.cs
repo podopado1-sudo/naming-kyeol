@@ -83,49 +83,81 @@ public class EvaluateUserHanjaTests
     // ⑧ 지정 없음 = 지금과 같다
     // ═══════════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// ⑧ 의 서비스 층 몫 — 전부 '*' 와 대표 성씨 한자는 '지정 없음'(picks == null)으로 접힌다. 서비스는 picks 가 null 이면 예전 경로를 그대로 타므로,
+    /// 접힌 요청의 응답이 필드 없는 요청과 직렬화까지 같다는 것은 컨트롤러 층(EvaluateHanjaApiTests.Folded_Request_…)이 본다
+    /// (여기서 null 을 넘긴 호출과 인자를 안 준 호출을 견주면 같은 호출을 두 번 견주는 꼴이라 늘 참이다).
+    /// 여기서는 접기가 지키는 것을 본다: 접히지 않은 '전부 자동' 지정을 손으로 만들어 넘기면 점수는 같아도 응답이 달라진다(고름 표시).
+    /// </summary>
     [Fact]
-    public async Task Unspecified_AllAutoAndRepresentativeSurname_SerializesTheSameAsNoField()
+    public async Task Unspecified_AllAutoAndRepresentativeSurname_FoldsToNoPicks_AndFoldingIsWhatKeepsTheResponse()
     {
         var service = Service();
         foreach (var name in new[] { "서윤", "지우", "민준", "하늘", "한빛", "민", "서아린", "몰닉" })
+        {
+            // 전부 '*' + 대표 한자(李, 통합·호환 코드 모두) → 지정 없음
+            foreach (var surnameHanja in new[] { Cp(0x674E), Cp(0xF9E1), "*", "" })
+                Assert.Null(Resolve(name, "이", new string('*', name.Length), surnameHanja));
+
+            // 접히지 않았다면 — 전부 자동인 지정을 그대로 넘긴 경우
+            var unfolded = new HanjaPicks(Enumerable.Repeat(HanjaPick.Auto, name.Length).ToList(), null);
             foreach (var gender in Genders)
                 foreach (var (date, time) in Births)
                 {
-                    // 전부 '*' + 대표 한자(李, 통합·호환 코드 모두) → 지정 없음
-                    HanjaPicks? picks = null;
-                    foreach (var surnameHanja in new[] { Cp(0x674E), Cp(0xF9E1), "*", "" })
-                    {
-                        picks = Resolve(name, "이", new string('*', name.Length), surnameHanja);
-                        Assert.Null(picks);
-                    }
-
                     var plain = await service.EvaluateNameAsync(name, "이", D(date), gender, "neutral", T(time));
-                    var folded = await service.EvaluateNameAsync(name, "이", D(date), gender, "neutral", T(time), picks);
-                    Assert.Equal(Json(plain), Json(folded));
+                    var kept = await service.EvaluateNameAsync(name, "이", D(date), gender, "neutral", T(time), unfolded);
+
+                    // 계산에 쓴 글자가 같으니 점수는 같다
+                    Assert.Equal(plain.AestheticScore, kept.AestheticScore);
+                    Assert.Equal(plain.HarmonyScore, kept.HarmonyScore);
+                    Assert.Equal(plain.FinalScore, kept.FinalScore);
+                    // 그래도 응답은 다르다 — 한자를 정한 요청으로 표시된다. 접기가 없으면 아무것도 고르지 않은 사람에게 이 표시가 붙는다
+                    Assert.False(plain.HanjaSummary!.UserHanja);
+                    Assert.True(kept.HanjaSummary!.UserHanja);
+                    Assert.NotEqual(Json(plain), Json(kept));
+                    // 수리 기준 노트: 예전 경로는 예전 두 문장, 지정 경로는 조립 문장(한자가 하나라도 있고 조화를 계산했을 때)
+                    Assert.DoesNotContain(plain.Harmony.Notes, IsNewBasisNote);
+                    Assert.DoesNotContain(kept.Harmony.Notes, IsOldBasisNote);
+                    Assert.Equal(plain.Harmony.Notes.Count(IsOldBasisNote), kept.Harmony.Notes.Count(IsNewBasisNote));
                 }
+        }
     }
 
-    /// <summary>⑧-2 — 한자를 하나도 고르지 않은 순우리말 음절 이름: 잠긴 칸에 '-' 가 와도 지정 없음이라 노트 문장이 지금 그대로다.</summary>
+    /// <summary>
+    /// ⑧-2 의 서비스 층 몫 — 한자를 하나도 고르지 않은 순우리말 음절 이름: 잠긴 칸·쓸 글자 없는 칸의 '-' 는 자동으로 접혀 지정 없음이 된다.
+    /// 접기가 지키는 것: 접히지 않고 그 칸이 '한자 없음'으로 넘어가면 조화 노트가 '한자를 두지 않은 …' 문장으로 바뀐다(예전 문장이 사라진다).
+    /// 접힌 요청의 응답이 필드 없는 요청과 같다는 것은 컨트롤러 층(EvaluateHanjaApiTests.Folded_Request_…)이 본다.
+    /// </summary>
     [Theory]
     [InlineData("한빛", "*-")]
     [InlineData("빛봄", "--")]
     [InlineData("봄", "-")]
     [InlineData("몰닉", "--")]
-    public async Task Unspecified_NoneMarkOnSyllableWithoutUsableHanja_IsTheSameAsNoField(string name, string nameHanja)
+    public async Task Unspecified_NoneMarkOnSyllableWithoutUsableHanja_FoldsToNoPicks_AndFoldingKeepsTheOldNotes(string name, string nameHanja)
     {
         Assert.Null(Resolve(name, "김", nameHanja));
+
+        // 접히지 않았다면 — 같은 칸을 '한자 없음'으로 둔 지정
+        var unfolded = new HanjaPicks(nameHanja.Select(c => c == HanjaInput.NoneMark ? HanjaPick.None : HanjaPick.Auto).ToList(), null);
+        Assert.True(unfolded.AnyNone);
 
         var service = Service();
         foreach (var (date, time) in Births)
         {
             var plain = await service.EvaluateNameAsync(name, "김", D(date), "none", "neutral", T(time));
-            var folded = await service.EvaluateNameAsync(name, "김", D(date), "none", "neutral", T(time), Resolve(name, "김", nameHanja));
-            Assert.Equal(Json(plain), Json(folded));
+            var kept = await service.EvaluateNameAsync(name, "김", D(date), "none", "neutral", T(time), unfolded);
 
-            // 사용자가 비운 칸이 없으니 '한자를 두지 않은' 문장은 나오지 않는다
-            Assert.DoesNotContain(folded.Harmony.Notes, n => n == BlankSomeNote || n == BlankAllNote || n == BlankStrokeNote);
+            // 지정 없는 경로: 사용자가 비운 칸이 없으니 '한자를 두지 않은' 문장은 나오지 않는다
+            Assert.DoesNotContain(plain.Harmony.Notes, n => n == BlankSomeNote || n == BlankAllNote || n == BlankStrokeNote);
+            Assert.False(plain.HanjaSummary!.UserHanja);
+            Assert.True(kept.HanjaSummary!.UserHanja);
             if (date != null)
-                Assert.Contains(folded.Harmony.Notes, n => n == AutoSomeNote || n == AutoAllNote);
+            {
+                Assert.Contains(plain.Harmony.Notes, n => n == AutoSomeNote || n == AutoAllNote);
+                // 접히지 않은 쪽은 문장이 바뀐다 — 접기가 막는 차이
+                Assert.Contains(kept.Harmony.Notes, n => n == BlankSomeNote || n == BlankAllNote);
+                Assert.DoesNotContain(kept.Harmony.Notes, n => n == AutoSomeNote || n == AutoAllNote);
+            }
         }
     }
 

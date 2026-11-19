@@ -19,10 +19,13 @@ public static class HanjaFactMapper
     public static HanjaFactDto ToFact(HanjaInfo hanja, string? syllable, bool surname = false)
     {
         var reading = string.IsNullOrEmpty(syllable) ? hanja.Reading : syllable;
+        // 뜻은 한글 훈일 때만 싣는다 — 사전 로더가 한글 뜻이 없는 글자에 채워 둔 Unihan 영문 뜻(U+39B3 한 자)은 훈이 아니다.
+        // 후보 목록의 묶음(HanjaInput.CandidatesFor)도 같은 판정이라 '뜻 풀이 없는 글자' 묶음에 실린다
+        bool hasGloss = HanjaInput.HasKoreanGloss(hanja);
         return new HanjaFactDto
         {
             Character = hanja.Character,
-            Gloss = HanjaData.GlossForReading(hanja.Meaning, reading),
+            Gloss = hasGloss ? HanjaData.GlossForReading(hanja.Meaning, reading) : "",
             FiveElement = hanja.FiveElement ?? "",
             ResourceGrade = hanja.ResourceGrade,
             VReasons = hanja.VReasons.ToList(),
@@ -31,7 +34,7 @@ public static class HanjaFactMapper
             // OrderForDisplay 의 1순위 묶음과 같은 판정(빈출 목록에 있고 약자가 아님)
             Common = !surname && HanjaData.IsCommonNameHanja(hanja.Character) && !HanjaData.IsWeakGivenNameHanja(hanja.Character),
             Forbidden = !surname && HanjaData.IsForbiddenNameHanja(hanja.Character),
-            HasMeaning = !string.IsNullOrEmpty(hanja.Meaning),
+            HasMeaning = hasGloss,
             Basic = HanjaData.IsInCjkBasicRange(hanja.Character),
         };
     }
@@ -57,18 +60,21 @@ public static class HanjaFactMapper
             Counts = new Dictionary<string, int>(fit.Counts),
         };
 
-    /// <summary>글자 한 자의 판정(<see cref="HanjaInput.Judge"/>) → /hanja/resolve 응답. 훈은 칸의 음절이 있으면 그 음절, 없으면 대표 독음 기준.</summary>
-    public static HanjaResolveResponseDto ToResolveResponse(HanjaJudgement judgement, char? syllable)
+    /// <summary>
+    /// 글자 한 자의 판정(<see cref="HanjaInput.Judge"/>) → /hanja/resolve 응답. 훈은 칸의 음절이 있으면 그 음절, 없으면 대표 독음 기준.
+    /// 성씨 칸의 판정(<paramref name="surname"/>)이면 글자 사실에 이름용 표시(이름에 피하는 글자·먼저 보여 드리는 글자)를 싣지 않는다 — hanjaSummary 의 성씨 글자와 같다.
+    /// </summary>
+    public static HanjaResolveResponseDto ToResolveResponse(HanjaJudgement judgement, char? syllable, bool surname = false)
     {
         var syllableText = syllable?.ToString();
         return new HanjaResolveResponseDto
         {
             Status = judgement.Status,
             Character = judgement.Character,
-            Hanja = judgement.Hanja == null ? null : ToFact(judgement.Hanja, syllableText),
+            Hanja = judgement.Hanja == null ? null : ToFact(judgement.Hanja, syllableText, surname),
             AcceptedSyllables = judgement.AcceptedSyllables.ToList(),
             Message = judgement.Message,
-            Suggestion = judgement.Suggestion == null ? null : ToFact(judgement.Suggestion, syllableText),
+            Suggestion = judgement.Suggestion == null ? null : ToFact(judgement.Suggestion, syllableText, surname),
         };
     }
 }
