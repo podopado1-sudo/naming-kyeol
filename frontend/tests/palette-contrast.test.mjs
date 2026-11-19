@@ -181,6 +181,7 @@ test("FIVE_EL 표지색(막대·왼쪽 테두리)은 옛 색 그대로 — 글�
   const offenders = [];
   // OhaengResult — /ohaeng 원국 칸·개수 막대·한자 묶음 칩(2026-11, 같은 FIVE_EL 토큰)
   // HanjaSlots·HanjaPickerPanel — /evaluate 한자 칸·고르기 패널의 오행 칩·거르기 버튼(2026-11 한자 입력)
+  // HanjaSummaryBlock — /evaluate 결과 '이 이름의 한자' 블록(오행 칩은 EvalPrimitives 의 ElementChip)
   for (const f of [
     "DetailSaju.tsx",
     "DetailMid.tsx",
@@ -189,6 +190,7 @@ test("FIVE_EL 표지색(막대·왼쪽 테두리)은 옛 색 그대로 — 글�
     "OhaengResult.tsx",
     "HanjaSlots.tsx",
     "HanjaPickerPanel.tsx",
+    "HanjaSummaryBlock.tsx",
   ]) {
     read("src", "components", "design", f)
       .split(/\r?\n/)

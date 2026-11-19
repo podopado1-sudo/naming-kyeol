@@ -1111,7 +1111,7 @@ export function EvaluateInputPage({
           <InfoRow
             icon={<BookOpen size={20} strokeWidth={1.5} />}
             label="한자 후보 분석"
-            detail="뜻·자원오행·획수"
+            detail="뜻·자원오행·획수 — 직접 골라 다시 계산할 수 있어요"
           />
         </ul>
       </section>

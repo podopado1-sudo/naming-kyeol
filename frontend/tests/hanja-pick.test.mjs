@@ -1210,6 +1210,16 @@ test("새 소스·테스트에 호환 한자·BMP 밖 글자·보이지 않는 �
     "./hanja-pick-text.test.mjs",
     "./hanja-pick-store.test.mjs",
     "./evaluate-hanja-pages.test.mjs",
+    // 결과 화면(C6)
+    "../src/lib/hanja-recalc.ts",
+    "../src/lib/hanja-summary-text.ts",
+    "../src/components/design/HanjaSummaryBlock.tsx",
+    "../src/components/design/OhaengRelationChip.tsx",
+    "../src/components/design/EvalBody.tsx",
+    "../src/app/evaluate/EvaluateResult.tsx",
+    "../src/app/favorites/page.tsx",
+    "./hanja-recalc.test.mjs",
+    "./hanja-summary-text.test.mjs",
   ];
   for (const rel of files) {
     const hits = [];

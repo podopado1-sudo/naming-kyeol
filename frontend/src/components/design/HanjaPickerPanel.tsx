@@ -67,7 +67,7 @@ import {
   surnamePanelTitle,
 } from "@/lib/hanja-pick-text";
 import { noHanjaSyllableNote } from "@/lib/no-hanja";
-import type { HanjaFact } from "@/lib/types";
+import type { ElementFit, HanjaFact } from "@/lib/types";
 
 import { FIVE_EL } from "./DetailPrimitives";
 import { RESOURCE_GRADE_INFO, type ResourceBadgeKey } from "./resource-grade";
@@ -90,6 +90,20 @@ export interface HanjaPickerPanelProps {
   onClose: () => void;
   /** 여러 글자를 붙여 넣었다 — 이 칸부터 나눠 넣는 일은 칸 줄을 아는 쪽이 한다 */
   onSpread?: (characters: string[]) => void;
+  /**
+   * 생년월일로 평가한 결과가 있을 때의 용신·희신·기신 오행(응답 hanjaSummary.elementFit) — 이름 패널의 오행 거르기 칩에
+   * 그 말을 붙인다. 입력 폼(아직 평가 전)과 성씨 패널에서는 주지 않는다
+   */
+  elementFit?: ElementFit | null;
+}
+
+/** 오행 거르기 칩에 붙이는 말 — 그 오행이 용신·희신·기신이면 그 이름(조화 점수가 쓴 값 그대로) */
+function fitRoleOf(element: string, fit: ElementFit | null | undefined): string | undefined {
+  if (!fit) return undefined;
+  if (element === fit.yongshin) return "용신";
+  if (element === fit.heeshin) return "희신";
+  if (element === fit.gishin) return "기신";
+  return undefined;
 }
 
 /** 한 번에 보이는 '그 밖의 글자' 수 — 나머지는 '더 보기' */
@@ -316,7 +330,17 @@ function PanelShell({
 // ------------------------------------------------------------
 // 이름 패널
 // ------------------------------------------------------------
-function NamePanel({ id, slot, forbiddenCount, onPick, onAuto, onNone, onClose, onSpread }: HanjaPickerPanelProps) {
+function NamePanel({
+  id,
+  slot,
+  forbiddenCount,
+  onPick,
+  onAuto,
+  onNone,
+  onClose,
+  onSpread,
+  elementFit,
+}: HanjaPickerPanelProps) {
   const uid = useId();
   const searchId = `${uid}-search`;
   const avoidedId = `${uid}-avoided`;
@@ -423,7 +447,13 @@ function NamePanel({ id, slot, forbiddenCount, onPick, onAuto, onNone, onClose, 
             <div role="group" aria-label="자원오행으로 거르기" style={{ display: "flex", gap: 4 }}>
               <ElementButton label="전체" on={element === ""} onClick={() => setElement("")} />
               {ELEMENT_FILTERS.map((el) => (
-                <ElementButton key={el} element={el} on={element === el} onClick={() => setElement(el)} />
+                <ElementButton
+                  key={el}
+                  element={el}
+                  fitRole={fitRoleOf(el, elementFit)}
+                  on={element === el}
+                  onClick={() => setElement(el)}
+                />
               ))}
             </div>
           )}
@@ -542,11 +572,14 @@ function NamePanel({ id, slot, forbiddenCount, onPick, onAuto, onNone, onClose, 
 function ElementButton({
   element,
   label,
+  fitRole,
   on,
   onClick,
 }: {
   element?: string;
   label?: string;
+  /** 그 오행이 용신·희신·기신이면 그 말 — 생년월일로 평가한 결과가 있을 때만 */
+  fitRole?: string;
   on: boolean;
   onClick: () => void;
 }) {
@@ -555,7 +588,7 @@ function ElementButton({
     <button
       type="button"
       aria-pressed={on}
-      aria-label={def ? `${def.name}(${def.label})` : undefined}
+      aria-label={def ? [`${def.name}(${def.label})`, fitRole].filter(Boolean).join(" · ") : undefined}
       onClick={onClick}
       style={{
         appearance: "none",
@@ -581,6 +614,8 @@ function ElementButton({
         <>
           <span style={{ fontSize: 15, lineHeight: 1.1 }}>{def.label}</span>
           <span style={{ fontSize: 10.5, lineHeight: 1.1 }}>{def.name}</span>
+          {/* 좁은 화면에서 칩 하나는 36px 안팎이다 — 역할 말은 옆이 아니라 아래 줄에 */}
+          {fitRole && <span style={{ fontSize: 10.5, lineHeight: 1.1, fontWeight: 600 }}>{fitRole}</span>}
         </>
       ) : (
         <span style={{ fontSize: 13 }}>{label}</span>

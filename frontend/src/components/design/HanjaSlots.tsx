@@ -5,6 +5,11 @@
  * 누르면 칸 줄 바로 아래의 고르기 패널(HanjaPickerPanel)이 열린다 — 한 번에 한 칸만(`openKey`).
  * 칸 상태는 여기서 정하지 않는다. lib/hanja-pick.ts deriveSlots 가 계산한 칸을 받아 그리기만 한다.
  *
+ * 두 가지 배치
+ * - 가로 한 줄(입력 폼): 칸 버튼만 나란히.
+ * - 세로 줄(결과 화면 '이 이름의 한자' 블록 — `detail` 을 주면): 줄 = 칸 버튼 + 그 글자의 사실(훈·칩·꼬리표), 줄 사이에 `between`
+ *   (이웃한 두 글자의 자원오행 관계 칩). 가로로 두면 좁은 화면에서 성 1 + 이름 2 도 넘친다(설계 §3-4).
+ *
  * 규칙
  * - `.sumi-form` 전역 규칙(app/globals.css)에 걸리지 않게 콤보·탭 역할을 쓰지 않는다 — 버튼 + aria-expanded.
  * - 상태를 흐림으로 알리지 않는다(글자 대비가 떨어진다). 잠긴 칸은 바탕색과 글로 알린다.
@@ -13,7 +18,7 @@
  */
 "use client";
 
-import type { CSSProperties } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 
 import { choiceKey, type HanjaSlot } from "@/lib/hanja-pick";
 import { slotAriaLabel, slotFace } from "@/lib/hanja-pick-text";
@@ -49,6 +54,13 @@ export interface HanjaSlotsProps {
   /** 칸에 딸린 안내 문장의 id(잠긴 칸의 까닭·오류 문장) */
   describedBy?: (slot: HanjaSlot) => string | undefined;
   onToggle: (slot: HanjaSlot) => void;
+  /**
+   * 칸 옆에 붙일 내용(결과 블록의 글자 사실) — 주면 칸을 세로 줄로 쌓는다(줄 = 칸 버튼 + 내용).
+   * 칸 아래의 짧은 꼬리('기본 한자')는 이 내용이 대신 적으므로 그리지 않는다
+   */
+  detail?: (slot: HanjaSlot) => ReactNode;
+  /** 세로 줄 배치에서 이웃한 두 줄 사이에 넣을 것(자원오행 관계 칩) — 없으면 null */
+  between?: (previous: HanjaSlot, next: HanjaSlot) => ReactNode;
 }
 
 /** 칸 버튼을 화면에 다시 들일 때 위쪽에 남길 틈(px) — 사이트 머리(sticky, 약 70px)보다 넉넉하게 */
@@ -60,6 +72,13 @@ const row: CSSProperties = {
   alignItems: "flex-start",
   gap: 6,
 };
+
+/** 세로 줄 배치 — 줄마다 칸 버튼(56px) + 내용 */
+const stack: CSSProperties = { display: "flex", flexDirection: "column", gap: 12 };
+const stackRow: CSSProperties = { display: "flex", alignItems: "flex-start", gap: 14 };
+const stackDetail: CSSProperties = { flex: 1, minWidth: 0 };
+/** 줄 사이 칩은 내용 칸의 왼쪽 선에 맞춘다(칸 56 + 틈 14) */
+const stackBetween: CSSProperties = { paddingLeft: 70 };
 
 const boxBase: CSSProperties = {
   width: 56,
@@ -101,6 +120,8 @@ export function HanjaSlots({
   invalidKey,
   describedBy,
   onToggle,
+  detail,
+  between,
 }: HanjaSlotsProps) {
   const renderSlot = (slot: HanjaSlot) => {
     const key = slotKey(slot);
@@ -157,7 +178,7 @@ export function HanjaSlots({
           )}
         </span>
         <span style={{ fontSize: 12.5, lineHeight: 1.3, color: "var(--color-text-2)" }}>{slot.syllable}</span>
-        {face.tail && (
+        {face.tail && !detail && (
           <span style={{ fontSize: 10.5, lineHeight: 1.2, color: "var(--color-text-3)", whiteSpace: "nowrap" }}>
             {face.tail}
           </span>
@@ -165,6 +186,26 @@ export function HanjaSlots({
       </button>
     );
   };
+
+  if (detail) {
+    const all = [...surname, ...name];
+    return (
+      <div role="group" aria-labelledby={labelledBy} aria-label={labelledBy ? undefined : "한자 칸"} style={stack}>
+        {all.map((slot, i) => {
+          const chip = i > 0 ? between?.(all[i - 1], slot) : null;
+          return (
+            <Fragment key={slotKey(slot)}>
+              {chip ? <div style={stackBetween}>{chip}</div> : null}
+              <div style={stackRow}>
+                {renderSlot(slot)}
+                <div style={stackDetail}>{detail(slot)}</div>
+              </div>
+            </Fragment>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div role="group" aria-labelledby={labelledBy} aria-label={labelledBy ? undefined : "한자 칸"} style={row}>

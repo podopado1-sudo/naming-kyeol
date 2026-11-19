@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { favoriteKey, removeFavorite, useFavorites, type FavoriteName } from "@/lib/favorites";
+import { favoriteHanjaLabel } from "@/lib/hanja-summary-text";
 import { splitFullName } from "@/lib/name-split";
 
 export default function FavoritesPage() {
@@ -90,6 +91,7 @@ export default function FavoritesPage() {
                   >
                     {f.fullName}
                   </div>
+                  <SavedHanja f={f} />
                   <SavedMeta f={f} />
                 </div>
 
@@ -192,6 +194,43 @@ function SavedMeta({ f }: { f: FavoriteName }) {
     </div>
   );
 }
+
+/**
+ * 고른 한자 한 줄 — 같은 이름·같은 생년월일이라도 한자 조합이 다르면 따로 저장되므로(lib/favorites.ts 의 키),
+ * 어느 조합인지 줄마다 적는다(2026-11 한자 입력). 저장분에는 고른 칸의 글자만 있다 — 자동 칸은 '음절(자동)',
+ * 한자 없이 둔 칸은 '음절(한글)'(lib/hanja-summary-text.ts favoriteHanjaLabel). 한자를 고르지 않은 저장분에는 줄이 없다.
+ */
+function SavedHanja({ f }: { f: FavoriteName }) {
+  const { lastName, name } = nameParts(f);
+  const label = favoriteHanjaLabel({ lastName, name, hanja: f.hanja, lastHanja: f.lastHanja });
+  if (!label) return null;
+  return (
+    <div
+      style={{
+        fontSize: 13,
+        lineHeight: 1.5,
+        color: "var(--color-text-2)",
+        marginBottom: 4,
+        overflowWrap: "anywhere",
+      }}
+    >
+      한자{" "}
+      {/* 한자 글자만 사이트 한자 서체로 — 나머지 글(성씨·이름·(자동))은 줄의 서체 그대로 */}
+      {label.split(HAN_RUN).map((part, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className="font-hanja" style={{ fontSize: 15, color: "var(--color-text)" }}>
+            {part}
+          </span>
+        ) : (
+          part
+        )
+      )}
+    </div>
+  );
+}
+
+/** 한자가 이어진 토막(통합 한자 — 기본·확장 영역). split 의 홀수 번째 조각이 한자다 */
+const HAN_RUN = /([㐀-䶿一-鿿\u{20000}-\u{323af}]+)/u;
 
 function buildEvaluateUrl(f: FavoriteName) {
   const params = new URLSearchParams();

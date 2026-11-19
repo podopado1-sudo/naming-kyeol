@@ -3,15 +3,18 @@
 // 2026-11 설계 docs/plan-hanja-input-2026-11.md §13-3. 화면 컴포넌트는 node 로 그려 볼 수 없으므로(React·경로 별칭),
 // 지켜야 하는 계약을 소스 원문으로 고정한다. 순수 로직(칸 파생·문장)은 hanja-pick.test.mjs · hanja-pick-text.test.mjs 가 값으로 본다.
 //
-// 지금 보는 것(C5 — 입력 화면): 칸 줄 HanjaSlots · 고르기 패널 HanjaPickerPanel · 입력 폼 EvaluateInput · EvaluateClient 의 입력 쪽.
-// 뒤 단계가 이 파일에 더할 것: 결과 블록 HanjaSummaryBlock(금지 문장·흐림·조사·aria-current — C6), 설명 글 EvaluateHanjaGuide 와
-// robots·메타·/name·/ohaeng 링크(C7). 그때 NEW_COMPONENTS·NEW_TEXT_FILES 에 파일을 더하면 같은 검사가 걸린다.
+// 지금 보는 것
+// - C5(입력 화면): 칸 줄 HanjaSlots · 고르기 패널 HanjaPickerPanel · 입력 폼 EvaluateInput · EvaluateClient 의 입력 쪽.
+// - C6(결과 화면): '이 이름의 한자' 블록 HanjaSummaryBlock · 관계 칩 OhaengRelationChip · 결과 화면 EvaluateResult ·
+//   후보 표 EvalBody · EvaluateClient 의 제자리 재계산 · /favorites 의 한자 줄.
+// 뒤 단계가 이 파일에 더할 것: 설명 글 EvaluateHanjaGuide 와 robots·메타·/name·/ohaeng 링크(C7).
+// 그때 NEW_COMPONENTS·NEW_TEXT_FILES 에 파일을 더하면 같은 검사가 걸린다.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { ROOT, contrast, hexRgb, read as readRaw, token } from "./color-utils.mjs";
+import { ROOT, contrast, hexRgb, read as readRaw, tint, token, utilityColor } from "./color-utils.mjs";
 
 /** 소스 원문 — 줄바꿈을 LF 로 맞춘다(저장소가 core.autocrlf 라 기존 파일은 작업 트리에서 CRLF 다) */
 const read = (...p) => readRaw(...p).replace(/\r\n/g, "\n");
@@ -28,11 +31,19 @@ const INPUT = [...DESIGN, "EvaluateInput.tsx"];
 const CLIENT = ["src", "app", "evaluate", "EvaluateClient.tsx"];
 const STORE = ["src", "lib", "hanja-pick-store.ts"];
 const TEXT = ["src", "lib", "hanja-pick-text.ts"];
+// 결과 화면(C6)
+const BLOCK = [...DESIGN, "HanjaSummaryBlock.tsx"];
+const CHIP = [...DESIGN, "OhaengRelationChip.tsx"];
+const BODY = [...DESIGN, "EvalBody.tsx"];
+const RESULT = ["src", "app", "evaluate", "EvaluateResult.tsx"];
+const FAVORITES = ["src", "app", "favorites", "page.tsx"];
+const SUMMARY_TEXT = ["src", "lib", "hanja-summary-text.ts"];
+const RECALC = ["src", "lib", "hanja-recalc.ts"];
 
 /** 이 기능이 새로 만든 화면 컴포넌트 — 흐림·역할·격자 규칙을 건다 */
-const NEW_COMPONENTS = [SLOTS, PANEL];
+const NEW_COMPONENTS = [SLOTS, PANEL, BLOCK];
 /** 이 기능이 새로 쓰는 문장이 든 파일 — 금지 문장·고정 조사 꼴을 건다(기존 문장은 범위 밖이다 — 설계 §9) */
-const NEW_TEXT_FILES = [SLOTS, PANEL, TEXT, STORE, ["src", "lib", "hanja-pick.ts"]];
+const NEW_TEXT_FILES = [SLOTS, PANEL, TEXT, STORE, ["src", "lib", "hanja-pick.ts"], BLOCK, CHIP, SUMMARY_TEXT, RECALC];
 
 const name = (p) => p.at(-1);
 /** 주석을 뺀 코드(블록 주석·줄 주석·JSX 주석) — 규칙을 설명하는 주석의 낱말에 걸리지 않게 */
@@ -54,7 +65,7 @@ function functionBody(src, fn) {
 // ─── 번들 · 개인정보 ─────────────────────────────────────────
 
 test("클라이언트 화면이 큰 정적 JSON 을 읽는 서버 전용 모듈을 import 하지 않는다", () => {
-  for (const p of [SLOTS, PANEL, INPUT, CLIENT, STORE, TEXT]) {
+  for (const p of [SLOTS, PANEL, INPUT, CLIENT, STORE, TEXT, BLOCK, CHIP, BODY, RESULT, FAVORITES, SUMMARY_TEXT, RECALC]) {
     const src = code(read(...p));
     for (const re of [/lib\/hanja-seo/, /lib\/name-seo/, /@\/data\//, /from "\.\/hanja-seo"/, /from "\.\/name-seo"/, /\.json"/]) {
       assert.doesNotMatch(src, re, `${name(p)}: ${re}`);
@@ -63,14 +74,16 @@ test("클라이언트 화면이 큰 정적 JSON 을 읽는 서버 전용 모듈�
 });
 
 test("이름·한자·생년월일을 콘솔·브라우저 저장소·분석 이벤트에 싣지 않는다", () => {
-  for (const p of [SLOTS, PANEL, STORE, TEXT]) {
+  for (const p of [SLOTS, PANEL, STORE, TEXT, BLOCK, CHIP, SUMMARY_TEXT, RECALC]) {
     const src = code(read(...p));
     for (const re of [/console\./, /localStorage/, /sessionStorage/, /sendBeacon/, /gtag\(/, /document\.title/, /document\.cookie/]) {
       assert.doesNotMatch(src, re, `${name(p)}: ${re}`);
     }
   }
-  // 폼·화면 상태 파일은 예전부터 있던 코드가 섞여 있다 — 콘솔만 본다
-  for (const p of [INPUT, CLIENT]) assert.doesNotMatch(code(read(...p)), /console\./, name(p));
+  // 폼·화면 상태·결과 화면 파일은 예전부터 있던 코드가 섞여 있다 — 콘솔만 본다
+  for (const p of [INPUT, CLIENT, RESULT, BODY]) assert.doesNotMatch(code(read(...p)), /console\./, name(p));
+  // 응답 캐시·본 조합 목록은 메모리에만 둔다(브라우저 저장소에 쓰지 않는다)
+  assert.doesNotMatch(code(read(...CLIENT)), /localStorage|sessionStorage|indexedDB/);
 });
 
 test("음절 파일을 받는 곳은 저장소 모듈 하나 — 주소는 lib/hanja-pick 의 두 함수가 만든 것뿐이다", () => {
@@ -79,7 +92,7 @@ test("음절 파일을 받는 곳은 저장소 모듈 하나 — 주소는 lib/h
   assert.deepEqual(fetches, ["HANJA_PICK_INDEX", "url"]);
   assert.match(store, /const url = syllableFile\(syllable\);\s*if \(!url\) return Promise\.resolve\(null\);/);
   // 화면 컴포넌트는 직접 fetch 하지 않는다(판정 API 는 lib/api 의 hanjaResolve)
-  for (const p of [SLOTS, PANEL, INPUT, TEXT]) assert.doesNotMatch(code(read(...p)), /\bfetch\(/, name(p));
+  for (const p of [SLOTS, PANEL, INPUT, TEXT, BLOCK, CHIP, BODY, SUMMARY_TEXT, RECALC]) assert.doesNotMatch(code(read(...p)), /\bfetch\(/, name(p));
 });
 
 test("이름을 칠 때는 음절 파일을 받지 않는다 — 받는 자리는 주소로 온 한자·들고 온 글자·붙여넣기 셋과 패널", () => {
@@ -175,7 +188,7 @@ test("변수 뒤에 조사를 붙이지 않는다 — 끼워 넣은 값(따옴�
   // JSX 에 끼운 값({slot.syllable}’를)도 같은 꼴이다
   const fixedJsx = /\}[’」](을|를|은|는|이|가|와|과|로|으로|나|이나)[\s,.<]/;
   assert.match("‘{slot.syllable}’를 넣어", fixedJsx);
-  for (const p of [SLOTS, PANEL, INPUT]) assert.doesNotMatch(code(read(...p)), fixedJsx, name(p));
+  for (const p of [SLOTS, PANEL, INPUT, BLOCK, BODY, RESULT]) assert.doesNotMatch(code(read(...p)), fixedJsx, name(p));
   for (const p of NEW_TEXT_FILES) {
     const src = code(read(...p));
     assert.doesNotMatch(src, fixed, name(p));
@@ -375,5 +388,270 @@ test("칸 줄은 조합이 끝난 값으로 다시 그린다 — 조합 끝에 �
 });
 
 test("새 파일들이 있다", () => {
-  for (const p of [SLOTS, PANEL, STORE, TEXT]) assert.ok(existsSync(join(ROOT, ...p)), name(p));
+  for (const p of [SLOTS, PANEL, STORE, TEXT, BLOCK, CHIP, SUMMARY_TEXT, RECALC]) assert.ok(existsSync(join(ROOT, ...p)), name(p));
+});
+
+// ═════════════════════════════════════════════════════════════
+// 결과 화면(C6) — '이 이름의 한자' 블록 · 제자리 재계산 · 후보 표 · 저장·공유
+// ═════════════════════════════════════════════════════════════
+
+test("관계 칩 — 서버·클라이언트가 함께 쓰는 컴포넌트. 색 표와 마크업은 /name 조합 카드의 것 그대로", () => {
+  const chip = read(...CHIP);
+  assert.doesNotMatch(chip, /^\s*["']use client["']/m);
+  const table = /const OHAENG_CHIP[^{]*\{([\s\S]*?)\n\};/.exec(chip);
+  assert.ok(table, "OHAENG_CHIP 선언 꼴(const OHAENG_CHIP … = { … };)이 바뀌었다 — palette-contrast 가 이 꼴로 읽는다");
+  const rows = [...table[1].matchAll(/(생|비화|극|unknown):\s*"([^"]*)"/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(rows, [
+    ["생", "bg-teal-50 text-teal-700"],
+    ["비화", "bg-navy-50 text-navy"],
+    ["극", "bg-gold-50 text-gold-800"],
+    ["unknown", ""],
+  ]);
+  assert.match(
+    chip,
+    /className=\{`inline-block rounded-md px-2\.5 py-1 text-xs font-medium \$\{OHAENG_CHIP\[kind\]\}`\}\s*>\s*자원오행 \{label\}\s*<\/span>/
+  );
+  // /name 조합 카드가 아직 제 색 표를 갖고 있으면(그쪽을 이 컴포넌트로 바꾸기 전) 두 표가 글자 그대로 같다
+  const old = /const OHAENG_CHIP[^{]*\{([\s\S]*?)\n\};/.exec(read("src", "app", "name", "[slug]", "page.tsx"));
+  if (old) assert.equal(table[1], old[1]);
+  // 글자색 대비 4.5:1 — palette-contrast 가 /name 의 표에 거는 것과 같은 검사
+  for (const [kind, cls] of rows.filter(([, c]) => c)) {
+    const ratio = contrast(utilityColor(/\btext-([\w-]+)/.exec(cls)[1]), utilityColor(/\bbg-([\w-]+)/.exec(cls)[1]));
+    assert.ok(ratio >= AA, `${kind} ${ratio.toFixed(2)}:1`);
+  }
+  // 관계로 점수를 매기지 않는다 — 칩은 말만 그린다
+  assert.doesNotMatch(code(chip), /score|점수/i);
+});
+
+test("결과 블록 — 그릴 글자는 blockView(확정 응답, 기다리는 변경) 하나로 정한다: 변경이 걷히면 확정된 조합으로 돌아간다", () => {
+  const block = code(read(...BLOCK));
+  assert.match(block, /const view = useMemo\(\(\) => blockView\(summary, pending\), \[summary, pending\]\);/);
+  assert.match(block, /const slots = useMemo\(\(\) => blockSlots\(view, store\.index\), \[view, store\.index\]\);/);
+  // 칸 줄·패널은 입력 화면과 같은 컴포넌트(세로 줄 배치)
+  assert.equal([...block.matchAll(/<HanjaSlots\b/g)].length, 1);
+  assert.equal([...block.matchAll(/<HanjaPickerPanel\b/g)].length, 1);
+  assert.match(block, /detail=\{detail\}\s*between=\{between\}/);
+  // 관계 칩은 이름 꼴(ohaengRelationName) + 공용 칩. 이름 글자 앞에만 둔다(복성의 두 글자 사이에는 없다)
+  assert.match(
+    block,
+    /if \(next\.target !== "name"\) return null;\s*const relation = relationBetween\(previous\.fact, next\.fact\);\s*return relation \? <OhaengRelationChip kind=\{relation\.kind\} label=\{relation\.label\} \/> : null;/
+  );
+  assert.match(code(read(...SUMMARY_TEXT)), /const relation = ohaengRelationName\(a\.fiveElement, b\.fiveElement\);/);
+  // 성씨 줄은 글자·획수·자원오행 칩뿐 — 훈·역할 꼬리표·이름용 표시가 본문에 없다
+  const surname = functionBody(read(...BLOCK), "SurnameDetail");
+  for (const word of ["gloss", "forbidden", "fills", "fillLabel", "hasMeaning", "이름에 피하는", "빼는 글자"]) {
+    assert.ok(!surname.includes(word), `성씨 줄에 ${word} 가 있다`);
+  }
+  assert.match(surname, /<FactChips fact=\{slot\.fact\} surname \/>/);
+  // 역할 꼬리표는 이름 글자에만 — 응답 fills(대기 중에는 rolesOf) 그대로
+  assert.match(
+    functionBody(read(...BLOCK), "NameDetail"),
+    /syllable\.fills\.map\(\(fill\) => \(\s*<span key=\{fill\} style=\{fillTagStyle\(isPenaltyFill\(fill\)\)\}>\s*\{fillLabel\(fill, fact\.fiveElement, fit\)\}/
+  );
+});
+
+test("결과 블록 — 다시 계산하지 못하면 그 칸 아래 alert + [다시 시도] [닫기], 비교 줄은 버튼 + aria-current", () => {
+  const block = read(...BLOCK);
+  assert.match(block, /<p role="alert" style=\{\{ \.\.\.alertText, margin: 0 \}\}>\s*\{recalcFailedNote\(/);
+  assert.match(block, />\s*다시 시도\s*<\/button>/);
+  assert.match(block, />\s*닫기\s*<\/button>/);
+  // 안내가 사라지면 포커스가 그 칸 버튼으로(문서 맨 위로 떨어지지 않게)
+  assert.equal([...block.matchAll(/focusSlot\(slot\);\s*on(Retry|DismissError)\(\);/g)].length, 2);
+  // 칸 버튼에 오류 문장을 잇는다
+  assert.match(block, /slotKey\(slot\) === errorKey \? errorId : undefined,/);
+  // 서버가 짚은 칸(400 의 target·slot)은 그 칸의 패널을 연다 — 한 번만
+  assert.match(block, /const forcedKey = recalcError\?\.open && errorKey && recalcError\.id !== ackedError \? errorKey : null;/);
+  // 패널을 닫으면(고르기·닫기·Esc) 그 칸 버튼으로 포커스
+  assert.match(block, /button\?\.focus\(\{ preventScroll: true \}\);\s*button\?\.scrollIntoView\(\{ block: "nearest" \}\);/);
+  for (const fn of ["closePanel", "applyChoice"]) assert.match(functionBody(block, fn), /setOpenKey\(null\);\s*focusSlot\(/, fn);
+  assert.match(functionBody(block, "toggleSlot"), /setOpenKey\(effectiveOpenKey === key \? null : key\);/);
+  // 비교 줄 — 2개 이상일 때만, 줄 = 버튼, 지금 조합에 aria-current
+  assert.match(block, /\{seen\.length >= 2 && \(/);
+  assert.match(block, /if \(rows\.length < 2\) return null;/);
+  assert.match(block, /aria-current=\{current \? "true" : undefined\}\s*onClick=\{\(\) => onSelect\(entry\.sig\)\}/);
+});
+
+test("결과 블록 — 숫자를 만들지 않는다: 비교 줄의 점수는 받아 둔 응답의 세 값뿐", () => {
+  const block = code(read(...BLOCK));
+  const scores = [...block.matchAll(/\bdata\.(\w*Score)\b/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(scores)].sort(), ["aestheticScore", "finalScore", "harmonyScore"]);
+  assert.doesNotMatch(block, /Score\s*[-+*/]|[-+*/]\s*data\.\w*Score|Math\./);
+  // 생년월일이 없으면 점수 대신 달라지는 사실(응답에 실린 값)
+  assert.match(block, /\{line\.strokeSum !== null && <span style=\{seenChunk\}>앞 두 글자 획수 합 \{line\.strokeSum\}<\/span>\}/);
+});
+
+test("결과 블록의 작은 글씨는 글자 전용 토큰 — 바탕과 4.5:1 을 넘는다", (t) => {
+  const block = read(...BLOCK);
+  // 역할 꼬리표 — 감점은 주의 글자색(amber 10% 틴트 위), 그 밖은 청록 글자색(teal-50 위)
+  assert.match(
+    block,
+    /background: penalty \? "rgba\(181,135,76,0\.10\)" : "var\(--color-teal-50\)",\s*color: penalty \? "var\(--color-amber-warm-700\)" : "var\(--color-teal-800\)",/
+  );
+  assert.match(block, /const alertText: CSSProperties = \{ \.\.\.noteText, color: "var\(--color-amber-warm-700\)" \};/);
+  const amber700 = hexRgb(token("color-amber-warm-700-token"));
+  const teal800 = hexRgb(token("color-teal-800-token"));
+  const pairs = [
+    ["감점 꼬리표 amber-warm-700 / amber 10% 틴트(흰 카드 위)", amber700, tint([181, 135, 76], 0.1, WHITE)],
+    ["꼬리표 teal-800 / teal-50", teal800, hexRgb(token("color-teal-50-token"))],
+    ["주의 문장 amber-warm-700 / 흰 카드", amber700, WHITE],
+    ["'지금 조합'·'지금 한자'·읽는 법 teal-800 / 흰 카드", teal800, WHITE],
+    ["안내 문장·대기 글 배지 text-2 / 흰 카드", hexRgb(token("color-text-2-token")), WHITE],
+    ["획수 고지 text-3 / 흰 카드", hexRgb(token("color-text-3-token")), WHITE],
+  ];
+  for (const [label, fg, bg] of pairs) {
+    const ratio = contrast(fg, bg);
+    t.diagnostic(`${label}: ${ratio.toFixed(2)}:1`);
+    assert.ok(ratio >= AA, `${label} ${ratio.toFixed(2)}:1`);
+  }
+  // 후보 표의 '지금 한자' 글
+  assert.match(read(...BODY), /fontSize: 12\.5,\s*fontWeight: 600,\s*color: "var\(--color-teal-800\)",/);
+});
+
+test("결과 화면 — 기다리는 동안 흐리게 하지 않고 글 배지와 aria-busy 로 알린다", () => {
+  const result = read(...RESULT);
+  assert.equal([...result.matchAll(/opacity/gi)].length, 1, "EvaluateResult 의 흐림은 세대 칩의 구분점 하나뿐이어야 한다");
+  assert.match(result, /<span style=\{\{ opacity: 0\.55, fontWeight: 500 \}\}> · <\/span>/);
+  assert.equal([...result.matchAll(/aria-busy=\{waiting \|\| undefined\}/g)].length, 3, "타일 묶음·미학·조화 패널");
+  assert.match(result, /\{waiting && \(\s*<span[\s\S]*?\{WAITING_BADGE\}\s*<\/span>\s*\)\}/);
+  assert.match(
+    result,
+    /const view = summary && change \? blockView\(summary, change\.pending\) : null;\s*const waiting = view\?\.waiting \?\? false;/
+  );
+  // 화면 상태(EvaluateClient)·후보 표(EvalBody)도 흐림으로 상태를 알리지 않는다
+  assert.equal([...read(...CLIENT).matchAll(/opacity/gi)].length, 0);
+  assert.doesNotMatch(functionBody(read(...BODY), "HanjaCandidatesTable"), /opacity/i);
+});
+
+test("결과 화면 — hanjaSummary 가 없는 응답은 블록·'이 글자로' 없이 예전 화면 그대로", () => {
+  const result = code(read(...RESULT));
+  assert.match(result, /const summary = data\.hanjaSummary \?\? null;\s*const change = summary && recalc \? recalc : null;/);
+  assert.match(result, /\{summary && change && \(\s*<section[^>]*>\s*<HanjaSummaryBlock/);
+  assert.match(
+    result,
+    /onPick=\{\s*change \? \(index, fact\) => change\.onChange\("name", index, \{ kind: "hanja", fact \}\) : undefined\s*\}/
+  );
+  assert.match(result, /subtitle=\{\s*change\s*\? CANDIDATES_SUBTITLE\s*: "음절마다 쓸 수 있는 한자와/);
+  // 조화 패널: 획수 고지 + 대체값 경고의 문구 가르기
+  assert.match(result, /\{HARMONY_STROKE_NOTICE\}\{" "\}\s*<Link href="\/method"/);
+  assert.match(result, /\{fallbackWarning\(summary\)\}/);
+  // 화면 상태도 hanjaSummary 가 없으면 한자를 바꾸지 않는다
+  assert.match(code(read(...CLIENT)), /if \(!shown\?\.data\.hanjaSummary\) return;/);
+  // 입력 화면의 '평가 후 어떤 결과를 받나요?' 셋째 줄 — 다시 계산이 생긴 뒤에 적는 말(설계 §9-2)
+  assert.match(read(...INPUT), /label="한자 후보 분석"\s*detail="뜻·자원오행·획수 — 직접 골라 다시 계산할 수 있어요"/);
+});
+
+test("저장·공유 — 저장 키와 저장분에 고른 한자, 공유 링크는 화면에 보인 글자를 모두(shareHanja)", () => {
+  const result = code(read(...RESULT));
+  assert.match(
+    result,
+    /const hanja = input\.hanja \|\| undefined;\s*const lastHanja = input\.lastHanja \|\| undefined;\s*const fav = useIsFavorite\(data\.fullName, birthDate, hanja, lastHanja\);/
+  );
+  assert.match(result, /tone: input\.tone,\s*hanja,\s*lastHanja,\s*finalScore: data\.finalScore,/);
+  assert.match(
+    result,
+    /const shared = \{ \.\.\.input, \.\.\.shareHanja\(data\.hanjaSummary, input\) \};\s*const url = `\$\{window\.location\.origin\}\$\{evaluateHref\(shared, \{ withBirth: false \}\)\}`;/
+  );
+  // /favorites — 조합마다 한자 한 줄, '다시 보기'·'제거'는 그 조합의 것
+  const favorites = code(read(...FAVORITES));
+  assert.match(favorites, /favoriteHanjaLabel\(\{ lastName, name, hanja: f\.hanja, lastHanja: f\.lastHanja \}\)/);
+  assert.match(favorites, /<SavedHanja f=\{f\} \/>/);
+  assert.match(favorites, /removeFavorite\(f\.fullName, f\.birthDate, f\.hanja, f\.lastHanja\)/);
+  assert.match(favorites, /if \(f\.hanja\) params\.set\("hanja", f\.hanja\);\s*if \(f\.lastHanja\) params\.set\("lastHanja", f\.lastHanja\);/);
+});
+
+test("후보 표 — 줄 끝의 버튼 하나('이 글자로'), 지금 계산에 쓴 글자 줄은 글. 줄 전체는 버튼이 아니다", () => {
+  const body = read(...BODY);
+  const table = functionBody(body, "HanjaCandidatesTable");
+  assert.equal([...table.matchAll(/<button\b/g)].length, 1);
+  assert.match(table, /aria-label=\{`‘\$\{g\.syllable\}’ 음절을 \$\{c\.character\} 글자로 바꾸기`\}/);
+  assert.match(table, /\{confirmedChars\?\.\[gi\] === c\.character \? "지금 한자" : "다시 계산 중"\}/);
+  assert.match(table, /\) : c\.fact \? \(/, "글자 사실(fact)이 없는 줄(옛 백엔드)에는 버튼을 두지 않는다");
+  assert.match(table, /onPick\(gi, fact\);/);
+  // 버튼이 글로 바뀌면 포커스를 그 글로 옮긴다(문서 맨 위로 떨어지지 않게)
+  assert.match(table, /tabIndex=\{-1\}/);
+  assert.match(table, /document\.getElementById\(focusMark\.id\)\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(body, /const pickButtonStyle: CSSProperties = \{[^}]*minHeight: 44,/);
+  // onPick 을 주지 않으면 예전 줄 그대로(등급 배지만)
+  assert.match(table, /\{onPick \? \(/);
+  assert.equal([...table.matchAll(/<ResourceGradeBadge\b/g)].length, 2, "버튼이 있는 꼴·없는 꼴에 배지 하나씩");
+});
+
+test("화면 상태 — 제자리 재계산: 결과를 지우지 않고, 빠른 변경은 한 번으로 묶고, 본 조합은 서버를 부르지 않는다", () => {
+  const raw = read(...CLIENT);
+  const client = code(raw);
+  assert.match(client, /const RECALC_DEBOUNCE_MS = 400;/);
+  assert.match(client, /const DONE_NOTICE_MS = 4_000;/);
+  // 평가 요청은 한 자리 — 첫 평가만 결과를 지우고 맨 위로 올린다
+  assert.equal([...client.matchAll(/\bevaluate\(\{/g)].length, 1);
+  assert.match(client, /if \(!attempt\) \{\s*setShown\(null\);\s*setPending\(null\);\s*setRecalcError\(null\);\s*announce\(null\);\s*\}/);
+  assert.match(client, /if \(mode === "first"\) \{\s*announce\(null\);\s*window\.scrollTo\(\{ top: 0 \}\);\s*\} else \{/);
+  assert.equal([...client.matchAll(/setShown\(null\)/g)].length, 3, "첫 평가·빈 폼으로 돌아감·다른 이름 평가하기 — 재계산은 결과를 지우지 않는다");
+  // 칸을 바꾸면: 기다리는 조합 위에 얹고(두 칸이 함께 간다), 0.4초 뒤 한 번
+  const change = functionBody(raw, "changeHanja");
+  assert.match(change, /const base = pending \?\? \{ input: shown\.input, changes: null \};/);
+  assert.match(change, /input: nextHanjaInput\(base\.input, target, index, choice\),\s*changes: mergePending\(base\.changes, target, index, choice\),/);
+  assert.match(change, /RECALC_DEBOUNCE_MS/);
+  const start = functionBody(raw, "startRecalc");
+  assert.match(start, /clearDebounce\(\);\s*reqIdRef\.current\+\+;/, "타이머를 다시 걸고 진행 중인 응답은 버린다");
+  assert.match(start, /if \(sig === inputSignature\(shown\.input\)\) \{\s*setPending\(null\);\s*return;\s*\}/);
+  assert.match(start, /const cached = cacheRef\.current\.get\(aliasRef\.current\.get\(sig\) \?\? sig\);\s*if \(cached\) \{\s*show\(cached, "recalc"\);\s*return;\s*\}/);
+  assert.match(start, /setPending\(next\);\s*debounceRef\.current = setTimeout\(\(\) => \{\s*debounceRef\.current = null;\s*void run\(next\.input, next\);\s*\}, delay\);/);
+  // 본 조합으로 돌아가기 — 받아 둔 응답을 다시 보여 줄 뿐
+  const select = functionBody(raw, "selectSeen");
+  assert.doesNotMatch(select, /\brun\(|\bevaluate\(|setTimeout/);
+  assert.match(select, /show\(entry\.value, "seen"\);/);
+});
+
+test("화면 상태 — 주소·서명·저장은 응답의 정규 꼴로, 재계산의 실패는 하단 띠가 아니라 그 칸 아래로", () => {
+  const client = code(read(...CLIENT));
+  assert.match(
+    client,
+    /const canonical = hanjaFromSummary\(data\.hanjaSummary\);\s*const entry: Shown = \{ data, input: canonical \? \{ \.\.\.input, \.\.\.canonical \} : input \};/
+  );
+  assert.match(client, /cachePut\(cacheRef\.current, sig, entry\);/);
+  assert.match(client, /urlSigRef\.current = sig;\s*replaceUrl\(evaluateHref\(entry\.input, \{ withBirth: true \}\)\);/);
+  assert.match(client, /setSeen\(\(prev\) => pushSeen\(prev, \{ sig, base: baseSignature\(entry\.input\), value: entry \}\)\);/);
+  // 실패 가지: pending 을 지워 블록을 되돌리고 그 칸의 안내를 세운 뒤 끝낸다 — 하단 띠·폼 오류·주소·캐시·본 조합 목록을 건드리지 않는다
+  const failure = /if \(attempt\) \{([\s\S]*?)\n {8}\}\n {8}if \(err instanceof ApiError && err\.status === 400 && err\.target\) \{/.exec(client);
+  assert.ok(failure, "재계산 실패 가지를 찾지 못했다");
+  assert.match(failure[1], /setPending\(null\);\s*setRecalcError\(\{[\s\S]*?retry: attempt,\s*\}\);\s*return;\s*$/);
+  for (const re of [/setError\(/, /setFieldError\(/, /replaceUrl\(/, /cachePut\(/, /setSeen\(/, /setShown\(/, /urlSigRef/]) {
+    assert.doesNotMatch(failure[1], re, `실패 가지에 ${re}`);
+  }
+  assert.match(failure[1], /open: pointed !== null,/);
+  // 완료·진행 알림 — 알림 영역은 늘 문서에 있고(조건부로 끼우지 않는다) 안의 글만 바뀐다
+  assert.equal([...client.matchAll(/role="status"/g)].length, 1);
+  assert.match(client, /<div\s+role="status"\s+aria-live="polite"/);
+  assert.doesNotMatch(client, /&& \(\s*<div\s+role="status"/);
+  assert.match(client, /\{stripText && \(/);
+  assert.match(
+    client,
+    /const stripText = error\s*\? error\s*: slow\s*\? "서버를 깨우는 중이에요\. 길게는 1분 가까이 걸릴 수 있어요\."\s*: pending\s*\? RECALC_PROGRESS\s*: loading\s*\? "평가 중\.\.\."\s*: notice;/
+  );
+  assert.match(client, /announce\(mode === "recalc" \? recalcDoneNotice\(entry\.data\) : seenShownNotice\(entry\.data\)\);/);
+  // 다른 이름으로 넘어가면 재계산 상태와 본 조합 목록을 걷는다. 이름 한자는 이름과 함께 비운다
+  assert.equal([...client.matchAll(/dropRecalc\(\);\s*setSeen\(\[\]\);/g)].length, 2);
+  assert.match(client, /setSeed\(last \? \{ \.\.\.seedFromInput\(last\), firstName: "", hanja: "" \} : undefined\);/);
+});
+
+test("칸 줄의 세로 배치 — 내용(detail)을 주면 줄 = 칸 버튼 + 내용, 칸 아래의 짧은 꼬리는 그리지 않는다", () => {
+  const slots = read(...SLOTS);
+  assert.match(slots, /\{face\.tail && !detail && \(/);
+  assert.match(slots, /\{renderSlot\(slot\)\}\s*<div style=\{stackDetail\}>\{detail\(slot\)\}<\/div>/);
+  assert.match(slots, /const chip = i > 0 \? between\?\.\(all\[i - 1\], slot\) : null;/);
+  // 입력 폼은 내용을 주지 않는다 — 가로 한 줄 그대로
+  assert.doesNotMatch(read(...INPUT), /\bdetail=\{/);
+});
+
+test("패널의 오행 거르기 칩 — 생년월일 결과가 있으면 용신·희신·기신 글(이름 패널에만)", () => {
+  const panel = read(...PANEL);
+  assert.match(
+    functionBody(panel, "fitRoleOf"),
+    /if \(element === fit\.yongshin\) return "용신";\s*if \(element === fit\.heeshin\) return "희신";\s*if \(element === fit\.gishin\) return "기신";/
+  );
+  assert.match(functionBody(panel, "NamePanel"), /fitRole=\{fitRoleOf\(el, elementFit\)\}/);
+  assert.ok(!functionBody(panel, "SurnamePanel").includes("elementFit"));
+  assert.match(read(...BLOCK), /elementFit=\{birthDateProvided \? fit : null\}/);
+  // 입력 폼(아직 평가 전)은 주지 않는다
+  assert.doesNotMatch(read(...INPUT), /elementFit/);
 });

@@ -102,6 +102,9 @@ test("칸 버튼의 이름 — 설계 §8-8 의 꼴. 성씨 칸은 훈을 읽지
   assert.equal(slotAriaLabel(slot("name", "빛", "locked")), "‘빛’ 음절 한자 — 한글");
   assert.equal(slotAriaLabel(slot("surname", "궉", "locked")), "‘궉’ 성씨 한자 — 자동");
   assert.equal(slotAriaLabel(slot("name", "서", "checking")), "‘서’ 음절 한자 — 확인 중");
+  // 결과 화면의 칸 — 글자가 든 자동 칸: 서버가 자동으로 고른 이름 글자, 대표 한자 표에 없는 성씨의 추정 글자(입력 폼의 자동 칸에는 글자가 없다)
+  assert.equal(slotAriaLabel(slot("name", "윤", "auto", fact(YUN, "윤택할 윤"))), `‘윤’ 음절 한자 — ${YUN}(윤택할 윤), 자동으로 고른 한자. 바꾸기`);
+  assert.equal(slotAriaLabel(slot("surname", "유", "auto", fact(LIU, "죽일 류(유)"))), `‘유’ 성씨 한자 — ${LIU}, 추정한 한자. 바꾸기`);
 });
 
 test("잠긴 칸·쓸 글자가 없는 칸의 안내 — 이름 칸은 lib/no-hanja 의 문장 그대로, 성씨 칸은 서버의 성씨용 말", () => {

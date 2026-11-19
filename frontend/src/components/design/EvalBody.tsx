@@ -8,13 +8,15 @@
 "use client";
 
 import { Sparkles, Info } from "lucide-react";
-import type { ComponentType, SVGProps } from "react";
+import { useEffect, useId, useState } from "react";
+import type { CSSProperties, ComponentType, SVGProps } from "react";
 
 import { ElementChip } from "./EvalPrimitives";
 import { ResourceGradeBadge } from "./DetailHanja";
 import type { ResourceGrade } from "./resource-grade";
 import { keepFilledBlocks, twoColTemplate } from "./eval-layout";
 import { hasNoHanja, noHanjaSyllableNote } from "@/lib/no-hanja";
+import type { HanjaFact } from "@/lib/types";
 
 // ============================================================
 // HanjaCandidatesTable — 음절별 한자 후보 (2-col 카드)
@@ -30,10 +32,67 @@ export interface HanjaGroup {
     resourceGrade?: ResourceGrade;
     /** V 등급의 이유 — '자료 적음'·'추정' 배지 판정용 */
     vReasons?: string[];
+    /**
+     * 이 글자를 그 음절 칸에 넣었을 때의 글자 사실(응답 hanjaCandidates[].candidates[].fact — 2026-11 한자 입력).
+     * '이 글자로' 버튼이 고른 글자를 응답을 기다리는 동안 그리는 데 쓴다. 옛 백엔드면 없다 — 그 줄에는 버튼을 두지 않는다
+     */
+    fact?: HanjaFact | null;
   }[];
 }
 
-export function HanjaCandidatesTable({ groups }: { groups: HanjaGroup[] }) {
+/** 줄 끝 '이 글자로' 버튼 — 누름 영역 44px. 줄 전체를 버튼으로 만들지 않는다(줄 안의 등급 배지가 포커스를 받는 툴팁이다) */
+const pickButtonStyle: CSSProperties = {
+  appearance: "none",
+  minHeight: 44,
+  padding: "0 12px",
+  background: "var(--color-surface)",
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--radius-sm)",
+  fontFamily: "var(--font-sans)",
+  fontSize: 13,
+  fontWeight: 500,
+  color: "var(--color-text)",
+  whiteSpace: "nowrap",
+  cursor: "pointer",
+};
+
+/** 지금 계산에 쓴 글자 줄의 표시 — 버튼 대신 글. 방금 고른 글자는 응답이 올 때까지 '다시 계산 중' */
+const currentMarkStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  minHeight: 44,
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: "var(--color-teal-800)",
+  whiteSpace: "nowrap",
+  outline: "none",
+};
+
+export function HanjaCandidatesTable({
+  groups,
+  onPick,
+  currentChars,
+  confirmedChars,
+}: {
+  groups: HanjaGroup[];
+  /**
+   * 주면 줄 끝에 '이 글자로' 버튼이 생긴다 — (음절 번호, 그 글자의 사실). 한자를 바꿔 다시 계산할 수 있는 결과에서만 준다
+   * (2026-11 한자 입력 — docs/plan-hanja-input-2026-11.md §8-1)
+   */
+  onPick?: (syllableIndex: number, fact: HanjaFact) => void;
+  /** 음절마다 지금 화면에 둔 글자('이 이름의 한자' 블록과 같은 값 — 다시 계산하는 중이면 방금 고른 글자). 한자가 없으면 null */
+  currentChars?: readonly (string | null)[];
+  /** 음절마다 마지막으로 계산이 끝난 글자 — currentChars 와 다르면 그 음절은 다시 계산하는 중이다 */
+  confirmedChars?: readonly (string | null)[];
+}) {
+  const markBase = useId();
+  // '이 글자로'를 누르면 그 버튼이 글('다시 계산 중')로 바뀐다 — 포커스가 문서 맨 위로 떨어지지 않게 그 글로 옮긴다
+  const [focusMark, setFocusMark] = useState<{ id: string; n: number } | null>(null);
+  useEffect(() => {
+    if (!focusMark) return;
+    document.getElementById(focusMark.id)?.focus({ preventScroll: true });
+  }, [focusMark]);
+
   return (
     <div
       className="eval-2col"
@@ -150,7 +209,39 @@ export function HanjaCandidatesTable({ groups }: { groups: HanjaGroup[] }) {
                     )}
                   </div>
                 </div>
-                <ResourceGradeBadge grade={c.resourceGrade} vReasons={c.vReasons} size="sm" tipAlign="right" />
+                {onPick ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-end",
+                      gap: 4,
+                    }}
+                  >
+                    <ResourceGradeBadge grade={c.resourceGrade} vReasons={c.vReasons} size="sm" tipAlign="right" />
+                    {currentChars?.[gi] === c.character ? (
+                      <span id={`${markBase}-${gi}-${i}`} tabIndex={-1} style={currentMarkStyle}>
+                        {confirmedChars?.[gi] === c.character ? "지금 한자" : "다시 계산 중"}
+                      </span>
+                    ) : c.fact ? (
+                      <button
+                        type="button"
+                        aria-label={`‘${g.syllable}’ 음절을 ${c.character} 글자로 바꾸기`}
+                        onClick={() => {
+                          const fact = c.fact;
+                          if (!fact) return;
+                          onPick(gi, fact);
+                          setFocusMark((prev) => ({ id: `${markBase}-${gi}-${i}`, n: (prev?.n ?? 0) + 1 }));
+                        }}
+                        style={pickButtonStyle}
+                      >
+                        이 글자로
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <ResourceGradeBadge grade={c.resourceGrade} vReasons={c.vReasons} size="sm" tipAlign="right" />
+                )}
               </div>
             ))}
           </div>

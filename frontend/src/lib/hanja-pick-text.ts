@@ -47,6 +47,17 @@ export function slotFace(slot: HanjaSlot): SlotFace {
 }
 
 /**
+ * 한자가 든 칸의 출처 말. 'auto' 인데 글자가 있는 칸은 결과 화면('이 이름의 한자' 블록)에만 있다 —
+ * 서버가 자동으로 고른 이름 글자, 대표 한자 표에 없는 성씨의 추정 글자(입력 폼의 자동 칸에는 글자가 없다).
+ */
+function slotSourceWord(slot: HanjaSlot): string {
+  if (slot.state === "default") return "기본 한자";
+  if (slot.state === "carried") return "들고 온 글자";
+  if (slot.state === "auto") return slot.target === "surname" ? "추정한 한자" : "자동으로 고른 한자";
+  return "고른 한자";
+}
+
+/**
  * 칸 버튼의 이름(aria-label) — 화면 글자가 한자 한 자나 '자동'뿐이라 이름을 따로 준다(설계 §8-8).
  * 이름 칸: `‘서’ 음절 한자 — 瑞(상서 서), 고른 한자. 바꾸기` · 성씨 칸: `‘유’ 성씨 한자 — 柳, 기본 한자. 바꾸기`(훈 없음).
  */
@@ -61,8 +72,7 @@ export function slotAriaLabel(slot: HanjaSlot): string {
   }
   const gloss = slot.target === "name" ? (slot.fact?.gloss ?? "") : "";
   const glyph = gloss ? `${slot.character}(${gloss})` : slot.character;
-  const source = slot.state === "default" ? "기본 한자" : slot.state === "carried" ? "들고 온 글자" : "고른 한자";
-  return `${head} — ${glyph}, ${source}. 바꾸기`;
+  return `${head} — ${glyph}, ${slotSourceWord(slot)}. 바꾸기`;
 }
 
 /** 후보 파일이 없는 성씨 음절(사전에 그 음절로 읽는 한자가 없다) — 서버가 성씨 칸에 쓰는 말과 같다 */

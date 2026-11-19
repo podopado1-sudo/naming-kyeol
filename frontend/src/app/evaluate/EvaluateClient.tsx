@@ -22,6 +22,18 @@
  *   들고 온 글자는 입력 폼에만 쓴다 — 서명에 넣지 않고, 결과 화면이거나 주소가 자동 평가를 뜻하면 버린다.
  *   링크에 적힌 독음의 음절 파일에 그 글자가 실제로 있을 때만 폼에 넘긴다(주소에 적힌 낱말을 그대로 화면에 옮기지 않는다).
  * - 서버가 한자 칸을 틀렸다고 알려 주면(400 의 target·slot) 하단 띠가 아니라 폼의 그 칸 아래에 문장을 적는다(fieldError).
+ *
+ * 결과 화면에서 한자 바꿔 다시 계산하기(설계 §8-2·§8-3 — 제자리 재계산)
+ * - 상태 셋: `shown` = **마지막으로 계산이 끝난** 응답과 그 입력 · `pending` = 지금 서버에 묻고 있는 조합(바뀐 칸 묶음) ·
+ *   `recalcError` = 다시 계산하지 못한 칸과 까닭.
+ * - 칸을 바꾸면(changeHanja) pending 을 걸어 블록이 고른 글자로 바로 바뀌고, 0.4초 뒤 한 번만 서버에 묻는다(그 사이 또 바꾸면 다시 잰다).
+ *   결과 화면은 지우지 않는다 — 응답이 오면 제자리에서 갈아 끼우고, 하단 띠(aria-live)로 한 줄 알린다.
+ * - 실패하면(요청이 몰림·응답 없음·연결 실패·400) pending 을 지운다 → 블록이 shown 의 조합으로 **되돌아간다**. 까닭은 하단 띠가 아니라
+ *   그 칸 아래에 적는다(그 띠는 닫기가 없다). 주소·서명·캐시·본 조합 목록은 건드리지 않는다. 새 한자 옆에 옛 점수가 남지 않는다.
+ * - 평가 뒤 주소·저장·서명에 쓰는 한자는 응답의 정규 꼴(hanjaSummary.nameHanja·lastNameHanja)로 다시 쓴다 — 같은 조합이 한 가지 꼴로만
+ *   남는다. hanjaSummary 가 없는 응답(옛 백엔드·한글 음절이 아닌 이름)이면 보낸 입력 그대로 쓰고 블록을 그리지 않는다.
+ * - 응답 캐시(조합 서명 → 응답, 최대 8)와 '지금까지 본 조합'(같은 바탕에서 계산이 끝난 조합 — 지금 조합 + 최근 3개).
+ *   본 조합으로 돌아갈 때는 서버를 부르지 않는다. 점수는 늘 응답의 값이다 — 화면에서 만들지 않는다.
  */
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -36,9 +48,28 @@ import {
   type EvalSubmitPayload,
   type InitialSeed,
 } from "@/components/design/EvaluateInput";
+import type { RecalcErrorView, SeenCombo } from "@/components/design/HanjaSummaryBlock";
 import { ApiError, evaluate } from "@/lib/api";
-import { apiHanjaFields, confirmedPickReadings, parsePickHash, type PendingPick } from "@/lib/hanja-pick";
+import {
+  apiHanjaFields,
+  confirmedPickReadings,
+  hanjaFromSummary,
+  parsePickHash,
+  type HanjaChoice,
+  type PendingHanja,
+  type PendingPick,
+  type SlotTarget,
+} from "@/lib/hanja-pick";
 import { requestPickFile, usePickStore } from "@/lib/hanja-pick-store";
+import {
+  baseSignature,
+  cachePut,
+  mergePending,
+  nextHanjaInput,
+  pushSeen,
+  type SeenEntry,
+} from "@/lib/hanja-recalc";
+import { RECALC_PROGRESS, recalcDoneNotice, seenShownNotice } from "@/lib/hanja-summary-text";
 import type { HanjaFact, NameEvaluationResponse } from "@/lib/types";
 
 import {
@@ -57,10 +88,35 @@ const EMPTY_SIG = inputSignature(inputFromParams(new URLSearchParams()));
 
 /** 이 시간이 지나도 응답이 없으면 콜드스타트 안내로 바꾼다 */
 const SLOW_NOTICE_MS = 5_000;
+/** 한자를 바꾼 뒤 서버에 묻기까지의 틈 — 그 사이 또 바꾸면 다시 잰다(빠른 연속 변경을 요청 한 번으로 묶는다) */
+const RECALC_DEBOUNCE_MS = 400;
+/** 다시 계산이 끝났다는 한 줄을 띄워 두는 시간 */
+const DONE_NOTICE_MS = 4_000;
+/** 보낸 꼴 → 정규 꼴 서명 표에 두는 수(보낸 꼴이 정규 꼴과 다를 때만 쓴다) */
+const ALIAS_LIMIT = 16;
 
 interface Shown {
   data: NameEvaluationResponse;
+  /** 이 결과의 입력 — 한자는 서버가 받아들인 정규 꼴 */
   input: EvalInput;
+}
+
+/** 서버에 묻고 있는(또는 곧 물을) 조합 */
+interface PendingRecalc {
+  input: EvalInput;
+  /** shown 에서 바뀐 칸들 — 블록이 응답을 기다리지 않고 그린다 */
+  changes: PendingHanja;
+  /** 마지막으로 바꾼 칸 — 실패하면 그 칸 아래에 안내를 적는다 */
+  last: { target: SlotTarget; index: number; choice: HanjaChoice };
+}
+
+type RecalcError = RecalcErrorView & {
+  /** [다시 시도]가 다시 보낼 조합 */
+  retry: PendingRecalc;
+};
+
+function choiceWord(choice: HanjaChoice): Pick<RecalcErrorView, "kind" | "character"> {
+  return { kind: choice.kind, character: choice.kind === "hanja" ? choice.fact.character : null };
 }
 
 export function EvaluateClient() {
@@ -77,6 +133,15 @@ export function EvaluateClient() {
   const [pendingPick, setPendingPick] = useState<PendingPick | null>(null);
   const pickStore = usePickStore();
 
+  // 결과 화면에서 한자를 바꿔 다시 계산하는 중인 조합 — 없으면 null
+  const [pending, setPending] = useState<PendingRecalc | null>(null);
+  // 다시 계산하지 못한 칸 — 블록은 shown 의 조합으로 돌아가 있다
+  const [recalcError, setRecalcError] = useState<RecalcError | null>(null);
+  // 같은 바탕(성·이름·생년월일·시각·성별·톤)에서 계산이 끝난 조합 — 지금 조합 + 최근 3개
+  const [seen, setSeen] = useState<SeenEntry<Shown>[]>([]);
+  // 하단 띠의 한 줄 알림('다시 계산했어요 — …')
+  const [notice, setNotice] = useState<string | null>(null);
+
   // 마지막 요청 번호 — 늦게 도착한 이전 응답이 새 결과를 덮지 않게 한다
   const reqIdRef = useRef(0);
   // 지금 URL이 뜻하는(=이미 처리한) 입력의 서명. 초기값은 파라미터 없는 /evaluate
@@ -86,6 +151,23 @@ export function EvaluateClient() {
   useEffect(() => {
     resultShownRef.current = shown !== null;
   }, [shown]);
+
+  // 응답 캐시 — 정규 꼴 서명 → 응답. 본 조합으로 돌아갈 때 서버를 부르지 않는다(메모리에만 둔다 — 브라우저 저장소에 쓰지 않는다)
+  const cacheRef = useRef(new Map<string, Shown>());
+  // 보낸 꼴의 서명 → 정규 꼴의 서명(둘이 다를 때만 — 복성에서 한 글자만 고른 경우 등)
+  const aliasRef = useRef(new Map<string, string>());
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+      if (noticeTimerRef.current !== null) clearTimeout(noticeTimerRef.current);
+      debounceRef.current = null;
+      noticeTimerRef.current = null;
+    },
+    []
+  );
 
   // 들고 온 글자는 링크에 적힌 독음의 음절 파일에 실제로 있을 때만 폼에 넘긴다 — 띠에는 확인된 독음만 적는다.
   // 파일을 받지 못한 독음은 확인할 수 없으므로 없는 것으로 본다(손으로 고친 주소·사전에 없는 글자와 같이 버린다)
@@ -99,10 +181,65 @@ export function EvaluateClient() {
     return ready && readings.length > 0 ? { character: pendingPick.character, readings } : null;
   }, [pendingPick, pickStore.files, pickStore.failed]);
 
+  const clearDebounce = useCallback(() => {
+    if (debounceRef.current === null) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+  }, []);
+
+  /** 하단 띠의 한 줄 알림 — 4초 뒤 지운다. null 이면 바로 지운다 */
+  const announce = useCallback((text: string | null) => {
+    if (noticeTimerRef.current !== null) {
+      clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = null;
+    }
+    setNotice(text);
+    if (text === null) return;
+    noticeTimerRef.current = setTimeout(() => {
+      noticeTimerRef.current = null;
+      setNotice(null);
+    }, DONE_NOTICE_MS);
+  }, []);
+
+  /**
+   * 계산이 끝난 조합을 화면에 확정한다 — 주소·서명·본 조합 목록을 그 조합으로 맞춘다.
+   * first = 첫 평가(맨 위로 올린다) · recalc = 제자리 재계산(화면을 그대로 두고 한 줄로 알린다) · seen = 본 조합으로 돌아감.
+   */
+  const show = useCallback(
+    (entry: Shown, mode: "first" | "recalc" | "seen") => {
+      const sig = inputSignature(entry.input);
+      setShown(entry);
+      setPending(null);
+      setRecalcError(null);
+      setSeen((prev) => pushSeen(prev, { sig, base: baseSignature(entry.input), value: entry }));
+      // 주소창에는 생년월일까지 남긴다(새로고침해도 같은 결과). 공유 버튼은 생년월일을 뺀 링크를 쓴다.
+      urlSigRef.current = sig;
+      replaceUrl(evaluateHref(entry.input, { withBirth: true }));
+      if (mode === "first") {
+        announce(null);
+        window.scrollTo({ top: 0 });
+      } else {
+        // 후보 표에서 고르면 점수 타일이 화면 밖이다 — 바뀐 것을 한 줄로 알린다(숫자는 응답 값)
+        announce(mode === "recalc" ? recalcDoneNotice(entry.data) : seenShownNotice(entry.data));
+      }
+    },
+    [announce]
+  );
+
+  /**
+   * 평가를 요청한다. `attempt` 가 있으면 결과 화면의 제자리 재계산이다 — 결과를 지우지 않고(맨 위로 올리지도 않는다),
+   * 실패하면 그 칸 아래에 안내를 적는다. 없으면 첫 평가(폼 제출·주소 진입)다.
+   */
   const run = useCallback(
-    async (input: EvalInput) => {
+    async (input: EvalInput, attempt?: PendingRecalc) => {
       const id = ++reqIdRef.current;
-      setShown(null);
+      clearDebounce();
+      if (!attempt) {
+        setShown(null);
+        setPending(null);
+        setRecalcError(null);
+        announce(null);
+      }
       setError(null);
       setFieldError(null);
       setSlow(false);
@@ -119,21 +256,52 @@ export function EvaluateClient() {
           ...apiHanjaFields(input),
         });
         if (id !== reqIdRef.current) return;
-        setShown({ data, input });
-        // 주소창에는 생년월일까지 남긴다(새로고침해도 같은 결과). 공유 버튼은 생년월일을 뺀 링크를 쓴다.
-        urlSigRef.current = inputSignature(input);
-        replaceUrl(evaluateHref(input, { withBirth: true }));
-        window.scrollTo({ top: 0 });
+        // 주소·저장·서명에 쓰는 한자는 서버가 받아들인 정규 꼴로 다시 쓴다(호환 한자·기본 한자와 같은 성씨 지정이 한 가지 꼴로 정리된다).
+        // hanjaSummary 가 없는 응답(옛 백엔드·한글 음절이 아닌 이름)이면 보낸 입력 그대로다
+        const canonical = hanjaFromSummary(data.hanjaSummary);
+        const entry: Shown = { data, input: canonical ? { ...input, ...canonical } : input };
+        const sig = inputSignature(entry.input);
+        const asked = inputSignature(input);
+        cachePut(cacheRef.current, sig, entry);
+        if (asked !== sig) cachePut(aliasRef.current, asked, sig, ALIAS_LIMIT);
+        show(entry, attempt ? "recalc" : "first");
       } catch (err) {
         if (id !== reqIdRef.current) return;
+        const message = err instanceof Error ? err.message : "평가 중 오류가 발생했어요.";
+        if (attempt) {
+          // 재계산의 오류는 하단 띠에 올리지 않는다(그 띠는 닫기가 없다). pending 을 지워 블록을 마지막으로 계산이 끝난 조합으로
+          // 되돌리고, 그 칸 아래에 까닭을 적는다. 서버가 칸을 짚었으면(400 의 target·slot) 그 칸을 연다
+          const slotCount = (target: SlotTarget) => (target === "name" ? input.name : input.lastName).length;
+          const pointed =
+            err instanceof ApiError &&
+            err.status === 400 &&
+            err.target &&
+            err.slot !== undefined &&
+            err.slot >= 0 &&
+            err.slot < slotCount(err.target)
+              ? { target: err.target, index: err.slot }
+              : null;
+          const at = pointed ?? attempt.last;
+          // 그 칸에 무엇을 넣으려 했나 — 서버가 짚은 칸이 이번에 바꾼 칸이 아니면 글자를 대지 않는다
+          const choice = (at.target === "name" ? attempt.changes.name : attempt.changes.surname)[at.index];
+          setPending(null);
+          setRecalcError({
+            id,
+            target: at.target,
+            index: at.index,
+            ...(choice ? choiceWord(choice) : { kind: "slot" as const, character: null }),
+            message,
+            open: pointed !== null,
+            retry: attempt,
+          });
+          return;
+        }
         if (err instanceof ApiError && err.status === 400 && err.target) {
           // 한자 칸의 오류 — 폼의 그 칸 아래에 적는다(하단 띠에만 뜨면 어느 칸이 틀렸는지 알 수 없다)
           setFieldError({ id, target: err.target, slot: err.slot ?? -1, message: err.message });
           return;
         }
-        setError(
-          err instanceof Error ? err.message : "평가 중 오류가 발생했어요."
-        );
+        setError(message);
       } finally {
         if (id === reqIdRef.current) {
           setLoading(false);
@@ -141,8 +309,16 @@ export function EvaluateClient() {
         }
       }
     },
-    []
+    [announce, clearDebounce, show]
   );
+
+  /** 결과 화면에 걸린 재계산 상태를 모두 걷는다 — 다른 이름·빈 폼으로 넘어갈 때 */
+  const dropRecalc = useCallback(() => {
+    clearDebounce();
+    setPending(null);
+    setRecalcError(null);
+    announce(null);
+  }, [announce, clearDebounce]);
 
   // URL이 바뀌었을 때 (첫 진입·추천 '상세 보기'·찜 '다시 보기'·푸터 '이름 평가'·뒤로 가기)
   const handleUrl = useCallback(
@@ -159,13 +335,15 @@ export function EvaluateClient() {
       }
       // 성·이름이 없는 URL — 진행 중 요청을 버리고 (시드만 채운) 입력 폼으로
       reqIdRef.current++;
+      dropRecalc();
+      setSeen([]);
       setShown(null);
       setLoading(false);
       setSlow(false);
       setError(null);
       setFieldError(null);
     },
-    [run]
+    [dropRecalc, run]
   );
 
   function handleSubmit(payload: EvalSubmitPayload) {
@@ -189,6 +367,8 @@ export function EvaluateClient() {
   function handleReset() {
     const last = shown?.input;
     reqIdRef.current++;
+    dropRecalc();
+    setSeen([]);
     setShown(null);
     setLoading(false);
     setSlow(false);
@@ -201,12 +381,92 @@ export function EvaluateClient() {
     window.scrollTo({ top: 0 });
   }
 
+  /**
+   * 그 조합으로 다시 계산한다(결과 화면은 그대로 둔다).
+   * - 진행 중인 재계산의 응답은 버린다 — 늦게 와도 지금 고른 조합을 덮지 않는다.
+   * - 마지막으로 계산이 끝난 조합으로 돌아온 것이면 기다릴 것이 없다. 받아 둔 응답이 있으면 바로 확정한다(서버를 부르지 않는다).
+   * - 아니면 `delay` 뒤 한 번 묻는다. 그 사이 또 바뀌면 이 함수가 다시 불려 타이머를 새로 건다.
+   */
+  function startRecalc(next: PendingRecalc, delay: number) {
+    if (!shown) return;
+    clearDebounce();
+    reqIdRef.current++;
+    setRecalcError(null);
+    setError(null);
+    setLoading(false);
+    setSlow(false);
+    announce(null);
+    const sig = inputSignature(next.input);
+    if (sig === inputSignature(shown.input)) {
+      setPending(null);
+      return;
+    }
+    const cached = cacheRef.current.get(aliasRef.current.get(sig) ?? sig);
+    if (cached) {
+      show(cached, "recalc");
+      return;
+    }
+    setPending(next);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      void run(next.input, next);
+    }, delay);
+  }
+
+  /** 결과 화면에서 칸 하나를 바꿨다('이 이름의 한자' 블록의 칸 · '한자 후보' 표의 '이 글자로') */
+  function changeHanja(target: SlotTarget, index: number, choice: HanjaChoice) {
+    if (!shown?.data.hanjaSummary) return;
+    // 기다리는 조합이 있으면 그 위에 얹는다 — 두 칸을 잇달아 바꾸면 두 칸이 함께 간다
+    const base = pending ?? { input: shown.input, changes: null };
+    startRecalc(
+      {
+        input: nextHanjaInput(base.input, target, index, choice),
+        changes: mergePending(base.changes, target, index, choice),
+        last: { target, index, choice },
+      },
+      RECALC_DEBOUNCE_MS
+    );
+  }
+
+  /** '지금까지 본 조합'의 줄을 눌렀다 — 받아 둔 응답을 다시 보여 준다(서버를 부르지 않는다) */
+  function selectSeen(sig: string) {
+    if (!shown) return;
+    const entry = seen.find((e) => e.sig === sig);
+    if (!entry) return;
+    clearDebounce();
+    reqIdRef.current++;
+    setError(null);
+    setLoading(false);
+    setSlow(false);
+    if (sig === inputSignature(shown.input)) {
+      // 지금 조합의 줄 — 기다리던 변경만 거둔다
+      setPending(null);
+      setRecalcError(null);
+      announce(null);
+      return;
+    }
+    show(entry.value, "seen");
+  }
+
+  const seenCombos = useMemo<SeenCombo[]>(() => seen.map((e) => ({ sig: e.sig, data: e.value.data })), [seen]);
+
   // 응답이 5초 넘게 없으면 콜드스타트 안내 (60초에서 api.ts가 끊는다)
   useEffect(() => {
     if (!loading) return;
     const timer = setTimeout(() => setSlow(true), SLOW_NOTICE_MS);
     return () => clearTimeout(timer);
   }, [loading]);
+
+  // 하단 띠의 글 — 오류(첫 평가) > 콜드스타트 안내 > 다시 계산하는 중 > 평가 중 > 한 줄 알림
+  const stripText = error
+    ? error
+    : slow
+      ? "서버를 깨우는 중이에요. 길게는 1분 가까이 걸릴 수 있어요."
+      : pending
+        ? RECALC_PROGRESS
+        : loading
+          ? "평가 중..."
+          : notice;
 
   return (
     <>
@@ -220,6 +480,18 @@ export function EvaluateClient() {
           data={shown.data}
           input={shown.input}
           onReset={handleReset}
+          recalc={{
+            pending: pending?.changes ?? null,
+            error: recalcError,
+            seen: seenCombos,
+            currentSig: inputSignature(shown.input),
+            onChange: changeHanja,
+            onRetry: () => {
+              if (recalcError) startRecalc(recalcError.retry, 0);
+            },
+            onDismissError: () => setRecalcError(null),
+            onSelectSeen: selectSeen,
+          }}
         />
       ) : (
         <main
@@ -239,35 +511,41 @@ export function EvaluateClient() {
         </main>
       )}
 
-      {(loading || error) && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: "fixed",
-            bottom: 24,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 100,
-            maxWidth: "calc(100vw - 32px)",
-            boxSizing: "border-box",
-            textAlign: "center",
-            lineHeight: 1.5,
-            background: error ? "rgba(196, 90, 76, 0.95)" : "var(--color-navy)",
-            color: "#fff",
-            padding: "10px 20px",
-            borderRadius: error || slow ? 16 : 999,
-            fontSize: 13,
-            boxShadow: "var(--shadow-md)",
-          }}
-        >
-          {error
-            ? error
-            : slow
-              ? "서버를 깨우는 중이에요. 길게는 1분 가까이 걸릴 수 있어요."
-              : "평가 중..."}
-        </div>
-      )}
+      {/* 하단 띠 — 진행·완료를 글로 알린다. 알림 영역(role="status")은 늘 문서에 두고 안의 글만 바꾼다
+          (글이 생길 때 영역째 새로 끼우면 화면 읽기 프로그램이 놓칠 수 있다). 누를 것이 없어 클릭을 가로채지 않는다.
+          좌우 16px 를 뺀 폭 안에서 가운데에 둔다(왼쪽 50% + 옮기기로 두면 쓸 수 있는 폭이 화면의 절반이라 좁은 화면에서 일찍 줄이 바뀐다) */}
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          position: "fixed",
+          bottom: 24,
+          left: 16,
+          right: 16,
+          zIndex: 100,
+          display: "flex",
+          justifyContent: "center",
+          pointerEvents: "none",
+        }}
+      >
+        {stripText && (
+          <div
+            style={{
+              boxSizing: "border-box",
+              textAlign: "center",
+              lineHeight: 1.5,
+              background: error ? "rgba(196, 90, 76, 0.95)" : "var(--color-navy)",
+              color: "#fff",
+              padding: "10px 20px",
+              borderRadius: error || slow ? 16 : 999,
+              fontSize: 13,
+              boxShadow: "var(--shadow-md)",
+            }}
+          >
+            {stripText}
+          </div>
+        )}
+      </div>
     </>
   );
 }

@@ -21,6 +21,8 @@ const FILES = [
   "components/design/DualResult.tsx",
   "components/design/SmartResultParent.tsx",
   "components/design/SmartResultRare.tsx",
+  // /evaluate '이 이름의 한자' 블록·'지금까지 본 조합'(2026-11 한자 입력) — 비교 줄의 점수는 받아 둔 응답의 값뿐이다
+  "components/design/HanjaSummaryBlock.tsx",
 ];
 
 // 순위·인덱스·seed 로 점수를 만드는 꼴 — 주석은 빼고 본다(삭제 이유를 적은 주석에 옛 식이 남아 있다)

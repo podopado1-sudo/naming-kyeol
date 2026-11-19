@@ -1,8 +1,15 @@
 "use client";
 
 /**
- * /evaluate 결과 화면 — 점수 타일 + 미학·조화 Breakdown + 한자 후보 + 강점/참고 + 다음 단계.
+ * /evaluate 결과 화면 — 점수 타일 + 이 이름의 한자 + 미학·조화 Breakdown + 한자 후보 + 강점/참고 + 다음 단계.
  * 사이트 Header/Footer는 page.tsx가 감싼다.
+ *
+ * 한자 바꿔 다시 계산하기(2026-11 한자 입력 — docs/plan-hanja-input-2026-11.md §3-4·§8-3·§9-3)
+ * - 점수 타일 아래 '이 이름의 한자' 블록(HanjaSummaryBlock)의 칸, 또는 '한자 후보' 표의 '이 글자로'로 한자를 바꾼다.
+ *   다시 계산은 부모(EvaluateClient)가 한다 — 이 화면은 지우지 않고 응답이 오면 제자리에서 갈아 끼운다.
+ * - 기다리는 동안 화면을 흐리게 하지 않는다. 점수 타일 위에 글 배지('이전 한자 기준 · 다시 계산 중')를 달고
+ *   타일·미학·조화 패널에 aria-busy 만 건다(카드 전체를 흐리게 하면 작은 글씨의 대비가 떨어진다).
+ * - 응답에 hanjaSummary 가 없으면(옛 백엔드·한글 음절이 아닌 이름) 블록과 '이 글자로' 버튼 없이 예전 화면 그대로다.
  */
 
 import { useEffect, useState } from "react";
@@ -20,8 +27,21 @@ import {
   type HanjaGroup,
 } from "@/components/design/EvalBody";
 import { hasVisibleContent } from "@/components/design/eval-layout";
+import {
+  HanjaSummaryBlock,
+  type RecalcErrorView,
+  type SeenCombo,
+} from "@/components/design/HanjaSummaryBlock";
 import { toResourceGrade } from "@/components/design/resource-grade";
 import { toggleFavorite, useIsFavorite } from "@/lib/favorites";
+import { blockView, type HanjaChoice, type PendingHanja, type SlotTarget } from "@/lib/hanja-pick";
+import { shareHanja } from "@/lib/hanja-recalc";
+import {
+  CANDIDATES_SUBTITLE,
+  HARMONY_STROKE_NOTICE,
+  WAITING_BADGE,
+  fallbackWarning,
+} from "@/lib/hanja-summary-text";
 import type { GenerationFit, NameEvaluationResponse } from "@/lib/types";
 
 import { evaluateHref, similarSearchHref, type EvalInput } from "./evaluate-params";
@@ -41,6 +61,8 @@ function mapHanjaGroups(res: NameEvaluationResponse): HanjaGroup[] {
       resourceGrade: toResourceGrade(c.resourceGrade),
       // V 를 '이견 있음'·'자료 적음'·'추정'으로 나누는 이유 목록(백엔드 S7 — 옛 백엔드면 없어 V 는 '이견 있음')
       vReasons: c.vReasons ?? undefined,
+      // 그 음절 칸에 넣었을 때의 글자 사실 — '이 글자로'가 응답을 기다리는 동안 그릴 값(옛 백엔드면 없다)
+      fact: c.fact ?? null,
     })),
   }));
 }
@@ -54,8 +76,25 @@ const RESULT_CSS = `
     .eval-score-grid { grid-template-columns: repeat(2, 1fr) !important; }
     .eval-score-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
     .eval-2col { grid-template-columns: 1fr !important; }
+    .eval-hanja-block { padding: 18px 16px !important; }
   }
 `;
+
+/** 한자를 바꿔 다시 계산하는 일 — 부모(EvaluateClient)가 상태를 갖고 이 화면은 그리기만 한다 */
+export interface EvalRecalc {
+  /** 응답을 기다리는 동안의 바뀐 칸 — 없으면 null */
+  pending: PendingHanja | null;
+  /** 다시 계산하지 못한 칸 */
+  error: RecalcErrorView | null;
+  /** 같은 조건에서 계산이 끝난 조합들(지금 조합 포함) */
+  seen: readonly SeenCombo[];
+  /** 지금 조합의 입력 서명 */
+  currentSig: string;
+  onChange: (target: SlotTarget, index: number, choice: HanjaChoice) => void;
+  onRetry: () => void;
+  onDismissError: () => void;
+  onSelectSeen: (sig: string) => void;
+}
 
 // ============================================================
 // 결과 페이지
@@ -64,12 +103,24 @@ export function EvaluateResultView({
   data,
   input,
   onReset,
+  recalc,
 }: {
   data: NameEvaluationResponse;
   /** 이 결과를 낸 입력 — 저장·공유·다음 단계 링크가 쓴다 (fullName을 잘라 쓰면 복성이 깨진다) */
   input: EvalInput;
   onReset: () => void;
+  /** 한자를 바꿔 다시 계산하는 길 — 응답에 hanjaSummary 가 있을 때만 쓴다 */
+  recalc?: EvalRecalc;
 }) {
+  // 응답에 hanjaSummary 가 없으면(옛 백엔드·한글 음절이 아닌 이름) 블록도 '이 글자로' 버튼도 없다 — 예전 화면 그대로
+  const summary = data.hanjaSummary ?? null;
+  const change = summary && recalc ? recalc : null;
+  // 블록과 같은 값 — 다시 계산하는 중이면 방금 고른 글자
+  const view = summary && change ? blockView(summary, change.pending) : null;
+  const waiting = view?.waiting ?? false;
+  const confirmedChars = summary ? summary.syllables.map((s) => s.hanja?.character ?? null) : undefined;
+  const currentChars = view ? view.syllables.map((s) => s.hanja?.character ?? null) : undefined;
+
   const aestheticRows = [
     { label: "발음", value: data.aesthetic.pronunciation, max: 30 },
     { label: "리듬", value: data.aesthetic.rhythm, max: 25 },
@@ -157,10 +208,33 @@ export function EvaluateResultView({
           </div>
         )}
 
+        {/* 타일 위 32px 틈 — 다시 계산하는 동안 여기에 글 배지를 단다(틈 안에 두어 타일이 밀리지 않는다) */}
+        <div style={{ position: "relative", height: 32 }}>
+          {waiting && (
+            <span
+              style={{
+                position: "absolute",
+                left: 0,
+                bottom: 6,
+                padding: "1px 10px",
+                borderRadius: 999,
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-divider)",
+                fontSize: 12,
+                lineHeight: 1.6,
+                fontWeight: 500,
+                color: "var(--color-text-2)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {WAITING_BADGE}
+            </span>
+          )}
+        </div>
         <div
           className="eval-score-grid"
+          aria-busy={waiting || undefined}
           style={{
-            marginTop: 32,
             display: "grid",
             gridTemplateColumns: `repeat(${
               data.birthDateProvided === false ? 3 : 4
@@ -183,8 +257,27 @@ export function EvaluateResultView({
         </div>
       </div>
 
+      {/* 이 이름의 한자 — 계산에 쓴 한자와 바꾸기(같은 화면에서 다시 계산) */}
+      {summary && change && (
+        <section style={{ marginTop: 40 }}>
+          <HanjaSummaryBlock
+            summary={summary}
+            pending={change.pending}
+            birthDateProvided={data.birthDateProvided !== false}
+            hasBirthTime={input.birthTime !== ""}
+            recalcError={change.error}
+            seen={change.seen}
+            currentSig={change.currentSig}
+            onChange={change.onChange}
+            onRetry={change.onRetry}
+            onDismissError={change.onDismissError}
+            onSelectSeen={change.onSelectSeen}
+          />
+        </section>
+      )}
+
       {/* 미학 Breakdown */}
-      <section style={{ marginTop: 48 }}>
+      <section aria-busy={waiting || undefined} style={{ marginTop: 48 }}>
         <BreakdownPanel
           title="미학 점수"
           total={data.aestheticScore}
@@ -214,7 +307,7 @@ export function EvaluateResultView({
           </div>
         </section>
       ) : (
-        <section style={{ marginTop: 48 }}>
+        <section aria-busy={waiting || undefined} style={{ marginTop: 48 }}>
           <BreakdownPanel
             title="조화 점수"
             total={data.harmonyScore}
@@ -234,6 +327,19 @@ export function EvaluateResultView({
                   조화 점수에 15점 만점으로 들어가지만, 길흉 표기는 참고로만 봐
                   주세요.
                 </p>
+                <p
+                  style={{
+                    margin: "8px 0 0",
+                    fontSize: 12.5,
+                    lineHeight: 1.65,
+                    color: "var(--color-text-3)",
+                  }}
+                >
+                  {HARMONY_STROKE_NOTICE}{" "}
+                  <Link href="/method" style={{ color: "var(--color-teal-800)", fontWeight: 500 }}>
+                    작명 원리
+                  </Link>
+                </p>
                 {data.harmony.usedFallback ? (
                   <div
                     style={{
@@ -246,8 +352,10 @@ export function EvaluateResultView({
                       color: "#7A5B22",
                     }}
                   >
-                    {/* usedFallback = 배정 한자가 없는 음절(순한글 음절·글자가 모두 불용인 음절)이 있다 — 백엔드 HarmonyEngine 노트와 같은 말(2026-10-26) */}
-                    ⚠ 배정할 한자가 없는 음절이 있어 기본값으로 계산했어요
+                    {/* usedFallback = 한자가 없는 음절이 있다. 사용자가 한자 없이 둔 칸이 있으면 '한자를 두지 않은 음절은 획수를 추정값으로 계산했어요',
+                        그 밖(순한글 음절·글자가 모두 불용인 음절)은 백엔드 HarmonyEngine 노트와 같은 말 '배정할 한자가 없는 음절이 있어
+                        기본값으로 계산했어요'(2026-10-26) — lib/hanja-summary-text.ts fallbackWarning */}
+                    {fallbackWarning(summary)}
                   </div>
                 ) : null}
               </>
@@ -262,9 +370,20 @@ export function EvaluateResultView({
           {/* 후보 표는 음절별 목록이라 점수에 쓴 한자와 다를 수 있다 — 어느 쪽인지 밝혀 둔다 (감사 EV-3) */}
           <SectionHead
             title="한자 후보"
-            subtitle="음절마다 쓸 수 있는 한자와 부수로 정한 자원오행, 그 판정 등급(확정·이견 있음·예외 적용)이에요. 점수 계산에 쓴 한자는 아래 '의미 메모'에 적어 두었어요."
+            subtitle={
+              change
+                ? CANDIDATES_SUBTITLE
+                : "음절마다 쓸 수 있는 한자와 부수로 정한 자원오행, 그 판정 등급(확정·이견 있음·예외 적용)이에요. 점수 계산에 쓴 한자는 아래 '의미 메모'에 적어 두었어요."
+            }
           />
-          <HanjaCandidatesTable groups={hanjaGroups} />
+          <HanjaCandidatesTable
+            groups={hanjaGroups}
+            onPick={
+              change ? (index, fact) => change.onChange("name", index, { kind: "hanja", fact }) : undefined
+            }
+            currentChars={currentChars}
+            confirmedChars={confirmedChars}
+          />
         </section>
       )}
 
@@ -489,9 +608,11 @@ function ResultActions({
   data: NameEvaluationResponse;
   input: EvalInput;
 }) {
-  // 찜 키는 이름+생년월일 — 같은 이름도 아이(생년월일)가 다르면 따로 저장된다
+  // 찜 키는 이름+생년월일(+고른 한자) — 같은 이름도 아이(생년월일)가 다르거나 한자 조합이 다르면 따로 저장된다
   const birthDate = input.birthDate || undefined;
-  const fav = useIsFavorite(data.fullName, birthDate);
+  const hanja = input.hanja || undefined;
+  const lastHanja = input.lastHanja || undefined;
+  const fav = useIsFavorite(data.fullName, birthDate, hanja, lastHanja);
 
   // 생년월일·성별·톤까지 저장해야 찜 '다시 보기'가 같은 평가를 자동으로 다시 연다 (감사 EV-7).
   // 성·이름은 입력값 그대로 — fullName[0]으로 자르면 '남궁민'이 '남'+'궁민'이 된다(EV-6).
@@ -504,6 +625,9 @@ function ResultActions({
       birthTime: input.birthTime || undefined,
       gender: input.gender,
       tone: input.tone,
+      // 고른 한자(주소 꼴) — '다시 보기'가 같은 조합을 다시 연다. 고르지 않았으면 싣지 않는다(예전 저장분과 같은 키)
+      hanja,
+      lastHanja,
       finalScore: data.finalScore,
       aestheticScore: data.aestheticScore,
       // 출생일 없이 낸 결과의 조화 점수는 미산정(0)이라 '조화 0'으로 보이지 않게 뺀다
@@ -515,9 +639,12 @@ function ResultActions({
 
   // 공유 링크는 생년월일을 뺀다(아이 생년월일 노출 방지). 받는 쪽은 출생일 없이 평가되므로
   // 조화가 들어간 종합 점수는 문구에 쓰지 않는다 — 받은 화면과 숫자가 달라지기 때문.
+  // 한자를 하나라도 고른 결과는 화면에 보인 이름 글자를 모두 싣는다(자동 칸도 그 글자로) — 고른 칸만 실으면 받는 쪽 자동 칸이
+  // 생년월일 없는 기본 배정으로 채워져 다른 조합으로 열린다. 한자를 고르지 않은 결과의 링크는 예전과 같다(lib/hanja-recalc.ts shareHanja).
   async function onShare() {
     if (typeof window === "undefined") return;
-    const url = `${window.location.origin}${evaluateHref(input, { withBirth: false })}`;
+    const shared = { ...input, ...shareHanja(data.hanjaSummary, input) };
+    const url = `${window.location.origin}${evaluateHref(shared, { withBirth: false })}`;
     const text =
       data.birthDateProvided === false
         ? `${data.fullName} 종합 ${data.finalScore}점`
