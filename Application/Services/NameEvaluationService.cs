@@ -106,6 +106,7 @@ public class NameEvaluationService : INameEvaluationService
             },
 
             HanjaCandidates = hanjaCandidates,
+            HanjaSummary = BuildHanjaSummary(name, lastName, score, picks),
 
             Summary = explanation.Summary,
             Strengths = explanation.Strengths,
@@ -133,6 +134,108 @@ public class NameEvaluationService : INameEvaluationService
             Headline = fit.Headline,
             Description = fit.Description,
             PeakDecade = fit.PeakDecade
+        };
+    }
+
+    public const string SourceUser = "user";
+    public const string SourceAuto = "auto";
+    public const string SourceNone = "none";
+    public const string SourceUnavailable = "unavailable";
+    public const string SourceDefault = "default";
+    public const string SourceEstimated = "estimated";
+
+    /// <summary>
+    /// 응답의 '이 이름의 한자'(hanjaSummary — 2026-11 한자 입력, 설계서 §4-3). 점수가 실제로 쓴 값만 옮긴다: 이름 글자는 <see cref="CanonicalNameScore.AssignedHanja"/>,
+    /// 오행 역할은 조화가 쓴 <see cref="ElementFit"/>, 성씨 획수는 수리와 같은 규칙. 여기서 한자를 다시 고르지 않는다.
+    /// ⚠️ 어떤 이름·성씨 문자열에도 예외를 내지 않는다 — 한자를 지정하지 않은 기존 요청에도 실리는 필드라, 여기서 던지면 지금 되는 요청이 500 이 된다.
+    /// 지정 없는 요청은 이름이 한글인지 검사하지 않으므로(낱자모·공백·한자·이모지가 올 수 있다) 한글 음절만이 아니면 null 을 돌려준다.
+    /// </summary>
+    private static HanjaSummaryDto? BuildHanjaSummary(string name, string lastName, CanonicalNameScore score, HanjaPicks? picks)
+    {
+        try
+        {
+            var surname = (lastName ?? string.Empty).Trim();   // 성씨 획수 계산(SurnameData.ResolveStrokes)과 같은 Trim
+            if (!HanjaInput.IsHangulSyllables(name) || !HanjaInput.IsHangulSyllables(surname)) return null;
+
+            var fit = score.Harmony.ElementFit;   // 출생일이 없으면 null — fills 는 빈 목록
+            var assigned = score.AssignedHanja;
+
+            var syllables = new List<SyllableHanjaDto>(name.Length);
+            for (int i = 0; i < name.Length; i++)
+            {
+                var syllable = name[i].ToString();
+                var kind = picks != null && i < picks.Name.Count ? picks.Name[i].Kind : HanjaPickKind.Auto;
+                // 사용자가 비운 칸은 null(덮어쓴 목록에서 이미 null), 그 밖은 점수가 쓴 글자 그대로
+                var hanja = kind == HanjaPickKind.None ? null : (i < assigned.Count ? assigned[i] : null);
+                syllables.Add(new SyllableHanjaDto
+                {
+                    Syllable = syllable,
+                    // 자동인데 글자가 없으면 '쓸 수 있는 인명용 한자가 없는 음절' — 그 자리에 '-' 가 왔어도 입력 단계에서 자동으로 접혀 이 값이다
+                    Source = kind switch
+                    {
+                        HanjaPickKind.Picked => SourceUser,
+                        HanjaPickKind.None => SourceNone,
+                        _ => hanja != null ? SourceAuto : SourceUnavailable,
+                    },
+                    Fills = hanja == null || fit == null ? new List<string>() : fit.RolesOf(hanja.FiveElement).ToList(),
+                    Hanja = hanja == null ? null : HanjaFactMapper.ToFact(hanja, syllable),
+                });
+            }
+
+            return new HanjaSummaryDto
+            {
+                UserHanja = picks != null,
+                NameHanja = picks?.NameText ?? string.Empty,
+                LastNameHanja = picks?.SurnameText ?? string.Empty,
+                Surname = BuildSurnameHanja(surname, picks),
+                Syllables = syllables,
+                ElementFit = HanjaFactMapper.ToDto(fit),
+            };
+        }
+        catch
+        {
+            // 덧붙이는 필드 하나 때문에 평가 전체를 실패시키지 않는다(화면은 이 필드가 없으면 블록을 그리지 않는다)
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 성씨 한자 — 고른 한자(user), 대표 한자 표(default), 표에 없는 성씨의 독음 추정(estimated). 획수는 수리(HarmonyEngine.CalculateSuriSagyeokScore)와
+    /// 같은 규칙: 고른 글자들의 획수 합(한 글자라도 못 정했으면 0), 아니면 <see cref="SurnameData.ResolveStrokes"/> 값.
+    /// 글자를 전부 정하지 못하면(표 밖 성씨의 추정이 중간에 끊김, 복성에서 한 글자만 골랐는데 나머지 자리에 둘 글자가 없음) chars 는 빈 목록·획수 0.
+    /// 성씨 글자에는 이름용 표시(이름에 피하는 글자·먼저 보여 드리는 글자)를 싣지 않는다.
+    /// </summary>
+    private static SurnameHanjaDto BuildSurnameHanja(string surname, HanjaPicks? picks)
+    {
+        string source;
+        int strokes;
+        List<HanjaData.HanjaInfo?> chars;
+
+        if (picks?.Surname is { } picked)
+        {
+            source = SourceUser;
+            chars = picked.ToList();
+            strokes = chars.Any(h => h == null || h.StrokeCount <= 0) ? 0 : chars.Sum(h => h!.StrokeCount);
+        }
+        else
+        {
+            var resolved = SurnameData.ResolveStrokes(surname);
+            source = resolved.FromTable ? SourceDefault : SourceEstimated;
+            strokes = resolved.Strokes;
+            chars = resolved.Hanja.EnumerateRunes()
+                .Select(r => HanjaData.FindByCharacter(r.ToString()))
+                .ToList();
+        }
+
+        bool complete = chars.Count == surname.Length && chars.All(h => h != null);
+        return new SurnameHanjaDto
+        {
+            Hangul = surname,
+            Source = source,
+            Strokes = complete ? strokes : 0,
+            Chars = complete
+                ? chars.Select((h, i) => HanjaFactMapper.ToFact(h!, surname[i].ToString(), surname: true)).ToList()
+                : new List<HanjaFactDto>(),
         };
     }
 

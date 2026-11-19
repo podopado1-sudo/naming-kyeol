@@ -67,9 +67,10 @@ public class HarmonyEngine : IHarmonyEngine
         // 이 배정(SelectedHanja)은 화면에 보이는 한자라 미학 성별 보너스도 이 글자로 매긴다(ScoringService — 2026-10-26 결정 ③).
         // 그래서 미학 점수가 출생일에 따라 달라질 수 있다(지우(여) 출생일 없음 智瑀 +3 · 2024-03-15 智佑 0).
         string? yPrimary = null, yHee = null, yGi = null;
+        NameForm.Domain.Models.Saju.SajuChart? chart0 = null;
         try
         {
-            var chart0 = _sajuCalculationService.CalculateChart(birthDate, birthTime);
+            chart0 = _sajuCalculationService.CalculateChart(birthDate, birthTime);
             if (_yongshinCalculationService != null)
             {
                 var y0 = _yongshinCalculationService.Calculate(chart0);
@@ -77,6 +78,11 @@ public class HarmonyEngine : IHarmonyEngine
             }
         }
         catch { /* 용신 계산 실패 → 용신 없이 인명 빈출/성별 기준으로만 선택 */ }
+
+        // 오행 쪽 사정(용신·희신·기신, 사주에 부족한·많은 오행, 사주 글자의 오행 개수) — 응답 hanjaSummary 가 글자마다 '이 한자가 무엇을 채우는지'를
+        // 붙이는 데 쓴다(2026-11 한자 입력). 위에서 구한 값을 담을 뿐 용신을 다시 계산하지 않고, 점수·노트·한자 배정에는 닿지 않는다.
+        // 사주를 못 구했으면 null, 용신 계산만 실패했으면(또는 용신 서비스 없이 만든 엔진이면) 세 값만 null 이다.
+        breakdown.ElementFit = ElementFit.From(chart0?.FiveElementCount, yPrimary, yHee, yGi);
 
         // 각 음절에서 한자 선택 — 점수·표시·저장이 공유할 단일 결과
         // 자동 배정을 예전과 똑같이 먼저 구하고, 사용자가 정한 칸만 덮어쓴다(고름 → 그 글자, 한자 없음 → null). 자동 칸은 다른 칸에서
@@ -195,9 +201,8 @@ public class HarmonyEngine : IHarmonyEngine
         // SajuCalculationService로 4기둥 오행 분포 계산 (연도만 쓰던 FortuneUtils 대체)
         var chart = _sajuCalculationService.CalculateChart(birthDate, birthTime);
         var sajuElements = chart.FiveElementCount;
-        double avg = sajuElements.Values.Average();
-        var lackingElements = sajuElements.Where(e => e.Value < avg).Select(e => e.Key).ToList();
-        var excessiveElements = sajuElements.Where(e => e.Value > avg * 1.5).Select(e => e.Key).ToList();
+        // 평균 미만 = 부족, 평균의 1.5배 초과 = 과다 — 응답의 elementFit(부족·많은 오행)이 같은 식을 쓰도록 공용 헬퍼로 옮겼다(식·훑는 순서는 그대로)
+        var (lackingElements, excessiveElements) = ElementFit.Balance(sajuElements);
 
         int score = 50; // 기본 점수 (100점 만점 기준)
 

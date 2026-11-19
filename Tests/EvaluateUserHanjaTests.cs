@@ -12,7 +12,7 @@ namespace NameForm.Tests;
 
 /// <summary>
 /// /evaluate 에 사용자가 정한 한자(picks)가 계산에 들어가는지 — 설계서 docs/plan-hanja-input-2026-11.md §13-1 ⑧~⑭·⑰ 의 서비스 층 몫
-/// (응답 hanjaSummary·컨트롤러 검증·통계 키·로그 단언은 다음 단계 C2).
+/// (응답 hanjaSummary·컨트롤러 검증·통계 키·로그·/hanja/resolve 는 <see cref="EvaluateHanjaApiTests"/>).
 /// 실제 사주·용신 서비스로 돌린다. 출생일이 들어가는 기대값(용신·자동 배정 한자·점수)은 숫자를 적어 두지 않고 테스트 안에서 다시 센다 —
 /// 획수·음양·성별 값은 사전 원자료(HanjaInfo)에서, 자동 배정은 같은 조건의 지정 없는 실행에서 읽는다.
 /// ⚠️ 한자는 코드포인트 숫자(<see cref="Cp"/>)로만 적는다. 주석의 한자는 모두 통합 한자다.
@@ -171,6 +171,24 @@ public class EvaluateUserHanjaTests
                     {
                         Assert.DoesNotContain(picked.Harmony.Notes, IsNewBasisNote);
                     }
+
+                    // 응답의 '이 이름의 한자'(hanjaSummary — C2)에서 달라지는 것은 '고름' 표시뿐이다: userHanja, 정규 꼴, 고른 칸의 source.
+                    // 글자·사실·오행 역할(fills)·성씨·elementFit 은 같다 — 표시를 되돌리면 응답 전체가 같아야 한다.
+                    var autoSummary = auto.HanjaSummary!;
+                    var pickedSummary = picked.HanjaSummary!;
+                    Assert.False(autoSummary.UserHanja);
+                    Assert.Equal("", autoSummary.NameHanja);
+                    Assert.True(pickedSummary.UserHanja);
+                    Assert.Equal(string.Concat(assigned.Select(h => h?.Character ?? "*")), pickedSummary.NameHanja);
+                    for (int i = 0; i < name.Length; i++)
+                    {
+                        Assert.Equal(assigned[i] != null ? "auto" : "unavailable", autoSummary.Syllables[i].Source);
+                        Assert.Equal(assigned[i] != null ? "user" : "unavailable", pickedSummary.Syllables[i].Source);
+                        pickedSummary.Syllables[i].Source = autoSummary.Syllables[i].Source;
+                    }
+                    pickedSummary.UserHanja = false;
+                    pickedSummary.NameHanja = "";
+
                     Assert.Equal(Json(auto), Json(picked));
                 }
 

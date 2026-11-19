@@ -28,6 +28,12 @@ public class NameEvaluationResultDto
     // 한자 후보
     public List<HanjaCandidateGroupDto> HanjaCandidates { get; set; } = new();
 
+    /// <summary>
+    /// 이 이름의 한자 — 성씨·음절마다 계산에 쓴 한자와 출처(고름·자동·없음), 용신·부족 오행 역할(2026-11 한자 입력).
+    /// 한자를 지정하지 않은 요청에도 실린다(userHanja false). 이름이나 성씨가 한글 음절만이 아니면 null.
+    /// </summary>
+    public HanjaSummaryDto? HanjaSummary { get; set; }
+
     // 설명
     public string Summary { get; set; } = "";
     public List<string> Strengths { get; set; } = new();
@@ -168,4 +174,18 @@ public class NameEvaluateRequestDto
     /// <summary>톤 ("neutral", "soft", "strong")</summary>
     [System.ComponentModel.DataAnnotations.StringLength(10, ErrorMessage = "톤은 'neutral', 'soft', 'strong' 중 하나여야 합니다.")]
     public string Tone { get; set; } = "neutral";
+
+    /// <summary>
+    /// 이름 한자(선택, 2026-11) — 정리 뒤 글자 수 = 이름 글자 수. 자리마다 한자 한 글자 / <c>*</c> 자동 / <c>-</c> 한자 없이 한글로.
+    /// 생략·빈 문자열·전부 <c>*</c> 는 지정 없음(예전과 같은 계산). 길이 제한은 정리 전 문자열(이체 선택자·서로게이트 쌍 포함)을 재므로 넉넉히 둔다.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.StringLength(64, ErrorMessage = "이름 한자는 이름 글자 수만큼 넣어 주세요.")]
+    public string? NameHanja { get; set; }
+
+    /// <summary>
+    /// 성씨 한자(선택, 2026-11) — 정리 뒤 글자 수 = 성씨 글자 수. 자리마다 한자 / <c>*</c>(기본으로 두는 한자). <c>-</c> 는 받지 않는다.
+    /// 생략·빈 문자열·전부 <c>*</c>·대표 한자와 같은 글자는 지정 없음.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.StringLength(16, ErrorMessage = "성씨 한자는 성씨 글자 수만큼 넣어 주세요.")]
+    public string? LastNameHanja { get; set; }
 }

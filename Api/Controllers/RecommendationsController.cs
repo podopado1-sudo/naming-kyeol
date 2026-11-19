@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using NameForm.Application.DTOs;
 using NameForm.Application.Engines;
 using NameForm.Application.Engines.Data;
+using NameForm.Application.Engines.Utils;
 using NameForm.Application.Services;
 using NameForm.Domain.Models;
 using NameForm.Infrastructure.Repositories;
@@ -1079,9 +1080,27 @@ public class RecommendationsController : ControllerBase
                 return BadRequest(new { error = $"톤은 다음 중 하나여야 합니다: {string.Join(", ", validTones)}" });
             }
 
+            // 사용자가 정한 한자(2026-11 한자 입력) — 지정이 없으면 picks 가 null 이고 아래는 예전과 같은 경로다.
+            // 문제가 있으면 예외를 던지지 않고 바로 400 으로 돌려준다: 아래 catch 의 LogWarning(ex, …) 에 사용자가 넣은 글자가 예외 문구로 남지 않게.
+            // 화면은 code·target·slot 으로 어느 칸인지 안다(slot 은 칸 하나의 문제가 아니면 -1).
+            var (picks, hanjaProblem) = HanjaInput.Resolve(
+                request.Name, request.LastName, request.NameHanja, request.LastNameHanja);
+            if (hanjaProblem != null)
+            {
+                return BadRequest(new
+                {
+                    error = hanjaProblem.Message,
+                    code = hanjaProblem.Code,
+                    target = hanjaProblem.Target,
+                    slot = hanjaProblem.Slot,
+                });
+            }
+
+            // 로그 템플릿에 한자를 넣지 않는다(이름·성씨 평문은 기존 그대로 — 개인정보처리방침 1항 '서버 로그')
             _logger.LogInformation("이름 평가 요청: 이름={Name}, 성={LastName}, 성별={Gender}, 톤={Tone}",
                 request.Name, request.LastName, request.Gender, request.Tone);
-            await _usageTracker.TrackAsync("endpoint", "evaluate");
+            // 한자를 정한 요청은 키를 따로 센다 — 한자를 바꿀 때마다 다시 부르는 재계산이 'evaluate' 수를 부풀리지 않고, 이 기능이 쓰이는지 잴 수 있다
+            await _usageTracker.TrackAsync("endpoint", picks != null ? "evaluate-hanja" : "evaluate");
 
             TimeSpan? birthTime = null;
             if (!string.IsNullOrEmpty(request.BirthTime) &&
@@ -1092,7 +1111,7 @@ public class RecommendationsController : ControllerBase
 
             var result = await _nameEvaluationService.EvaluateNameAsync(
                 request.Name, request.LastName, birthDate,
-                request.Gender!.ToLower(), request.Tone!.ToLower(), birthTime);
+                request.Gender!.ToLower(), request.Tone!.ToLower(), birthTime, picks);
 
             _logger.LogInformation("이름 평가 완료: {FullName}, 최종점수={FinalScore}",
                 result.FullName, result.FinalScore);

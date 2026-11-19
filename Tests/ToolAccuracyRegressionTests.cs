@@ -1021,6 +1021,21 @@ public class ToolAccuracyRegressionTests
         Assert.Equal(new[] { "출생지 코드는 20자 이내여야 합니다." },
             ValidationMessages(new SajuElementsRequestDto { BirthDate = "1990-03-15", BirthplaceCode = new string('a', 21) }));
         Assert.Empty(ValidationMessages(new SajuElementsRequestDto { BirthDate = "1990-03-15", BirthTime = "14:30", BirthplaceCode = "busan" }));
+        // /evaluate 한자 입력(2026-11) — 길이는 정리 전 문자열(이체 선택자·서로게이트 쌍 포함)을 재므로 넉넉하다(이름 64·성씨 16)
+        Assert.Equal(new[] { "이름 한자는 이름 글자 수만큼 넣어 주세요." },
+            ValidationMessages(new NameEvaluateRequestDto { Name = "서윤", LastName = "이", NameHanja = new string('*', 65) }));
+        Assert.Equal(new[] { "성씨 한자는 성씨 글자 수만큼 넣어 주세요." },
+            ValidationMessages(new NameEvaluateRequestDto { Name = "서윤", LastName = "이", LastNameHanja = new string('*', 17) }));
+        Assert.Empty(ValidationMessages(new NameEvaluateRequestDto
+            { Name = "서윤", LastName = "이", NameHanja = new string('*', 64), LastNameHanja = new string('*', 16) }));
+        Assert.Empty(ValidationMessages(new NameEvaluateRequestDto { Name = "서윤", LastName = "이" }));
+        // /hanja/resolve — 글자는 8자까지(한 글자 + 이체 선택자·서로게이트 쌍 여유), 음절은 한 글자
+        Assert.Equal(new[] { "한자 한 글자를 넣어 주세요." }, ValidationMessages(new HanjaResolveRequestDto { Text = "" }));
+        Assert.Equal(new[] { "한자 한 글자를 넣어 주세요." }, ValidationMessages(new HanjaResolveRequestDto { Text = new string('가', 9) }));
+        Assert.Equal(new[] { "음절은 한글 한 글자로 넣어 주세요." },
+            ValidationMessages(new HanjaResolveRequestDto { Text = "가", Syllable = "임수" }));
+        Assert.Empty(ValidationMessages(new HanjaResolveRequestDto { Text = new string('가', 8), Syllable = "임" }));
+        Assert.Empty(ValidationMessages(new HanjaResolveRequestDto { Text = "가" }));
     }
 
     private static string ErrorOf<T>(ActionResult<T> result)
@@ -1075,6 +1090,25 @@ public class ToolAccuracyRegressionTests
         // 모르는 출생지를 조용히 서울로 바꾸지 않는다
         foreach (var bad in new[] { "mars", "seoul1", "부산" })
             Assert.Equal("출생지는 목록에 있는 시·도 가운데 하나여야 합니다.", await SajuError("1990-03-15", "14:30", bad));
+
+        // /evaluate 한자 입력(2026-11) — 한자 필드 검증은 서비스·추적기를 쓰기 전에 끝난다(null). 문장은 HanjaInput 의 것이라
+        // 위 ErrorMessages_InSource_AreKoreanOnly(컨트롤러 리터럴만 본다)가 보지 못한다 — 여기서 실제 응답으로 본다
+        async Task<string> EvaluateError(string name, string lastName, string? nameHanja, string? lastNameHanja = null) =>
+            ErrorOf(await recommendations.EvaluateName(new NameEvaluateRequestDto
+                { Name = name, LastName = lastName, NameHanja = nameHanja, LastNameHanja = lastNameHanja }));
+        Assert.Equal("한자를 고르려면 이름과 성씨를 한글로만 넣어 주세요.", await EvaluateError("서ㅇ", "이", "**x"));
+        Assert.Equal("이름 한자는 이름 글자 수만큼 넣어 주세요.", await EvaluateError("서윤", "이", "***"));
+        Assert.Equal("성씨 한자는 성씨 글자 수만큼 넣어 주세요.", await EvaluateError("서윤", "남궁", null, "x"));
+        Assert.Equal("성씨에는 ‘한자 없음’을 고를 수 없어요. 비워 두면 기본으로 두는 성씨 한자로 계산해요.", await EvaluateError("서윤", "이", null, "-"));
+        Assert.Equal("‘윤’ 칸에 넣은 글자는 한자가 아니에요. 한자 한 글자를 넣거나 비워 두면 자동으로 골라요.", await EvaluateError("서윤", "이", "*x"));
+        // 사전에 없는 글자·독음 불일치는 한자가 들어가는 문장이라 EvaluateHanjaApiTests 가 코드포인트로 본다
+
+        // /hanja/resolve — 생성자 의존성은 로거뿐
+        var hanja = new HanjaController(NullLogger<HanjaController>.Instance);
+        Assert.Equal("한자 한 글자를 넣어 주세요.", ErrorOf(hanja.Resolve(new HanjaResolveRequestDto { Text = " " })));
+        Assert.Equal("한자 한 글자를 넣어 주세요.", ErrorOf(hanja.Resolve(new HanjaResolveRequestDto { Text = new string('가', 9) })));
+        Assert.Equal("음절은 한글 한 글자로 넣어 주세요.", ErrorOf(hanja.Resolve(new HanjaResolveRequestDto { Text = "가", Syllable = "ㅇ" })));
+        Assert.Equal("음절은 한글 한 글자로 넣어 주세요.", ErrorOf(hanja.Resolve(new HanjaResolveRequestDto { Text = "가", Syllable = "임수" })));
     }
 
     [Fact]

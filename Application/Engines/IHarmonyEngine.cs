@@ -23,6 +23,13 @@ public class HarmonyBreakdown
     /// 이 한자를 쓰도록 단일 진실의 원천으로 노출. 음절에 한자가 없으면 해당 위치 null.
     /// </summary>
     public List<HanjaInfo?> SelectedHanja { get; set; } = new();
+
+    /// <summary>
+    /// 출생일로만 정해지는 오행 쪽 사정 — 용신·희신·기신, 사주에 부족한·많은 오행, 사주 글자의 오행 개수(2026-11 한자 입력).
+    /// 점수 계산이 쓴 값 그대로이고 한자와 무관하다. 응답 hanjaSummary 의 elementFit·fills 가 이 값에서 나온다.
+    /// 조화를 계산하지 않았거나(출생일 없음) 사주를 못 구했으면 null.
+    /// </summary>
+    public NameForm.Application.Engines.Utils.ElementFit? ElementFit { get; set; }
 }
 
 /// <summary>
