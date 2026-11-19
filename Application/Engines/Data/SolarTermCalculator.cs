@@ -1,11 +1,22 @@
 namespace NameForm.Application.Engines.Data;
 
 /// <summary>
-/// 절기(節氣) 날짜 계산기 — Jean Meeus "Astronomical Algorithms" 2nd ed. 기반
-/// 정확도: ±10분 이내 (1900~2100년 범위)
+/// 절기(節氣) 날짜 계산기 — Jean Meeus "Astronomical Algorithms" 2nd ed. 기반(25장 저정밀 태양 황경 식, 분 아래 버림)
+/// 정확도(실측 — 2026-11 P0, docs/plan-ohaeng-2026-11.md §17-4): 발표된 12절 절입 시각(일본 국립천문대 '天象 長期版' UT+9,
+/// 한국천문연구원 역서)과 견주면 13분 이르게 ~ 9분 늦게, 평균 3분 이르다(1900~2097년 가운데 56개 해 672건 — 10분을 넘는 것 20건.
+/// Tests/SolarTermCalculatorTests 가 그 가운데 열 해를 ±15분(2024년은 ±10분)으로 지킨다). 옛 주석의 '±10분 이내'는 맞지 않았다.
+/// 분 단위로 맞추려면 ΔT·고정밀 황경식(또는 절입 시각 표)이 필요하다(따로 잡을 일).
+/// 알려진 한계(2026-11-19 대조 — 설계 §17-8): 이 오차 안의 몇 분에 태어난 시각 있는 입력은 월주(입춘이면 연주도)가 옆 달 것으로 나오고
+/// (1900~2099년 합계 8,955분 = 전체의 0.0085%), 시각 없는 입력(낮 12시 기준)은 절입이 정오에서 몇 분 안인 닷새
+/// (1918-01-06 · 1988-01-06 · 2020-03-05 · 2080-07-06 · 2086-03-05)의 월주가 발표값 기준과 한 달 다르다 — 그날은 절기 안내가 함께 뜬다.
+/// 날짜·시각 목록은 Tests/SajuCalculationP0Tests 의 '알려진 정밀도 한계' 절.
+/// 돌려주는 값은 모두 UTC 순간이다 — 사주 계산은 출생 순간(UTC)과 그대로 비교한다(서버 시간대와 무관).
 /// </summary>
 public static class SolarTermCalculator
 {
+    /// <summary>월주를 가르는 12절 하나 — 이름·그 절부터 시작하는 달의 지지 인덱스·절입 순간(UTC)</summary>
+    public readonly record struct MonthTerm(string Name, int BranchIndex, DateTime InstantUtc);
+
     // 24절기 태양황경 (도)
     // 사주에서 월주를 결정하는 12절(節)만 표시
     private static readonly (string Name, double Longitude)[] SolarTerms =
@@ -43,7 +54,9 @@ public static class SolarTermCalculator
     };
 
     /// <summary>
-    /// 특정 년도에서 태양황경이 targetLongitude°에 도달하는 날짜(UTC)를 계산
+    /// 특정 년도에서 태양황경이 targetLongitude°에 도달하는 순간(UTC)을 계산.
+    /// 그 해(year)의 것 = 황경 270° 미만(춘분 0° … 대설 255°)은 3~12월, 270° 초과(소한 285° … 경칩 345°)는 1~3월.
+    /// (동지 270° 만은 전년 12월로 나온다 — 12절이 아니어서 쓰는 곳이 없다.)
     /// </summary>
     public static DateTime GetSolarTermDate(int year, double targetLongitude)
     {
@@ -51,20 +64,12 @@ public static class SolarTermCalculator
         // 춘분은 매년 3월 20일경
         var approxDate = new DateTime(year, 3, 20, 0, 0, 0, DateTimeKind.Utc);
 
-        // targetLongitude가 춘분(0°)보다 큰 경우 → 앞으로, 작은 경우 → 뒤로
-        double daysOffset = targetLongitude switch
-        {
-            >= 0 and < 180 => targetLongitude / 360.0 * 365.25,
-            >= 180 => (targetLongitude - 360.0) / 360.0 * 365.25,
-            < 0 => targetLongitude / 360.0 * 365.25,
-            _ => 0
-        };
-
-        // 소한(285°), 대한(300°), 입춘(315°)... 은 전년 춘분 기준으로 계산
-        if (targetLongitude >= 270)
-        {
-            daysOffset = (targetLongitude - 360.0) / 360.0 * 365.25;
-        }
+        // 270° 미만은 3/20 보다 늦은 날짜로, 270° 이상(소한·대한·입춘·우수·경칩)은 3/20 보다 이른 날짜로 어림한다.
+        // 2026-11 P0(B2) 전에는 180° 이상을 모두 이른 날짜로 어림해 한로(195°)·입동(225°)·대설(255°)이 전년도 날짜로 수렴했다
+        // — 그 해 10/8 무렵~12/31 의 월지가 늘 酉로 나오던 원인.
+        double daysOffset = targetLongitude >= 270
+            ? (targetLongitude - 360.0) / 360.0 * 365.25
+            : targetLongitude / 360.0 * 365.25;
 
         var estimatedDate = approxDate.AddDays(daysOffset);
 
@@ -89,42 +94,57 @@ public static class SolarTermCalculator
     }
 
     /// <summary>
-    /// 주어진 날짜의 월주 지지 인덱스 반환 (입춘 기준)
+    /// 그 해(year)의 12절 절입 순간(UTC) — 소한(1월)·입춘(2월) … 대설(12월), 시간 순.
     /// </summary>
-    public static int GetMonthBranchIndex(DateTime date)
+    public static IReadOnlyList<MonthTerm> GetMonthTerms(int year)
     {
-        // 해당 년도의 12절기 날짜를 계산하고, date가 속하는 구간 찾기
-        var year = date.Year;
-
-        var terms = new List<(DateTime Date, int BranchIdx)>();
+        var terms = new List<MonthTerm>(TermToBranchIndex.Count);
         foreach (var (name, branchIdx) in TermToBranchIndex)
         {
             var lon = SolarTerms.First(t => t.Name == name).Longitude;
-            var termDate = GetSolarTermDate(year, lon);
-            terms.Add((termDate, branchIdx));
-
-            // 소한/대한은 다음 해 1월에 있으므로 전년도도 계산
-            if (name is "소한" or "대한")
-            {
-                var prevTermDate = GetSolarTermDate(year - 1, lon);
-                terms.Add((prevTermDate, branchIdx));
-            }
+            terms.Add(new MonthTerm(name, branchIdx, GetSolarTermDate(year, lon)));
         }
-
-        // 날짜 정렬 후 해당 구간 찾기
-        var sorted = terms.OrderByDescending(t => t.Date).ToList();
-        foreach (var (termDate, branchIdx) in sorted)
-        {
-            if (date >= termDate)
-                return branchIdx;
-        }
-
-        // 기본값: 축월(1)
-        return 1;
+        terms.Sort((a, b) => a.InstantUtc.CompareTo(b.InstantUtc));
+        return terms;
     }
 
     /// <summary>
-    /// 입춘(315°) 날짜 반환 — 년주 계산에 사용
+    /// 주어진 순간(UTC)의 월주 지지 인덱스 — 그 순간 이전(같거나 앞)의 가장 늦은 12절이 정한다.
+    /// 전년·그 해 12절을 함께 본다: 1월 1일~소한 전은 전년 대설이 子월로 만든다(그 해 것만 보면 이 구간에 앞선 절이 없다).
+    /// </summary>
+    public static int GetMonthBranchIndex(DateTime instantUtc)
+    {
+        int year = instantUtc.Year;
+        MonthTerm? latest = null;
+        foreach (var term in GetMonthTerms(year - 1).Concat(GetMonthTerms(year)))
+        {
+            if (term.InstantUtc <= instantUtc && (latest is null || term.InstantUtc > latest.Value.InstantUtc))
+                latest = term;
+        }
+
+        // 전년 12절은 모두 instantUtc 앞이라 늘 값이 있다(없다면 계산기 오류 — 조용히 축월로 넘기지 않는다)
+        return latest?.BranchIndex
+            ?? throw new InvalidOperationException("월주를 정할 절기를 찾지 못했습니다.");
+    }
+
+    /// <summary>
+    /// [fromUtc, toUtc) 안에 절입 순간이 있는 12절의 이름(없으면 null) — 시각 없이 넣은 날이 절기가 드는 날인지 볼 때 쓴다.
+    /// </summary>
+    public static string? FindMonthTermWithin(DateTime fromUtc, DateTime toUtc)
+    {
+        for (int year = fromUtc.Year; year <= toUtc.Year; year++)
+        {
+            foreach (var term in GetMonthTerms(year))
+            {
+                if (term.InstantUtc >= fromUtc && term.InstantUtc < toUtc)
+                    return term.Name;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 입춘(315°) 순간(UTC) 반환 — 년주 계산에 사용
     /// </summary>
     public static DateTime GetLichun(int year) =>
         GetSolarTermDate(year, 315);

@@ -111,16 +111,18 @@ public class YongshinCalculationService : IYongshinCalculationService
     {
         int score = 0;
 
-        var pillars = new List<(SajuPillar Pillar, bool IsDay)>
+        // 지지 가중치는 기둥의 '자리'로 준다. SajuPillar 는 record 라 == 가 값 비교다 — 옛 코드처럼 pillar == chart.MonthPillar 로 가리면
+        // 간지가 같은 기둥(일주 = 월주, 시주 = 월주 …)이 모두 월지로 읽혀 ×3 이 붙는다(2026-11 P0 B4: 1990-03-15 14:30 부산 −5, 바른 값 −4)
+        var pillars = new List<(SajuPillar Pillar, bool IsDay, int BranchWeight)>
         {
-            (chart.YearPillar,  false),
-            (chart.MonthPillar, false),
-            (chart.DayPillar,   true),   // 일간 천간은 제외, 일지는 포함
+            (chart.YearPillar,  false, 1),
+            (chart.MonthPillar, false, 3),
+            (chart.DayPillar,   true,  2),   // 일간 천간은 제외, 일지는 포함
         };
         if (chart.HourPillar != null)
-            pillars.Add((chart.HourPillar, false));
+            pillars.Add((chart.HourPillar, false, 1));
 
-        foreach (var (pillar, isDay) in pillars)
+        foreach (var (pillar, isDay, branchWeight) in pillars)
         {
             // 천간 (일간 자신은 제외)
             if (!isDay)
@@ -131,10 +133,7 @@ public class YongshinCalculationService : IYongshinCalculationService
 
             // 지지 (weight: 월지=3, 일지=2, 나머지=1)
             var branchElem = GetBranchElement(pillar.BranchChar);
-            int w = pillar == chart.MonthPillar ? 3
-                  : pillar == chart.DayPillar   ? 2
-                  : 1;
-            score += ClassifyElement(dayElem, branchElem) * w;
+            score += ClassifyElement(dayElem, branchElem) * branchWeight;
         }
 
         return score;
