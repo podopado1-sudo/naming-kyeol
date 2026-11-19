@@ -9,7 +9,10 @@ namespace NameForm.Application.Engines.Data;
 /// </summary>
 public static class ThreeSyllableCuratedLoader
 {
-    private static List<CuratedThreeSyllableEntry>? _entries;
+    // volatile — 락 밖 첫 읽기에서 다 읽은 목록만 보이게 한다(PhonologyVowelLoader 와 같은 방식).
+    // 옛 코드는 LoadEntries 가 빈 목록을 이 필드에 먼저 넣고 파일을 읽어, 시작 직후 함께 들어온 요청이
+    // 빈 목록을 받았다(3음절 탭 결과가 그 요청만 달라짐 — 2026-11-19 P0 영향 측정에서 발견).
+    private static volatile List<CuratedThreeSyllableEntry>? _entries;
     private static readonly object _lockObject = new object();
 
     /// <summary>
@@ -19,24 +22,18 @@ public static class ThreeSyllableCuratedLoader
     {
         get
         {
-            if (_entries == null)
+            var local = _entries;
+            if (local != null) return local;
+            lock (_lockObject)
             {
-                lock (_lockObject)
-                {
-                    if (_entries == null)
-                    {
-                        LoadEntries();
-                    }
-                }
+                // 다 읽은 목록만 단 한 번 넣는다 — 읽는 중인 상태가 밖으로 나가지 않는다
+                return _entries ??= LoadEntries();
             }
-            return _entries!;
         }
     }
 
-    private static void LoadEntries()
+    private static List<CuratedThreeSyllableEntry> LoadEntries()
     {
-        _entries = new List<CuratedThreeSyllableEntry>();
-
         var searchPaths = new[]
         {
             Path.Combine(AppContext.BaseDirectory, "data", "three-syllable-curated.json"),
@@ -51,7 +48,7 @@ public static class ThreeSyllableCuratedLoader
         {
             System.Diagnostics.Debug.WriteLine(
                 "경고: three-syllable-curated.json 파일을 찾을 수 없습니다. 3글자 큐레이션 리스트가 비어있습니다.");
-            return;
+            return new List<CuratedThreeSyllableEntry>();
         }
 
         try
@@ -62,7 +59,7 @@ public static class ThreeSyllableCuratedLoader
 
             if (data?.Entries != null)
             {
-                _entries = data.Entries
+                return data.Entries
                     .Where(e => !string.IsNullOrWhiteSpace(e.Name) && e.Name.Length == 3)
                     .ToList();
             }
@@ -71,7 +68,18 @@ public static class ThreeSyllableCuratedLoader
         {
             System.Diagnostics.Debug.WriteLine(
                 $"경고: three-syllable-curated.json 로드 실패: {ex.Message}. 빈 리스트로 진행합니다.");
-            _entries = new List<CuratedThreeSyllableEntry>();
+        }
+        return new List<CuratedThreeSyllableEntry>();
+    }
+
+    /// <summary>
+    /// 테스트용 캐시 무효화 — 다음 접근 때 다시 읽는다(동시 첫 읽기 회귀 테스트가 쓴다).
+    /// </summary>
+    public static void ResetCache()
+    {
+        lock (_lockObject)
+        {
+            _entries = null;
         }
     }
 
@@ -82,8 +90,8 @@ public static class ThreeSyllableCuratedLoader
     {
         lock (_lockObject)
         {
-            _entries = null;
-            LoadEntries();
+            // 다시 읽는 동안에도 옛 목록이 그대로 보이고, 다 읽은 뒤 한 번에 바꾼다
+            _entries = LoadEntries();
         }
     }
 

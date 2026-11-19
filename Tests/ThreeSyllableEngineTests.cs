@@ -562,4 +562,39 @@ public class ThreeSyllableEngineTests
 
         Assert.Equal(shouldDetect, hasAssociation);
     }
+
+    // ── 동시 첫 읽기 회귀 (2026-11-19) ───────────────────────────────────
+    // 옛 버그: ThreeSyllableCuratedLoader.LoadEntries 가 빈 목록을 공유 필드에 먼저 넣고 파일을 읽어,
+    // 시작 직후 함께 들어온 요청이 빈 큐레이션 목록을 받았다(3음절 탭 결과가 그 요청만 달라지고,
+    // GenerateCandidates_IsDeterministic_SameInputSameOutput 이 전체 실행 아홉 번에 한 번꼴로 실패).
+    // PhonologyTests 의 로더 동시 로딩 테스트와 같은 틀.
+
+    [Fact]
+    public async Task CuratedLoader_ConcurrentLoadAfterReset_NeverYieldsEmptyList()
+    {
+        var expected = NameForm.Application.Engines.Data.ThreeSyllableCuratedLoader.Entries.Count;
+        Assert.True(expected > 0, "three-syllable-curated.json 을 읽지 못했다 — 이 테스트의 전제");
+
+        for (int round = 0; round < 5; round++)
+        {
+            NameForm.Application.Engines.Data.ThreeSyllableCuratedLoader.ResetCache();
+
+            const int threads = 32;
+            using var start = new ManualResetEventSlim(false);
+            var failures = new System.Collections.Concurrent.ConcurrentBag<string>();
+
+            var tasks = Enumerable.Range(0, threads).Select(_ => Task.Run(() =>
+            {
+                start.Wait();
+                var count = NameForm.Application.Engines.Data.ThreeSyllableCuratedLoader.Entries.Count;
+                if (count != expected) failures.Add($"count={count}");
+            })).ToArray();
+
+            start.Set();
+            await Task.WhenAll(tasks);
+
+            Assert.True(failures.IsEmpty,
+                $"라운드 {round}: 동시 로딩 중 덜 읽은 목록 관측(기대 {expected}) — {string.Join(", ", failures.Take(5))}");
+        }
+    }
 }
