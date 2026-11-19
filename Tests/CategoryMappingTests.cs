@@ -4,8 +4,34 @@ using Xunit;
 
 namespace NameForm.Tests;
 
+[Collection(HanjaDictionaryMutationCollection.Name)]
 public class CategoryMappingTests
 {
+    /// <summary>
+    /// 공유 사전 항목의 카테고리 칸을 테스트 뒤에 되돌린다 — LoadCategoryMapping 은 사전의 글자 항목을 그 자리에서 고친다
+    /// (되돌리지 않으면 같은 실행의 뒤 테스트가 운영과 다른 카테고리를 본다). 돌려주는 함수를 finally 에서 부른다.
+    /// </summary>
+    private static Action SnapshotCategories(params string[] characters)
+    {
+        var saved = characters
+            .Select(HanjaData.FindByCharacter)
+            .Where(h => h != null)
+            .Select(h => (Hanja: h!, h!.Category, h.CategoryMajor, h.CategoryMinor, h.CategoryTags, h.CategoryEvidence, h.CategoryConfidence))
+            .ToList();
+        return () =>
+        {
+            foreach (var s in saved)
+            {
+                s.Hanja.Category = s.Category;
+                s.Hanja.CategoryMajor = s.CategoryMajor;
+                s.Hanja.CategoryMinor = s.CategoryMinor;
+                s.Hanja.CategoryTags = s.CategoryTags;
+                s.Hanja.CategoryEvidence = s.CategoryEvidence;
+                s.Hanja.CategoryConfidence = s.CategoryConfidence;
+            }
+        };
+    }
+
     [Fact]
     public void LoadCategoryMapping_LegacyFormat_LoadsCorrectly()
     {
@@ -22,6 +48,7 @@ public class CategoryMappingTests
         };
 
         File.WriteAllText(tempFile, JsonSerializer.Serialize(legacyMapping));
+        var restore = SnapshotCategories("春", "德", "智");
 
         try
         {
@@ -38,6 +65,7 @@ public class CategoryMappingTests
         }
         finally
         {
+            restore();
             File.Delete(tempFile);
         }
     }
@@ -67,6 +95,7 @@ public class CategoryMappingTests
         };
 
         File.WriteAllText(tempFile, JsonSerializer.Serialize(extendedMapping));
+        var restore = SnapshotCategories("水");
 
         try
         {
@@ -84,6 +113,7 @@ public class CategoryMappingTests
         }
         finally
         {
+            restore();
             File.Delete(tempFile);
         }
     }

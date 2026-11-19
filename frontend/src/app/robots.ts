@@ -48,6 +48,11 @@ const BLOCKED_AI_BOTS = [
 // /search?는 JSON-LD SearchAction 대상이라 막지 않는다.
 const TOOL_QUERY_VARIANTS = ["/required-char?", "/evaluate?", "/analysis?"];
 
+// 화면이 fetch 로 읽는 정적 데이터(/data/hanja-pick/v1/*.json — /evaluate 한자 고르기의 음절별 후보 목록)는 수집 금지.
+// 색인할 본문이 아니라 화면 재료이고, 같은 사실(글자·훈·자원오행·획수·이름에 피하는 글자)은 /hanja 쪽마다 HTML 로 이미 공개돼 있다.
+// robots 는 따르는 봇만 막는다(접근 제한이 아니다) — 색인돼야 하는 내용을 /data/ 에서만 읽어 그리는 화면을 만들지 말 것.
+const STATIC_DATA = "/data/";
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -55,7 +60,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: ["Googlebot", "Bingbot", "Naverbot", "Yeti", "Daumoa"],
         allow: "/",
-        disallow: ["/favorites", "/api/", ...TOOL_QUERY_VARIANTS],
+        disallow: ["/favorites", "/api/", STATIC_DATA, ...TOOL_QUERY_VARIANTS],
       },
       // 2. AI 학습/스크래퍼 봇 — 전체 차단
       {
@@ -66,7 +71,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/favorites", "/api/", ...TOOL_QUERY_VARIANTS],
+        disallow: ["/favorites", "/api/", STATIC_DATA, ...TOOL_QUERY_VARIANTS],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

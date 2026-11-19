@@ -454,6 +454,24 @@ if (args.Length >= 1 && args[0] == "dump-name-scores")
     return;
 }
 
+// /evaluate 한자 고르기의 음절별 정적 후보 파일(2026-11 한자 입력 — docs/plan-hanja-input-2026-11.md §4-6).
+//   dotnet run -- dump-hanja-pick [outdir]            (기본 frontend/public/data/hanja-pick/v1 — 커밋하는 파일)
+// 음절마다 {음절 코드포인트 16진 소문자}.json(서 = c11c.json) + index.json. 내용은 HanjaPickDump.Build() — 목록·순서는 /evaluate 의 입력 검증과 같은
+// HanjaInput.CandidatesFor, 글자 사실은 응답 hanjaSummary 와 같은 HanjaFactMapper. 줄바꿈 없는 한 줄 JSON 이고 시각을 넣지 않아 두 번 돌려도 같은 바이트다.
+// 한자 데이터(불용·약자·자원오행·획수·뜻·성씨 대표 한자 표)를 바꾸면 다시 돌려 커밋한다 — 안 돌리면 Tests/HanjaPickStaticFilesTests 가 실패한다.
+if (args.Length >= 1 && args[0] == "dump-hanja-pick")
+{
+    NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
+    var pickOutDir = args.Length >= 2 ? args[1] : NameForm.Application.Engines.Utils.HanjaPickDump.DefaultOutputDirectory;
+    var (pickFiles, pickWritten, pickRemoved) = NameForm.Application.Engines.Utils.HanjaPickDump.WriteTo(pickOutDir);
+    var pickSizes = pickFiles.Select(f => (f.FileName, Bytes: System.Text.Encoding.UTF8.GetByteCount(f.Json))).ToList();
+    var pickLargest = pickSizes.OrderByDescending(s => s.Bytes).First();
+    Console.WriteLine($"[dump-hanja-pick] 파일 {pickFiles.Count}개(음절 {pickFiles.Count - 1} + index.json) → {pickOutDir} " +
+                      $"(새로 쓰거나 바꿈 {pickWritten} · 지운 낡은 파일 {pickRemoved} · 합계 {pickSizes.Sum(s => (long)s.Bytes)}바이트 · " +
+                      $"가장 큰 파일 {pickLargest.FileName} {pickLargest.Bytes}바이트)");
+    return;
+}
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: true)

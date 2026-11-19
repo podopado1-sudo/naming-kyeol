@@ -4,6 +4,7 @@ using Xunit;
 
 namespace NameForm.Tests;
 
+[Collection(HanjaDictionaryMutationCollection.Name)]
 public class CategoryClassificationTests
 {
     /// <summary>
@@ -59,14 +60,25 @@ public class CategoryClassificationTests
 
         if (hanja != null)
         {
-            HanjaData.UpdateMeaningAndClassify(character, meaning);
-            var updated = HanjaData.FindByCharacter(character);
+            // 공유 사전의 항목을 고치는 테스트다 — 끝나면 원래 뜻·카테고리로 되돌린다
+            // (되돌리지 않으면 같은 실행의 뒤 테스트가 水 의 뜻을 '물 수'가 아니라 '물'로 본다)
+            var (originalMeaning, originalCategory) = (hanja.Meaning, hanja.Category);
+            try
+            {
+                HanjaData.UpdateMeaningAndClassify(character, meaning);
+                var updated = HanjaData.FindByCharacter(character);
 
-            // Assert
-            Assert.NotNull(updated);
-            Assert.Equal(meaning, updated.Meaning);
-            // Category should be set (either automatically or manually)
-            Assert.NotNull(updated.Category);
+                // Assert
+                Assert.NotNull(updated);
+                Assert.Equal(meaning, updated.Meaning);
+                // Category should be set (either automatically or manually)
+                Assert.NotNull(updated.Category);
+            }
+            finally
+            {
+                hanja.Meaning = originalMeaning;
+                hanja.Category = originalCategory;
+            }
         }
     }
 }
