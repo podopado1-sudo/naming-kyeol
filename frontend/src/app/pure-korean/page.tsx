@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import {
   Card,
@@ -165,6 +166,14 @@ export default function PureKoreanPage() {
         </h1>
         <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
           자연·감정·계절 등 한국어 고유의 결을 담은 이름을 추천해드릴게요
+        </p>
+        {/* 2026-11-19 D7 권고안(설계 docs/plan-ohaeng-2026-11.md §9-2·§16) — 리포트 md 와 같은 커밋(C3)에 넣는다(먼저 내면 404) */}
+        <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
+          실제로 많이 쓰인 순우리말 이름은{" "}
+          <Link href="/guide/pure-korean-names" className="text-teal underline underline-offset-2">
+            순우리말 아기 이름 리포트
+          </Link>
+          에서 볼 수 있어요
         </p>
       </header>
 
