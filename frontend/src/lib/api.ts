@@ -23,6 +23,8 @@ import type {
   CompanyNamingResponse,
   CompanyNamingOptions,
   RequiredCharCandidate,
+  SajuElementsRequest,
+  SajuElementsResponse,
 } from "./types";
 import { josa, type JosaPair } from "./josa";
 
@@ -113,6 +115,8 @@ const FIELD_LABELS: Readonly<Record<string, string>> = {
   keywords: "키워드",
   industry: "업종",
   count: "개수",
+  // /saju/elements(부족한 오행 찾기) — 백엔드 문구는 한국어로 시작하지만 프레임워크 기본 문구가 필드명으로 시작할 때를 대비
+  birthplacecode: "출생지",
 };
 
 /** 영문 필드명 뒤 조사 → 한글 이름 받침에 맞춰 다시 고를 짝 */
@@ -254,6 +258,17 @@ export function evaluate(
   req: NameEvaluationRequest
 ): Promise<NameEvaluationResponse> {
   return request("/recommendations/evaluate", req);
+}
+
+/**
+ * 부족한 오행 찾기(/ohaeng) — 생년월일(+시각·출생지)로 사주 원국 오행 개수·없는 오행·용신·희신·오행별 이름 한자 예.
+ * 입력값은 요청 본문으로만 보낸다(URL·저장소에 두지 않는다 — tests/ohaeng-privacy.test.mjs). 백엔드도 DB·서버 로그에 남기지 않는다.
+ * 'expensive' 리미터(IP당 분 20회)를 평가·추천과 함께 쓴다.
+ */
+export function sajuElements(
+  req: SajuElementsRequest
+): Promise<SajuElementsResponse> {
+  return request("/saju/elements", req);
 }
 
 // 상호 작명 (회사명 · 가게명 · 브랜드명)

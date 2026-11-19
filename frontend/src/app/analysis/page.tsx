@@ -82,6 +82,8 @@ function mapSaju(api?: ApiSajuChart | null): SajuChartData | null {
     dayMaster: api.dayMaster,
     birthplaceName: api.birthplaceName,
     correctionMinutes: api.correctionMinutes,
+    correctionApplied: api.correctionApplied,
+    termOnBirthDay: api.termOnBirthDay,
     yongshin: api.yongshin
       ? {
           strength:

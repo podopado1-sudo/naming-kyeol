@@ -339,8 +339,11 @@ export interface SajuPillarData {
   stemName: string;
   branchChar: string;
   branchName: string;
+  /** 천간 오행 */
   fiveElement: string;
   yinYang: string;
+  /** 지지 오행 (2026-11 /saju/elements 와 함께 추가 — /name-analysis 응답에도 실린다, 옛 응답에는 없음) */
+  branchFiveElement?: string;
 }
 
 export interface YongshinData {
@@ -367,7 +370,68 @@ export interface SajuChartData {
   dayMaster: string;
   birthplaceName: string;
   correctionMinutes: number;
+  /**
+   * 진태양시 보정을 했는지 — 사주 계산 수정(설계 docs/plan-ohaeng-2026-11.md §1 P0)에서 더한 필드. 출생 시각이 없으면 false
+   * (날짜 그대로 — 보정 없음, correctionMinutes 0). P0 전 백엔드 응답에는 없다(undefined) — 화면은 undefined 를 '모름'으로 읽는다
+   */
+  correctionApplied?: boolean;
+  /**
+   * 시각 없이 넣은 날 안에 12절 절입 순간이 있으면 그 절기 이름(예: "입춘"), 아니면 null — P0-c 에서 더한 필드.
+   * 그날은 태어난 시각에 따라 월주(입춘이면 연주도)가 갈린다(시각이 없으면 낮 12시 기준). P0 전 백엔드 응답에는 없다
+   */
+  termOnBirthDay?: string | null;
   yongshin?: YongshinData;
+}
+
+// ============================================================
+// Saju Elements — 부족한 오행 찾기(/ohaeng), POST /api/v1/saju/elements
+// 백엔드 SajuElementsRequestDto·SajuElementsResponseDto 와 1:1 (설계 docs/plan-ohaeng-2026-11.md §2)
+// ============================================================
+export interface SajuElementsRequest {
+  /** 양력 생년월일 YYYY-MM-DD (1900-01-01 ~ 오늘 KST) */
+  birthDate: string;
+  /** 출생 시각 HH:mm (선택 — 없으면 시주를 빼고 여섯 글자) */
+  birthTime?: string;
+  /** 출생지 시·도 코드 (선택 — lib/birthplaces.ts 17개, 비우면 서울) */
+  birthplaceCode?: string;
+}
+
+/** 한자 묶음 역할 — 용신 · 희신 · 원국에 없는 오행 */
+export type ElementRole = "yongshin" | "heeshin" | "missing";
+
+export interface ElementHanjaItem {
+  character: string;
+  /** 대표 독음 — gloss 를 고른 독음 */
+  reading: string;
+  /** 대표 독음 + 대체 독음 중 한글 한 음절(李 리·이) — 독음마다 /hanja/{독음} 링크 */
+  readings: string[];
+  /** 그 독음의 훈 한 조각 (예: "밝을 명", "오얏 리(이)") */
+  gloss: string;
+  /** 자원오행 등급 — "R"(확정) 또는 "X"(예외 적용) */
+  resourceGrade: string;
+}
+
+export interface ElementHanjaGroup {
+  /** 木/火/土/金/水 */
+  element: string;
+  roles: ElementRole[];
+  /** 없는 오행이 기신일 때 true — 이때 hanja 는 빈 배열 */
+  isGishin: boolean;
+  hanja: ElementHanjaItem[];
+}
+
+export interface SajuElementsResponse {
+  /** /name-analysis 의 saju 와 같은 모양(이름이 없어 yongshin.nameFitsYongshin 은 늘 null) */
+  saju: SajuChartData;
+  /** 센 글자 수 — 시주가 있으면 8, 없으면 6 */
+  characterCount: number;
+  hasBirthTime: boolean;
+  /** 출생지를 비워 서울 기준으로 둔 경우 true */
+  birthplaceDefaulted: boolean;
+  /** 개수가 가장 많은 오행 전부(동률 포함, 木火土金水 순) — saju.strongestElement 는 동률이면 하나뿐이라 화면은 이것을 쓴다 */
+  strongestElements: string[];
+  /** 용신 → 희신 → 없는 오행 순의 오행별 한자 예 묶음(최대 5, 같은 오행 두 번 없음) */
+  elementHanja: ElementHanjaGroup[];
 }
 
 // ============================================================

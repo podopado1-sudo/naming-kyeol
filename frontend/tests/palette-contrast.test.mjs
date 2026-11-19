@@ -179,7 +179,8 @@ test("FIVE_EL 표지색(막대·왼쪽 테두리)은 옛 색 그대로 — 글�
   for (const el of ELEMENTS) assert.deepEqual(chip[el].marker, hexRgb(old[el]), el);
   // 글자 자리에 표지색(.color)을 다시 쓰면 걸린다 — 막대 background·borderLeft 는 괜찮다
   const offenders = [];
-  for (const f of ["DetailSaju.tsx", "DetailMid.tsx", "DetailHanja.tsx", "EvalPrimitives.tsx"]) {
+  // OhaengResult — /ohaeng 원국 칸·개수 막대·한자 묶음 칩(2026-11, 같은 FIVE_EL 토큰)
+  for (const f of ["DetailSaju.tsx", "DetailMid.tsx", "DetailHanja.tsx", "EvalPrimitives.tsx", "OhaengResult.tsx"]) {
     read("src", "components", "design", f)
       .split(/\r?\n/)
       .forEach((line, i) => {

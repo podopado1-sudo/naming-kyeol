@@ -6,6 +6,8 @@
  */
 "use client";
 
+import { sajuCardCorrectionLine, termNote } from "@/lib/ohaeng";
+
 import { Button } from "./Primitives";
 import { FIVE_EL } from "./DetailPrimitives";
 
@@ -39,6 +41,13 @@ export interface SajuChartData {
   dayMaster: string;
   birthplaceName?: string;
   correctionMinutes?: number;
+  /** 진태양시 보정을 했는지 — 출생 시각 없이 계산하면 false(백엔드 SajuChartDto.CorrectionApplied, 2026-11 P0) */
+  correctionApplied?: boolean;
+  /**
+   * 시각 없이 넣은 날 안에 12절 절입 순간이 있으면 그 절기 이름(백엔드 SajuChartDto.TermOnBirthDay, 2026-11 P0-c) — 그날은 태어난 시각에 따라
+   * 월주(입춘이면 연주도)가 갈리고, 시각이 없는 지금 결과는 낮 12시 기준이다. 있으면 보정 줄 아래에 한 줄로 알린다(lib/ohaeng.ts termNote)
+   */
+  termOnBirthDay?: string | null;
   yongshin?: YongshinData;
 }
 
@@ -90,6 +99,11 @@ export function SajuSection({
     1,
     ...elementsOrder.map((k) => saju.fiveElementCount[k] || 0)
   );
+
+  const showCorrectionLine =
+    Boolean(saju.birthplaceName) || saju.correctionMinutes != null || saju.correctionApplied === false;
+  // 절기 줄 — /ohaeng 결과와 같은 문장(시각 없이 넣은 날이 절기가 드는 날일 때만 값이 있다)
+  const term = termNote(saju.termOnBirthDay);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -220,7 +234,8 @@ export function SajuSection({
             );
           })}
         </div>
-        {(saju.birthplaceName || saju.correctionMinutes != null) && (
+        {/* 보정 줄 — 시각 없이 계산한 원국(correctionApplied false)은 '보정하지 않았어요', 그 밖에는 '약 −32분'(lib/ohaeng.ts) */}
+        {showCorrectionLine && (
           <div
             style={{
               padding: "10px 16px",
@@ -230,9 +245,21 @@ export function SajuSection({
               textAlign: "right",
             }}
           >
-            출생지 {saju.birthplaceName} · 진태양시 보정{" "}
-            {(saju.correctionMinutes ?? 0) > 0 ? "+" : ""}
-            {saju.correctionMinutes ?? 0}분
+            {sajuCardCorrectionLine(saju)}
+          </div>
+        )}
+        {/* 절기 줄 — 시각 없이 넣은 날이 절기가 드는 날이면 연·월주가 낮 12시 기준임을 알린다(2026-11-19 검토 반영 — 설계 §17-8 · D8) */}
+        {term && (
+          <div
+            style={{
+              padding: showCorrectionLine ? "0 16px 12px" : "10px 16px 12px",
+              fontSize: 12,
+              lineHeight: 1.6,
+              color: "var(--color-text-2)",
+              background: "var(--color-surface-2)",
+            }}
+          >
+            {term}
           </div>
         )}
       </div>

@@ -63,6 +63,8 @@ interface PrincipleCard {
   icon: LucideIcon;
   title: string;
   body: string;
+  /** 본문 뒤에 붙는 관련 화면 링크(선택 — 2026-11 '자원오행 보완' → /ohaeng) */
+  link?: { href: string; label: string };
 }
 
 const AESTHETIC_ROWS: PillarRow[] = [
@@ -108,6 +110,7 @@ const TRADITION_CARDS: PrincipleCard[] = [
     icon: Leaf,
     title: "자원오행 보완",
     body: "木·火·土·金·水 가운데 사주에서 부족하거나 과한 오행을 보고, 이름 한자의 자원오행이 필요한 오행을 채우는 쪽으로 점수를 줍니다. 자원오행은 한자의 부수로 정합니다(아래 04).",
+    link: { href: "/ohaeng", label: "내 사주의 부족한 오행 찾기" },
   },
   {
     icon: Music,
@@ -1042,6 +1045,13 @@ function PrincipleBox({ card }: { card: PrincipleCard }) {
         >
           {card.body}
         </p>
+        {card.link && (
+          <p style={{ fontSize: 13.5, lineHeight: 1.7, margin: "8px 0 0" }}>
+            <Link href={card.link.href} style={inlineLink}>
+              {card.link.label}
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );

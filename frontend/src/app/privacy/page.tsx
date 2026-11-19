@@ -80,7 +80,7 @@ export default function PrivacyPage() {
             개인정보처리방침
           </h1>
           <p style={{ ...body, fontSize: 13, color: "var(--color-text-3)" }}>
-            시행일: 2026년 11월 3일 (최초 2026년 8월 21일)
+            시행일: 2026년 11월 25일 (최초 2026년 8월 21일)
           </p>
         </div>
 
@@ -88,6 +88,9 @@ export default function PrivacyPage() {
           {/* 2026-11-03 실제 처리와 맞춤: 결과 링크 조회·피드백·테마 저장은 없는 기능이라 지움, 이름 추천 기록(DB)·서버 로그·처리 위탁을
               사실대로 적음(RecommendationService.CreateRecommendationAsync 가 성·출생일·성별·톤·상위 후보를 저장, 요청 로그에 성·이름 평문).
               광고 항은 게시자 정책의 필수 고지(다른 사이트 방문 기반·웹 비콘·IP·파트너 사이트 데이터 링크)를 보강 */}
+          {/* 2026-11-25 /ohaeng(부족한 오행 찾기) 출생지 항목 추가 — 출생지(시·도)는 그 화면만 받는다. 입력값은 계산에만 쓰고 DB·서버 로그에 남기지 않는다
+              (SajuController 로그는 '오행 찾기 요청' 한 줄뿐 — SajuControllerLoggingTests). 사용 통계는 종류(endpoint)·키(ohaeng)·시각만.
+              시행일 '2026년 11월 25일'은 배포일 자리표시 — 배포일로 바꿀 것(설계 docs/plan-ohaeng-2026-11.md §8·§10) */}
           <section>
             <h2 style={sectionTitle}>1. 수집하는 정보</h2>
             <p style={{ ...body, marginBottom: 10 }}>
@@ -97,11 +100,13 @@ export default function PrivacyPage() {
             </p>
             <ul style={list}>
               <li>
-                <strong>추천·평가·분석 입력값</strong>: 성씨, 이름, 출생일(시), 성별, 선호 톤,
-                부모 이름·영어 이름·키워드 등 이용자가 결과를 만들려고 입력하는 값. 결과
-                계산에 쓰입니다. &lsquo;이름 추천&rsquo;(/search) 화면에서 추천을 받으면
-                성씨·출생일·성별·톤, 요청 시각과 상위 추천 후보 10개(영어 이름을 넣어 이중 이름
-                후보가 들면 그 영어 이름 포함)가 데이터베이스에 기록됩니다.
+                <strong>추천·평가·분석·오행 찾기 입력값</strong>: 성씨, 이름, 출생일(시),
+                출생지(시·도), 성별, 선호 톤, 부모 이름·영어 이름·키워드 등 이용자가 결과를 만들려고
+                입력하는 값. 결과 계산에 쓰입니다. &lsquo;이름 추천&rsquo;(/search) 화면에서 추천을
+                받으면 성씨·출생일·성별·톤, 요청 시각과 상위 추천 후보 10개(영어 이름을 넣어 이중 이름
+                후보가 들면 그 영어 이름 포함)가 데이터베이스에 기록됩니다. &lsquo;부족한 오행
+                찾기&rsquo;(/ohaeng)에 넣은 출생일·출생 시각·출생지는 결과 계산에만 쓰고
+                데이터베이스와 서버 로그에 남기지 않습니다.
               </li>
               <li>
                 <strong>서버 로그</strong>: 요청을 처리할 때 입력한 성씨·이름·영어 이름·성별·톤
@@ -129,7 +134,7 @@ export default function PrivacyPage() {
           <section>
             <h2 style={sectionTitle}>2. 이용 목적</h2>
             <ul style={list}>
-              <li>이름 추천·평가·분석 결과의 생성</li>
+              <li>이름 추천·평가·분석과 오행 찾기 결과의 생성</li>
               <li>서비스 이용 통계(어떤 기능이 쓰이는지 파악)</li>
               <li>서비스의 안정적 운영과 오류 대응</li>
               <li>문의에 대한 회신</li>

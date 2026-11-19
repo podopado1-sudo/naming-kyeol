@@ -22,11 +22,16 @@ const ROUTES: Array<{
   path: string;
   priority: number;
   changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
+  /**
+   * 그 화면의 내용이 바뀐 날(YYYY-MM-DD) — 없으면 아래 공통 lastModified. 새 화면·내용이 바뀐 화면만 준다
+   * (2026-11 /ohaeng 설계 §7 — '2026-11-25' 는 배포일 자리표시, 배포일로 바꿀 것 · 설계 §10)
+   */
+  lastModified?: string;
 }> = [
   // 랜딩/교육 — 최상위
   { path: "", priority: 1.0, changeFrequency: "weekly" },
-  { path: "method", priority: 0.9, changeFrequency: "monthly" },
-  { path: "guide", priority: 0.9, changeFrequency: "monthly" },
+  { path: "method", priority: 0.9, changeFrequency: "monthly", lastModified: "2026-11-25" }, // 자원오행 보완 카드 → /ohaeng 링크
+  { path: "guide", priority: 0.9, changeFrequency: "monthly", lastModified: "2026-11-25" }, // 04장 → /ohaeng 링크(D7)·리포트 목록에 순우리말 리포트
 
   // 핵심 추천 도구
   { path: "search", priority: 0.8, changeFrequency: "monthly" },
@@ -42,6 +47,8 @@ const ROUTES: Array<{
   { path: "twin", priority: 0.6, changeFrequency: "monthly" },
   { path: "dual-name", priority: 0.6, changeFrequency: "monthly" },
   { path: "rare-surname", priority: 0.6, changeFrequency: "monthly" },
+  // 부족한 오행 찾기 — 이름 대신 생년월일만 받는 보조 도구(2026-11)
+  { path: "ohaeng", priority: 0.7, changeFrequency: "monthly", lastModified: "2026-11-25" },
 
   // 상호 작명 (인명과 별도 벌티컬)
   { path: "company", priority: 0.7, changeFrequency: "monthly" },
@@ -49,7 +56,7 @@ const ROUTES: Array<{
   // 운영 페이지
   { path: "about", priority: 0.4, changeFrequency: "yearly" },
   { path: "contact", priority: 0.4, changeFrequency: "yearly" },
-  { path: "privacy", priority: 0.3, changeFrequency: "yearly" },
+  { path: "privacy", priority: 0.3, changeFrequency: "yearly", lastModified: "2026-11-25" }, // 출생지 항목·오행 찾기 입력값
 
   // 한자 사전 인덱스
   { path: "hanja", priority: 0.8, changeFrequency: "monthly" },
@@ -66,7 +73,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const staticRoutes: MetadataRoute.Sitemap = ROUTES.map((r) => ({
     url: r.path ? `${SITE_URL}/${r.path}` : SITE_URL,
-    lastModified,
+    lastModified: r.lastModified ? new Date(r.lastModified) : lastModified,
     changeFrequency: r.changeFrequency,
     priority: r.priority,
   }));
