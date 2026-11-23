@@ -5,6 +5,7 @@ import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { Badge } from "@/components/ui/badge";
 import { HanjaCharCard } from "@/components/hanja/HanjaCharCard";
+import { HanjaEvaluateLine } from "@/components/hanja/HanjaEvaluateLine";
 import {
   HanjaAvoidBadge,
   HanjaElementBadge,
@@ -33,6 +34,7 @@ import {
   splitAvoidedChars,
   standardCharOf,
 } from "@/lib/hanja-seo";
+import { evaluatePickHref } from "@/lib/hanja-pick";
 import { josa } from "@/lib/josa";
 import { isNameUsableRecord, noHanjaSyllableNote } from "@/lib/no-hanja";
 import { BASE_OPEN_GRAPH } from "@/lib/og";
@@ -180,20 +182,51 @@ function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
   );
 }
 
-function CtaBanner({ char, label }: { char: string; label: string }) {
+/**
+ * 추천 배너. pickHref(글자 상세만 — 2026-11 한자 입력 §11-2)를 주면 첫째 버튼이 '‘瑞’ 글자로 이름 맞춰 보기 →'(이름 평가의 음절 칸에
+ * 그 글자를 들고 간다 — /evaluate#pick=…&as=…, 풀 페이지 이동)이고 추천 버튼은 둘째(테두리 버튼)로 내려간다. 주지 않으면(독음 쪽) 지금 모양 그대로.
+ */
+function CtaBanner({ char, label, pickHref }: { char: string; label: string; pickHref?: string }) {
   // BMP 밖 글자(코드포인트 > 0xFFFF, 확장 B 이후 80자)는 추천 엔진이 한 글자로 받지 못해
-  // /required-char가 일반 오류로 끝난다 — 막다른 버튼을 두지 않고 숨긴다 (2026-10-21)
-  if ((char.codePointAt(0) ?? 0) > 0xffff) return null;
+  // /required-char가 일반 오류로 끝난다 — 막다른 버튼을 두지 않고 숨긴다 (2026-10-21).
+  // 맞춰 보기는 글자(코드포인트) 단위로 받으므로 pickHref 가 있으면 그 버튼만 남긴다(2026-11)
+  const recommendable = (char.codePointAt(0) ?? 0) <= 0xffff;
+  if (!recommendable && !pickHref) return null;
+  if (!pickHref) {
+    return (
+      <div className="my-10 rounded-xl border border-paper-line bg-paper-tint p-6 text-center">
+        <p className="mb-4 text-sm text-text-2">{label}</p>
+        <Link
+          href={`/required-char?char=${encodeURIComponent(char)}`}
+          rel="nofollow"
+          className="inline-block rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-navy-600"
+        >
+          &lsquo;{char}&rsquo; 글자를 넣어 이름 추천받기 →
+        </Link>
+      </div>
+    );
+  }
   return (
     <div className="my-10 rounded-xl border border-paper-line bg-paper-tint p-6 text-center">
       <p className="mb-4 text-sm text-text-2">{label}</p>
-      <Link
-        href={`/required-char?char=${encodeURIComponent(char)}`}
-        rel="nofollow"
-        className="inline-block rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-navy-600"
-      >
-        &lsquo;{char}&rsquo; 글자를 넣어 이름 추천받기 →
-      </Link>
+      <div className="flex flex-wrap justify-center gap-3">
+        {/* 해시는 크롤러에게 /evaluate 한 주소(색인 착지)라 nofollow 를 달지 않는다. /evaluate 는 클라이언트 네비 잔상 버그가 있어 <a> */}
+        <a
+          href={pickHref}
+          className="inline-block rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-navy-600"
+        >
+          &lsquo;{char}&rsquo; 글자로 이름 맞춰 보기 →
+        </a>
+        {recommendable && (
+          <Link
+            href={`/required-char?char=${encodeURIComponent(char)}`}
+            rel="nofollow"
+            className="inline-block rounded-lg border border-navy px-6 py-3 text-sm font-semibold text-navy no-underline transition hover:bg-navy-50"
+          >
+            &lsquo;{char}&rsquo; 글자를 넣어 이름 추천받기 →
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
@@ -332,6 +365,9 @@ function ReadingPage({ reading, chars }: { reading: string; chars: string[] }) {
             label={`'${reading}'${josa(reading, "이/가")} 들어가는 이름이 궁금하신가요? 미학 점수와 오행 조화까지 분석해 드립니다.`}
           />
         )}
+        {/* 배너는 그대로 두고 아래에 이름 평가로 가는 한 줄(2026-11 한자 입력 §11-2) — 독음이라 글자를 들고 가지 않는다(쿼리·해시 없는 /evaluate).
+            배너와 같은 조건 — 이름에 쓰는 글자가 없는 독음(죄·혐·핍·뉵)에는 '골라 맞춰 볼 수 있어요'를 권하지 않는다 */}
+        {named.length > 0 && <HanjaEvaluateLine className="-mt-6" />}
 
         {siblings.length > 0 && (
           <section className="mt-12">
@@ -646,11 +682,14 @@ function CharPage({ char }: { char: string }) {
           </section>
         )}
 
-        {/* 이름에 피하는 글자(nf)는 추천 버튼을 두지 않는다 — 필수 글자로 고정하면 엔진이 불용 글자를 그대로 쓴다 */}
+        {/* 이름에 피하는 글자(nf)는 추천 버튼을 두지 않는다 — 필수 글자로 고정하면 엔진이 불용 글자를 그대로 쓴다.
+            맞춰 보기도 두지 않는다 — 이름 평가는 받기는 하지만 권하지는 않는다(2026-11 한자 입력 §11-2).
+            맞춰 보기는 독음을 모두 싣는다(均 → as=균,연) — 이 쪽이 보여 주는 독음과 이름 평가가 받는 칸이 같다 */}
         {!avoided && (
           <CtaBanner
             char={char}
             label={`${char}(${primaryReading}) 글자가 들어간 이름의 미학 점수와 오행 조화가 궁금하신가요?`}
+            pickHref={evaluatePickHref(char, record.r)}
           />
         )}
 

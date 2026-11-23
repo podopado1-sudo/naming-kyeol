@@ -8,8 +8,10 @@
 // - C6(결과 화면): '이 이름의 한자' 블록 HanjaSummaryBlock · 관계 칩 OhaengRelationChip · 결과 화면 EvaluateResult ·
 //   후보 표 EvalBody · EvaluateClient 의 제자리 재계산 · /favorites 의 한자 줄.
 // - C7 앞 절반(착지·문구·방침): 설명 글 EvaluateHanjaGuide(서버 컴포넌트) · 메타(layout.tsx) · /ohaeng 한자 예의 '맞춰 보기' ·
-//   개인정보처리방침 · sitemap·robots. 맨 아래 묶음.
-// 뒤 단계가 이 파일에 더할 것: /name 조합 카드의 '이 한자로 평가'(rel="nofollow")와 /hanja 인덱스·독음·글자 상세의 링크(C7 뒤 절반).
+//   개인정보처리방침 · sitemap·robots.
+// - C7 뒤 절반(진입 링크): /name 조합 카드의 공용 관계 칩·'이 한자로 평가'(rel="nofollow") · /hanja 글자 상세의 '맞춰 보기' 버튼 ·
+//   독음 쪽·인덱스의 한 줄(HanjaEvaluateLine) · 그 쪽들의 제목·설명·h1 틀 고정(검색 유입 보호). 맨 아래 묶음.
+//   링크가 데이터 전부에서 이름 평가로 그대로 읽히는지는 hanja-pick.test.mjs 가 값으로 본다.
 // 새 화면 파일을 만들면 NEW_COMPONENTS·NEW_TEXT_FILES 에 더한다 — 같은 검사가 걸린다.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -49,11 +51,16 @@ const OHAENG_RESULT = [...DESIGN, "OhaengResult.tsx"];
 const PRIVACY = ["src", "app", "privacy", "page.tsx"];
 const SITEMAP = ["src", "app", "sitemap.ts"];
 const ROBOTS = ["src", "app", "robots.ts"];
+// 진입 링크(C7 뒤 절반)
+const NAME_PAGE = ["src", "app", "name", "[slug]", "page.tsx"];
+const HANJA_SLUG = ["src", "app", "hanja", "[slug]", "page.tsx"];
+const HANJA_INDEX = ["src", "app", "hanja", "page.tsx"];
+const EVAL_LINE = ["src", "components", "hanja", "HanjaEvaluateLine.tsx"];
 
 /** 이 기능이 새로 만든 화면 컴포넌트 — 흐림·역할·격자 규칙을 건다 */
-const NEW_COMPONENTS = [SLOTS, PANEL, BLOCK, GUIDE];
+const NEW_COMPONENTS = [SLOTS, PANEL, BLOCK, GUIDE, EVAL_LINE];
 /** 이 기능이 새로 쓰는 문장이 든 파일 — 금지 문장·고정 조사 꼴을 건다(기존 문장은 범위 밖이다 — 설계 §9) */
-const NEW_TEXT_FILES = [SLOTS, PANEL, TEXT, STORE, ["src", "lib", "hanja-pick.ts"], BLOCK, CHIP, SUMMARY_TEXT, RECALC, GUIDE];
+const NEW_TEXT_FILES = [SLOTS, PANEL, TEXT, STORE, ["src", "lib", "hanja-pick.ts"], BLOCK, CHIP, SUMMARY_TEXT, RECALC, GUIDE, EVAL_LINE];
 
 const name = (p) => p.at(-1);
 /** 주석을 뺀 코드(블록 주석·줄 주석·JSX 주석) — 규칙을 설명하는 주석의 낱말에 걸리지 않게 */
@@ -946,8 +953,6 @@ test("sitemap·robots — /evaluate 는 바뀐 날을 자기 lastModified 로(�
 // 빌드 HTML 대조(바꾸기 전 빌드와 title·description·h1 같음, 더해진 것이 링크 줄뿐)는 구현 기록 §26 에 적었다.
 // ═════════════════════════════════════════════════════════════
 
-const NAME_PAGE = ["src", "app", "name", "[slug]", "page.tsx"];
-
 test("/name 조합 카드의 '이 한자로 평가' — 이름과 그 조합만 싣는 nofollow 링크(칩 아래), 순우리말 참고 조합에는 없다", () => {
   const raw = read(...NAME_PAGE);
   assert.match(code(raw), /^import \{ evaluateComboHref \} from "@\/lib\/hanja-pick";$/m);
@@ -974,4 +979,100 @@ test("/name 조합 카드의 '이 한자로 평가' — 이름과 그 조합만 
   assert.doesNotMatch(code(raw), /<Link\s+href=\{?["'`]\/evaluate/);
   // 서버 컴포넌트에서 쓰는 링크 함수는 큰 JSON 을 import 하지 않는 순수 모듈이다(이 쪽의 번들과 무관하지만 클라이언트도 같은 모듈을 쓴다)
   assert.doesNotMatch(code(read("src", "lib", "hanja-pick.ts")), /from "\.\/(hanja|name)-seo"|\.json"/);
+});
+
+/** 주석을 빼고 줄바꿈을 접은 원문 — 지운 JSX 주석 자리에 남는 `{}` 도 뺀다 */
+const flatCode = (src) => flat(code(src)).replace(/\{\} /g, "");
+
+test("/hanja 글자 상세 — 첫째 버튼 '‘瑞’ 글자로 이름 맞춰 보기'(독음 전부를 해시에), 추천 버튼은 둘째. 피하는 글자는 배너 없음, BMP 밖은 새 버튼만", () => {
+  const raw = read(...HANJA_SLUG);
+  assert.match(code(raw), /^import \{ evaluatePickHref \} from "@\/lib\/hanja-pick";$/m);
+  const banner = flatCode(functionBody(raw, "CtaBanner"));
+  assert.ok(banner.startsWith("function CtaBanner({ char, label, pickHref }: { char: string; label: string; pickHref?: string }) {"));
+  // BMP 밖 글자 — 추천 버튼은 계속 숨기고, 맞춰 보기가 있으면 그 버튼만
+  assert.ok(banner.includes("const recommendable = (char.codePointAt(0) ?? 0) <= 0xffff; if (!recommendable && !pickHref) return null;"));
+  // pickHref 가 없을 때(독음 쪽)는 지금 모양 그대로 — 채운 추천 버튼 하나
+  const recommendLink = (cls) =>
+    `<Link href={\`/required-char?char=\${encodeURIComponent(char)}\`} rel="nofollow" className="${cls}" > &lsquo;{char}&rsquo; 글자를 넣어 이름 추천받기 → </Link>`;
+  const filled = "inline-block rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-navy-600";
+  const outlined = "inline-block rounded-lg border border-navy px-6 py-3 text-sm font-semibold text-navy no-underline transition hover:bg-navy-50";
+  const box = '<div className="my-10 rounded-xl border border-paper-line bg-paper-tint p-6 text-center"> <p className="mb-4 text-sm text-text-2">{label}</p>';
+  assert.ok(banner.includes(`if (!pickHref) { return ( ${box} ${recommendLink(filled)} </div> ); }`), "독음 쪽 배너가 바뀌었다");
+  // pickHref 가 있을 때: 맞춰 보기(<a> — 해시 링크라 nofollow 없음, 채운 버튼) → 추천(테두리 버튼, BMP 밖이면 없음)
+  assert.ok(
+    banner.includes(
+      `return ( ${box} <div className="flex flex-wrap justify-center gap-3"> <a href={pickHref} className="${filled}" > &lsquo;{char}&rsquo; 글자로 이름 맞춰 보기 → </a> {recommendable && ( ${recommendLink(outlined)} )} </div> </div> );`
+    ),
+    "글자 상세 배너의 두 버튼 꼴이 바뀌었다"
+  );
+  // 글자 상세: 피하는 글자(nf)가 아니면 배너 + 맞춰 보기(독음 전부 record.r). 라벨 문장은 그대로
+  const charPage = flatCode(functionBody(raw, "CharPage"));
+  assert.ok(
+    charPage.includes(
+      "{!avoided && ( <CtaBanner char={char} label={`${char}(${primaryReading}) 글자가 들어간 이름의 미학 점수와 오행 조화가 궁금하신가요?`} pickHref={evaluatePickHref(char, record.r)} /> )}"
+    )
+  );
+  // 배너 호출은 둘 — 독음 쪽은 글자가 아니라 독음이라 pickHref 를 주지 않는다
+  const calls = [...code(raw).matchAll(/<CtaBanner\b[\s\S]*?\/>/g)].map((m) => m[0]);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map((c) => c.includes("pickHref=")), [false, true]);
+  // 버튼 높이 44px(py-3 12 + text-sm 20 + 12) — 두 버튼 같은 꼴
+  for (const cls of [filled, outlined]) assert.match(cls, /\bpy-3\b.*\btext-sm\b/);
+});
+
+test("/hanja 독음 쪽·인덱스의 한 줄 — 쿼리·해시 없는 /evaluate(nofollow 없음). 독음 쪽은 배너 바로 아래·배너와 같은 조건", () => {
+  const line = read(...EVAL_LINE);
+  assert.doesNotMatch(line, /^\s*["']use client["']/m);
+  assert.ok(
+    flatCode(line).includes(
+      '<p className={`text-center text-sm leading-relaxed text-text-2 ${className}`}> 이름을 정하셨다면 음절마다 한자를 골라 맞춰 볼 수 있어요 →{" "} <a href="/evaluate" className="font-medium text-teal-800 no-underline hover:underline"> 이름 평가 </a> </p>'
+    )
+  );
+  // 링크는 하나 — 목적지는 폼 맨 위(설명 글 앵커 아님), nofollow·새 창 없음
+  assert.deepEqual([...code(line).matchAll(/<a\b[^>]*>/g)].map((m) => m[0]), ['<a href="/evaluate" className="font-medium text-teal-800 no-underline hover:underline">']);
+  // 독음 쪽: 배너 바로 아래, 배너와 같은 조건(이름에 쓰는 글자가 없는 독음에는 둘 다 없다)
+  const reading = flatCode(functionBody(read(...HANJA_SLUG), "ReadingPage"));
+  assert.match(reading, /\{named\.length > 0 && \( <CtaBanner char=\{reading\} label=\{`[^`]*`\} \/> \)\} \{named\.length > 0 && <HanjaEvaluateLine className="-mt-6" \/>\}/);
+  // 인덱스: '추천 도구 연결' 상자(그대로) 아래 — 쪽의 맨 끝
+  assert.match(flatCode(read(...HANJA_INDEX)), /필수 글자로 이름 추천받기 → <\/Link> <\/div> <HanjaEvaluateLine className="mt-4" \/> <\/main>/);
+  // 쓰는 곳은 이 둘뿐
+  for (const p of [HANJA_SLUG, HANJA_INDEX]) {
+    assert.match(read(...p), /^import \{ HanjaEvaluateLine \} from "@\/components\/hanja\/HanjaEvaluateLine";$/m, name(p));
+    assert.equal([...code(read(...p)).matchAll(/<HanjaEvaluateLine\b/g)].length, 1, name(p));
+  }
+  // 글자색 — 종이 위 작은 글씨(teal-800)
+  const ratio = contrast(hexRgb(token("color-teal-800-token")), PAPER);
+  assert.ok(ratio >= AA, `teal-800 / 종이 ${ratio.toFixed(2)}:1`);
+});
+
+test("검색 유입 보호 — /hanja·/name 의 title·description·h1 틀과 기존 문단은 그대로(링크 줄만 더했다)", () => {
+  const slug = read(...HANJA_SLUG);
+  // 독음 쪽
+  assert.ok(slug.includes("const title = `이름에 쓰는 '${reading}' 한자 ${chars.length}자 — 종류·뜻·획수·오행`;"));
+  assert.ok(
+    slug.includes(
+      "const description = `'${reading}'${josa(reading, \"으로/로\")} 읽는 인명용 한자 ${chars.length}자의 뜻, 획수, 자원오행을 한눈에 비교하세요. 부수 기준 자원오행과 판정 근거를 함께 보여 드립니다.`;"
+    )
+  );
+  assert.ok(flat(slug).includes("이름에 쓰는 &lsquo;{reading}&rsquo; 한자 {chars.length}자 </h1>"));
+  // 글자 상세
+  assert.ok(slug.includes('const title = `${char}(${record.r.join("·")}) — 뜻·획수·오행`;'));
+  assert.ok(flat(slug).includes("}. 이름에 쓰일 때의 의미와 함께 쓰기 좋은 글자를 확인하세요.`;"));
+  assert.ok(flat(slug).includes('{char}{" "} <span className="font-normal text-text-2"> ({meaningParts[0]}) </span> </h1>'));
+  assert.equal([...code(slug).matchAll(/<h1\b/g)].length, 2);
+  // 기존 문단 — 독음 쪽 배너 문장·글자 상세 배너 문장
+  assert.ok(slug.includes("들어가는 이름이 궁금하신가요? 미학 점수와 오행 조화까지 분석해 드립니다.`}"));
+  // 인덱스
+  const index = read(...HANJA_INDEX);
+  assert.equal([...index.matchAll(/title: "인명용 한자 사전 — 뜻·획수·오행 검색",/g)].length, 2);
+  assert.ok(index.includes('"이름에 쓰는 인명용 한자 9,000여 자의 뜻, 획수, 오행을 독음별로 찾아보세요. 대법원 인명용 한자 기준, 부수 기준 자원오행과 판정 근거(확정·이견)를 함께 제공합니다.",'));
+  assert.match(flat(index), /<h1 className="[^"]*"> 인명용 한자 사전 <\/h1>/);
+  assert.ok(flat(index).includes("마음에 드는 글자를 찾으셨나요? 그 글자가 들어간 이름의 미학 점수와 오행 조화를 분석해 드립니다."));
+  // /name
+  const nameSrc = read(...NAME_PAGE);
+  assert.ok(nameSrc.includes("const title = `${name} 이름 뜻 — 인기 순위·한자·의미`;"));
+  assert.ok(nameSrc.includes("const description = `${name}: ${GENDER_LABEL[gender]}.${meanPart} 출생신고 통계 기준 인기 순위와 남녀 비율${"));
+  assert.ok(flat(nameSrc).includes('{name} <span className="text-xl font-normal text-text-2 sm:text-2xl">이름 뜻</span> </h1>'));
+  assert.equal([...code(nameSrc).matchAll(/<h1\b/g)].length, 1);
+  assert.ok(flat(nameSrc).includes("{name}의 발음·미학 점수와 사주 오행 조화가 궁금하신가요?"));
 });

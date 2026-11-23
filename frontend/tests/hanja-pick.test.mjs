@@ -972,6 +972,59 @@ test("evaluateComboHref: 이름과 한자 조합 — 성·성별은 싣지 않�
   assert.deepEqual([...params.keys()], ["name", "hanja"]);
 });
 
+// C7 진입 링크 — 정적 쪽(/hanja 글자 상세 · /name 조합 카드)이 만드는 링크 전부가 이름 평가에서 그대로 읽히는지, 데이터 전체로 본다.
+// 쪽 파일이 이 함수를 그 인자로 부르는지는 evaluate-hanja-pages.test.mjs 가 원문으로 본다.
+const hanjaSeo = () => JSON.parse(read("../src/data/hanja-seo.json"));
+
+test("/hanja 글자 상세의 '맞춰 보기' — 피하는 글자가 아닌 상세 글자 전부: 해시가 글자와 독음 전부로 되읽히고, 그 독음의 음절 파일마다 글자가 있다", () => {
+  const seo = hanjaSeo();
+  const inFile = new Map();
+  const has = (syllable, character) => {
+    if (!inFile.has(syllable)) {
+      const path = here(`../public${syllableFile(syllable)}`);
+      inFile.set(syllable, existsSync(path) ? new Set(parsePickFile(JSON.parse(readFileSync(path, "utf8"))).map((f) => f.character)) : new Set());
+    }
+    return inFile.get(syllable).has(character);
+  };
+  let linked = 0;
+  let outsideBmp = 0;
+  const wrong = [];
+  for (const [character, record] of Object.entries(seo)) {
+    if (!(record.m && record.s) || record.nf === 1) continue; // 상세 쪽이 없거나(hasDetailPage) 배너가 없는(피하는 글자) 글자
+    linked++;
+    if ((character.codePointAt(0) ?? 0) > 0xffff) outsideBmp++;
+    const href = evaluatePickHref(character, record.r);
+    const pick = parsePickHash(new URL(href, "https://example.invalid").hash);
+    if (!pick || pick.character !== character || pick.readings.join() !== record.r.join()) wrong.push(`${hex(character)} ${href}`);
+    else if (!pick.readings.every((r) => has(r, character))) wrong.push(`${hex(character)} 음절 파일에 없음 ${pick.readings}`);
+  }
+  assert.deepEqual(wrong.slice(0, 10), []);
+  // 지금 데이터의 규모 — 상세 9,016자 중 피하는 글자 991자를 뺀 수, 그중 BMP 밖(추천 버튼 없이 이 버튼만)
+  assert.ok(linked > 8000, `링크 ${linked}자`);
+  assert.ok(outsideBmp > 0, "BMP 밖 글자가 한 자도 없다 — 새 버튼만 남는 경로를 보지 못한다");
+  // 독음 둘(均 균·연)은 둘 다, 가장 많은 독음 수도 넉 줄을 넘지 않는다(링크가 버리는 독음이 없다)
+  assert.deepEqual(seo[GYUN].r, ["균", "연"]);
+  assert.ok(Math.max(...Object.values(seo).map((r) => r.r.length)) <= 4);
+});
+
+test("/name 조합 카드의 '이 한자로 평가' — 수록 이름의 조합 전부가 이름만으로 떨어지지 않고 그 조합 그대로 실린다", () => {
+  const { names } = JSON.parse(read("../src/data/name-seo.json"));
+  let combos = 0;
+  const wrong = [];
+  for (const [name, record] of Object.entries(names)) {
+    if (record.pk) continue; // 순우리말 사전 이름의 참고 조합에는 링크가 없다
+    for (const combo of record.combos ?? []) {
+      combos++;
+      const params = new URLSearchParams(evaluateComboHref(name, combo.join("")).split("?")[1]);
+      if (params.get("name") !== name || params.get("hanja") !== combo.join("") || [...params.keys()].join() !== "name,hanja") {
+        wrong.push(`${name} ${hex(combo.join(""))}`);
+      }
+    }
+  }
+  assert.deepEqual(wrong.slice(0, 10), []);
+  assert.ok(combos > 10000, `조합 ${combos}개`);
+});
+
 // ============================================================
 // 고르기 패널의 목록
 // ============================================================
@@ -1228,6 +1281,12 @@ test("새 소스·테스트에 호환 한자·BMP 밖 글자·보이지 않는 �
     "../src/app/privacy/page.tsx",
     "../src/app/sitemap.ts",
     "./note-polarity.test.mjs",
+    // 진입 링크(C7 뒤 절반). app/hanja/[slug]/page.tsx 는 예전 주석의 경고 이모지(U+26A0 + 이체 선택자 U+FE0F)가 있어 목록에 넣지 않았다 —
+    // 이번에 더한 줄(배너 주석의 한자 예 瑞 — 통합 한자)은 커밋 때 따로 훑었다
+    "../src/app/name/[slug]/page.tsx",
+    "../src/app/hanja/page.tsx",
+    "../src/components/hanja/HanjaEvaluateLine.tsx",
+    "./palette-contrast.test.mjs",
   ];
   for (const rel of files) {
     const hits = [];

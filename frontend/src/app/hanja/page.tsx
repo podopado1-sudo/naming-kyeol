@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { HanjaGradeBadge } from "@/components/hanja/HanjaBadges";
+import { HanjaEvaluateLine } from "@/components/hanja/HanjaEvaluateLine";
 import {
   getAllDetailChars,
   getAllReadings,
@@ -172,6 +173,8 @@ export default function HanjaIndexPage() {
             필수 글자로 이름 추천받기 →
           </Link>
         </div>
+        {/* 이름 평가로 가는 한 줄(2026-11 한자 입력 §11-2) — 색인되는 허브인데 평가로 가는 줄이 없었다. 위 상자는 그대로 */}
+        <HanjaEvaluateLine className="mt-4" />
       </main>
       <Footer />
     </>
