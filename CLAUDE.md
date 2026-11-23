@@ -30,7 +30,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (2,567 테스트, 2026-10-28 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (2,663 테스트, 2026-11-23 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -54,7 +54,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 2,567개)
+# 테스트 실행 (NameForm.slnx 경유 — 2,663개)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -207,7 +207,7 @@ D:\MyDev\NameForm\
           └── 분석/평가 서비스
                 NameAnalysisService     → 이름 평가 (한자/사주/음령오행)
                 NameEvaluationService   → 상세 평가 (Aesthetic·Harmony Breakdown)
-                SajuCalculationService  → 사주 4기둥 계산
+                SajuCalculationService  → 사주 4기둥 계산 (2026-11 계산 버그 B1~B5 수정 — '알려진 이슈'의 사주 계산 기록)
                 YongshinCalculationService → 용신 분석 (억부법 + 조후법)
 ```
 
@@ -1028,6 +1028,31 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   `ParentBasedSecondReviewFixTests`(2차 — 성 칸 없는 전체 이름·키워드 5개 이상과 첫 카드·family-meaning 한자 = ScoringService.AssignedHanja·키워드 카드 약자·비실명 반대 성별·
   낱말/'-자' 이름·복성 메아리·유행/두음 순서 — 기대값은 손으로 나눈 부모 이름·평가 경로·데이터 목록·손 표)·
   `ParentBasedNamingEngineTests`·프런트 `tests/parent-naming.test.mjs`(코드 표·keywordHasHangul·familyMeaningRoles)·`tests/name-split.test.mjs`(splitParentName — 남궁민·제갈량·황보라)
+- ~~**사주 계산 버그 B1~B5**~~ (2026-11-24 배포 — 설계·검증 기록은 브랜치 `feat/ohaeng-1119` 의 docs/plan-ohaeng-2026-11.md §1 · §17): 시각 없는 입력의 일주가 전날 것(B1), 10/8 무렵~12/31 월지가 늘 酉(B2), 절입일 경계(B3), 같은 간지 기둥의 강약 가중치(B4), 보정한 시각 23시대의 시주 천간(B5).
+  영향(수정 전후 서버 대조, 2026-11-19): 시각 없이 넣은 /evaluate 는 종합 점수 36.8%가 바뀜(달력 고른 표본 10,000쌍 — 바뀐 것 평균 ±3.2점 · 최대 11점(이름 200개 격자에서는 13점), 배정 한자 28.1%), 시각을 넣으면 8.9%(거의 10~12월생).
+  2000~2024년 모든 날 기준 용신이 바뀌는 출생 입력은 시각 없음 30.0% · 시각 있음 6.6%(B2 4.9% · B4 1.1% · B5 0.2% · 겹침과 B3 0.4%). /search 한자 이름 top10 은 요청의 70~74%에서 달라지고 추천 1위는 55~60%에서 바뀐다(`NamePoolEngine` 이 시각 없이 원국을 구한다).
+  /name 정적 데이터는 무영향(`NameSeo_AestheticScores_MatchEngine` 통과 — 재생성 불필요). 블로그 · 캡처에 출생일을 넣은 /evaluate · /search 화면이 있으면 값이 달라진다.
+  고친 것(커밋 46a4875 — `SajuCalculationService`·`SolarTermCalculator`·`YongshinCalculationService`·`SajuChart`): 시각이 없으면 진태양시 보정 없이 넣은 날짜로 일주를 세우고 연·월주는 그날 낮 12시(KST) 기준,
+  절기는 전년·그 해 12절을 함께 넣어 순간(UTC)으로 비교, 연주는 입춘 순간과 비교(서버 시간대 의존 제거), 강약 가중치는 기둥의 자리로(월지 3·일지 2), 보정한 시각 23시대의 시주 천간은 다음 날 일간 기준
+  (야자시 — 일주는 그날 그대로). 시각이 없으면 응답의 `correctionMinutes` 가 0(옛 −32) — /analysis 사주 카드는 '진태양시 보정 0분'으로 보인다. 응답 필드 `correctionApplied`·`termOnBirthDay` 와
+  '보정하지 않았어요'·절기 안내 줄은 /ohaeng 과 함께 나간다(브랜치 `feat/ohaeng-1119`). 회귀 `Tests/SajuCalculationP0Tests.cs`·`SolarTermCalculatorTests.cs`.
+  위 수치는 모두 **달력에서 고르게 뽑은 표본** 값이다(지정 격자 값은 버그별 구분용이라 옮기지 않았다). B4 는 시각 있는 입력의 6.3%가 강약 점수가, 1.1%가 용신이 바뀐다.
+  검산: 독립 재구현(고정밀 황경식 — 계산 코드를 보지 않고 작성)과 256,290줄 대조에서 규칙 불일치 0, 한국천문연구원·일본 국립천문대 12절 612건·일진 2,326일 대조.
+- **[별도 결정] /search 후보 풀은 출생 시각을 쓰지 않는다**: `NamePoolEngine`(· `RequiredCharEngine` · `TwinNameEngine`)이 `CalculateChart(birthDate)` 를 시각 없이 불러 풀의 '없는 오행 · 2개 이상인 오행'을 정한다.
+  그래서 사주 계산 수정의 영향은 **시각을 넣은 요청에도** 미친다 — 시각 있는 요청의 70.0%에서 한자 이름 top10 이 바뀌고(/evaluate 로는 '바뀐 것 없음'인 입력도 65.1%), 사용자에게 '시각을 넣었으면 안 바뀐다'고 말할 수 없다.
+  수정 뒤 풀은 '넣은 날짜의 일주', 조화 점수(`HarmonyEngine`)는 '보정한 시각의 일주'를 써서 0시대(서울 시계 00:00~00:32) 출생은 두 원국의 일주가 하루 다르다(수정 전에는 풀이 늘 전날 일주). 풀 엔진에 시각을 넘길지는 따로 정한다.
+- **옛 엔드포인트의 출생 시각 · 날짜 파싱이 느슨하다**(B1~B5 밖, 처음부터): `TimeSpan.TryParse` 가 '5'를 5일 · '1.02:00'을 1일 2시간 · '-01:00'을 전날 23시로 받아 `CalculateChart` 가 다른 날짜의 원국을 내고, '24:00' · '25:00'은 조용히 버려 시각 없음(보정 없음 · 낮 12시 기준)으로 계산한다
+  (`NameAnalysisService` · `RecommendationService` · `SmartRecommendationService` · `TwinNameService` · `RecommendationsController`). /dual-name · /parent-based · /rare-surname 의 `BirthDate` 는 길이 제한 없이 `DateTime.TryParse` 라 '…Z' · '+09:00' 이 붙으면
+  서버 지역 시간으로 바뀐 날짜를 쓴다(개발 PC = 한국 시간, 운영 = UTC 에서 날짜가 갈릴 수 있다 — 남아 있는 서버 시간대 의존). 화면(type=date · type=time)에서는 닿지 않고 API 직접 호출이나 손으로 만든 주소에서만 난다.
+  고칠 때: 엄격 파서(yyyy-MM-dd InvariantCulture · HH:mm/HH:mm:ss 00:00~23:59)를 공용 헬퍼로 두고 형식이 틀리면 400(옛 엔드포인트의 검증 동작이 바뀐다 — 별도 커밋). 그 헬퍼 파일은 `SajuCalculationP0Tests.P0_B3_NoServerTimeZoneInYearPillar` 의 검사 목록에 넣는다.
+- **절기 계산기 정밀도(알려진 한계)**: `SolarTermCalculator` 는 저정밀 황경 식 + 분 버림이라 절입 시각이 참값보다 13분 이르게 ~ 9분 늦게 나온다(1900~2099년 2,400건 — 평균 2분 이름). 그 사이 몇 분에 태어난 시각 있는 입력은 월주(입춘이면 연주도)가 옆 달 것으로 나온다
+  (200년 합계 8,955분 = 전체의 0.0085%, 약 11,700건에 1건. 가까운 해에서 큰 것: 2026년 입하 05-05 20:36~20:49 · 청명 04-05 03:28~03:40 · 망종 06-06 00:37~00:48). 시각 없는 입력은 낮 12시 기준이라 절입이 정오에서 몇 분 안인 닷새
+  (1918-01-06 · 1988-01-06 · 2020-03-05 · 2080-07-06 · 2086-03-05)의 월주가 발표값 기준과 한 달 다르다. 목록은 `SajuCalculationP0Tests` '알려진 정밀도 한계' 절. 고치려면 ΔT + 고정밀 황경식 또는 절입 시각 표(별도 작업).
+- ~~**3음절 큐레이션 로더 첫 로드 경쟁**~~ (2026-11-24 배포, 커밋 d174454): `ThreeSyllableCuratedLoader.LoadEntries` 가 빈 목록을 먼저 공유 필드에 넣고 파일을 읽어, 시작 직후(운영 콜드 스타트 포함) 동시에 온 요청이 빈 큐레이션 목록을 받았다
+  (3음절 탭 앞 이름이 형태소 조합으로 바뀜, 전체 `dotnet test` 가 드물게 한 건 실패). `_entries` 를 `volatile` 로 두고 다 읽은 목록만 잠금 안에서 한 번 넣는다(`PhonologyVowelLoader` 와 같은 방식), `ResetCache()` 추가,
+  회귀 `ThreeSyllableEngineTests.CuratedLoader_ConcurrentLoadAfterReset_NeverYieldsEmptyList`.
+- **개발 환경 함정**: `nameform.db` 가 없는 새 폴더(새 worktree)에서 처음 띄우면 `CanConnect()` 가 false 라 `EnsureCreated` 를 건너뛰고 `UsageEvents` 만 생긴 뒤, 다음 부팅의 강제 생성 스크립트가
+  'UsageEvents already exists'에서 멈춰 `Candidates` · `UserFeedbacks` 가 끝내 안 생긴다 — /smart 응답에서 standard(한자 이름) 탭이 말없이 빠진다. **띄우기 전에 0바이트 `nameform.db` 를 만들어 둘 것**(운영 PostgreSQL 은 무관).
 
 ### 프론트엔드
 - **한자 서체 범위**: 사이트 한자 폰트(layout.tsx next/font Noto Serif KR — Google 조각 373개)는 기본 영역 4,620/20,992자·확장 A/B 0자만 담는다
