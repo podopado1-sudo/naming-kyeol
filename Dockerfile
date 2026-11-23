@@ -12,6 +12,9 @@
 #   - Cors__AllowedOrigins__0=https://namingkyeol.com
 #   - Authentication__Enabled / Authentication__ApiKeys__0
 #   - PORT (Render 자동 주입, 기본 10000)
+#   - (선택) ForwardedHeaders__ClientIpHeader / ForwardedHeaders__TrustedNetworks__0..N
+#       리미터가 방문자 IP 를 읽는 헤더(기본 CF-Connecting-IP)와 믿는 직전 홉 대역(기본 사설망·루프백)
+#       — Api/Middleware/ClientIpForwarding.cs. ASPNETCORE_FORWARDEDHEADERS_ENABLED 는 필요 없다
 # =================================================================
 
 # ---------- Stage 1: Build ----------

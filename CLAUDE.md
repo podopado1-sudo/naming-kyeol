@@ -1060,4 +1060,12 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 ### 인프라/운영
 - **Render Free cold start**: 15분 idle 후 첫 요청 30초+ — `.github/workflows/keepalive.yml`이 10분 간격 ping으로 회피 (실측: GitHub cron 스로틀링으로 약 1시간 간격까지 밀림 — cold start 완전 회피는 못 함). 같은 워크플로가 프론트(namingkyeol.com)도 확인해 3회 연속 비200이면 run 실패 → GitHub 실패 알림 메일이 다운 감지 채널 (2026-07-30 Vercel 정지 402 사후 대책). 저장소 60일 무커밋 시 GitHub이 스케줄 자동 비활성화하므로 알림 메일 주의
 - **api.namingkyeol.com 커스텀 도메인**: Render 검증 미완 — 완료 시 Vercel `NEXT_PUBLIC_API_URL` 교체 필요
+- **리미터 버킷의 IP = 방문자 주소 (2026-11-19)**: 운영 경로는 방문자 → Cloudflare → Render 프록시 → Kestrel 이라 `RemoteIpAddress` 를 그대로 쓰면
+  프록시 주소 하나(전 방문자 공용 버킷)다. `app.UseClientIpForwarding()`(`Api/Middleware/ClientIpForwarding.cs` — 파이프라인 맨 앞, `UseRateLimiter` 보다 먼저)가
+  직전 홉이 사설망·루프백일 때만 `CF-Connecting-IP` 값 하나를 읽어 되찾는다. `X-Forwarded-For` 는 읽지 않는다(Cloudflare·Render 가 덧붙이기만 해 왼쪽 값은
+  방문자가 지어낼 수 있고 오른쪽 끝은 Cloudflare 엣지 주소). 헤더가 없거나 직전 홉이 신뢰 대역 밖이면 예전처럼 직전 홉 주소로 집계. 버킷 키는
+  `RateLimitPartitionKey`(IPv6 는 /64). 환경변수로 덮을 수 있다 — `ForwardedHeaders__ClientIpHeader`, `ForwardedHeaders__TrustedNetworks__0..N`(CIDR, 주면 기본 목록 대체).
+  Render 에 `ASPNETCORE_FORWARDEDHEADERS_ENABLED` 는 넣을 필요 없다(프레임워크가 같은 미들웨어를 하나 더 거는 스위치 — 임시 시험에서는 넣어도 버킷 규칙이 같았다).
+  배포 뒤 확인: 로그의 '클라이언트 IP 전달 확인' 줄(경우마다 한 번 — 방문자 IP 는 적지 않는다)에 '방문자별 버킷'이 보이면 정상, '신뢰 대역 밖' 경고면 대역 설정을 볼 것.
+  회귀 `RateLimitClientIpIntegrationTests`(Program.cs 를 그대로 띄움 — 미들웨어 순서 포함)·`ClientIpForwardingTests`
 - **dev 환경 확인**: `Properties/launchSettings.json`으로 `dotnet run`만 쳐도 Development 모드 자동 적용됨

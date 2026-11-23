@@ -505,6 +505,10 @@ builder.Services.AddSwaggerGen();
 //   - 전체 endpoint는 기본(Global) 정책 자동 적용
 //
 // 초과 시 429 Too Many Requests 응답 + Retry-After 헤더
+//
+// ⚠️ 버킷 키의 IP 는 app.UseClientIpForwarding() 이 되찾은 방문자 주소다 (Cloudflare → Render 프록시 뒤라
+//    그대로 두면 RemoteIpAddress 가 프록시 주소 하나 — 전 방문자 공용 버킷). 신뢰 규칙은 ClientIpForwarding.cs
+builder.Services.AddClientIpForwarding(builder.Configuration);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -519,7 +523,7 @@ builder.Services.AddRateLimiter(options =>
     // 전역 정책 — IP당 분당 60회
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
     {
-        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ip = RateLimitPartitionKey.For(httpContext);
         return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 60,
@@ -532,7 +536,7 @@ builder.Services.AddRateLimiter(options =>
     // "expensive" 정책 — 비싼 API용. IP당 분당 20회 + 시간당 200회 (이중 제한)
     options.AddPolicy("expensive", httpContext =>
     {
-        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ip = RateLimitPartitionKey.For(httpContext);
         return RateLimitPartition.GetSlidingWindowLimiter(ip, _ => new SlidingWindowRateLimiterOptions
         {
             PermitLimit = 20,
@@ -786,6 +790,8 @@ NameForm.Application.Engines.Data.HanjaData.LoadExternalData();
 NameForm.Application.Engines.Data.NameGenderData.LoadExternalData();
 
 // Configure the HTTP request pipeline.
+app.UseClientIpForwarding(); // 맨 앞 — 뒤의 리미터·인증 로그가 프록시 주소가 아니라 방문자 주소를 본다
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -814,3 +820,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// 통합 테스트(WebApplicationFactory<Program>)가 실제 파이프라인을 띄울 수 있게 공개한다.
+public partial class Program { }
