@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
+import { OhaengRelationChip } from "@/components/design/OhaengRelationChip";
 import { Badge } from "@/components/ui/badge";
 import { HanjaGradeBadge } from "@/components/hanja/HanjaBadges";
 import { ScoreBreakdownCard } from "@/components/results/ScoreBreakdownCard";
@@ -187,17 +188,12 @@ function GenderBar({ rec }: { rec: NameSeoRecord }) {
   );
 }
 
-const OHAENG_CHIP: Record<string, string> = {
-  생: "bg-teal-50 text-teal-700",
-  비화: "bg-navy-50 text-navy",
-  극: "bg-gold-50 text-gold-800", // 土 배지와 같은 골드 글자 토큰 — 옛 gold-700 은 gold-50 위 3.40:1
-  unknown: "",
-};
-
 /** 한자 조합 카드 — 글자별 훈음/획수/자원오행/판정 등급 + 두 글자 자원오행 관계(상생·비화·상극).
  * 오행은 부수 기준 자원오행(hanja-seo.json e — 2026-10-22 S4), 등급은 R 확정·V 이견 있음·X 예외 적용(g).
  * 훈음은 이름 음절의 독음에 맞춘다(乻은 하늘의 '늘' 자리에서 "음차 늘", "땅 이름 얼"이 아니라).
- * featured(1순위 강조·'추천 1순위' 라벨)는 한자 이름에만 — 순우리말 사전 이름(pk)의 조합은 참고라 강조하지 않는다(ND-3). */
+ * featured(1순위 강조·'추천 1순위' 라벨)는 한자 이름에만 — 순우리말 사전 이름(pk)의 조합은 참고라 강조하지 않는다(ND-3).
+ * 관계 칩은 /evaluate '이 이름의 한자' 블록과 같은 공용 컴포넌트(OhaengRelationChip — 2026-11 한자 입력 §11-1). 색 표와 마크업은
+ * 이 파일에 있던 것을 글자 그대로 옮긴 것이라 HTML 이 같고(바꾼 커밋에서 빌드 3,865쪽 대조), 말은 지금처럼 ohaengRelation 의 label 이다. */
 function ComboCard({
   combo,
   name,
@@ -258,13 +254,7 @@ function ComboCard({
           </div>
         ))}
       </div>
-      {rel.label && (
-        <span
-          className={`inline-block rounded-md px-2.5 py-1 text-xs font-medium ${OHAENG_CHIP[rel.kind]}`}
-        >
-          자원오행 {rel.label}
-        </span>
-      )}
+      <OhaengRelationChip kind={rel.kind} label={rel.label} />
     </div>
   );
 }

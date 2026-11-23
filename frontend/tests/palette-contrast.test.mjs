@@ -212,7 +212,13 @@ test("/evaluate 부족 오행 칩·/name 두 글자 오행 관계 칩 글자도 
     assert.ok(r >= AA);
   }
   // /name 한자 조합 카드 상생·비화·상극 칩(OHAENG_CHIP) — 옛 극 gold-700/gold-50 3.40:1
-  const name = read("src", "app", "name", "[slug]", "page.tsx");
+  // 2026-11 한자 입력(설계 §13-3): 색 표는 /name 과 /evaluate 결과 블록이 함께 쓰는 공용 칩으로 옮겼다 — 그 파일의 표를 읽는다
+  const name = read("src", "components", "design", "OhaengRelationChip.tsx");
+  assert.match(
+    read("src", "app", "name", "[slug]", "page.tsx"),
+    /<OhaengRelationChip kind=\{rel\.kind\} label=\{rel\.label\} \/>/,
+    "/name 조합 카드가 공용 칩을 쓰지 않는다 — 이 검사가 그 카드의 색을 보지 못한다",
+  );
   const block = /const OHAENG_CHIP[^{]*\{([\s\S]*?)\n\};/.exec(name);
   assert.ok(block, "OHAENG_CHIP 을 찾지 못했다");
   for (const [, kind, cls] of block[1].matchAll(/(생|비화|극):\s*"([^"]+)"/g)) {

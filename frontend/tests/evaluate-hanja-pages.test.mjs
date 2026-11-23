@@ -424,6 +424,16 @@ test("관계 칩 — 서버·클라이언트가 함께 쓰는 컴포넌트. 색 
   // /name 조합 카드가 아직 제 색 표를 갖고 있으면(그쪽을 이 컴포넌트로 바꾸기 전) 두 표가 글자 그대로 같다
   const old = /const OHAENG_CHIP[^{]*\{([\s\S]*?)\n\};/.exec(read("src", "app", "name", "[slug]", "page.tsx"));
   if (old) assert.equal(table[1], old[1]);
+  // C7: /name 조합 카드는 이 컴포넌트를 쓴다(칩만 바꾼 커밋에서 빌드한 /name 3,865쪽 HTML 이 바꾸기 전과 같음을 대조했다).
+  // 제 색 표·칩 마크업을 다시 두지 않는다 — 두 벌이 되면 한쪽만 고쳐진다
+  const nameSrc = read("src", "app", "name", "[slug]", "page.tsx");
+  assert.equal(old, null, "/name 이 제 OHAENG_CHIP 을 다시 갖고 있다 — 공용 칩(OhaengRelationChip)을 쓸 것");
+  assert.match(nameSrc, /^import \{ OhaengRelationChip \} from "@\/components\/design\/OhaengRelationChip";$/m);
+  assert.equal([...nameSrc.matchAll(/<OhaengRelationChip kind=\{rel\.kind\} label=\{rel\.label\} \/>/g)].length, 1);
+  assert.doesNotMatch(code(nameSrc), /자원오행 \{rel\.label\}/);
+  // 칩의 말은 /name 그대로 — 상극은 '상극(기운이 부딪침)'(ohaengRelation). /evaluate 블록의 이름 꼴(ohaengRelationName)이 아니다
+  assert.match(nameSrc, /const rel = ohaengRelation\(r1\.e, r2\.e\);/);
+  assert.doesNotMatch(nameSrc, /ohaengRelationName/);
   // 글자색 대비 4.5:1 — palette-contrast 가 /name 의 표에 거는 것과 같은 검사
   for (const [kind, cls] of rows.filter(([, c]) => c)) {
     const ratio = contrast(utilityColor(/\btext-([\w-]+)/.exec(cls)[1]), utilityColor(/\bbg-([\w-]+)/.exec(cls)[1]));
