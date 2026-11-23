@@ -52,7 +52,7 @@ const PRIVACY = ["src", "app", "privacy", "page.tsx"];
 const SITEMAP = ["src", "app", "sitemap.ts"];
 const ROBOTS = ["src", "app", "robots.ts"];
 // 진입 링크(C7 뒤 절반)
-const NAME_PAGE = ["src", "app", "name", "[slug]", "page.tsx"];
+const NAME_PAGE_SRC = ["src", "app", "name", "[slug]", "page.tsx"]; // ③ 묶음(검색 유입 보호)이 쓴다 — ②의 NAME_PAGE 와 따로 두어 ②만 되돌려도 이 파일이 깨지지 않게
 const HANJA_SLUG = ["src", "app", "hanja", "[slug]", "page.tsx"];
 const HANJA_INDEX = ["src", "app", "hanja", "page.tsx"];
 const EVAL_LINE = ["src", "components", "hanja", "HanjaEvaluateLine.tsx"];
@@ -933,53 +933,9 @@ test("개인정보처리방침 — 고른 한자·판정 요청·음절 파일 �
   assert.match(read("src", "lib", "hanja-pick.ts"), /export const HANJA_PICK_BASE = "\/data\/hanja-pick\/v1";/);
 });
 
-test("sitemap·robots — /evaluate 는 바뀐 날을 자기 lastModified 로(방침·오행 찾기와 같은 배포일), 정적 후보 파일은 수집하지 않게", () => {
-  const sitemap = read(...SITEMAP);
-  const dateOf = (path) =>
-    new RegExp(`\\{ path: "${path}", priority: [\\d.]+, changeFrequency: "\\w+", lastModified: "(\\d{4}-\\d{2}-\\d{2})" \\}`).exec(sitemap)?.[1];
-  assert.ok(dateOf("evaluate"), "evaluate 줄에 lastModified 가 없다");
-  assert.equal(dateOf("evaluate"), dateOf("privacy"), "방침과 같은 날(같은 배포)");
-  assert.equal(dateOf("evaluate"), dateOf("ohaeng"));
-  assert.match(sitemap, /\{ path: "evaluate", priority: 0\.8, changeFrequency: "monthly", lastModified: "/);
-  const robots = read(...ROBOTS);
-  assert.match(robots, /const STATIC_DATA = "\/data\/";/);
-  assert.equal([...robots.matchAll(/disallow: \["\/favorites", "\/api\/", STATIC_DATA, \.\.\.TOOL_QUERY_VARIANTS\],/g)].length, 2);
-  assert.match(robots, /const TOOL_QUERY_VARIANTS = \[[^\]]*"\/evaluate\?"[^\]]*\];/);
-});
-
-// ═════════════════════════════════════════════════════════════
-// 진입 링크(C7 뒤 절반) — /name 조합 카드 · /hanja 인덱스·독음 쪽·글자 상세
-// 검색 유입이 가장 많은 쪽들이다 — 링크 줄만 더하고 제목·설명·h1·기존 문단은 건드리지 않는다(사용자 결정).
-// 빌드 HTML 대조(바꾸기 전 빌드와 title·description·h1 같음, 더해진 것이 링크 줄뿐)는 구현 기록 §26 에 적었다.
-// ═════════════════════════════════════════════════════════════
-
-test("/name 조합 카드의 '이 한자로 평가' — 이름과 그 조합만 싣는 nofollow 링크(칩 아래), 순우리말 참고 조합에는 없다", () => {
-  const raw = read(...NAME_PAGE);
-  assert.match(code(raw), /^import \{ evaluateComboHref \} from "@\/lib\/hanja-pick";$/m);
-  const card = functionBody(raw, "ComboCard");
-  assert.match(
-    card,
-    /\{evaluateLink && \(\s*<a\s+href=\{evaluateComboHref\(name, c1 \+ c2\)\}\s+rel="nofollow"\s+aria-label=\{`이 한자로 평가 — \$\{c1\}\$\{c2\}`\}\s+className="[^"]*\bmin-h-11\b[^"]*\btext-teal-800\b[^"]*"\s*>\s*이 한자로 평가 →\s*<\/a>\s*\)\}/
-  );
-  assert.equal([...code(card).matchAll(/<a\b/g)].length, 1, "카드의 링크는 하나");
-  assert.ok(card.indexOf("<OhaengRelationChip") < card.indexOf("evaluateComboHref("), "관계 칩 아래");
-  assert.match(card, /^\s*evaluateLink: boolean;$/m);
-  // 순우리말 사전 이름(pk)의 '한자로 쓴다면(참고)' 조합에는 달지 않는다 — '추천 1순위' 강조와 같은 조건
-  assert.match(
-    flat(code(raw)),
-    /<ComboCard key=\{combo\.join\(""\)\} combo=\{combo\} name=\{name\} featured=\{kind !== "pure" && i === 0\} evaluateLink=\{kind !== "pure"\} \/>/
-  );
-  assert.equal([...raw.matchAll(/<ComboCard\b/g)].length, 1);
-  // 성·성별은 싣지 않는다 — 링크 함수가 받는 것은 이름과 한자뿐(값은 hanja-pick.test.mjs evaluateComboHref)
-  assert.match(read("src", "lib", "hanja-pick.ts"), /export function evaluateComboHref\(name: string, hanja: string\): string \{/);
-  // 이 쪽에서 /evaluate 로 가는 링크는 셋 — 모두 풀 페이지 이동(<a>)이고 nofollow(목적지 /evaluate?… 는 robots 가 막는다)
-  const evalAnchors = [...code(raw).matchAll(/<a\s+href=\{[^}]*(?:\/evaluate|evaluateComboHref)[^}]*\}[\s\S]*?>/g)].map((m) => m[0]);
-  assert.equal(evalAnchors.length, 3);
-  for (const a of evalAnchors) assert.match(a, /\brel="nofollow"/, a);
-  assert.doesNotMatch(code(raw), /<Link\s+href=\{?["'`]\/evaluate/);
-  // 서버 컴포넌트에서 쓰는 링크 함수는 큰 JSON 을 import 하지 않는 순수 모듈이다(이 쪽의 번들과 무관하지만 클라이언트도 같은 모듈을 쓴다)
-  assert.doesNotMatch(code(read("src", "lib", "hanja-pick.ts")), /from "\.\/(hanja|name)-seo"|\.json"/);
-});
+// ─── 진입 링크 ③(/hanja — 커밋 5c378b2) · 검색 유입 보호 ─────────────────
+// 이 묶음은 ③이 파일 끝(② /name 링크 묶음 바로 뒤)에 붙였던 것을 여기로 옮겼다 — ② 묶음이 파일 끝에 홀로 있어야
+// ②만 되돌릴 때(git revert 75ebc6f) 이 파일이 부딪치지 않는다. /name 쪽 원문은 ② 의 NAME_PAGE 가 아니라 NAME_PAGE_SRC 로 읽는다.
 
 /** 주석을 빼고 줄바꿈을 접은 원문 — 지운 JSX 주석 자리에 남는 `{}` 도 뺀다 */
 const flatCode = (src) => flat(code(src)).replace(/\{\} /g, "");
@@ -1069,10 +1025,60 @@ test("검색 유입 보호 — /hanja·/name 의 title·description·h1 틀과 �
   assert.match(flat(index), /<h1 className="[^"]*"> 인명용 한자 사전 <\/h1>/);
   assert.ok(flat(index).includes("마음에 드는 글자를 찾으셨나요? 그 글자가 들어간 이름의 미학 점수와 오행 조화를 분석해 드립니다."));
   // /name
-  const nameSrc = read(...NAME_PAGE);
+  const nameSrc = read(...NAME_PAGE_SRC);
   assert.ok(nameSrc.includes("const title = `${name} 이름 뜻 — 인기 순위·한자·의미`;"));
   assert.ok(nameSrc.includes("const description = `${name}: ${GENDER_LABEL[gender]}.${meanPart} 출생신고 통계 기준 인기 순위와 남녀 비율${"));
   assert.ok(flat(nameSrc).includes('{name} <span className="text-xl font-normal text-text-2 sm:text-2xl">이름 뜻</span> </h1>'));
   assert.equal([...code(nameSrc).matchAll(/<h1\b/g)].length, 1);
   assert.ok(flat(nameSrc).includes("{name}의 발음·미학 점수와 사주 오행 조화가 궁금하신가요?"));
+});
+
+test("sitemap·robots — /evaluate 는 바뀐 날을 자기 lastModified 로(방침·오행 찾기와 같은 배포일), 정적 후보 파일은 수집하지 않게", () => {
+  const sitemap = read(...SITEMAP);
+  const dateOf = (path) =>
+    new RegExp(`\\{ path: "${path}", priority: [\\d.]+, changeFrequency: "\\w+", lastModified: "(\\d{4}-\\d{2}-\\d{2})" \\}`).exec(sitemap)?.[1];
+  assert.ok(dateOf("evaluate"), "evaluate 줄에 lastModified 가 없다");
+  assert.equal(dateOf("evaluate"), dateOf("privacy"), "방침과 같은 날(같은 배포)");
+  assert.equal(dateOf("evaluate"), dateOf("ohaeng"));
+  assert.match(sitemap, /\{ path: "evaluate", priority: 0\.8, changeFrequency: "monthly", lastModified: "/);
+  const robots = read(...ROBOTS);
+  assert.match(robots, /const STATIC_DATA = "\/data\/";/);
+  assert.equal([...robots.matchAll(/disallow: \["\/favorites", "\/api\/", STATIC_DATA, \.\.\.TOOL_QUERY_VARIANTS\],/g)].length, 2);
+  assert.match(robots, /const TOOL_QUERY_VARIANTS = \[[^\]]*"\/evaluate\?"[^\]]*\];/);
+});
+
+// ═════════════════════════════════════════════════════════════
+// 진입 링크(C7 뒤 절반) — /name 조합 카드 · /hanja 인덱스·독음 쪽·글자 상세
+// 검색 유입이 가장 많은 쪽들이다 — 링크 줄만 더하고 제목·설명·h1·기존 문단은 건드리지 않는다(사용자 결정).
+// 빌드 HTML 대조(바꾸기 전 빌드와 title·description·h1 같음, 더해진 것이 링크 줄뿐)는 구현 기록 §26 에 적었다.
+// ═════════════════════════════════════════════════════════════
+
+const NAME_PAGE = ["src", "app", "name", "[slug]", "page.tsx"];
+
+test("/name 조합 카드의 '이 한자로 평가' — 이름과 그 조합만 싣는 nofollow 링크(칩 아래), 순우리말 참고 조합에는 없다", () => {
+  const raw = read(...NAME_PAGE);
+  assert.match(code(raw), /^import \{ evaluateComboHref \} from "@\/lib\/hanja-pick";$/m);
+  const card = functionBody(raw, "ComboCard");
+  assert.match(
+    card,
+    /\{evaluateLink && \(\s*<a\s+href=\{evaluateComboHref\(name, c1 \+ c2\)\}\s+rel="nofollow"\s+aria-label=\{`이 한자로 평가 — \$\{c1\}\$\{c2\}`\}\s+className="[^"]*\bmin-h-11\b[^"]*\btext-teal-800\b[^"]*"\s*>\s*이 한자로 평가 →\s*<\/a>\s*\)\}/
+  );
+  assert.equal([...code(card).matchAll(/<a\b/g)].length, 1, "카드의 링크는 하나");
+  assert.ok(card.indexOf("<OhaengRelationChip") < card.indexOf("evaluateComboHref("), "관계 칩 아래");
+  assert.match(card, /^\s*evaluateLink: boolean;$/m);
+  // 순우리말 사전 이름(pk)의 '한자로 쓴다면(참고)' 조합에는 달지 않는다 — '추천 1순위' 강조와 같은 조건
+  assert.match(
+    flat(code(raw)),
+    /<ComboCard key=\{combo\.join\(""\)\} combo=\{combo\} name=\{name\} featured=\{kind !== "pure" && i === 0\} evaluateLink=\{kind !== "pure"\} \/>/
+  );
+  assert.equal([...raw.matchAll(/<ComboCard\b/g)].length, 1);
+  // 성·성별은 싣지 않는다 — 링크 함수가 받는 것은 이름과 한자뿐(값은 hanja-pick.test.mjs evaluateComboHref)
+  assert.match(read("src", "lib", "hanja-pick.ts"), /export function evaluateComboHref\(name: string, hanja: string\): string \{/);
+  // 이 쪽에서 /evaluate 로 가는 링크는 셋 — 모두 풀 페이지 이동(<a>)이고 nofollow(목적지 /evaluate?… 는 robots 가 막는다)
+  const evalAnchors = [...code(raw).matchAll(/<a\s+href=\{[^}]*(?:\/evaluate|evaluateComboHref)[^}]*\}[\s\S]*?>/g)].map((m) => m[0]);
+  assert.equal(evalAnchors.length, 3);
+  for (const a of evalAnchors) assert.match(a, /\brel="nofollow"/, a);
+  assert.doesNotMatch(code(raw), /<Link\s+href=\{?["'`]\/evaluate/);
+  // 서버 컴포넌트에서 쓰는 링크 함수는 큰 JSON 을 import 하지 않는 순수 모듈이다(이 쪽의 번들과 무관하지만 클라이언트도 같은 모듈을 쓴다)
+  assert.doesNotMatch(code(read("src", "lib", "hanja-pick.ts")), /from "\.\/(hanja|name)-seo"|\.json"/);
 });
