@@ -32,10 +32,10 @@ import { BookOpen, Leaf, Music } from "lucide-react";
 import {
   deriveSlots,
   isHangulSyllables,
-  marksOf,
   pickSyllablesIn,
   seedChoices,
   spreadPaste,
+  submitMarks,
   surnameDefaultAt,
   type HanjaChoice,
   type HanjaSlot,
@@ -43,7 +43,6 @@ import {
 import { getPickSnapshot, requestPickFile, requestPickIndex, usePickStore } from "@/lib/hanja-pick-store";
 import {
   MIXED_SCRIPT_NOTICE,
-  PANEL_LOAD_FAILED,
   SLOTS_EMPTY_GUIDE,
   SLOTS_HINT,
   SLOTS_JAMO_NOTE,
@@ -53,6 +52,7 @@ import {
   pasteReport,
   pickBannerText,
   seedRejectedNote,
+  seedUncheckedNote,
   slotNote,
   type PasteReport,
 } from "@/lib/hanja-pick-text";
@@ -363,6 +363,8 @@ export function EvaluateInputPage({
   const slotBase = `${uid}-hanja-slot`;
   const errorId = `${uid}-hanja-error`;
   const noteBase = `${uid}-hanja-note`;
+  // 이름 칸 — 들고 온 글자의 띠를 닫으면 포커스를 여기로 옮긴다(누른 [닫기]가 띠째 사라져 포커스가 body 로 떨어지지 않게)
+  const firstNameId = `${uid}-first-name`;
 
   const store = usePickStore();
   // 색인은 이름과 무관한 고정 주소다 — 폼이 뜰 때 한 번 받는다(잠긴 칸·성씨 기본 한자를 안다)
@@ -474,12 +476,13 @@ export function EvaluateInputPage({
     () => deriveSlots(settled, choices, pick, store.index, store.files),
     [settled, choices, pick, store.index, store.files]
   );
-  // 주소로 온 한자를 확인하는 동안(그 음절 파일을 받는 중) 그 칸은 '확인 중'
-  const waitingKeys = new Set(
+  // 주소로 온 한자를 확인하는 동안(그 음절 파일을 받는 중) 그 칸은 '확인 중' — 그동안 제출하면 그 글자를 그대로 싣는다(submitMarks)
+  const waitingSeeds = new Map(
     seeded.pending
       .filter((item) => !store.failed.has(item.syllable) && !userChoices.has(item.key))
-      .map((item) => item.key)
+      .map((item) => [item.key, item.character] as const)
   );
+  const waitingKeys = new Set(waitingSeeds.keys());
   const asShown = (slot: HanjaSlot): HanjaSlot =>
     waitingKeys.has(slotKey(slot)) ? { ...slot, state: "checking", character: null, fact: null } : slot;
   const surnameSlots = (derived.surname ?? []).map(asShown);
@@ -569,6 +572,8 @@ export function EvaluateInputPage({
 
   function dismissPick() {
     keepCarried(nameSlots);
+    // 누른 [닫기]는 띠째 사라진다 — 포커스를 이름 칸으로(띠 바로 아래 폼의 첫 칸 줄)
+    document.getElementById(firstNameId)?.focus({ preventScroll: true });
     onPickDismiss?.();
   }
 
@@ -615,9 +620,10 @@ export function EvaluateInputPage({
   const seedRejected = seeded.rejected.filter(
     (item) => liveKeys.has(item.key) && !userChoices.has(item.key) && item.key !== errorKey
   );
-  const seedUnchecked = seeded.pending.some(
-    (item) => store.failed.has(item.syllable) && liveKeys.has(item.key) && !userChoices.has(item.key)
-  );
+  // 주소로 온 한자를 확인할 음절 파일을 받지 못한 칸 — 그 칸은 자동이다(제출하면 자동으로 간다). 화면이 그 사실을 칸 이름과 함께 알린다
+  const seedUnchecked = seeded.pending
+    .filter((item) => store.failed.has(item.syllable) && liveKeys.has(item.key) && !userChoices.has(item.key))
+    .map((item) => item.syllable);
 
   // SSR 안전: useEffect로 style inject
   useEffect(() => {
@@ -647,7 +653,8 @@ export function EvaluateInputPage({
 
   function handleSubmit() {
     if (!canSubmit || loading) return;
-    // 제출 직전에는 지금 값으로 칸을 다시 계산한다(조합이 끝나기를 기다리지 않는다). 한글 음절만이 아닌 쪽은 한자를 싣지 않는다
+    // 제출 직전에는 지금 값으로 칸을 다시 계산한다(조합이 끝나기를 기다리지 않는다). 한글 음절만이 아닌 쪽은 한자를 싣지 않는다.
+    // 확인을 기다리는 칸('확인 중' — 주소로 온 한자·들고 온 글자)은 그 글자를 그대로 싣는다 — 서버가 다시 검사하고, 틀리면 400 으로 그 칸이 열린다
     const now = deriveSlots({ lastName, firstName }, choices, pick, store.index, store.files);
     keepCarried(now.name);
     onSubmit?.({
@@ -657,8 +664,8 @@ export function EvaluateInputPage({
       birthTime,
       gender,
       tone,
-      hanja: marksOf(now.name).join(""),
-      lastHanja: marksOf(now.surname).join(""),
+      hanja: submitMarks(now.name, waitingSeeds, pick).join(""),
+      lastHanja: submitMarks(now.surname, waitingSeeds, pick).join(""),
     });
   }
 
@@ -666,28 +673,33 @@ export function EvaluateInputPage({
 
   return (
     <>
-      {/* 들고 온 글자(#pick)의 띠 — 음절 파일로 확인된 글자만 여기까지 온다 */}
-      {pick && (
-        <div
-          style={{
-            maxWidth: 560,
-            margin: "0 auto 12px",
-            boxSizing: "border-box",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "8px 8px 8px 16px",
-            background: "var(--color-teal-50)",
-            border: "1px solid var(--color-teal-100)",
-            borderRadius: "var(--radius-md)",
-            fontSize: 13.5,
-            lineHeight: 1.6,
-            color: "var(--color-text)",
-          }}
-        >
-          <span role="status" style={{ flex: 1, minWidth: 0, wordBreak: "keep-all" }}>
-            {pickBannerText(pick.character, pick.readings, settled.firstName)}
-          </span>
+      {/* 들고 온 글자(#pick)의 띠 — 음절 파일로 확인된 글자만 여기까지 온다. 글자는 폼이 뜬 뒤에 오므로 알림 영역(span role=status)은
+          늘 두고 안의 글만 바꾼다(글과 함께 영역째 끼우면 화면 읽기 프로그램이 첫 문장을 놓칠 수 있다). 띠가 없을 때는 높이 0 */}
+      <div
+        style={
+          pick
+            ? {
+                maxWidth: 560,
+                margin: "0 auto 12px",
+                boxSizing: "border-box",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "8px 8px 8px 16px",
+                background: "var(--color-teal-50)",
+                border: "1px solid var(--color-teal-100)",
+                borderRadius: "var(--radius-md)",
+                fontSize: 13.5,
+                lineHeight: 1.6,
+                color: "var(--color-text)",
+              }
+            : undefined
+        }
+      >
+        <span role="status" style={pick ? { flex: 1, minWidth: 0, wordBreak: "keep-all" } : undefined}>
+          {pick ? pickBannerText(pick.character, pick.readings, settled.firstName) : ""}
+        </span>
+        {pick && (
           <button
             type="button"
             onClick={dismissPick}
@@ -709,8 +721,8 @@ export function EvaluateInputPage({
           >
             닫기
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Form card — 수묵화 톤: 직선 + 모서리 ㄱㄴ + sumi-form (underline 입력) */}
       <div
@@ -745,6 +757,7 @@ export function EvaluateInputPage({
               ariaLabel="성"
             />
             <Input
+              id={firstNameId}
               value={firstName}
               onChange={(v) => changeName("firstName", v)}
               onCompositionStart={() => {
@@ -838,16 +851,15 @@ export function EvaluateInputPage({
                 {seedRejectedNote(item.character, item.syllable)}
               </p>
             ))}
-            {seedUnchecked && (
+            {seedUnchecked.length > 0 && (
               <p role="alert" style={slotAlertStyle}>
-                {PANEL_LOAD_FAILED}
+                {seedUncheckedNote(seedUnchecked)}
               </p>
             )}
-            {paste?.status && (
-              <p role="status" style={slotNoteStyle}>
-                {paste.status}
-              </p>
-            )}
+            {/* 나눠 넣은 결과 — 알림 영역은 늘 두고 안의 글만 바꾼다 */}
+            <p role="status" style={paste?.status ? slotNoteStyle : emptyStatusStyle}>
+              {paste?.status ?? ""}
+            </p>
             {paste?.alerts.map((text, i) => (
               <p key={i} role="alert" style={slotAlertStyle}>
                 {text}
@@ -1185,6 +1197,7 @@ function Divider() {
 }
 
 function Input({
+  id,
   value,
   onChange,
   onCompositionStart,
@@ -1194,6 +1207,7 @@ function Input({
   invalid,
   ariaLabel,
 }: {
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   /** 한글 조합 시작·끝 — 칸 줄은 조합이 끝난 값으로만 다시 그린다(끝날 때 그때의 값을 넘긴다) */
@@ -1206,6 +1220,7 @@ function Input({
 }) {
   return (
     <input
+      id={id}
       aria-label={ariaLabel}
       value={value}
       placeholder={placeholder}
@@ -1484,6 +1499,9 @@ const slotNoteStyle: CSSProperties = { ...slotGuideStyle, marginTop: 8 };
 
 /** 칸 줄 아래의 오류 문장(role="alert") — 작은 글씨는 amber-warm-700 */
 const slotAlertStyle: CSSProperties = { ...slotNoteStyle, color: "var(--color-amber-warm-700)" };
+
+/** 비어 있는 알림 영역(role="status") — 늘 문서에 두고 글만 바꾼다. 빈 동안 높이 0 */
+const emptyStatusStyle: CSSProperties = { margin: 0 };
 
 const helpToggleStyle: CSSProperties = {
   marginTop: 12,

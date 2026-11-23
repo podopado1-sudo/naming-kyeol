@@ -207,7 +207,8 @@ export function EvaluateClient({ guide }: { guide?: ReactNode }) {
 
   /**
    * 계산이 끝난 조합을 화면에 확정한다 — 주소·서명·본 조합 목록을 그 조합으로 맞춘다.
-   * first = 첫 평가(맨 위로 올린다) · recalc = 제자리 재계산(화면을 그대로 두고 한 줄로 알린다) · seen = 본 조합으로 돌아감.
+   * first = 첫 평가(맨 위로 올린다) · recalc = 제자리 재계산(화면을 그대로 두고 한 줄로 알린다) ·
+   * seen = 받아 둔 응답으로 돌아감(비교 줄을 눌렀거나, 칸·후보 표로 본 조합을 다시 골라 캐시가 맞았다 — 서버를 부르지 않았다).
    */
   const show = useCallback(
     (entry: Shown, mode: "first" | "recalc" | "seen") => {
@@ -405,9 +406,10 @@ export function EvaluateClient({ guide }: { guide?: ReactNode }) {
       setPending(null);
       return;
     }
+    // 받아 둔 응답이 있으면 서버를 부르지 않는다 — 그래서 '다시 계산했어요'가 아니라 '본 조합으로 돌아왔어요'(비교 줄을 누른 때와 같은 알림)
     const cached = cacheRef.current.get(aliasRef.current.get(sig) ?? sig);
     if (cached) {
-      show(cached, "recalc");
+      show(cached, "seen");
       return;
     }
     setPending(next);

@@ -34,7 +34,7 @@ export interface SlotFace {
   tail: string | null;
 }
 
-/** 칸의 모양 — 한자가 정해진 칸은 그 글자, 아니면 '자동'·'한글'·'확인 중' */
+/** 칸의 모양 — 한자가 정해진 칸은 그 글자, 아니면 '자동'·'한글'·'확인 중'·'없음' */
 export function slotFace(slot: HanjaSlot): SlotFace {
   if (slot.character) {
     return { glyph: slot.character, word: null, tail: slot.state === "default" ? "기본 한자" : null };
@@ -42,17 +42,21 @@ export function slotFace(slot: HanjaSlot): SlotFace {
   if (slot.state === "checking") return { glyph: null, word: "확인 중", tail: null };
   // 사용자가 고른 '한자 없이'·쓸 글자가 없는 음절·후보 파일이 없는 이름 음절은 화면에 '한글'이다
   if (slot.state === "none" || slot.state === "hangul") return { glyph: null, word: "한글", tail: null };
-  if (slot.state === "locked" && slot.target === "name") return { glyph: null, word: "한글", tail: null };
+  if (slot.state === "locked") {
+    // 후보 파일이 없는 성씨(궉) — 칸 아래 안내가 '성씨 한자는 정할 수 없어요'라고 한다. '자동'이라 쓰면 그 문장과 어긋난다
+    return { glyph: null, word: slot.target === "name" ? "한글" : "없음", tail: null };
+  }
   return { glyph: null, word: "자동", tail: null };
 }
 
 /**
  * 한자가 든 칸의 출처 말. 'auto' 인데 글자가 있는 칸은 결과 화면('이 이름의 한자' 블록)에만 있다 —
  * 서버가 자동으로 고른 이름 글자, 대표 한자 표에 없는 성씨의 추정 글자(입력 폼의 자동 칸에는 글자가 없다).
+ * 'carried' = 다른 화면의 링크(#pick)로 넣은 글자 — 화면 읽기 사용자에게 설계 낱말('들고 온 글자')을 읽히지 않는다.
  */
 function slotSourceWord(slot: HanjaSlot): string {
   if (slot.state === "default") return "기본 한자";
-  if (slot.state === "carried") return "들고 온 글자";
+  if (slot.state === "carried") return "링크로 넣은 한자";
   if (slot.state === "auto") return slot.target === "surname" ? "추정한 한자" : "자동으로 고른 한자";
   return "고른 한자";
 }
@@ -66,7 +70,7 @@ export function slotAriaLabel(slot: HanjaSlot): string {
   if (slot.state === "checking") return `${head} — 확인 중`;
   if (!slot.character) {
     if (slot.state === "none") return `${head} — 한자 없이 한글로. 바꾸기`;
-    if (slot.state === "locked") return `${head} — ${slot.target === "name" ? "한글" : "자동"}`;
+    if (slot.state === "locked") return `${head} — ${slot.target === "name" ? "한글" : "정할 수 없음"}`;
     if (slot.state === "hangul") return `${head} — 한글. 고르기`;
     return `${head} — 자동. 고르기`;
   }
@@ -89,6 +93,15 @@ export function slotNote(slot: HanjaSlot): string | null {
 /** 주소로 온 한자가 그 음절 후보에 없어 칸을 비웠다 */
 export function seedRejectedNote(character: string, syllable: string): string {
   return `‘${character}’ 글자는 ‘${syllable}’ 음절 후보에 없어 비웠어요.`;
+}
+
+/**
+ * 주소로 온 한자(다른 화면의 링크 — /name '이 한자로 평가' 등)를 확인할 음절 파일을 받지 못했다 — 그 칸은 자동으로 두었다.
+ * 칸을 누르면 패널이 그 파일을 다시 받는다(받으면 주소로 온 한자가 그 칸에 들어간다). 음절은 칸 순서대로, 같은 음절은 한 번.
+ */
+export function seedUncheckedNote(syllables: readonly string[]): string {
+  const quoted = [...new Set(syllables)].map((s) => `‘${s}’`).join("·");
+  return `주소로 넘어온 한자를 확인할 목록을 불러오지 못해 ${quoted} 칸은 자동으로 두었어요. 칸을 눌러 목록을 다시 열거나 한자를 직접 붙여 넣어 주세요.`;
 }
 
 /**
@@ -115,18 +128,20 @@ export function isMixedScript(nameSlots: readonly HanjaSlot[] | null | undefined
 
 /**
  * 띠의 문장. `readings` 는 음절 파일로 확인된 독음만 넘긴다(주소에 적힌 낱말을 그대로 옮기지 않는다).
- * 조합이 끝난 이름이 2음절 이상인데 그 글자가 들어갈 음절(독음과 그 두음 꼴)이 없으면 '읽는 음절이 없어요'로 바뀐다.
+ * 괄호 안은 독음, 따옴표로 적는 '들어갈 음절'은 칸 파생(deriveSlots)과 같은 `acceptedSyllablesOf` — 독음과 그 두음 꼴이다
+ * (娌(리) → ‘리’ 또는 ‘이’. 두음 꼴 음절 파일에는 본음 파일의 글자가 모두 실려 있다 — 커밋된 음절 파일 671쌍 대조).
+ * 조합이 끝난 이름이 2음절 이상인데 그 글자가 들어갈 음절이 없으면 '읽는 음절이 없어요'로 바뀐다.
  */
 export function pickBannerText(character: string, readings: readonly string[], firstName: string): string {
   const shown = readings.join("·");
   const name = firstName.trim();
+  const accepted = acceptedSyllablesOf(readings);
   if (isHangulSyllables(name) && name.length >= 2) {
-    const accepted = acceptedSyllablesOf(readings);
     if (![...name].some((syllable) => accepted.includes(syllable))) {
       return `입력한 이름에는 ‘${character}’(${shown}) 글자로 읽는 음절이 없어요.`;
     }
   }
-  const quoted = readings.map((r) => `‘${r}’`).join(" 또는 ");
+  const quoted = accepted.map((r) => `‘${r}’`).join(" 또는 ");
   return `${character}(${shown}) 글자를 넣어 볼게요. 이름에 ${quoted} 음절이 있으면 그 칸에 넣어 드려요.`;
 }
 
@@ -155,7 +170,7 @@ export function surnamePanelIntro(hasDefault: boolean): string {
 /** 묶음 ③ 의 설명 — `forbidden` 은 index.json 의 숫자(못 받았으면 숫자 없이) */
 export function avoidedGroupIntro(forbidden: number | null | undefined): string {
   const count = typeof forbidden === "number" && forbidden > 0 ? `${forbidden.toLocaleString("ko-KR")}자` : "글자";
-  return `‘이름에 피하는 글자’는 이 사이트가 이름 추천과 자동 배정에서 빼기로 정한 ${count}예요. 인명용 한자 목록에 있는 글자이고, 고르면 그대로 계산합니다. 이 묶음 밖 글자의 뜻이 모두 이름에 어울린다는 말은 아니니 훈을 함께 보세요.`;
+  return `‘이름에 피하는 글자’는 이 사이트가 이름 추천과 자동으로 고르는 한자에서 빼기로 정한 ${count}예요. 인명용 한자 목록에 있는 글자이고, 고르면 그대로 계산합니다. 이 묶음 밖 글자의 뜻이 모두 이름에 어울린다는 말은 아니니 훈을 함께 보세요.`;
 }
 
 /** 찾기 0건 — 직접 입력 칸이 놓인 자리(PC 는 위, 그 밖은 아래의 접힌 버튼)를 가리킨다 */
@@ -180,9 +195,17 @@ export const DIRECT_HELP = "한글로 치고 한자 키로 바꾸거나, 한자�
 export const DIRECT_NOT_HANJA = "한자 한 글자를 넣어 주세요.";
 export const DIRECT_CHECKING = "확인하는 중…";
 
-/** 한글만 친 상태 — 조사가 '음절' 뒤에 온다 */
-export function hangulOnlyHelp(syllable: string): string {
-  return `‘${syllable}’ 음절을 한글로 친 뒤 한자 키(또는 오른쪽 Ctrl, 맥은 Option+Return)로 바꿔 주세요.`;
+/**
+ * 한글만 친 상태 — 조사가 '음절' 뒤에 온다.
+ * PC 가 아니면 한자 키 안내를 하지 않는다(아이폰 기본 자판 등 휴대폰 자판에는 한자 변환이 없다 — 설계 §3-3). 그때 입력 칸은
+ * 패널 아래쪽의 '한자 붙여 넣기'다 — 위에 목록이 있으면 목록에서 고르라고도 적는다(`listAbove`).
+ */
+export function hangulOnlyHelp(syllable: string, options: { pc?: boolean; listAbove?: boolean } = {}): string {
+  const { pc = true, listAbove = true } = options;
+  if (pc) return `‘${syllable}’ 음절을 한글로 친 뒤 한자 키(또는 오른쪽 Ctrl, 맥은 Option+Return)로 바꿔 주세요.`;
+  return listAbove
+    ? `‘${syllable}’ 음절의 한자를 복사해 여기에 붙여 넣거나, 위 목록에서 골라 주세요.`
+    : `‘${syllable}’ 음절의 한자를 복사해 여기에 붙여 넣어 주세요.`;
 }
 
 /** 그 음절 목록에 없는 글자 — 서버 응답을 기다리지 않고 바로 알린다 */
@@ -191,13 +214,25 @@ export function notInListNote(syllable: string): string {
 }
 
 /**
- * 5초 안에 이유를 받지 못했다. 이름 칸은 대법원 조회를 안내하고(링크 없이 이름만 — 설계 §20-3),
+ * 5초 안에 서버 판정을 받지 못했다. 이름 칸은 대법원 조회를 안내하고(링크 없이 이름만 — 설계 §20-3),
  * 성씨 칸은 인명용 한자 제한을 받지 않으므로 그 안내를 하지 않는다.
+ * - `known` — 음절 목록을 받아 '후보에 없는 글자예요'를 앞에 이미 적었는가. 아니면(목록을 받기 전·못 받음) 무엇을 확인하지 못했는지가
+ *   앞에 없으므로 '이 글자를 확인하지 못했어요'로 시작한다(앞 문장 없이 '이유를'이라고 쓰지 않는다).
+ * - `hasDefault` — 성씨에 기본으로 두는 한자(대표 한자 표)가 있는가. 없으면 비워 둘 때 이 사이트가 성씨 한자를 추정한다
+ *   (패널 버튼 '자동으로 고르기'·결과 꼬리 '추정한 성씨 한자'와 같은 말).
  */
-export function judgeTimeoutNote(target: HanjaSlot["target"]): string {
-  return target === "surname"
-    ? "이유를 확인하지 못했어요. 비워 두면 기본으로 두는 성씨 한자로 계산해요."
-    : "이유를 확인하지 못했어요. 출생신고에 쓸 수 있는 글자인지는 대법원 인명용 한자 조회에서 확인할 수 있어요.";
+export function judgeTimeoutNote(
+  target: HanjaSlot["target"],
+  options: { known?: boolean; hasDefault?: boolean } = {}
+): string {
+  const { known = true, hasDefault = true } = options;
+  const head = known ? "이유를 확인하지 못했어요." : "이 글자를 확인하지 못했어요.";
+  if (target === "surname") {
+    return hasDefault
+      ? `${head} 비워 두면 기본으로 두는 성씨 한자로 계산해요.`
+      : `${head} 비워 두면 이 사이트가 추정한 성씨 한자로 계산해요.`;
+  }
+  return `${head} 출생신고에 쓸 수 있는 글자인지는 대법원 인명용 한자 조회에서 확인할 수 있어요.`;
 }
 
 export interface PasteReport {
@@ -218,7 +253,7 @@ export function pasteReport(steps: readonly PasteStep[], dropped: readonly strin
     else if (step.status === "rejected") {
       alerts.push(`‘${step.character}’ 글자는 ‘${step.slot.syllable}’ 음절 후보에 없어 넣지 않았어요.`);
     } else if (step.status === "locked") {
-      alerts.push(`‘${step.character}’ 글자는 ‘${step.slot.syllable}’ 칸에 넣지 않았어요.`);
+      alerts.push(`‘${step.character}’ 글자는 넣지 않았어요 — ‘${step.slot.syllable}’ 칸은 한자를 고를 수 없는 칸이에요.`);
     } else {
       alerts.push(`‘${step.character}’ 글자는 확인하지 못해 넣지 않았어요.`);
     }

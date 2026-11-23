@@ -41,6 +41,7 @@ import {
   HARMONY_STROKE_NOTICE,
   WAITING_BADGE,
   fallbackWarning,
+  recalcFailedNote,
 } from "@/lib/hanja-summary-text";
 import type { GenerationFit, NameEvaluationResponse } from "@/lib/types";
 
@@ -120,6 +121,20 @@ export function EvaluateResultView({
   const waiting = view?.waiting ?? false;
   const confirmedChars = summary ? summary.syllables.map((s) => s.hanja?.character ?? null) : undefined;
   const currentChars = view ? view.syllables.map((s) => s.hanja?.character ?? null) : undefined;
+  // 다시 계산하지 못한 이름 칸 — 후보 표의 '이 글자로'로 시작한 변경이면 표에도 블록과 같은 문장을 남긴다(블록은 화면 위쪽이다)
+  const failedName = change?.error && change.error.target === "name" ? change.error : null;
+  const tableFailure =
+    failedName && summary
+      ? {
+          id: failedName.id,
+          index: failedName.index,
+          text: `${recalcFailedNote({
+            syllable: summary.syllables[failedName.index]?.syllable ?? "",
+            kind: failedName.kind,
+            character: failedName.character,
+          })} ${failedName.message}`,
+        }
+      : null;
 
   const aestheticRows = [
     { label: "발음", value: data.aesthetic.pronunciation, max: 30 },
@@ -383,6 +398,7 @@ export function EvaluateResultView({
             }
             currentChars={currentChars}
             confirmedChars={confirmedChars}
+            failure={tableFailure}
           />
         </section>
       )}

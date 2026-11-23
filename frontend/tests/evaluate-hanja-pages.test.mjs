@@ -149,7 +149,12 @@ test("판정 API 에는 뽑은 한자 한 글자만 보낸다 — 붙여 넣은 
 test("고른 한자가 평가 요청에 실린다 — 폼은 칸의 표시 글자를, 화면 상태는 apiHanjaFields 를 쓴다", () => {
   const input = code(read(...INPUT));
   assert.match(input, /const now = deriveSlots\(\{ lastName, firstName \}, choices, pick, store\.index, store\.files\);/);
-  assert.match(input, /hanja: marksOf\(now\.name\)\.join\(""\),\s*lastHanja: marksOf\(now\.surname\)\.join\(""\),/);
+  // 확인을 기다리는 칸('확인 중' — 주소로 온 한자·들고 온 글자)은 그 글자를 싣는다 — 서버가 다시 검사한다(값은 hanja-pick.test.mjs submitMarks, 검증 지적 2026-11-23)
+  assert.match(input, /hanja: submitMarks\(now\.name, waitingSeeds, pick\)\.join\(""\),\s*lastHanja: submitMarks\(now\.surname, waitingSeeds, pick\)\.join\(""\),/);
+  assert.match(
+    input,
+    /const waitingSeeds = new Map\(\s*seeded\.pending\s*\.filter\(\(item\) => !store\.failed\.has\(item\.syllable\) && !userChoices\.has\(item\.key\)\)\s*\.map\(\(item\) => \[item\.key, item\.character\] as const\)\s*\);\s*const waitingKeys = new Set\(waitingSeeds\.keys\(\)\);/
+  );
   const client = code(read(...CLIENT));
   assert.match(client, /tone: input\.tone,\s*\.\.\.apiHanjaFields\(input\),/);
   // 한자 칸의 400(target·slot)은 하단 띠가 아니라 폼으로 넘긴다
@@ -330,6 +335,14 @@ test("패널 — region + 제목, 열리면 PC 는 직접 입력 칸·그 밖은
   assert.match(panel, /role="region"\s+aria-labelledby=\{titleId\}/);
   assert.match(panel, /const PC_QUERY = "\(hover: hover\) and \(pointer: fine\)";/);
   assert.match(panel, /const target = \(pc \? inputRef\.current : null\) \?\? titleRef\.current;\s*target\?\.focus\(\{ preventScroll: true \}\);/);
+  // 포커스는 화면을 움직이지 않는다 — 열린 패널을 화면 안으로 끌어온다(검증 지적 2026-11-23). 패널은 음절 파일을 받으며 자라므로
+  // 열린 순간의 높이가 아니라 다 자란 높이(CSS max-height)로 맞추고, 위로는 사이트 머리(88px) 밑까지만
+  assert.match(panel, /target\?\.focus\(\{ preventScroll: true \}\);\s*if \(panelRef\.current\) bringIntoView\(panelRef\.current\);/);
+  assert.match(panel, /<div\s+ref=\{panelRef\}\s+id=\{id\}\s+role="region"/);
+  const bring = functionBody(panel, "bringIntoView");
+  assert.match(bring, /const max = Number\.parseFloat\(getComputedStyle\(el\)\.maxHeight\);/);
+  assert.match(bring, /if \(below > 0\) window\.scrollBy\(\{ top: Math\.min\(below, Math\.max\(above, 0\)\) \}\);\s*else if \(above < 0\) window\.scrollBy\(\{ top: above \}\);/);
+  assert.match(panel, /const VIEW_MARGIN_TOP = 88;/);
   assert.match(panel, /tabIndex=\{-1\}/);
   assert.match(panel, /if \(e\.key !== "Escape" \|\| e\.nativeEvent\.isComposing\) return;\s*e\.stopPropagation\(\);\s*onClose\(\);/);
   // 폼: 닫으면(고르기·닫기·Esc·같은 칸 다시 누르기) 그 칸 버튼으로 포커스가 돌아간다
@@ -349,13 +362,21 @@ test("직접 입력·찾기 — 보이는 label, 판정 문장은 aria-described
   assert.match(direct, /aria-invalid=\{invalid \|\| undefined\}/);
   assert.match(direct, /<p role="alert" style=\{warnText\}>\s*\{alertText\}/);
   assert.match(direct, /<p role="status" style=\{hintText\}>\s*\{DIRECT_CHECKING\}/);
-  assert.match(direct, /<p role="status" style=\{hintText\}>\s*\{hangulOnlyHelp\(slot\.syllable\)\}/);
+  assert.match(direct, /<p role="status" style=\{hintText\}>\s*\{hangulOnlyHelp\(slot\.syllable, \{ pc, listAbove: !!list && list\.length > 0 \}\)\}/);
+  // 판정이 늦을 때의 문장 — 목록을 받기 전인지(known)·성씨에 기본 한자가 있는지(hasDefault)로 갈린다(값은 hanja-pick-text.test.mjs)
+  assert.match(direct, /judgeTimeoutNote\(slot\.target, \{ known: judge\.known, hasDefault \}\)/);
+  assert.match(functionBody(panel, "SurnamePanel"), /hasDefault=\{!!representative\}/);
   assert.doesNotMatch(direct, /placeholder=/, "직접 입력의 이름을 placeholder 로 대신하지 않는다");
   // 조합 중에는 판정하지 않는다
   assert.match(direct, /if \(composing \|\| \(e\.nativeEvent as InputEvent\)\.isComposing\) \{\s*setValue\(next\);\s*return;/);
   const namePanel = functionBody(panel, "NamePanel");
   assert.match(namePanel, /<label htmlFor=\{searchId\} style=\{fieldLabel\}>\s*뜻·글자로 찾기/);
-  assert.match(namePanel, /<p role="status"[^>]*>\s*\{matches\.length > 0 \? `\$\{matches\.length\}자 찾음` : searchEmptyNote\(pc\)\}/);
+  // 찾은 글자 수 — 알림 영역은 늘 두고 안의 글만 바꾼다(검증 지적 2026-11-23)
+  assert.match(
+    namePanel,
+    /<p role="status" style=\{loaded && filtering \? \{ \.\.\.hintText, marginTop: 10 \} : emptyStatus\}>\s*\{loaded && filtering \? \(matches\.length > 0 \? `\$\{matches\.length\}자 찾음` : searchEmptyNote\(pc\)\) : ""\}/
+  );
+  assert.doesNotMatch(namePanel, /\{loaded && filtering && \(\s*<>\s*<p role="status"/);
   // 오행 거르기는 누름 상태 버튼
   assert.match(functionBody(panel, "ElementButton"), /aria-pressed=\{on\}/);
 });
@@ -386,7 +407,12 @@ test("성씨 패널은 글자 격자뿐 — 훈·이름용 표시·묶음이 본
 
 test("들고 온 글자의 띠·준비 중 안내는 status, 주소로 온 한자를 비운 안내는 alert", () => {
   const input = read(...INPUT);
-  assert.match(input, /<span role="status"[^>]*>\s*\{pickBannerText\(pick\.character, pick\.readings, settled\.firstName\)\}/);
+  // 띠의 알림 영역(span)은 글자가 오기 전부터 늘 둔다 — 띠가 없을 때는 스타일 없이 높이 0(검증 지적 2026-11-23)
+  assert.match(
+    input,
+    /<span role="status" style=\{pick \? \{ flex: 1, minWidth: 0, wordBreak: "keep-all" \} : undefined\}>\s*\{pick \? pickBannerText\(pick\.character, pick\.readings, settled\.firstName\) : ""\}/
+  );
+  assert.doesNotMatch(code(input), /\{pick && \(\s*<div[\s\S]{0,600}?role="status"/);
   assert.match(input, /<p role="status" style=\{slotGuideStyle\}>\s*\{SLOTS_PREPARING\}/);
   assert.match(input, /<p key=\{item\.key\} role="alert" style=\{slotAlertStyle\}>\s*\{seedRejectedNote\(item\.character, item\.syllable\)\}/);
   // 이름을 넣기 전의 안내 줄은 조건 없이 첫 HTML 에 실리는 문장이다(색인을 기다리지 않는다)
@@ -590,7 +616,8 @@ test("후보 표 — 줄 끝의 버튼 하나('이 글자로'), 지금 계산에
   const body = read(...BODY);
   const table = functionBody(body, "HanjaCandidatesTable");
   assert.equal([...table.matchAll(/<button\b/g)].length, 1);
-  assert.match(table, /aria-label=\{`‘\$\{g\.syllable\}’ 음절을 \$\{c\.character\} 글자로 바꾸기`\}/);
+  // 이름은 보이는 글('이 글자로')로 시작한다 — 음성 입력으로 보이는 글을 말해도 맞는다(WCAG 2.5.3, 검증 지적 2026-11-23)
+  assert.match(table, /aria-label=\{`이 글자로 — ‘\$\{g\.syllable\}’ 음절을 \$\{c\.character\} 글자로 바꾸기`\}/);
   assert.match(table, /\{confirmedChars\?\.\[gi\] === c\.character \? "지금 한자" : "다시 계산 중"\}/);
   assert.match(table, /\) : c\.fact \? \(/, "글자 사실(fact)이 없는 줄(옛 백엔드)에는 버튼을 두지 않는다");
   assert.match(table, /onPick\(gi, fact\);/);
@@ -621,7 +648,11 @@ test("화면 상태 — 제자리 재계산: 결과를 지우지 않고, 빠른 
   const start = functionBody(raw, "startRecalc");
   assert.match(start, /clearDebounce\(\);\s*reqIdRef\.current\+\+;/, "타이머를 다시 걸고 진행 중인 응답은 버린다");
   assert.match(start, /if \(sig === inputSignature\(shown\.input\)\) \{\s*setPending\(null\);\s*return;\s*\}/);
-  assert.match(start, /const cached = cacheRef\.current\.get\(aliasRef\.current\.get\(sig\) \?\? sig\);\s*if \(cached\) \{\s*show\(cached, "recalc"\);\s*return;\s*\}/);
+  // 받아 둔 응답으로 돌아가면 서버를 부르지 않았다 — '다시 계산했어요'가 아니라 '본 조합으로 돌아왔어요'(검증 지적 2026-11-23)
+  assert.match(start, /const cached = cacheRef\.current\.get\(aliasRef\.current\.get\(sig\) \?\? sig\);\s*if \(cached\) \{\s*show\(cached, "seen"\);\s*return;\s*\}/);
+  // '다시 계산했어요'(recalc)는 서버 응답을 받은 자리 하나에서만
+  assert.equal([...client.matchAll(/"recalc"/g)].length, 3, "show 의 모드 타입 · announce 의 갈래 · run 의 응답");
+  assert.match(client, /show\(entry, attempt \? "recalc" : "first"\);/);
   assert.match(start, /setPending\(next\);\s*debounceRef\.current = setTimeout\(\(\) => \{\s*debounceRef\.current = null;\s*void run\(next\.input, next\);\s*\}, delay\);/);
   // 본 조합으로 돌아가기 — 받아 둔 응답을 다시 보여 줄 뿐
   const select = functionBody(raw, "selectSeen");
@@ -681,6 +712,89 @@ test("패널의 오행 거르기 칩 — 생년월일 결과가 있으면 용신
   assert.match(read(...BLOCK), /elementFit=\{birthDateProvided \? fit : null\}/);
   // 입력 폼(아직 평가 전)은 주지 않는다
   assert.doesNotMatch(read(...INPUT), /elementFit/);
+});
+
+// ─── 검증 지적 반영(2026-11-23 — 설계 §27) ─────────────────────
+
+test("포커스가 body 로 떨어지지 않게 — '더 보기' · #pick 띠의 [닫기] · 후보 표의 재계산 실패(설계 §8-8)", () => {
+  const panel = read(...PANEL);
+  const namePanel = functionBody(panel, "NamePanel");
+  // '더 보기'는 누르면 사라진다 — 새로 보인 첫 글자(그 밖의 글자 13번째)로
+  assert.match(namePanel, /onClick=\{\(\) => \{\s*focusMoreRef\.current = true;\s*setShowAll\(true\);\s*\}\}/);
+  assert.match(
+    namePanel,
+    /const first = othersRef\.current\?\.querySelectorAll\("button"\)\[FIRST_OTHERS\];\s*first\?\.focus\(\{ preventScroll: true \}\);\s*first\?\.scrollIntoView\(\{ block: "nearest" \}\);/
+  );
+  assert.match(namePanel, /<ul\s+ref=\{othersRef\}/);
+  // #pick 띠의 [닫기] — 띠째 사라진다. 이름 칸으로
+  const input = read(...INPUT);
+  assert.match(functionBody(input, "dismissPick"), /document\.getElementById\(firstNameId\)\?\.focus\(\{ preventScroll: true \}\);\s*onPickDismiss\?\.\(\);/);
+  assert.match(input, /<Input\s+id=\{firstNameId\}\s+value=\{firstName\}/);
+  // 후보 표 — 실패하면 누른 줄의 버튼으로(포커스가 다른 곳 — 서버가 짚은 칸의 패널 등 — 에 있으면 그대로), 표에도 실패 한 줄.
+  // 같은 문장의 alert 는 블록에 하나 — 표의 줄은 글이고 누른 버튼이 aria-describedby 로 잇는다
+  const table = functionBody(read(...BODY), "HanjaCandidatesTable");
+  assert.match(
+    table,
+    /if \(active && active !== document\.body\) return;\s*document\.getElementById\(`\$\{markBase\}-pick-\$\{origin\.gi\}-\$\{origin\.i\}`\)\?\.focus\(\{ preventScroll: true \}\);/
+  );
+  assert.match(table, /if \(failureId === undefined \|\| !origin \|\| handledFailureRef\.current === failureId\) return;/);
+  assert.match(table, /id=\{`\$\{markBase\}-pick-\$\{gi\}-\$\{i\}`\}/);
+  assert.match(table, /<p id=\{failureLineId\(gi\)\} style=\{failureLineStyle\}>\s*\{failure\.text\}/);
+  assert.match(table, /aria-describedby=\{\s*showsFailure\(gi\) && origin\?\.i === i \? failureLineId\(gi\) : undefined\s*\}/);
+  assert.doesNotMatch(code(table), /role="alert"/);
+  assert.match(read(...BODY), /const failureLineStyle: CSSProperties = \{[^}]*color: "var\(--color-amber-warm-700\)",/);
+  const result = read(...RESULT);
+  assert.match(result, /failure=\{tableFailure\}/);
+  assert.match(code(result), /const failedName = change\?\.error && change\.error\.target === "name" \? change\.error : null;/);
+  assert.match(code(result), /\} \$\{failedName\.message\}`,/);
+});
+
+test("알림 영역(role=status)은 늘 문서에 두고 글만 바꾼다 — 나눠 넣은 결과(#pick 띠·찾은 글자 수는 위 테스트)", () => {
+  const input = code(read(...INPUT));
+  assert.doesNotMatch(input, /\{paste\?\.status && \(/);
+  assert.match(input, /<p role="status" style=\{paste\?\.status \? slotNoteStyle : emptyStatusStyle\}>\s*\{paste\?\.status \?\? ""\}/);
+  assert.match(input, /const emptyStatusStyle: CSSProperties = \{ margin: 0 \};/);
+  assert.match(code(read(...PANEL)), /const emptyStatus: CSSProperties = \{ margin: 0 \};/);
+});
+
+test("패널 — 목록을 받는 동안에도 찾기·거르기 자리를 둔다(Tab 이 바닥의 '작명 원리' 링크로 건너뛰지 않게), 칸에 든 글자는 '지금 한자'", () => {
+  const panel = read(...PANEL);
+  const namePanel = functionBody(panel, "NamePanel");
+  assert.match(namePanel, /const hasList = loaded \? list\.length > 0 && !zeroUsable : !failed && !zeroUsable;/);
+  assert.match(namePanel, /sub=\{loaded && hasList \? `고를 수 있는 글자 \$\{list\.length\}자` : undefined\}/);
+  // 찾기 칸·거르기 칩은 hasList 하나로 그린다(받는 동안 참) — 받는 동안 건 조건은 목록이 오면 그대로 걸린다
+  assert.equal([...namePanel.matchAll(/\{hasList && \(/g)].length, 2);
+  // 칸에 지금 든 글자 — 결과 화면의 자동 칸·링크로 넣은 글자는 고른 글자가 아니다. 후보 표(EvalBody)와 같은 말
+  assert.match(functionBody(panel, "CandidateRow"), /\{current && <span style=\{\{ color: "var\(--color-teal-800\)", fontWeight: 600 \}\}>지금 한자<\/span>\}/);
+  assert.doesNotMatch(code(panel), /지금 고른 글자/);
+});
+
+test("결과 블록 — 태어난 시각의 계산 기준(서울 기준 보정·출생지 받지 않음)은 접힌 '칩과 꼬리표 읽는 법' 밖, 용신 한 줄 아래", () => {
+  const block = functionBody(read(...BLOCK), "HanjaSummaryBlock");
+  const details = block.indexOf("<details");
+  const at = block.indexOf("birthTimeNotice(hasBirthTime)");
+  assert.ok(details > 0 && at > 0 && at < details, "birthTimeNotice 가 <details> 앞에 있어야 한다");
+  assert.equal([...block.matchAll(/birthTimeNotice\(/g)].length, 1);
+  assert.ok(block.indexOf("{yongshin && <p") < at);
+  assert.match(block, /\{birthDateProvided && \(\s*<p style=\{\{ \.\.\.guideText, marginTop: yongshin \? 8 : 0 \}\}>\{birthTimeNotice\(hasBirthTime\)\}<\/p>\s*\)\}/);
+});
+
+test("/ohaeng 한자 예 — '자주 쓰는 한자'라고 쓰지 않는다(그 집합은 이름 평가 패널이 '사용 통계는 아닙니다'라고 하는 빈출 목록)", () => {
+  for (const p of [OHAENG_RESULT, ["src", "app", "ohaeng", "OhaengGuide.tsx"]]) {
+    const src = flat(read(...p));
+    assert.doesNotMatch(src, /자주 쓰는/, name(p));
+    assert.ok(src.includes("이 사이트가 이름 글자로 꼽아 둔 한자(사용 통계는 아닙니다) 가운데"), name(p));
+  }
+  assert.match(
+    readFileSync(join(ROOT, "..", "Application", "Engines", "Utils", "ElementHanjaPicker.cs"), "utf8"),
+    /=> HanjaData\.IsCommonNameHanja\(h\.Character\)/
+  );
+  assert.match(read(...PANEL), /이 사이트가 이름 글자로 꼽아 둔 글자예요 — 사용 통계는 아닙니다\./);
+});
+
+test("문구 — '자동 배정' 대신 화면의 말('자동으로 고르는 한자'), 설명 글도 같은 말", () => {
+  for (const p of [TEXT, SUMMARY_TEXT, GUIDE]) assert.doesNotMatch(code(read(...p)), /자동 배정/, name(p));
+  assert.ok(flat(read(...GUIDE)).includes("이 사이트가 이름 추천과 자동으로 고르는 한자에서 빼기로 정한 {num(facts.forbidden)}자예요"));
 });
 
 // ═════════════════════════════════════════════════════════════
@@ -785,7 +899,7 @@ test("설명 글의 사실 — 예로 든 글자의 독음은 음절 파일과 �
   assert.deepEqual(syllablesOf(na), ["나"]);
   assert.ok(
     guide.includes(
-      `<span style={hanja}>${li}</span>는 ‘리’와 ‘이’ 칸에, <span style={hanja}>${ryeon}</span>은 ‘련’과 ‘연’ 칸에 모두 넣을 수 있고, 이름의 첫 글자인지 뒤 글자인지는 가리지 않아요. 지정된 발음이 ‘나’뿐인{" "} <span style={hanja}>${na}</span>는 ‘라’ 칸에 넣을 수 없습니다.`
+      `<span style={hanja}>${li}</span>는 ‘리’와 ‘이’ 칸에, <span style={hanja}>${ryeon}</span>은 ‘련’과 ‘연’ 칸에 모두 넣을 수 있어요. 이름 글자에서는 첫 글자인지 뒤 글자인지를 가리지 않는다는 것이 법원행정처 선례(가족관계등록선례 제200909-2호)입니다. 지정된 발음이 ‘나’뿐인 <span style={hanja}>${na}</span>는 ‘라’ 칸에 넣을 수 없습니다.`
     ),
     "두음 문단의 예가 바뀌었다 — 음절 파일로 다시 확인할 것"
   );
@@ -802,7 +916,15 @@ test("설명 글의 사실 — 예로 든 글자의 독음은 음절 파일과 �
   assert.ok(about.includes("종합 점수는 미학 70%와 조화 30%를 더한 값이고"));
   assert.ok(guide.includes("자원오행 보완(30)·획수 조화(20)·음양(10)·전통 81수리(15)를 그 한자로 다시 계산합니다."));
   assert.ok(guide.includes("발음오행(25)과 미학 점수의 발음·리듬·음절·세대 중립·의미 항목은 한글 이름으로 매기므로 한자를 바꿔도 같아요"));
-  assert.ok(guide.includes("종합 점수는 미학 70%와 조화 30%를 더한 값이에요."));
+  // 종합 점수·성씨 한자 문장은 출생일 조건을 단다 — 출생일이 없으면 조화를 계산하지 않아 종합 = 미학(ScoringService), 성씨 한자를 바꿔도 점수는 그대로
+  // (성별 보너스는 이름 글자만 본다 — 검증 지적 2026-11-23. 바로 위 EvaluateAbout 의 문장과 같은 조건)
+  assert.ok(guide.includes("종합 점수는 출생일을 넣으면 미학 70%와 조화 30%를 더한 값이고, 출생일이 없으면 미학 점수가 곧 종합 점수예요."));
+  assert.ok(guide.includes("출생일을 넣었다면 성씨 한자를 바꿀 때 점수 가운데서는 전통 81수리만 달라집니다."));
+  assert.doesNotMatch(guide, /종합 점수는 미학 70%와 조화 30%를 더한 값이에요/);
+  assert.doesNotMatch(guide, /성씨 한자를 바꾸면 전통 81수리만/);
+  const scoring = readFileSync(join(ROOT, "..", "Application", "Services", "ScoringService.cs"), "utf8");
+  assert.match(scoring, /\? \(int\)Math\.Round\(aesthetic\.TotalScore \* 0\.7 \+ harmony\.TotalScore \* 0\.3\)/);
+  assert.match(scoring, /출생일이 없으면 조화를 빼고 미학 점수만/);
   // 조화의 성별 보정은 글자마다 +5/−3 — 백엔드 산식의 두 줄
   assert.ok(guide.includes(`조화의 성별 보정(글자마다 +5/${cp(0x2212)}3)`));
   const harmony = readFileSync(join(ROOT, "..", "Application", "Engines", "HarmonyEngine.cs"), "utf8");
@@ -834,6 +956,10 @@ test("설명 글 — 법규 사실은 확인한 대로만(설계 §20): 혼용 �
   assert.ok(backend.includes("한글 음 한 글자를 넣어 확인할 수 있습니다."));
   // 두음 — 조회 화면 안내문의 요지
   assert.ok(guide.includes("한자는 지정된 발음으로만 쓸 수 있고, 첫소리가 ㄴ·ㄹ인 한자는 소리 나는 바에 따라 ㅇ·ㄴ으로 쓸 수 있습니다."));
+  // 자리(첫 글자·뒤 글자)를 가리지 않는다는 근거는 조회 화면 안내가 아니라 법원행정처 선례 — 이름 글자에 한한 말로
+  // (설계 §20-2, docs/plan-hanja-input-facts-2026-11.json 의 corrected 문장. 조회 안내의 주의사항에는 자리에 관한 말이 없다 — 검증 지적 2026-11-23)
+  assert.ok(guide.includes("이름 글자에서는 첫 글자인지 뒤 글자인지를 가리지 않는다는 것이 법원행정처 선례(가족관계등록선례 제200909-2호)입니다."));
+  assert.doesNotMatch(guide, /그래서 [^.]*가리지 않아요/, "'그래서'로 이어 조회 안내의 말처럼 읽히게 쓰지 않는다");
   // 대법원 조회는 이름만 적는다 — 바깥 링크가 없다(그 사이트의 링크 유의사항)
   const hrefs = [...raw.matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
   assert.deepEqual(hrefs, ["/ohaeng", "/method", "/about#ai"]);
@@ -874,7 +1000,7 @@ test("/ohaeng 한자 예의 '맞춰 보기' — 글자와 독음만 해시에 �
   const item = functionBody(raw, "HanjaItem");
   assert.match(
     item,
-    /<a\s+href=\{evaluatePickHref\(item\.character, item\.readings\)\}\s+target="_blank"\s+rel="noopener"\s+aria-label=\{`\$\{item\.character\} 한자로 이름 맞춰 보기`\}\s+style=\{pickLink\}\s*>\s*맞춰 보기\s*<\/a>/
+    /<a\s+href=\{evaluatePickHref\(item\.character, item\.readings\)\}\s+target="_blank"\s+rel="noopener"\s+aria-label=\{`\$\{item\.character\} 한자로 이름 맞춰 보기 \(새 창\)`\}\s+style=\{pickLink\}\s*>\s*맞춰 보기\s*<\/a>/
   );
   assert.equal([...result.matchAll(/<a\b/g)].length, 1, "풀 페이지 이동(<a>)은 이 링크 하나");
   // 넘기는 것은 응답의 글자·독음뿐 — 생년월일·시각·출생지를 싣지 않는다(이 칸은 그 값을 받지도 않는다)
@@ -898,11 +1024,18 @@ test("개인정보처리방침 — 고른 한자·판정 요청·음절 파일 �
   assert.ok(policy.includes("<strong>추천·평가·분석·오행 찾기 입력값</strong>: 성씨, 이름, 이름·성씨에 고른 한자, 출생일(시), 출생지(시·도), 성별, 선호 톤,"));
   assert.ok(
     policy.includes(
-      "&lsquo;이름 평가&rsquo;(/evaluate)의 한자 칸에 목록에 없는 한자를 직접 넣으면 그 한자 한 글자와 칸의 음절을 계산 서버로 보내 그 칸에 넣을 수 있는 글자인지 확인하며, 이 값도 데이터베이스와 서버 로그에 남기지 않습니다."
+      "&lsquo;이름 평가&rsquo;(/evaluate)의 한자 칸에 직접 넣은 한자를 그 음절 목록에서 바로 확인하지 못하면(목록에 없는 글자이거나 목록을 아직 받지 못한 경우) 그 한자 한 글자와 칸의 음절을 계산 서버로 보내 그 칸에 넣을 수 있는 글자인지 확인하며, 이 값도 데이터베이스와 서버 로그에 남기지 않습니다."
     )
   );
   // 1항 자동 수집 — 음절 파일 요청. '이름 전체가 아니다'라고 쓰지 않는다(칸을 여러 개 열면 그만큼 남는다)
-  assert.ok(policy.includes("이름 평가에서 한자 칸을 열거나 한자를 넣으면 그 음절의 한자 후보 목록 파일을 받으며, 그 요청 주소에 음절이 문자 코드로 들어갑니다)"));
+  assert.ok(
+    policy.includes(
+      "이름 평가에서 한자 칸을 열거나 한자를 넣으면(다른 화면의 링크로 한자가 함께 넘어온 경우 포함) 그 음절의 한자 후보 목록 파일을 받으며, 그 요청 주소에 음절이 문자 코드로 들어갑니다)"
+    )
+  );
+  // 방침이 실제 처리보다 좁지 않다(검증 지적 2026-11-23) — 직접 넣은 글자는 목록을 아직 못 받았을 때도 서버로 가고(known=false),
+  // 주소·해시로 넘어온 한자는 칸을 열지 않아도 그 음절 파일을 받는다(위 '이름을 칠 때는…' 테스트의 ⓑ·ⓒ)
+  assert.match(code(read(...PANEL)), /askServer\(raw, list !== undefined\);/);
   assert.doesNotMatch(flat(code(read(...PRIVACY))), /이름 전체가 아니/);
   // 1항 브라우저 저장 — 즐겨찾기에 고른 한자
   assert.ok(policy.includes("출생일·출생 시각·성별·톤·고른 한자·점수는 이용자 브라우저(localStorage)에만 저장되며"));

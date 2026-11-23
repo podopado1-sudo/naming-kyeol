@@ -117,10 +117,11 @@ test("다시 계산이 끝났다는 한 줄 — 숫자는 응답 값 그대로, 
 
 test("다시 계산하지 못했다 — 무엇으로 바꾸려 했는지에 따라. 변수 뒤에 조사를 붙이지 않는다", () => {
   assert.equal(T.recalcFailedNote({ syllable: "서", kind: "hanja", character: SEO }), `‘${SEO}’ 글자로 다시 계산하지 못했어요.`);
-  assert.equal(T.recalcFailedNote({ syllable: "윤", kind: "none", character: null }), "‘윤’ 칸을 한글로 두고 다시 계산하지 못했어요.");
-  assert.equal(T.recalcFailedNote({ syllable: "윤", kind: "auto", character: null }), "‘윤’ 칸을 자동으로 되돌려 다시 계산하지 못했어요.");
+  // '…두고/되돌려 다시 계산하지 못했어요'는 '되돌렸기 때문에 못 했다'로도 읽혀 '…조합으로'로(검증 지적 — 2026-11-23)
+  assert.equal(T.recalcFailedNote({ syllable: "윤", kind: "none", character: null }), "‘윤’ 칸을 한글로 둔 조합으로 다시 계산하지 못했어요.");
+  assert.equal(T.recalcFailedNote({ syllable: "윤", kind: "auto", character: null }), "‘윤’ 칸을 자동으로 되돌린 조합으로 다시 계산하지 못했어요.");
   // 서버가 짚은 칸이 이번에 바꾼 칸이 아니면 글자를 대지 않는다
-  assert.equal(T.recalcFailedNote({ syllable: "윤", kind: "slot", character: null }), "‘윤’ 칸에서 걸려 다시 계산하지 못했어요.");
+  assert.equal(T.recalcFailedNote({ syllable: "윤", kind: "slot", character: null }), "‘윤’ 칸의 한자 때문에 다시 계산하지 못했어요.");
 });
 
 // ============================================================
@@ -269,8 +270,13 @@ test("안내 문장 — 설계 §9-3 의 문구 그대로", () => {
   assert.equal(T.MEANING_SCORE_NOTICE, "미학의 ‘의미’ 점수는 음절 기준이라 고른 한자의 뜻은 반영하지 않아요.");
   assert.equal(
     T.NO_BIRTH_NOTICE,
-    "생년월일을 넣지 않아 조화 점수는 계산하지 않았어요. 한자를 바꾸면 글자의 뜻·자원오행·획수와 자원오행 관계가 바뀌고, 점수는 성별 보너스만 달라질 수 있어요. 생년월일을 넣으면 이 한자들로 자원오행 보완·획수 조화·음양·전통 81수리를 계산해요."
+    "한자를 바꾸면 글자의 뜻·자원오행·획수와 자원오행 관계가 바뀌고, 점수는 성별 보너스만 달라질 수 있어요. 출생일을 넣으면 이 한자들로 자원오행 보완·획수 조화·음양·전통 81수리를 계산해요."
   );
+  // '조화 점수를 계산하지 않았다'는 같은 화면 조화 자리의 상자가 말한다 — 되풀이하지 않고, 낱말은 입력 폼·그 상자와 같은 '출생일'(검증 지적 — 2026-11-23)
+  for (const text of [T.NO_BIRTH_NOTICE, T.SEEN_NO_BIRTH_NOTE]) {
+    assert.doesNotMatch(text, /생년월일/);
+  }
+  assert.doesNotMatch(T.NO_BIRTH_NOTICE, /계산하지 않았어요/);
   assert.equal(T.birthTimeNotice(true), "태어난 시각은 서울 기준으로 보정해 계산했어요(출생지는 받지 않습니다).");
   assert.equal(T.birthTimeNotice(false), "태어난 시각을 넣지 않아 시주 없이 계산했어요.");
   assert.equal(
@@ -305,8 +311,10 @@ test("태어난 시각 안내는 백엔드의 동작과 같다 — 시각이 있
 });
 
 test("칸마다의 안내 — 이름에 피하는 글자·뜻 풀이 없는 글자·한자 없이 둔 칸", () => {
-  assert.equal(T.forbiddenNote("쥐 서"), "이 사이트가 이름 추천과 자동 배정에서 빼는 글자예요(훈: 쥐 서).");
-  assert.equal(T.forbiddenNote(""), "이 사이트가 이름 추천과 자동 배정에서 빼는 글자예요.");
+  // '자동 배정' 대신 같은 화면의 말('자동으로 고르기'·'자동으로 고른 한자')로(검증 지적 — 2026-11-23)
+  assert.equal(T.forbiddenNote("쥐 서"), "이 사이트가 이름 추천과 자동으로 고르는 한자에서 빼는 글자예요(훈: 쥐 서).");
+  assert.equal(T.forbiddenNote(""), "이 사이트가 이름 추천과 자동으로 고르는 한자에서 빼는 글자예요.");
+  assert.doesNotMatch(T.forbiddenNote("쥐 서"), /자동 배정/);
   assert.equal(T.NO_MEANING_NOTE, "사전에 뜻 풀이가 없는 글자예요. 획수와 자원오행으로만 계산해요.");
   assert.equal(T.noneNote("윤", false), "‘윤’ 음절은 한자 없이 한글로 두었어요.");
   assert.equal(T.noneNote("윤", true), "‘윤’ 음절은 한자 없이 한글로 두었어요. 이 칸은 획수 조화에서 5획, 81수리에서 0획으로 어림해 계산했어요(추정값).");
@@ -384,7 +392,7 @@ test("비교 줄의 문구 — 설계 §9-3", () => {
   assert.equal(T.SEEN_TITLE, "지금까지 본 조합");
   assert.equal(T.SEEN_GUIDE, "같은 조건에서 한자만 바꿔 본 결과예요. 어느 쪽이 낫다는 판정은 하지 않습니다.");
   assert.equal(T.SEEN_AUTO_NOTE, "자동으로 고른 한자는 용신을 반영해 고른 글자라 ‘자원오행 보완’이 높게 나오는 편이에요.");
-  assert.equal(T.SEEN_NO_BIRTH_NOTE, "생년월일을 넣지 않아 점수 대신 달라지는 사실을 적었어요. 생년월일을 넣으면 조화 점수로 비교할 수 있어요.");
+  assert.equal(T.SEEN_NO_BIRTH_NOTE, "출생일을 넣지 않아 점수 대신 달라지는 사실을 적었어요. 출생일을 넣으면 조화 점수로 비교할 수 있어요.");
 });
 
 test("comboLine: 조합 한 줄의 사실 — 글자·자원오행·음양·앞 두 글자 획수 합·관계 이름. 점수는 없다", () => {

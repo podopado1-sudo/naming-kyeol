@@ -144,6 +144,28 @@ const panelStyle: CSSProperties = {
   textAlign: "left",
 };
 
+/** 열 때 화면 안으로 끌어오는 여백 — 위는 붙어 있는 사이트 머리(88px) 밑, 아래는 화면 바닥에서 16px */
+const VIEW_MARGIN_TOP = 88;
+const VIEW_MARGIN_BOTTOM = 16;
+
+/**
+ * 열린 패널을 화면 안으로 — **다 자란 높이**(CSS max-height, min(70dvh, 560px))로 맞춘다. 패널은 음절 파일을 받으며 자라므로
+ * 열린 순간의 높이로 맞추면(scrollIntoView) 목록이 오고 나서 아래가 다시 화면 밖으로 나간다(1280×900 에서 실측 — 바닥 1,091px).
+ * 아래로 넘길 때는 패널 머리가 사이트 머리 밑으로 들어가지 않을 만큼만 넘긴다. 이미 다 보이면 움직이지 않는다.
+ */
+function bringIntoView(el: HTMLElement) {
+  const rect = el.getBoundingClientRect();
+  const max = Number.parseFloat(getComputedStyle(el).maxHeight);
+  const height = Number.isFinite(max) ? Math.max(rect.height, max) : rect.height;
+  const below = rect.top + height - (window.innerHeight - VIEW_MARGIN_BOTTOM);
+  const above = rect.top - VIEW_MARGIN_TOP;
+  if (below > 0) window.scrollBy({ top: Math.min(below, Math.max(above, 0)) });
+  else if (above < 0) window.scrollBy({ top: above });
+}
+
+/** 비어 있는 알림 영역 — 늘 문서에 두고 안의 글만 바꾼다(글과 함께 영역째 끼우면 화면 읽기 프로그램이 첫 문장을 놓칠 수 있다) */
+const emptyStatus: CSSProperties = { margin: 0 };
+
 const headStyle: CSSProperties = {
   background: "var(--color-surface)",
   borderBottom: "1px solid var(--color-divider)",
@@ -269,15 +291,20 @@ function PanelShell({
 }) {
   const titleId = `${id}-title`;
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  // 열리면 PC 는 직접 입력 칸, 그 밖은 제목으로 포커스를 옮긴다(휴대폰에서 키보드를 띄우지 않는다)
+  // 열리면 PC 는 직접 입력 칸, 그 밖은 제목으로 포커스를 옮긴다(휴대폰에서 키보드를 띄우지 않는다).
+  // 포커스는 화면을 움직이지 않으므로 패널을 화면 안으로 따로 끌어온다 — 칸 아래에 열려 휴대폰에서는 제목 줄만 화면 바닥에 보였다.
+  // 패널 높이는 min(70dvh, 560px) 라 대개 칸 줄과 함께 화면에 들어온다
   useEffect(() => {
     const target = (pc ? inputRef.current : null) ?? titleRef.current;
     target?.focus({ preventScroll: true });
+    if (panelRef.current) bringIntoView(panelRef.current);
   }, [pc, inputRef]);
 
   return (
     <div
+      ref={panelRef}
       id={id}
       role="region"
       aria-labelledby={titleId}
@@ -347,6 +374,9 @@ function NamePanel({
   const pc = usePcPointer();
   const { list, failed } = useCandidates(slot.syllable);
   const inputRef = useRef<HTMLInputElement>(null);
+  const othersRef = useRef<HTMLUListElement>(null);
+  // '더 보기'를 눌렀다 — 버튼이 사라지므로 새로 보인 첫 글자로 포커스를 옮긴다(포커스가 body 로 떨어지지 않게)
+  const focusMoreRef = useRef(false);
 
   const [query, setQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -354,6 +384,14 @@ function NamePanel({
   const [showAll, setShowAll] = useState(false);
   const [showAvoided, setShowAvoided] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
+
+  useEffect(() => {
+    if (!showAll || !focusMoreRef.current) return;
+    focusMoreRef.current = false;
+    const first = othersRef.current?.querySelectorAll("button")[FIRST_OTHERS];
+    first?.focus({ preventScroll: true });
+    first?.scrollIntoView({ block: "nearest" });
+  }, [showAll]);
 
   const groups = useMemo(() => groupCandidates(list ?? []), [list]);
   const filtering = query.trim() !== "" || element !== "";
@@ -365,8 +403,10 @@ function NamePanel({
   const loaded = list !== undefined;
   // 쓸 글자가 하나도 없는 음절(몰·괵) — 자동 배정이 비므로 '자동'과 '한자 없이'가 같은 뜻이다
   const zeroUsable = slot.state === "hangul" || (loaded && groups.common.length + groups.others.length === 0);
-  // 찾기·오행 거르기는 고를 글자가 있을 때만 둔다(쓸 글자가 없는 음절은 접힌 묶음 하나뿐이다)
-  const hasList = loaded && list.length > 0 && !zeroUsable;
+  // 찾기·오행 거르기는 고를 글자가 있을 때 둔다(쓸 글자가 없는 음절은 접힌 묶음 하나뿐이다). 목록을 받는 동안에도 자리를 그려 둔다 —
+  // 그 사이 PC 의 직접 입력 칸에서 Tab 을 누르면 패널 바닥의 '작명 원리' 링크로 건너뛰어, Enter 한 번에 폼을 떠났다.
+  // 받는 동안 찾기·거르기를 걸면 아래는 '불러오는 중'이고, 목록이 오면 그 조건으로 보인다
+  const hasList = loaded ? list.length > 0 && !zeroUsable : !failed && !zeroUsable;
   const others = showAll ? groups.others : groups.others.slice(0, FIRST_OTHERS);
   const moreCount = groups.others.length - others.length;
   const hasExtension = (list ?? []).some((f) => !f.basic);
@@ -377,6 +417,7 @@ function NamePanel({
       list={list}
       label={label}
       help={help}
+      pc={pc}
       inputRef={inputRef}
       focusOnMount={focusOnMount}
       onPick={onPick}
@@ -394,7 +435,7 @@ function NamePanel({
     <PanelShell
       id={id}
       title={namePanelTitle(slot.syllable)}
-      sub={hasList ? `고를 수 있는 글자 ${list.length}자` : undefined}
+      sub={loaded && hasList ? `고를 수 있는 글자 ${list.length}자` : undefined}
       pc={pc}
       inputRef={inputRef}
       onClose={onClose}
@@ -473,17 +514,14 @@ function NamePanel({
         </p>
       )}
 
-      {loaded && filtering && (
-        <>
-          <p role="status" style={{ ...hintText, marginTop: 10 }}>
-            {matches.length > 0 ? `${matches.length}자 찾음` : searchEmptyNote(pc)}
-          </p>
-          {matches.length > 0 && (
-            <ul aria-label="찾은 글자" style={listReset}>
-              {matches.map(row)}
-            </ul>
-          )}
-        </>
+      {/* 찾은 글자 수 — 알림 영역은 패널이 열려 있는 동안 늘 두고 안의 글만 바꾼다 */}
+      <p role="status" style={loaded && filtering ? { ...hintText, marginTop: 10 } : emptyStatus}>
+        {loaded && filtering ? (matches.length > 0 ? `${matches.length}자 찾음` : searchEmptyNote(pc)) : ""}
+      </p>
+      {loaded && filtering && matches.length > 0 && (
+        <ul aria-label="찾은 글자" style={listReset}>
+          {matches.map(row)}
+        </ul>
       )}
 
       {loaded && !filtering && (
@@ -502,13 +540,20 @@ function NamePanel({
           {groups.others.length > 0 && (
             <>
               {groups.common.length > 0 && <p style={groupTitle}>그 밖의 글자</p>}
-              <ul aria-label={groups.common.length > 0 ? "그 밖의 글자" : "고를 수 있는 글자"} style={listReset}>
+              <ul
+                ref={othersRef}
+                aria-label={groups.common.length > 0 ? "그 밖의 글자" : "고를 수 있는 글자"}
+                style={listReset}
+              >
                 {others.map(row)}
               </ul>
               {moreCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowAll(true)}
+                  onClick={() => {
+                    focusMoreRef.current = true;
+                    setShowAll(true);
+                  }}
                   style={{ ...actionButton, width: "100%", marginTop: 8 }}
                 >
                   더 보기 ({moreCount}자)
@@ -652,7 +697,7 @@ function CandidateRow({
         boxSizing: "border-box",
         padding: "8px 6px",
         textAlign: "left",
-        // 지금 고른 글자는 바탕색이 아니라 왼쪽 선과 글로 알린다 — 바탕을 칠하면 오행 칩 글자의 대비가 4.5:1 아래로 떨어진다
+        // 칸에 지금 든 글자는 바탕색이 아니라 왼쪽 선과 글로 알린다 — 바탕을 칠하면 오행 칩 글자의 대비가 4.5:1 아래로 떨어진다
         background: "transparent",
         border: "none",
         borderLeft: current ? "3px solid var(--color-teal)" : "3px solid transparent",
@@ -718,7 +763,8 @@ function CandidateRow({
           {grade && <span>{grade}</span>}
           {!fact.basic && <span>확장 한자</span>}
           {fact.forbidden && <span style={{ color: "var(--color-amber-warm-700)" }}>이름에 피하는 글자</span>}
-          {current && <span style={{ color: "var(--color-teal-800)", fontWeight: 600 }}>지금 고른 글자</span>}
+          {/* 칸에 지금 든 글자 — 결과 화면의 자동 칸·링크로 넣은 글자는 사용자가 고른 글자가 아니다. 후보 표(EvalBody)와 같은 말 */}
+          {current && <span style={{ color: "var(--color-teal-800)", fontWeight: 600 }}>지금 한자</span>}
         </span>
       </span>
     </button>
@@ -744,6 +790,8 @@ function SurnamePanel({ id, slot, representative, onPick, onAuto, onClose, onSpr
       list={list}
       label={label}
       help={help}
+      pc={pc}
+      hasDefault={!!representative}
       inputRef={inputRef}
       focusOnMount={focusOnMount}
       onPick={pick}
@@ -887,6 +935,8 @@ function DirectInput({
   list,
   label,
   help,
+  pc,
+  hasDefault = true,
   inputRef,
   focusOnMount,
   onPick,
@@ -897,6 +947,10 @@ function DirectInput({
   list: readonly HanjaFact[] | undefined;
   label: string;
   help?: string;
+  /** PC 인가 — 아니면 한자 키 안내를 하지 않는다(그때 이 칸은 패널 아래쪽의 '한자 붙여 넣기') */
+  pc: boolean;
+  /** 성씨 칸 — 기본으로 두는 한자(대표 한자 표)가 있는가. 판정이 늦을 때의 안내가 '기본 한자'·'추정한 한자'로 갈린다 */
+  hasDefault?: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
   /** 접어 둔 칸을 펼쳤을 때 — 바로 붙여 넣을 수 있게 커서를 둔다 */
   focusOnMount: boolean;
@@ -1001,7 +1055,7 @@ function DirectInput({
     ? [
         judge.known ? notInListNote(slot.syllable) : "",
         judge.phase === "done" ? judge.message : "",
-        judge.phase === "timeout" ? judgeTimeoutNote(slot.target) : "",
+        judge.phase === "timeout" ? judgeTimeoutNote(slot.target, { known: judge.known, hasDefault }) : "",
       ]
         .filter(Boolean)
         .join(" ")
@@ -1075,7 +1129,7 @@ function DirectInput({
               )}
               {hangulOnly && (
                 <p role="status" style={hintText}>
-                  {hangulOnlyHelp(slot.syllable)}
+                  {hangulOnlyHelp(slot.syllable, { pc, listAbove: !!list && list.length > 0 })}
                 </p>
               )}
               {judge?.phase === "done" && judge.suggestion && (

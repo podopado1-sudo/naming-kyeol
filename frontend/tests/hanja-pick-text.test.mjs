@@ -25,6 +25,7 @@ const {
   pickBannerText,
   searchEmptyNote,
   seedRejectedNote,
+  seedUncheckedNote,
   slotAriaLabel,
   slotFace,
   slotNote,
@@ -83,14 +84,17 @@ test("칸의 모양 — 한자가 정해진 칸은 그 글자, 아니면 '자동
   for (const state of ["none", "hangul", "locked"]) {
     assert.deepEqual(slotFace(slot("name", "빛", state)), { glyph: null, word: "한글", tail: null }, state);
   }
-  // 후보 파일이 없는 성씨 음절은 '한글'이 아니다(서버가 추정한다)
-  assert.equal(slotFace(slot("surname", "궉", "locked")).word, "자동");
+  // 후보 파일이 없는 성씨 음절은 '한글'이 아니고 '자동'도 아니다 — 칸 아래 안내가 '성씨 한자는 정할 수 없어요'라고 한다(검증 지적 — 2026-11-23)
+  assert.equal(slotFace(slot("surname", "궉", "locked")).word, "없음");
+  assert.notEqual(slotFace(slot("surname", "궉", "locked")).word, "자동");
   assert.equal(slotFace(slot("name", "서", "checking")).word, "확인 중");
 });
 
 test("칸 버튼의 이름 — 설계 §8-8 의 꼴. 성씨 칸은 훈을 읽지 않는다", () => {
   assert.equal(slotAriaLabel(slot("name", "서", "picked", fact(SEO, "상서 서"))), `‘서’ 음절 한자 — ${SEO}(상서 서), 고른 한자. 바꾸기`);
-  assert.equal(slotAriaLabel(slot("name", "서", "carried", fact(SEO, "상서 서"))), `‘서’ 음절 한자 — ${SEO}(상서 서), 들고 온 글자. 바꾸기`);
+  // 링크(#pick)로 넣은 글자 — 설계 낱말('들고 온 글자')을 화면 읽기 사용자에게 읽히지 않는다
+  assert.equal(slotAriaLabel(slot("name", "서", "carried", fact(SEO, "상서 서"))), `‘서’ 음절 한자 — ${SEO}(상서 서), 링크로 넣은 한자. 바꾸기`);
+  assert.doesNotMatch(slotAriaLabel(slot("name", "서", "carried", fact(SEO, "상서 서"))), /들고 온/);
   assert.equal(slotAriaLabel(slot("surname", "유", "default", fact(RYU, "버들 류(유)"))), `‘유’ 성씨 한자 — ${RYU}, 기본 한자. 바꾸기`);
   // 성씨 칸에 훈이 실린 글자 사실이 와도 읽지 않는다(음절 파일은 이름·성씨 패널이 함께 쓴다)
   const surnamePicked = slotAriaLabel(slot("surname", "유", "picked", fact(LIU, "죽일 류(유)")));
@@ -103,7 +107,7 @@ test("칸 버튼의 이름 — 설계 §8-8 의 꼴. 성씨 칸은 훈을 읽지
   assert.equal(slotAriaLabel(slot("name", "몰", "hangul")), "‘몰’ 음절 한자 — 한글. 고르기");
   // 잠긴 칸은 '바꾸기'·'고르기'를 말하지 않는다(누를 수 없다)
   assert.equal(slotAriaLabel(slot("name", "빛", "locked")), "‘빛’ 음절 한자 — 한글");
-  assert.equal(slotAriaLabel(slot("surname", "궉", "locked")), "‘궉’ 성씨 한자 — 자동");
+  assert.equal(slotAriaLabel(slot("surname", "궉", "locked")), "‘궉’ 성씨 한자 — 정할 수 없음");
   assert.equal(slotAriaLabel(slot("name", "서", "checking")), "‘서’ 음절 한자 — 확인 중");
   // 결과 화면의 칸 — 글자가 든 자동 칸: 서버가 자동으로 고른 이름 글자, 대표 한자 표에 없는 성씨의 추정 글자(입력 폼의 자동 칸에는 글자가 없다)
   assert.equal(slotAriaLabel(slot("name", "윤", "auto", fact(YUN, "윤택할 윤"))), `‘윤’ 음절 한자 — ${YUN}(윤택할 윤), 자동으로 고른 한자. 바꾸기`);
@@ -127,6 +131,18 @@ test("잠긴 칸·쓸 글자가 없는 칸의 안내 — 이름 칸은 lib/no-ha
 test("주소로 온 한자를 비운 안내 · 이름을 넣기 전의 안내", () => {
   assert.equal(seedRejectedNote(YUN, "서"), `‘${YUN}’ 글자는 ‘서’ 음절 후보에 없어 비웠어요.`);
   assert.equal(SLOTS_EMPTY_GUIDE, "이름을 넣으면 음절마다 한자 칸이 생겨요. 한자는 고르지 않아도 됩니다.");
+});
+
+test("주소로 온 한자를 확인할 목록을 받지 못한 안내 — 그 칸을 자동으로 두었다는 것과 어느 칸인지를 말한다(검증 지적 — 2026-11-23)", () => {
+  assert.equal(
+    seedUncheckedNote(["윤"]),
+    "주소로 넘어온 한자를 확인할 목록을 불러오지 못해 ‘윤’ 칸은 자동으로 두었어요. 칸을 눌러 목록을 다시 열거나 한자를 직접 붙여 넣어 주세요."
+  );
+  // 칸이 여럿이면 가운뎃점으로, 같은 음절(하하)은 한 번
+  assert.match(seedUncheckedNote(["서", "윤"]), /목록을 불러오지 못해 ‘서’·‘윤’ 칸은 자동으로 두었어요\./);
+  assert.match(seedUncheckedNote(["하", "하"]), /못해 ‘하’ 칸은/);
+  // 옛 문장(무엇을 다시 열라는지·한자를 비웠다는 말이 없던 패널 문장)을 쓰지 않는다
+  assert.doesNotMatch(seedUncheckedNote(["윤"]), /잠시 뒤 다시 열어/);
 });
 
 test("한글·한자 혼용 — 한자가 든 칸과 한글로 두는 칸이 함께일 때만. 자동 칸은 세지 않는다", () => {
@@ -171,8 +187,20 @@ test("띠 — 독음 하나·둘, 이름이 2음절 이상인데 들어갈 음�
   const ROK = U(0x742d);
   assert.match(pickBannerText(ROK, ["록"], "녹원"), /넣어 볼게요/);
   assert.match(pickBannerText(ROK, ["록"], "민준"), /읽는 음절이 없어요/);
-  const NA = U(0x5a1c); // 지정 독음 '나' — '라' 칸에는 들어가지 않는다
+  // 띠가 말하는 음절도 칸에 들어가는 음절과 같다 — 독음 목록에 두음 꼴이 없는 글자(娌 리)는 ‘리’ 또는 ‘이’(검증 지적 — 2026-11-23,
+  // 옛 띠는 ‘리’ 만 말하고 '서이'의 '이' 칸에 넣었다). 괄호 안은 확인된 독음 그대로
+  const LI2 = U(0x5a0c); // 娌 동서 리
+  assert.equal(
+    pickBannerText(LI2, ["리"], "서이"),
+    `${LI2}(리) 글자를 넣어 볼게요. 이름에 ‘리’ 또는 ‘이’ 음절이 있으면 그 칸에 넣어 드려요.`
+  );
+  assert.equal(
+    pickBannerText(ROK, ["록"], ""),
+    `${ROK}(록) 글자를 넣어 볼게요. 이름에 ‘록’ 또는 ‘녹’ 음절이 있으면 그 칸에 넣어 드려요.`
+  );
+  const NA = U(0x5a1c); // 지정 독음 '나' — '라' 칸에는 들어가지 않는다(두음 꼴은 한쪽 방향이라 띠도 ‘나’ 만)
   assert.match(pickBannerText(NA, ["나"], "라희"), /읽는 음절이 없어요/);
+  assert.match(pickBannerText(NA, ["나"], ""), /이름에 ‘나’ 음절이 있으면/);
   // 낱자모가 남은 이름은 판정하지 않는다
   assert.equal(pickBannerText(SEO, ["서"], "민ㅈ"), one);
 });
@@ -220,6 +248,36 @@ test("직접 입력의 문장 — 한글만 친 상태·목록에 없는 글자�
   assert.doesNotMatch(judgeTimeoutNote("surname"), /인명용|출생신고/);
 });
 
+test("직접 입력의 문장 — PC 가 아니면 한자 키 안내 대신 붙여넣기, 목록을 받기 전의 시간 초과, 기본 한자가 없는 성씨(검증 지적 — 2026-11-23)", () => {
+  // PC 가 아닐 때(아이폰 기본 자판에는 한자 변환이 없다 — 설계 §3-3) 이 칸은 패널 아래쪽의 '한자 붙여 넣기'다
+  assert.equal(hangulOnlyHelp("서", { pc: true }), hangulOnlyHelp("서"));
+  assert.equal(hangulOnlyHelp("서", { pc: false }), "‘서’ 음절의 한자를 복사해 여기에 붙여 넣거나, 위 목록에서 골라 주세요.");
+  assert.equal(hangulOnlyHelp("서", { pc: false, listAbove: false }), "‘서’ 음절의 한자를 복사해 여기에 붙여 넣어 주세요.");
+  for (const text of [hangulOnlyHelp("서", { pc: false }), hangulOnlyHelp("서", { pc: false, listAbove: false })]) {
+    assert.doesNotMatch(text, /Ctrl|Option|한자 키/);
+  }
+  // 음절 목록을 받기 전(known=false)에는 앞에 '후보에 없는 글자예요'가 없다 — '이유를'로 시작하지 않는다
+  assert.equal(
+    judgeTimeoutNote("name", { known: false }),
+    "이 글자를 확인하지 못했어요. 출생신고에 쓸 수 있는 글자인지는 대법원 인명용 한자 조회에서 확인할 수 있어요."
+  );
+  assert.equal(judgeTimeoutNote("surname", { known: false }), "이 글자를 확인하지 못했어요. 비워 두면 기본으로 두는 성씨 한자로 계산해요.");
+  // 대표 한자 표에 없는 성씨(찬) — 비워 두면 이 사이트가 추정한다(패널 버튼 '자동으로 고르기'·결과 꼬리 '추정한 성씨 한자'와 같은 말)
+  assert.equal(
+    judgeTimeoutNote("surname", { hasDefault: false }),
+    "이유를 확인하지 못했어요. 비워 두면 이 사이트가 추정한 성씨 한자로 계산해요."
+  );
+  assert.equal(
+    judgeTimeoutNote("surname", { known: false, hasDefault: false }),
+    "이 글자를 확인하지 못했어요. 비워 두면 이 사이트가 추정한 성씨 한자로 계산해요."
+  );
+  // 이름 칸은 기본 한자와 무관하다
+  assert.equal(judgeTimeoutNote("name", { hasDefault: false }), judgeTimeoutNote("name"));
+  for (const known of [true, false]) {
+    for (const hasDefault of [true, false]) assert.doesNotMatch(judgeTimeoutNote("surname", { known, hasDefault }), /인명용|출생신고/);
+  }
+});
+
 test("나눠 넣은 결과 — 넣은 수 한 줄, 건너뛴 글자마다 한 줄", () => {
   const nameSlot = (syllable, extra) => slot("name", syllable, "auto", null, extra);
   const step = (status, character, s) => ({ position: 0, slot: s, character, status, fact: status === "placed" ? fact(character, "뜻") : null });
@@ -240,7 +298,8 @@ test("나눠 넣은 결과 — 넣은 수 한 줄, 건너뛴 글자마다 한 �
   assert.equal(mixed.status, "한자 1자를 칸에 나눠 넣었어요.");
   assert.deepEqual(mixed.alerts, [
     `‘${YUN}’ 글자는 ‘아’ 음절 후보에 없어 넣지 않았어요.`,
-    `‘${YUN}’ 글자는 ‘빛’ 칸에 넣지 않았어요.`,
+    // 잠긴 칸에도 까닭을 적는다(다른 갈래 문장처럼 — 검증 지적 2026-11-23)
+    `‘${YUN}’ 글자는 넣지 않았어요 — ‘빛’ 칸은 한자를 고를 수 없는 칸이에요.`,
     `‘${YUN}’ 글자는 확인하지 못해 넣지 않았어요.`,
     "칸보다 글자가 많아 뒤의 2자는 넣지 않았어요.",
   ]);

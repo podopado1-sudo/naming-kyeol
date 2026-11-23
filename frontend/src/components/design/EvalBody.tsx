@@ -8,7 +8,7 @@
 "use client";
 
 import { Sparkles, Info } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ComponentType, SVGProps } from "react";
 
 import { ElementChip } from "./EvalPrimitives";
@@ -56,6 +56,16 @@ const pickButtonStyle: CSSProperties = {
   cursor: "pointer",
 };
 
+/** 이 표의 '이 글자로'로 시작한 재계산이 실패했을 때 그 음절 상자에 남기는 한 줄 — 작은 글씨는 amber-warm-700(흰 카드 위) */
+const failureLineStyle: CSSProperties = {
+  margin: 0,
+  padding: "10px 20px 0",
+  fontSize: 12.5,
+  lineHeight: 1.6,
+  color: "var(--color-amber-warm-700)",
+  wordBreak: "keep-all",
+};
+
 /** 지금 계산에 쓴 글자 줄의 표시 — 버튼 대신 글. 방금 고른 글자는 응답이 올 때까지 '다시 계산 중' */
 const currentMarkStyle: CSSProperties = {
   display: "inline-flex",
@@ -73,6 +83,7 @@ export function HanjaCandidatesTable({
   onPick,
   currentChars,
   confirmedChars,
+  failure,
 }: {
   groups: HanjaGroup[];
   /**
@@ -84,6 +95,11 @@ export function HanjaCandidatesTable({
   currentChars?: readonly (string | null)[];
   /** 음절마다 마지막으로 계산이 끝난 글자 — currentChars 와 다르면 그 음절은 다시 계산하는 중이다 */
   confirmedChars?: readonly (string | null)[];
+  /**
+   * 다시 계산하지 못한 이름 칸(부모의 재계산 실패 — 실패마다 다른 id, 음절 번호, 블록과 같은 문장). 이 표의 '이 글자로'로 시작한
+   * 재계산이 실패하면 그 음절 상자에 이 문장을 남기고 누른 줄의 버튼으로 포커스를 돌려놓는다
+   */
+  failure?: { id: number; index: number; text: string } | null;
 }) {
   const markBase = useId();
   // '이 글자로'를 누르면 그 버튼이 글('다시 계산 중')로 바뀐다 — 포커스가 문서 맨 위로 떨어지지 않게 그 글로 옮긴다
@@ -92,6 +108,22 @@ export function HanjaCandidatesTable({
     if (!focusMark) return;
     document.getElementById(focusMark.id)?.focus({ preventScroll: true });
   }, [focusMark]);
+
+  // 마지막으로 '이 글자로'를 누른 줄. 재계산이 실패하면 그 줄의 글('다시 계산 중')이 다시 버튼이 되며 포커스가 사라진다 —
+  // 그 버튼으로 돌려놓는다. 실패 안내(role="alert")는 위쪽 블록의 그 칸 아래에 있어 화면 밖일 수 있으므로 이 표에도 한 줄 남긴다
+  const [origin, setOrigin] = useState<{ gi: number; i: number } | null>(null);
+  const handledFailureRef = useRef<number | null>(null);
+  const failureId = failure?.id;
+  useEffect(() => {
+    if (failureId === undefined || !origin || handledFailureRef.current === failureId) return;
+    handledFailureRef.current = failureId;
+    // 포커스가 다른 곳에 있으면(서버가 짚은 칸의 패널이 열렸거나 사용자가 옮겼다) 그대로 둔다
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    document.getElementById(`${markBase}-pick-${origin.gi}-${origin.i}`)?.focus({ preventScroll: true });
+  }, [failureId, origin, markBase]);
+  const failureLineId = (gi: number) => `${markBase}-failure-${gi}`;
+  const showsFailure = (gi: number) => !!failure && !!origin && origin.gi === gi && failure.index === gi;
 
   return (
     <div
@@ -127,6 +159,12 @@ export function HanjaCandidatesTable({
           >
             {hasNoHanja(g.candidates) ? `${g.syllable} 음절` : `${g.syllable} 음절 · ${g.candidates.length}개`}
           </div>
+          {/* 이 표에서 시작한 재계산의 실패 — 같은 문장의 alert 는 블록에 있다(두 번 읽히지 않게 여기는 글만, 누른 버튼이 이 줄을 설명으로 잇는다) */}
+          {showsFailure(gi) && failure && (
+            <p id={failureLineId(gi)} style={failureLineStyle}>
+              {failure.text}
+            </p>
+          )}
           {/* 후보 0 음절(순한글 음절·후보가 모두 불용인 음절) — 빈 상자 대신 한 줄 안내(2026-10-26 L4, lib/no-hanja.ts) */}
           {hasNoHanja(g.candidates) && (
             <p
@@ -226,11 +264,17 @@ export function HanjaCandidatesTable({
                     ) : c.fact ? (
                       <button
                         type="button"
-                        aria-label={`‘${g.syllable}’ 음절을 ${c.character} 글자로 바꾸기`}
+                        id={`${markBase}-pick-${gi}-${i}`}
+                        // 보이는 글('이 글자로')로 시작하는 이름 — 음성 입력으로 보이는 글을 말해도 맞는다(WCAG 2.5.3)
+                        aria-label={`이 글자로 — ‘${g.syllable}’ 음절을 ${c.character} 글자로 바꾸기`}
+                        aria-describedby={
+                          showsFailure(gi) && origin?.i === i ? failureLineId(gi) : undefined
+                        }
                         onClick={() => {
                           const fact = c.fact;
                           if (!fact) return;
                           onPick(gi, fact);
+                          setOrigin({ gi, i });
                           setFocusMark((prev) => ({ id: `${markBase}-${gi}-${i}`, n: (prev?.n ?? 0) + 1 }));
                         }}
                         style={pickButtonStyle}

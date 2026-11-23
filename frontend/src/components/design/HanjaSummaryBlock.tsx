@@ -533,6 +533,10 @@ export function HanjaSummaryBlock({
 
         <div style={{ marginTop: 16 }}>
           {yongshin && <p style={{ ...guideText, marginTop: 0, color: "var(--color-text)" }}>{yongshin}</p>}
+          {/* 태어난 시각의 계산 기준(서울 기준 보정·출생지 받지 않음) — 칩·꼬리표 읽는 법이 아니라 용신·조화 점수 전체의 기준이라 접지 않는다 */}
+          {birthDateProvided && (
+            <p style={{ ...guideText, marginTop: yongshin ? 8 : 0 }}>{birthTimeNotice(hasBirthTime)}</p>
+          )}
           {hasGishin && <p style={guideText}>{GISHIN_NOTICE}</p>}
           {!birthDateProvided && <p style={{ ...guideText, marginTop: 0 }}>{NO_BIRTH_NOTICE}</p>}
           {isMixedResult(summary) && <p style={guideText}>{MIXED_SCRIPT_NOTICE}</p>}
@@ -558,7 +562,6 @@ export function HanjaSummaryBlock({
                 <p style={guideText}>{FILL_NOTICE}</p>
                 {yongshin && <p style={guideText}>{YONGSHIN_METHOD_NOTICE}</p>}
                 <p style={guideText}>{FRAME_NOTICE}</p>
-                <p style={guideText}>{birthTimeNotice(hasBirthTime)}</p>
                 <p style={guideText}>{SURNAME_NOTICE}</p>
               </>
             )}

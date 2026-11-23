@@ -209,7 +209,8 @@ export function OhaengResult({
           <div style={{ ...card, padding: "22px 22px" }}>
             <h3 style={cardTitle}>오행별 이름 한자 예</h3>
             <p style={smallNote}>
-              인명에 자주 쓰는 한자 가운데 부수 기준 자원오행이 그 오행인 글자를 오행마다 12자까지 골랐습니다. 성별은 보지 않았고,
+              이 사이트가 이름 글자로 꼽아 둔 한자(사용 통계는 아닙니다) 가운데 부수 기준 자원오행이 그 오행인 글자를 오행마다
+              12자까지 골랐습니다. 성별은 보지 않았고,
               이 글자를 써야 한다는 뜻은 아닙니다. 독음을 누르면 한자 사전에서 같은 독음의 글자를 볼 수 있어요.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 22, marginTop: 18 }}>
@@ -487,12 +488,13 @@ function HanjaItem({ item }: { item: ElementHanjaItem }) {
           </div>
         )}
       </div>
-      {/* 이 글자를 들고 이름 평가로(새 창). 풀 페이지 이동(<a>) — 해시만 싣고 쿼리는 없다. 칸마다 글이 같아 이름(aria-label)에 글자를 넣는다 */}
+      {/* 이 글자를 들고 이름 평가로(새 창). 풀 페이지 이동(<a>) — 해시만 싣고 쿼리는 없다. 칸마다 글이 같아 이름(aria-label)에 글자를 넣는다.
+          새 창으로 열린다는 것을 링크 이름에도 적는다(카드 아래 안내 줄에만 있으면 링크로 옮겨 다니는 사용자는 모른다) */}
       <a
         href={evaluatePickHref(item.character, item.readings)}
         target="_blank"
         rel="noopener"
-        aria-label={`${item.character} 한자로 이름 맞춰 보기`}
+        aria-label={`${item.character} 한자로 이름 맞춰 보기 (새 창)`}
         style={pickLink}
       >
         맞춰 보기

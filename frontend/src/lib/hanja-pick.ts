@@ -728,6 +728,27 @@ export function seedChoices(
   return result;
 }
 
+/**
+ * 제출할 칸의 표시 글자 — 칸의 `mark` 그대로이되, **확인을 기다리는 칸은 기다리던 글자를 싣는다**:
+ * ① 주소로 온 한자(`waiting` — 칸 키 → 글자, 그 음절 파일을 아직 받는 중인 칸 — 화면은 '확인 중')
+ * ② 들고 온 글자(#pick)가 들어갈 '확인 중' 칸(`pick`).
+ * 기다리는 동안 제출하면 그 칸이 말없이 자동으로 계산되던 것(사용자가 맞춰 보려던 조합이 아닌 조합)을 막는다.
+ * 넣어도 되는 글자인지는 서버가 다시 검사한다 — 맞지 않으면 400 의 target·slot 으로 폼이 그 칸을 연다.
+ * 파일을 받지 못한(실패) 칸은 `waiting` 에 넣지 않는다 — 화면이 '자동으로 두었다'고 알리고 자동으로 보낸다(seedUncheckedNote).
+ */
+export function submitMarks(
+  slots: readonly HanjaSlot[] | null | undefined,
+  waiting: ReadonlyMap<string, string>,
+  pick: PendingPick | null | undefined
+): string[] {
+  return (slots ?? []).map((slot) => {
+    const seeded = waiting.get(choiceKey(slot.target, slot.index, slot.syllable));
+    if (seeded) return seeded;
+    if (slot.state === "checking" && pick) return pick.character;
+    return slot.mark;
+  });
+}
+
 export interface PasteStep {
   /** 넘겨받은 칸 목록 안의 자리 */
   position: number;

@@ -70,7 +70,10 @@ export function seenShownNotice(data: {
     : `본 조합으로 돌아왔어요 — 조화 ${data.harmonyScore} · 종합 ${data.finalScore}`;
 }
 
-/** 다시 계산하지 못했다 — 그 칸 아래에 적는다. 뒤에 까닭(api 문장)이 이어진다 */
+/**
+ * 다시 계산하지 못했다 — 그 칸 아래에 적는다. 뒤에 까닭(api 문장)이 이어진다.
+ * '…두고/되돌려 다시 계산하지 못했어요'는 '되돌렸기 때문에 못 했다'로도 읽혀 '…조합으로'로 쓴다.
+ */
 export function recalcFailedNote(change: {
   syllable: string;
   /** hanja = 글자를 골랐다 · none = 한자 없이 · auto = 자동(성씨는 기본 한자)으로 되돌렸다 · slot = 서버가 짚은 칸(이번에 바꾼 칸이 아니다) */
@@ -78,9 +81,9 @@ export function recalcFailedNote(change: {
   character: string | null;
 }): string {
   if (change.kind === "hanja" && change.character) return `‘${change.character}’ 글자로 다시 계산하지 못했어요.`;
-  if (change.kind === "none") return `‘${change.syllable}’ 칸을 한글로 두고 다시 계산하지 못했어요.`;
-  if (change.kind === "auto") return `‘${change.syllable}’ 칸을 자동으로 되돌려 다시 계산하지 못했어요.`;
-  return `‘${change.syllable}’ 칸에서 걸려 다시 계산하지 못했어요.`;
+  if (change.kind === "none") return `‘${change.syllable}’ 칸을 한글로 둔 조합으로 다시 계산하지 못했어요.`;
+  if (change.kind === "auto") return `‘${change.syllable}’ 칸을 자동으로 되돌린 조합으로 다시 계산하지 못했어요.`;
+  return `‘${change.syllable}’ 칸의 한자 때문에 다시 계산하지 못했어요.`;
 }
 
 // ============================================================
@@ -231,9 +234,12 @@ export function birthTimeNotice(hasBirthTime: boolean): string {
 export const SURNAME_NOTICE = "성씨 글자는 자원오행 보완 점수에 들어가지 않아요.";
 export const MEANING_SCORE_NOTICE = "미학의 ‘의미’ 점수는 음절 기준이라 고른 한자의 뜻은 반영하지 않아요.";
 
-/** 생년월일 없이 낸 결과 — 한자를 바꾸면 무엇이 달라지는지 */
+/**
+ * 출생일 없이 낸 결과 — 한자를 바꾸면 무엇이 달라지는지. '조화 점수를 계산하지 않았다'는 같은 화면의 조화 자리 상자가 이미 말하므로
+ * 되풀이하지 않는다. 낱말은 입력 폼('출생일' 칸)·조화 자리 상자·설명 글과 같은 '출생일'이다.
+ */
 export const NO_BIRTH_NOTICE =
-  "생년월일을 넣지 않아 조화 점수는 계산하지 않았어요. 한자를 바꾸면 글자의 뜻·자원오행·획수와 자원오행 관계가 바뀌고, 점수는 성별 보너스만 달라질 수 있어요. 생년월일을 넣으면 이 한자들로 자원오행 보완·획수 조화·음양·전통 81수리를 계산해요.";
+  "한자를 바꾸면 글자의 뜻·자원오행·획수와 자원오행 관계가 바뀌고, 점수는 성별 보너스만 달라질 수 있어요. 출생일을 넣으면 이 한자들로 자원오행 보완·획수 조화·음양·전통 81수리를 계산해요.";
 
 /** 안내를 접어 둔 줄의 이름 */
 export const GUIDE_SUMMARY = "칩과 꼬리표 읽는 법";
@@ -242,11 +248,14 @@ export const GUIDE_SUMMARY = "칩과 꼬리표 읽는 법";
 // 칸마다의 안내
 // ============================================================
 
-/** 이름에 피하는 글자(불용)를 골랐다 — 막지 않고 계산하되 사실을 적는다. 출생신고 가부를 말하지 않는다 */
+/**
+ * 이름에 피하는 글자(불용)를 골랐다 — 막지 않고 계산하되 사실을 적는다. 출생신고 가부를 말하지 않는다.
+ * '자동 배정' 대신 같은 화면의 말('자동으로 고르기'·'자동으로 고른 한자')을 쓴다.
+ */
 export function forbiddenNote(gloss: string): string {
   return gloss
-    ? `이 사이트가 이름 추천과 자동 배정에서 빼는 글자예요(훈: ${gloss}).`
-    : "이 사이트가 이름 추천과 자동 배정에서 빼는 글자예요.";
+    ? `이 사이트가 이름 추천과 자동으로 고르는 한자에서 빼는 글자예요(훈: ${gloss}).`
+    : "이 사이트가 이름 추천과 자동으로 고르는 한자에서 빼는 글자예요.";
 }
 
 export const NO_MEANING_NOTE = "사전에 뜻 풀이가 없는 글자예요. 획수와 자원오행으로만 계산해요.";
@@ -330,9 +339,9 @@ export const SEEN_GUIDE = "같은 조건에서 한자만 바꿔 본 결과예요
 /** 생년월일이 있고(용신을 구했고) 자동 칸이 든 줄이 있을 때 */
 export const SEEN_AUTO_NOTE =
   "자동으로 고른 한자는 용신을 반영해 고른 글자라 ‘자원오행 보완’이 높게 나오는 편이에요.";
-/** 생년월일이 없을 때 — 미학·종합이 조합마다 사실상 같아 숫자 줄이 비교가 되지 않는다 */
+/** 출생일이 없을 때 — 미학·종합이 조합마다 사실상 같아 숫자 줄이 비교가 되지 않는다 */
 export const SEEN_NO_BIRTH_NOTE =
-  "생년월일을 넣지 않아 점수 대신 달라지는 사실을 적었어요. 생년월일을 넣으면 조화 점수로 비교할 수 있어요.";
+  "출생일을 넣지 않아 점수 대신 달라지는 사실을 적었어요. 출생일을 넣으면 조화 점수로 비교할 수 있어요.";
 
 export interface ComboLine {
   /** 성씨 글자 — 한자를 정하지 못한 자리는 한글 음절 */

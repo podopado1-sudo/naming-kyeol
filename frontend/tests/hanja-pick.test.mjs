@@ -58,6 +58,7 @@ const {
   seedChoices,
   sortForSurname,
   spreadPaste,
+  submitMarks,
   surnameDefaultAt,
   syllableFile,
   toApiHanja,
@@ -851,6 +852,40 @@ test("seedChoices: 주소로 온 한자 → 칸 선택 — 맞는 글자만 선�
   // 길이가 안 맞는 값은 통째로 버린다
   const long = seedChoices({ lastName: "", firstName: "서윤", hanja: SEO + YUN + YUN }, files);
   assert.equal(long.choices.size + long.pending.length + long.rejected.length, 0);
+});
+
+test("submitMarks: 제출할 표시 글자 — 확인을 기다리는 칸은 기다리던 글자를 싣는다(검증 지적 2026-11-23 — 말없이 자동으로 계산되지 않게)", () => {
+  // /name '이 한자로 평가'(瑞潤)로 왔는데 '윤' 파일을 아직 받는 중 — 폼의 '윤' 칸은 '확인 중'이고 deriveSlots 의 mark 는 자동이다
+  const seed = seedChoices({ lastName: "", firstName: "서윤", hanja: SEO + YUN }, filesFor("서"));
+  const now = deriveSlots({ lastName: "이", firstName: "서윤" }, seed.choices, null, index, filesFor("서"));
+  assert.deepEqual(marksOf(now.name), [SEO, AUTO], "칸의 mark 는 기다리는 칸을 자동으로 둔다");
+  const waiting = new Map(seed.pending.map((item) => [item.key, item.character]));
+  assert.deepEqual(submitMarks(now.name, waiting, null), [SEO, YUN]);
+  // 성씨 칸도 같은 꼴(주소의 lastHanja)
+  const seedLast = seedChoices({ lastName: "유", firstName: "서윤", lastHanja: LIU }, NO_FILES);
+  const nowLast = deriveSlots({ lastName: "유", firstName: "서윤" }, seedLast.choices, null, index, NO_FILES);
+  const waitingLast = new Map(seedLast.pending.map((item) => [item.key, item.character]));
+  assert.deepEqual(submitMarks(nowLast.surname, waitingLast, null), [LIU]);
+  // 기다리는 칸이 없으면 칸의 mark 그대로(파일을 받지 못한 칸은 화면이 '자동으로 두었다'고 알리고 waiting 에 넣지 않는다)
+  assert.deepEqual(submitMarks(now.name, new Map(), null), marksOf(now.name));
+  // 들고 온 글자(#pick)가 들어갈 '확인 중' 칸 — 그 글자를 싣는다(서버가 다시 검사한다)
+  const pick = { character: SEO, readings: ["서"] };
+  const checking = deriveSlots({ lastName: "이", firstName: "서윤" }, NO_CHOICES, pick, index, NO_FILES);
+  assert.equal(checking.name[0].state, "checking");
+  assert.deepEqual(submitMarks(checking.name, new Map(), pick), [SEO, AUTO]);
+  // 들고 온 글자가 없으면 '확인 중' 이라도 mark 그대로 — 그리고 기다리는 주소 한자가 들고 온 글자보다 먼저다
+  assert.deepEqual(submitMarks(checking.name, new Map(), null), [AUTO, AUTO]);
+  assert.deepEqual(submitMarks(checking.name, new Map([[choiceKey("name", 0, "서"), LIU]]), pick), [LIU, AUTO]);
+  // 고른 칸·한자 없이·자동은 그대로
+  const mixed = deriveSlots(
+    { lastName: "", firstName: "서윤" },
+    new Map([[choiceKey("name", 1, "윤"), { kind: "none" }]]),
+    null,
+    index,
+    NO_FILES
+  );
+  assert.deepEqual(submitMarks(mixed.name, new Map(), null), [AUTO, NONE]);
+  assert.deepEqual(submitMarks(null, new Map(), null), []);
 });
 
 test("surnameDefaultAt: 성씨의 그 자리에 기본으로 두는 한자 — 색인의 대표 한자 표, 없으면 null", () => {
