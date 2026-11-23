@@ -939,3 +939,39 @@ test("sitemap·robots — /evaluate 는 바뀐 날을 자기 lastModified 로(�
   assert.equal([...robots.matchAll(/disallow: \["\/favorites", "\/api\/", STATIC_DATA, \.\.\.TOOL_QUERY_VARIANTS\],/g)].length, 2);
   assert.match(robots, /const TOOL_QUERY_VARIANTS = \[[^\]]*"\/evaluate\?"[^\]]*\];/);
 });
+
+// ═════════════════════════════════════════════════════════════
+// 진입 링크(C7 뒤 절반) — /name 조합 카드 · /hanja 인덱스·독음 쪽·글자 상세
+// 검색 유입이 가장 많은 쪽들이다 — 링크 줄만 더하고 제목·설명·h1·기존 문단은 건드리지 않는다(사용자 결정).
+// 빌드 HTML 대조(바꾸기 전 빌드와 title·description·h1 같음, 더해진 것이 링크 줄뿐)는 구현 기록 §26 에 적었다.
+// ═════════════════════════════════════════════════════════════
+
+const NAME_PAGE = ["src", "app", "name", "[slug]", "page.tsx"];
+
+test("/name 조합 카드의 '이 한자로 평가' — 이름과 그 조합만 싣는 nofollow 링크(칩 아래), 순우리말 참고 조합에는 없다", () => {
+  const raw = read(...NAME_PAGE);
+  assert.match(code(raw), /^import \{ evaluateComboHref \} from "@\/lib\/hanja-pick";$/m);
+  const card = functionBody(raw, "ComboCard");
+  assert.match(
+    card,
+    /\{evaluateLink && \(\s*<a\s+href=\{evaluateComboHref\(name, c1 \+ c2\)\}\s+rel="nofollow"\s+aria-label=\{`이 한자로 평가 — \$\{c1\}\$\{c2\}`\}\s+className="[^"]*\bmin-h-11\b[^"]*\btext-teal-800\b[^"]*"\s*>\s*이 한자로 평가 →\s*<\/a>\s*\)\}/
+  );
+  assert.equal([...code(card).matchAll(/<a\b/g)].length, 1, "카드의 링크는 하나");
+  assert.ok(card.indexOf("<OhaengRelationChip") < card.indexOf("evaluateComboHref("), "관계 칩 아래");
+  assert.match(card, /^\s*evaluateLink: boolean;$/m);
+  // 순우리말 사전 이름(pk)의 '한자로 쓴다면(참고)' 조합에는 달지 않는다 — '추천 1순위' 강조와 같은 조건
+  assert.match(
+    flat(code(raw)),
+    /<ComboCard key=\{combo\.join\(""\)\} combo=\{combo\} name=\{name\} featured=\{kind !== "pure" && i === 0\} evaluateLink=\{kind !== "pure"\} \/>/
+  );
+  assert.equal([...raw.matchAll(/<ComboCard\b/g)].length, 1);
+  // 성·성별은 싣지 않는다 — 링크 함수가 받는 것은 이름과 한자뿐(값은 hanja-pick.test.mjs evaluateComboHref)
+  assert.match(read("src", "lib", "hanja-pick.ts"), /export function evaluateComboHref\(name: string, hanja: string\): string \{/);
+  // 이 쪽에서 /evaluate 로 가는 링크는 셋 — 모두 풀 페이지 이동(<a>)이고 nofollow(목적지 /evaluate?… 는 robots 가 막는다)
+  const evalAnchors = [...code(raw).matchAll(/<a\s+href=\{[^}]*(?:\/evaluate|evaluateComboHref)[^}]*\}[\s\S]*?>/g)].map((m) => m[0]);
+  assert.equal(evalAnchors.length, 3);
+  for (const a of evalAnchors) assert.match(a, /\brel="nofollow"/, a);
+  assert.doesNotMatch(code(raw), /<Link\s+href=\{?["'`]\/evaluate/);
+  // 서버 컴포넌트에서 쓰는 링크 함수는 큰 JSON 을 import 하지 않는 순수 모듈이다(이 쪽의 번들과 무관하지만 클라이언트도 같은 모듈을 쓴다)
+  assert.doesNotMatch(code(read("src", "lib", "hanja-pick.ts")), /from "\.\/(hanja|name)-seo"|\.json"/);
+});

@@ -7,6 +7,7 @@ import { OhaengRelationChip } from "@/components/design/OhaengRelationChip";
 import { Badge } from "@/components/ui/badge";
 import { HanjaGradeBadge } from "@/components/hanja/HanjaBadges";
 import { ScoreBreakdownCard } from "@/components/results/ScoreBreakdownCard";
+import { evaluateComboHref } from "@/lib/hanja-pick";
 import { ELEMENT_KO, getHanja, getReadingChars } from "@/lib/hanja-seo";
 import { getInsight, type Insight } from "@/lib/insights";
 import { hasBatchim, josa, withJosa } from "@/lib/josa";
@@ -193,15 +194,19 @@ function GenderBar({ rec }: { rec: NameSeoRecord }) {
  * 훈음은 이름 음절의 독음에 맞춘다(乻은 하늘의 '늘' 자리에서 "음차 늘", "땅 이름 얼"이 아니라).
  * featured(1순위 강조·'추천 1순위' 라벨)는 한자 이름에만 — 순우리말 사전 이름(pk)의 조합은 참고라 강조하지 않는다(ND-3).
  * 관계 칩은 /evaluate '이 이름의 한자' 블록과 같은 공용 컴포넌트(OhaengRelationChip — 2026-11 한자 입력 §11-1). 색 표와 마크업은
- * 이 파일에 있던 것을 글자 그대로 옮긴 것이라 HTML 이 같고(바꾼 커밋에서 빌드 3,865쪽 대조), 말은 지금처럼 ohaengRelation 의 label 이다. */
+ * 이 파일에 있던 것을 글자 그대로 옮긴 것이라 HTML 이 같고(바꾼 커밋에서 빌드 3,865쪽 대조), 말은 지금처럼 ohaengRelation 의 label 이다.
+ * evaluateLink 면 칩 아래에 '이 한자로 평가 →'(이 조합을 /evaluate 한자 칸에 넣어 연다 — §11-1). 순우리말 사전 이름(pk)의 참고 조합에는
+ * 달지 않는다(featured 와 같은 조건 — 추천하는 조합이 아니다). */
 function ComboCard({
   combo,
   name,
   featured,
+  evaluateLink,
 }: {
   combo: string[];
   name: string;
   featured: boolean;
+  evaluateLink: boolean;
 }) {
   const [c1, c2] = combo;
   const [s1, s2] = [...name];
@@ -255,6 +260,18 @@ function ComboCard({
         ))}
       </div>
       <OhaengRelationChip kind={rel.kind} label={rel.label} />
+      {/* 이름과 이 조합만 싣는다 — 성·성별은 싣지 않는다(이 쪽의 다른 두 /evaluate 링크와 같다). 목적지 /evaluate?… 는 robots 가 막고 nofollow.
+          풀 페이지 이동(<a>) — /evaluate 는 클라이언트 네비 잔상 버그가 있다(같은 관례). 쪽당 최대 4개라 이름(aria-label)에 조합을 넣는다 */}
+      {evaluateLink && (
+        <a
+          href={evaluateComboHref(name, c1 + c2)}
+          rel="nofollow"
+          aria-label={`이 한자로 평가 — ${c1}${c2}`}
+          className="mt-2 flex min-h-11 w-fit items-center text-sm font-medium text-teal-800 no-underline hover:underline"
+        >
+          이 한자로 평가 →
+        </a>
+      )}
     </div>
   );
 }
@@ -502,6 +519,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
                   combo={combo}
                   name={name}
                   featured={kind !== "pure" && i === 0}
+                  evaluateLink={kind !== "pure"}
                 />
               ))}
             </div>
