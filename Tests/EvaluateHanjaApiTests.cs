@@ -1172,12 +1172,12 @@ public class EvaluateHanjaApiTests
         Assert.Equal(
             "이 사이트 사전에 없는 글자라서 이 글자로는 성씨 획수를 세지 못해요. " +
             "모양만 조금 다른 같은 글자가 실려 있을 수 있으니 ‘유’ 칸의 후보 목록에서 먼저 찾아보세요. " +
-            "비워 두면 기본으로 두는 성씨 한자로 계산해요.", missing.Message);
+            "비워 두면 이 사이트가 성씨 한자를 정해 계산해요.", missing.Message);   // 판정 API 는 성씨를 모른다 — 표 안·밖 어느 쪽에도 맞는 맺음(2026-11-25)
         var mismatch = Call(Cp(0x6F64), "유", "surname");
         Assert.Equal("reading_mismatch", mismatch.Status);
         Assert.Equal(
             $"‘{Cp(0x6F64)}’ 글자는 이 사이트 사전에 실린 독음(윤)이 ‘유’ 칸과 맞지 않아요. ‘유’ 음절로 읽는 한자를 넣어 주세요. " +
-            "비워 두면 기본으로 두는 성씨 한자로 계산해요.", mismatch.Message);
+            "비워 두면 이 사이트가 성씨 한자를 정해 계산해요.", mismatch.Message);
         foreach (var message in new[] { missing.Message!, mismatch.Message! })
         {
             Assert.DoesNotContain("인명용", message);
@@ -1185,9 +1185,10 @@ public class EvaluateHanjaApiTests
             Assert.True(IsKoreanSentence(message), message);
         }
 
-        // 평가의 입력 검증이 성씨 칸에 내는 문장과 같다(같은 함수)
-        Assert.Equal(HanjaInput.Resolve("서윤", "유", null, Cp(0x6669)).Problem!.Message, missing.Message);
-        Assert.Equal(HanjaInput.Resolve("서윤", "유", null, Cp(0x6F64)).Problem!.Message, mismatch.Message);
+        // 평가의 입력 검증이 성씨 칸에 내는 문장과 같다(같은 함수) — 맺음만 다르다: 판정 API 는 성씨를 몰라 표 안·밖 어느 쪽에도 맞는 말(2026-11-25)
+        static string Unknown(string m) => m.Replace(HanjaInput.SurnameLeaveEmptyTailDefault, HanjaInput.SurnameLeaveEmptyTailUnknown);
+        Assert.Equal(Unknown(HanjaInput.Resolve("서윤", "유", null, Cp(0x6669)).Problem!.Message), missing.Message);
+        Assert.Equal(Unknown(HanjaInput.Resolve("서윤", "유", null, Cp(0x6F64)).Problem!.Message), mismatch.Message);
         // 같은 입력을 이름 칸으로 물으면 이름용 문장(§20-3 확정 문구)이다
         Assert.Equal(HanjaInput.NotInDictionaryMessage('유'), Call(Cp(0x6669), "유", null).Message);
         Assert.Contains("인명용 독음(윤)", Call(Cp(0x6F64), "유", null).Message);

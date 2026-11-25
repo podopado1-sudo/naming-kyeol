@@ -567,11 +567,13 @@ public class HanjaInputTests
             "이 사이트 사전에 없는 글자라서 이 글자로는 성씨 획수를 세지 못해요. " +
             "모양만 조금 다른 같은 글자가 실려 있을 수 있으니 ‘유’ 칸의 후보 목록에서 먼저 찾아보세요. " +
             "비워 두면 기본으로 두는 성씨 한자로 계산해요.", problem.Message);
-        Assert.Equal(problem.Message, HanjaInput.Judge(Cp(0x6669), '유', surname: true).Message);
+        // 글자 판정 API 는 성씨를 모른다(요청에 성씨가 없다) — 맺음만 표 안·밖 어느 쪽에도 맞는 말이다(2026-11-25)
+        Assert.Equal(problem.Message.Replace(HanjaInput.SurnameLeaveEmptyTailDefault, HanjaInput.SurnameLeaveEmptyTailUnknown),
+            HanjaInput.Judge(Cp(0x6669), '유', surname: true).Message);
         Assert.Equal(
             "이 사이트 사전에 없는 글자라서 이 글자로는 성씨 획수를 세지 못해요. " +
             "모양만 조금 다른 같은 글자가 실려 있을 수 있으니 후보 목록에서 먼저 찾아보세요. " +
-            "비워 두면 기본으로 두는 성씨 한자로 계산해요.", HanjaInput.Judge(Cp(0x6669), null, surname: true).Message);
+            "비워 두면 이 사이트가 성씨 한자를 정해 계산해요.", HanjaInput.Judge(Cp(0x6669), null, surname: true).Message);
 
         var surnameMessages = new[]
         {

@@ -5,7 +5,7 @@ using Xunit;
 namespace NameForm.Tests;
 
 /// <summary>
-/// 2026-11-25 불용 12차 — U6-2 A 명백 부정 197자(docs/hanja-pick-negative-gloss-2026-11.md 의 A 표).
+/// 2026-11-25 불용 12차 — U6-2 A 명백 부정 197자(docs/hanja-pick-negative-gloss-2026-11.md 의 A 표)와 성씨 칸 맺음 문장.
 /// ⚠️ 한자는 문자 리터럴로 쓰지 않는다 — 정수 코드포인트로만 적는다(호환 한자 NFC 함정).
 /// </summary>
 public class HanjaU62ForbiddenTests
@@ -55,5 +55,50 @@ public class HanjaU62ForbiddenTests
             .Where(h => HanjaData.IsForbiddenNameHanja(h.Character) && HanjaData.IsWeakGivenNameHanja(h.Character))
             .Select(h => h.Character).ToList();
         Assert.Empty(both);
+    }
+
+    /// <summary>
+    /// 성씨 칸 맺음 — 대표 한자 표에 있는 성씨는 '기본으로 두는', 없는 성씨는 '이 사이트가 추정한'(프런트 lib/hanja-pick-text.ts 의 표 밖 성씨 문장과 같은 말),
+    /// 성씨를 모르는 글자 판정은 둘 다 맞는 말. 2026-11-23 검증 지적 #13 뒤 절반.
+    /// </summary>
+    [Fact]
+    public void SurnameTail_DependsOnTheRepresentativeTable()
+    {
+        Assert.True(SurnameData.RepresentativeHanja.ContainsKey("유"));
+        Assert.True(SurnameData.RepresentativeHanja.ContainsKey("남궁"));
+        Assert.False(SurnameData.RepresentativeHanja.ContainsKey("종"));
+        Assert.True(HanjaInput.HasCandidates('종'));
+
+        Assert.Equal(HanjaInput.SurnameLeaveEmptyTailDefault, HanjaInput.SurnameLeaveEmptyTail("유"));
+        Assert.Equal(HanjaInput.SurnameLeaveEmptyTailDefault, HanjaInput.SurnameLeaveEmptyTail("남궁"));
+        Assert.Equal(HanjaInput.SurnameLeaveEmptyTailEstimated, HanjaInput.SurnameLeaveEmptyTail("종"));
+        Assert.Equal(HanjaInput.SurnameLeaveEmptyTailUnknown, HanjaInput.SurnameLeaveEmptyTail(null));
+        Assert.Equal("비워 두면 이 사이트가 추정한 성씨 한자로 계산해요.", HanjaInput.SurnameLeaveEmptyTailEstimated);
+
+        // '한자 없음' — 표 안 성씨는 예전 문장 그대로, 표 밖 성씨는 추정 맺음
+        var (_, none) = HanjaInput.Resolve("서윤", "이", null, "-");
+        Assert.Equal(HanjaInput.SurnameNoneMessage, none!.Message);
+        (_, none) = HanjaInput.Resolve("서윤", "종", null, "-");
+        Assert.Equal(HanjaInput.CodeSurnameNone, none!.Code);
+        Assert.Equal("성씨에는 ‘한자 없음’을 고를 수 없어요. 비워 두면 이 사이트가 추정한 성씨 한자로 계산해요.", none.Message);
+
+        // 사전에 없는 글자(晩 U+6669)·독음 불일치(潤 U+6F64) — 표 밖 성씨 '종'
+        var (_, missing) = HanjaInput.Resolve("서윤", "종", null, Cp(0x6669));
+        Assert.Equal(HanjaInput.CodeNotInDictionary, missing!.Code);
+        Assert.EndsWith(HanjaInput.SurnameLeaveEmptyTailEstimated, missing.Message);
+        var (_, mismatch) = HanjaInput.Resolve("서윤", "종", null, Cp(0x6F64));
+        Assert.Equal(HanjaInput.CodeReadingMismatch, mismatch!.Code);
+        Assert.EndsWith(HanjaInput.SurnameLeaveEmptyTailEstimated, mismatch.Message);
+
+        // 표 안 복성 — 둘째 자리 문제도 '기본으로 두는'
+        var (_, compound) = HanjaInput.Resolve("서윤", "남궁", null, "*" + Cp(0x6F64));
+        Assert.Equal(1, compound!.Slot);
+        Assert.EndsWith(HanjaInput.SurnameLeaveEmptyTailDefault, compound.Message);
+
+        // 글자 판정(성씨를 모름)
+        Assert.EndsWith(HanjaInput.SurnameLeaveEmptyTailUnknown, HanjaInput.Judge(Cp(0x6F64), '종', surname: true).Message);
+        Assert.EndsWith(HanjaInput.SurnameLeaveEmptyTailUnknown, HanjaInput.Judge(Cp(0x6669), null, surname: true).Message);
+        // 이름 칸 문장에는 성씨 맺음이 없다
+        Assert.DoesNotContain("성씨", HanjaInput.Judge(Cp(0x6F64), '서').Message);
     }
 }

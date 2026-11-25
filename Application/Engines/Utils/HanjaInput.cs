@@ -65,7 +65,11 @@ public static class HanjaInput
     public const string NameNotHangulMessage = "한자를 고르려면 이름과 성씨를 한글로만 넣어 주세요.";
     public const string NameHanjaCountMessage = "이름 한자는 이름 글자 수만큼 넣어 주세요.";
     public const string SurnameHanjaCountMessage = "성씨 한자는 성씨 글자 수만큼 넣어 주세요.";
-    public const string SurnameNoneMessage = "성씨에는 ‘한자 없음’을 고를 수 없어요. 비워 두면 기본으로 두는 성씨 한자로 계산해요.";
+    /// <summary>성씨 칸의 '한자 없음' — 대표 한자 표에 있는 성씨의 문장. 성씨마다 맺음이 다르니 문장은 <see cref="SurnameNoneMessageFor"/> 로 만든다.</summary>
+    public const string SurnameNoneMessage = "성씨에는 ‘한자 없음’을 고를 수 없어요. " + SurnameLeaveEmptyTailDefault;
+
+    /// <summary>성씨 칸의 '한자 없음' 문장 — 맺음은 <see cref="SurnameLeaveEmptyTail"/>(표에 있는 성씨 = <see cref="SurnameNoneMessage"/>).</summary>
+    public static string SurnameNoneMessageFor(string? surname) => "성씨에는 ‘한자 없음’을 고를 수 없어요. " + SurnameLeaveEmptyTail(surname);
 
     /// <summary>글자 판정(<see cref="Judge"/>)에서 한자가 아닌 글자·빈 입력에 쓰는 문장 — 칸을 모르는 자리라 음절을 넣지 않는다.</summary>
     public const string JudgeNotHanjaMessage = "한자 한 글자를 넣어 주세요.";
@@ -73,21 +77,34 @@ public static class HanjaInput
     public static string NotHanjaMessage(char syllable) =>
         $"‘{syllable}’ 칸에 넣은 글자는 한자가 아니에요. 한자 한 글자를 넣거나 비워 두면 자동으로 골라요.";
 
-    /// <summary>성씨 칸 문장의 맺음 — 성씨 한자를 비워 두면 어떻게 계산하는지(<see cref="SurnameNoneMessage"/> 와 같은 말).</summary>
-    private const string SurnameLeaveEmptyTail = "비워 두면 기본으로 두는 성씨 한자로 계산해요.";
+    /// <summary>
+    /// 성씨 칸 문장의 맺음 — 성씨 한자를 비워 두면 어떻게 계산하는지(2026-11-25 — 표 밖 성씨에도 '기본으로 두는'이라고 하던 것을 가름).
+    /// 대표 한자 표(<see cref="SurnameData.RepresentativeHanja"/>)에 있는 성씨는 표의 글자로, 없는 성씨는 이 사이트가 추정한 글자로 계산한다
+    /// (<see cref="SurnameDefaultAt"/> · 응답 <c>surname.source</c> default/estimated). 성씨를 모르는 자리(글자 판정 API — 요청에 성씨가 없다)는 둘 다 맞는 말로 쓴다.
+    /// 프런트 <c>lib/hanja-pick-text.ts</c> 의 표 밖 성씨 문장('비워 두면 이 사이트가 추정한 성씨 한자로 계산해요.')과 같은 말이다.
+    /// </summary>
+    public static string SurnameLeaveEmptyTail(string? surname) =>
+        surname is null ? SurnameLeaveEmptyTailUnknown
+        : SurnameData.RepresentativeHanja.ContainsKey(surname) ? SurnameLeaveEmptyTailDefault
+        : SurnameLeaveEmptyTailEstimated;
+
+    public const string SurnameLeaveEmptyTailDefault = "비워 두면 기본으로 두는 성씨 한자로 계산해요.";
+    public const string SurnameLeaveEmptyTailEstimated = "비워 두면 이 사이트가 추정한 성씨 한자로 계산해요.";
+    public const string SurnameLeaveEmptyTailUnknown = "비워 두면 이 사이트가 성씨 한자를 정해 계산해요.";
 
     /// <summary>
     /// 사전에 없는 글자 — 음절을 모르면(글자만 판정) 칸 이름 없이 같은 뜻으로 쓴다.
     /// 성씨 칸(<paramref name="surname"/>)에는 인명용 한자·출생신고 이야기를 하지 않는다 — 성씨는 인명용 한자 제한을 받지 않는다(설계서 §20-4).
     /// 성씨 한자는 수리의 성씨 획수에만 쓰이므로 '성씨 획수를 세지 못한다'고 적는다.
     /// </summary>
-    public static string NotInDictionaryMessage(char? syllable, bool surname = false)
+    /// <param name="surnameText">성씨 칸이면 그 성씨 전체(맺음을 가르는 데 — <see cref="SurnameLeaveEmptyTail"/>). 모르면 null.</param>
+    public static string NotInDictionaryMessage(char? syllable, bool surname = false, string? surnameText = null)
     {
         string lookInList = syllable is { } s
             ? $"모양만 조금 다른 같은 글자가 실려 있을 수 있으니 ‘{s}’ 칸의 후보 목록에서 먼저 찾아보세요. "
             : "모양만 조금 다른 같은 글자가 실려 있을 수 있으니 후보 목록에서 먼저 찾아보세요. ";
         return surname
-            ? "이 사이트 사전에 없는 글자라서 이 글자로는 성씨 획수를 세지 못해요. " + lookInList + SurnameLeaveEmptyTail
+            ? "이 사이트 사전에 없는 글자라서 이 글자로는 성씨 획수를 세지 못해요. " + lookInList + SurnameLeaveEmptyTail(surnameText)
             : "이 사이트 사전에 없는 글자라서 이 글자로는 계산하지 못해요. 사전에 없다고 인명용 한자가 아니라는 뜻은 아닙니다. " + lookInList +
               "출생신고에 쓸 수 있는 글자인지는 대법원 전자가족관계등록시스템의 ‘인명용 한자 조회’에서 한글 음 한 글자를 넣어 확인할 수 있습니다.";
     }
@@ -99,14 +116,14 @@ public static class HanjaInput
     /// · 성씨 칸에는 '인명용 독음'이라고 쓰지 않는다 — 성씨는 인명용 한자 제한을 받지 않고(설계서 §20-4), 성씨로만 읽는 소리(鴌 궉)는 이 사전에 없을 수 있다.
     ///   그래서 '이 사이트 사전에 실린 독음'이라고 적는다.
     /// </summary>
-    public static string ReadingMismatchMessage(HanjaInfo hanja, char syllable, bool surname = false)
+    public static string ReadingMismatchMessage(HanjaInfo hanja, char syllable, bool surname = false, string? surnameText = null)
     {
         string readings = string.Join("·", AcceptedSyllables(hanja));
         bool hasCandidates = HasCandidates(syllable);
         if (surname)
             return $"‘{hanja.Character}’ 글자는 이 사이트 사전에 실린 독음({readings})이 ‘{syllable}’ 칸과 맞지 않아요. " +
                 (hasCandidates
-                    ? $"‘{syllable}’ 음절로 읽는 한자를 넣어 주세요. " + SurnameLeaveEmptyTail
+                    ? $"‘{syllable}’ 음절로 읽는 한자를 넣어 주세요. " + SurnameLeaveEmptyTail(surnameText)
                     : $"이 사이트 사전에는 ‘{syllable}’ 음절로 읽는 한자가 없어 이 칸의 성씨 한자는 정할 수 없어요.");
         return $"‘{hanja.Character}’ 글자의 인명용 독음({readings})이 ‘{syllable}’ 칸과 맞지 않아요. " +
             (hasCandidates
@@ -370,7 +387,7 @@ public static class HanjaInput
 
         for (int i = 0; i < surnameRunes.Count; i++)
             if (surnameRunes[i].Value == NoneMark)
-                return (null, new HanjaInputProblem(CodeSurnameNone, TargetSurname, i, SurnameNoneMessage));
+                return (null, new HanjaInputProblem(CodeSurnameNone, TargetSurname, i, SurnameNoneMessageFor(surname)));
 
         // 4) 이름 칸
         var namePicks = new List<HanjaPick>(name.Length);
@@ -406,7 +423,7 @@ public static class HanjaInput
                     surnamePicks.Add(SurnameDefaultAt(surname, i));
                     continue;
                 }
-                var (hanja, problem) = ResolveSlot(surnameRunes[i], surname[i], TargetSurname, i);
+                var (hanja, problem) = ResolveSlot(surnameRunes[i], surname[i], TargetSurname, i, surname);
                 if (problem != null) return (null, problem);
                 surnamePicks.Add(hanja);
             }
@@ -423,7 +440,7 @@ public static class HanjaInput
     }
 
     /// <summary>칸 하나의 글자 판정 — 한자 아님 → 사전에 없음 → 독음 불일치. 성씨 칸의 문장은 성씨용이다(인명용 한자 이야기를 하지 않는다).</summary>
-    private static (HanjaInfo? Hanja, HanjaInputProblem? Problem) ResolveSlot(Rune rune, char syllable, string target, int slot)
+    private static (HanjaInfo? Hanja, HanjaInputProblem? Problem) ResolveSlot(Rune rune, char syllable, string target, int slot, string? surnameText = null)
     {
         bool surname = target == TargetSurname;
         var (isHan, _, hanja) = Lookup(rune);
@@ -431,10 +448,10 @@ public static class HanjaInput
             return (null, new HanjaInputProblem(CodeNotHanja, target, slot, NotHanjaMessage(syllable)));
 
         if (hanja == null)
-            return (null, new HanjaInputProblem(CodeNotInDictionary, target, slot, NotInDictionaryMessage(syllable, surname)));
+            return (null, new HanjaInputProblem(CodeNotInDictionary, target, slot, NotInDictionaryMessage(syllable, surname, surnameText)));
 
         if (!ReadsAs(hanja, syllable))
-            return (null, new HanjaInputProblem(CodeReadingMismatch, target, slot, ReadingMismatchMessage(hanja, syllable, surname)));
+            return (null, new HanjaInputProblem(CodeReadingMismatch, target, slot, ReadingMismatchMessage(hanja, syllable, surname, surnameText)));
 
         return (hanja, null);
     }
