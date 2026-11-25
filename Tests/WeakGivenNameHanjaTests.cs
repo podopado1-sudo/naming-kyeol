@@ -465,7 +465,7 @@ public class WeakGivenNameHanjaTests
     [InlineData(0x77F0)] // 矰 — 弩 선례(주살)
     [InlineData(0x8F62)] // 轢 — 踐 선례(짓밟을)
     [InlineData(0x9095)] // 邕 — 壅 과 같은 훈(막을) — 壅 weak 뒤 옹(土·金) 1순위
-    [InlineData(0x54A2)] // 咢 — 喧 선례(시끄럽게 다툴)
+    // 咢 U+54A2 — 2026-11-25 불용 12차로 옮김(약자 세트에서 빠짐 — HanjaU62ForbiddenTests)
     [InlineData(0x9157)] // 酗 — 醲 선례(주정할 — 술 훈)
     [InlineData(0x9F38)] // 鼸 — 蛙·蝸 선례(도마뱀 — 범속 동물, 鼠 부수)
     public void NegGloss20261026_IsWeak(int codepoint)
