@@ -1034,8 +1034,8 @@ test("/hanja 글자 상세의 '맞춰 보기' — 피하는 글자가 아닌 상
     else if (!pick.readings.every((r) => has(r, character))) wrong.push(`${hex(character)} 음절 파일에 없음 ${pick.readings}`);
   }
   assert.deepEqual(wrong.slice(0, 10), []);
-  // 지금 데이터의 규모 — 상세 9,016자 중 피하는 글자 991자를 뺀 수, 그중 BMP 밖(추천 버튼 없이 이 버튼만)
-  assert.ok(linked > 8000, `링크 ${linked}자`);
+  // 지금 데이터의 규모 — 상세 9,016자 중 피하는 글자를 뺀 수(2026-11-25 불용 12차로 991 → 1,188자 — 7,828자), 그중 BMP 밖(추천 버튼 없이 이 버튼만)
+  assert.ok(linked > 7500, `링크 ${linked}자`);
   assert.ok(outsideBmp > 0, "BMP 밖 글자가 한 자도 없다 — 새 버튼만 남는 경로를 보지 못한다");
   // 독음 둘(均 균·연)은 둘 다, 가장 많은 독음 수도 넉 줄을 넘지 않는다(링크가 버리는 독음이 없다)
   assert.deepEqual(seo[GYUN].r, ["균", "연"]);
