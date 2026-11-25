@@ -30,7 +30,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (2,663 테스트, 2026-11-23 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (2,705 테스트, 2026-11-25 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -54,7 +54,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 2,663개)
+# 테스트 실행 (NameForm.slnx 경유 — 2,705개, 2026-11-25)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -78,7 +78,7 @@ npm run build
 # 린트
 npm run lint
 
-npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-10-28 기준 249개)
+npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-11-25 기준 289개, 10-28 기준 249)
            # 대비 테스트: tests/amber-contrast.test.mjs(amber-warm-700)·tests/palette-contrast.test.mjs(text-3·오행·골드·결과 화면 글자 토큰),
            # 공용 헬퍼 tests/color-utils.mjs(globals.css·Tailwind theme.css 실제 값, WCAG 대비, CIEDE2000 — *.test.mjs 가 아니라 따로 돌지 않는다)
 ```
@@ -208,6 +208,8 @@ D:\MyDev\NameForm\
                 NameAnalysisService     → 이름 평가 (한자/사주/음령오행)
                 NameEvaluationService   → 상세 평가 (Aesthetic·Harmony Breakdown)
                 SajuCalculationService  → 사주 4기둥 계산 (2026-11 계산 버그 B1~B5 수정 — '알려진 이슈'의 사주 계산 기록)
+                SajuElementsService     → 부족한 오행 찾기(/ohaeng, 2026-11-25) — 원국·오행 개수·용신 + 오행별 이름 한자 예(`ElementHanjaPicker`, 오행마다 12자까지).
+                                          원국·용신 → DTO 는 `SajuDtoMapper`(/name-analysis 와 같은 함수)
                 YongshinCalculationService → 용신 분석 (억부법 + 조후법)
 ```
 
@@ -314,6 +316,7 @@ D:\MyDev\NameForm\
 |--------|------|------|
 | POST | `/api/v1/name-analysis` | 이름 분석 (한자/사주/음령오행) |
 | POST | `/api/v1/recommendations/evaluate` | 이름 상세 평가 (Aesthetic·Harmony Breakdown) |
+| POST | `/api/v1/saju/elements` | 부족한 오행 찾기(/ohaeng, 2026-11-25) — `birthDate`(필수, 1900-01-01~오늘 KST)·`birthTime`(선택 HH:mm)·`birthplaceCode`(선택, 17개 시·도)로 사주 원국·오행 개수·용신과 오행별 이름 한자 예. 이름·성별은 받지 않고, 입력값을 DB·서버 로그에 남기지 않는다(로그는 '오행 찾기 요청' 한 줄, 사용 통계는 키 `ohaeng` 만 — `SajuControllerLoggingTests`). 리미터 `expensive`(분 20회 — /evaluate·/search 와 한 버킷) |
 
 ### 조회/메타
 | 메서드 | 경로 | 설명 |
@@ -734,7 +737,7 @@ pk(순우리말) 이름 서사는 음절별 한자 훈 글로스로 지어 한�
 Twin Result / Dual Result / Specialty Input 4종 / Evaluate Input / Coming Soon / 시스템 상태 4종 /
 Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 
-## 라우트 (정적 21,134쪽, 2026-10-26 next build 기준 — 10-22 대비 +210 은 드립 개방 70명 × 쪽·OG·트위터 카드)
+## 라우트 (정적 21,136쪽, 2026-11-25 next build --webpack 기준 — 10-26 대비 +2 는 /ohaeng·/guide/pure-korean-names)
 
 ```
 /                  홈 (Hero + Categories + ProPaths + 데이터 리포트 카드 + WhyKyeol — 서버 컴포넌트)
@@ -747,6 +750,8 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 /search            이름 추천 (구 /baby — 301 리다이렉트 구성됨)
 /evaluate          이름 평가
 /analysis          이름 분석
+/ohaeng            부족한 오행 찾기 (2026-11-25 — 생년월일·시각·출생지로 원국 오행 개수·용신·오행별 이름 한자 예, 정적 설명 글 + POST /saju/elements.
+                   입력값은 주소·저장소에 남기지 않는다. 설계·검증 기록 docs/plan-ohaeng-2026-11.md)
 /twin              쌍둥이
 /dual-name         한·영 이중 이름
 /parent-based      부모 이름 기반
@@ -757,7 +762,7 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 /company           회사·가게 이름 (상호 작명)
 /three-syllable    3글자
 /guide             작명 가이드 (7 챕터, 사용자 교육 + 상단 '데이터로 읽는 이름' 리포트 목록)
-/guide/[slug]      데이터 리포트 7편 (content/insights/*.md — 2026-10-22 '자원오행은 어떻게 정하나' 추가. 표 수치는 scripts/build_insight_*.py·
+/guide/[slug]      데이터 리포트 8편 (content/insights/*.md — 2026-10-22 '자원오행은 어떻게 정하나', 2026-11-25 '순우리말 아기 이름'(scripts/build_insight_pure_korean.py) 추가. 표 수치는 scripts/build_insight_*.py·
                    name-seo.json 에서 산출, 손 계산 금지)
 /method            작명 원리 (알고리즘 설명, 자원오행 기준 #resource-element — 판정 순서·등급 4종·학계 '불명', "리포트 방식" 포함)
 /favorites         저장한 이름 (localStorage 즐겨찾기)
@@ -1035,7 +1040,7 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   고친 것(커밋 46a4875 — `SajuCalculationService`·`SolarTermCalculator`·`YongshinCalculationService`·`SajuChart`): 시각이 없으면 진태양시 보정 없이 넣은 날짜로 일주를 세우고 연·월주는 그날 낮 12시(KST) 기준,
   절기는 전년·그 해 12절을 함께 넣어 순간(UTC)으로 비교, 연주는 입춘 순간과 비교(서버 시간대 의존 제거), 강약 가중치는 기둥의 자리로(월지 3·일지 2), 보정한 시각 23시대의 시주 천간은 다음 날 일간 기준
   (야자시 — 일주는 그날 그대로). 시각이 없으면 응답의 `correctionMinutes` 가 0(옛 −32) — /analysis 사주 카드는 '진태양시 보정 0분'으로 보인다. 응답 필드 `correctionApplied`·`termOnBirthDay` 와
-  '보정하지 않았어요'·절기 안내 줄은 /ohaeng 과 함께 나간다(브랜치 `feat/ohaeng-1119`). 회귀 `Tests/SajuCalculationP0Tests.cs`·`SolarTermCalculatorTests.cs`.
+  '보정하지 않았어요'·절기 안내 줄은 /ohaeng 과 함께 2026-11-25 배포(/name-analysis 응답에 `correctionApplied`·`termOnBirthDay`·기둥 `branchFiveElement` 가 새로 실린다 — 기존 필드 값은 그대로). 회귀 `Tests/SajuCalculationP0Tests.cs`·`SolarTermCalculatorTests.cs`.
   위 수치는 모두 **달력에서 고르게 뽑은 표본** 값이다(지정 격자 값은 버그별 구분용이라 옮기지 않았다). B4 는 시각 있는 입력의 6.3%가 강약 점수가, 1.1%가 용신이 바뀐다.
   검산: 독립 재구현(고정밀 황경식 — 계산 코드를 보지 않고 작성)과 256,290줄 대조에서 규칙 불일치 0, 한국천문연구원·일본 국립천문대 12절 612건·일진 2,326일 대조.
 - **[별도 결정] /search 후보 풀은 출생 시각을 쓰지 않는다**: `NamePoolEngine`(· `RequiredCharEngine` · `TwinNameEngine`)이 `CalculateChart(birthDate)` 를 시각 없이 불러 풀의 '없는 오행 · 2개 이상인 오행'을 정한다.
@@ -1093,4 +1098,11 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   Render 에 `ASPNETCORE_FORWARDEDHEADERS_ENABLED` 는 넣을 필요 없다(프레임워크가 같은 미들웨어를 하나 더 거는 스위치 — 임시 시험에서는 넣어도 버킷 규칙이 같았다).
   배포 뒤 확인: 로그의 '클라이언트 IP 전달 확인' 줄(경우마다 한 번 — 방문자 IP 는 적지 않는다)에 '방문자별 버킷'이 보이면 정상, '신뢰 대역 밖' 경고면 대역 설정을 볼 것.
   회귀 `RateLimitClientIpIntegrationTests`(Program.cs 를 그대로 띄움 — 미들웨어 순서 포함)·`ClientIpForwardingTests`
+- **2파 배포 (2026-11-25 — /saju/elements·/ohaeng·순우리말 리포트)**: 1파(11/23)의 방문자별 버킷은 11/25 Render Logs 로 확인(11/24~25 줄 모두
+  '직전 홉 ::1 신뢰, CF-Connecting-IP 헤더 있음 → 리미터가 방문자별 버킷으로 동작' — Render 는 루프백 ::1 로 넘겨준다, 경고 없음). 배포 순서: 백엔드 커밋만 먼저 push
+  (Vercel 은 프런트 무변경이라 건너뜀) → Render Live·운영 curl 200 확인 → 나머지 push(맨 위 커밋이 frontend 를 바꾸고 [skip render] 없음). 로컬 확인: dotnet test 2,705 · npm test 289 ·
+  next build --webpack 21,136쪽(/ohaeng ○) · 리포트 표 재계산 대조·audit_insights_tables 불일치 0 · 로컬 /ohaeng 2000-01-01 00:20 부산 = 己卯 丙子 丁巳 壬子(−24분)·1985-06-05 일주 乙亥.
+  배포 전 4관점 검토(백엔드·프런트·리포트·운영 + 반박 검증) 반영: 리포트에 사랑·하나·하루(사전 밖이라 세지 않음) 한 문장, sitemap /pure-korean lastmod.
+  남은 것: 백엔드 테스트가 /saju/elements 의 HTTP 계약(라우트·camelCase 키·리미터 속성)을 통합 테스트로 보지 않는다(컨트롤러 직접 호출만 — `RateLimitAppFactory` 로 하나 더할 것),
+  레거시 POST /api/v1/recommendations 로그 템플릿에서 생년월일을 뺐다(설계 D4 — 처리방침과 맞춤, 프런트 ohaeng-privacy 테스트가 모든 컨트롤러 템플릿을 본다)
 - **dev 환경 확인**: `Properties/launchSettings.json`으로 `dotnet run`만 쳐도 Development 모드 자동 적용됨

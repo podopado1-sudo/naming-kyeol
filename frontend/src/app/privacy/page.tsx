@@ -90,7 +90,7 @@ export default function PrivacyPage() {
               광고 항은 게시자 정책의 필수 고지(다른 사이트 방문 기반·웹 비콘·IP·파트너 사이트 데이터 링크)를 보강 */}
           {/* 2026-11-25 /ohaeng(부족한 오행 찾기) 출생지 항목 추가 — 출생지(시·도)는 그 화면만 받는다. 입력값은 계산에만 쓰고 DB·서버 로그에 남기지 않는다
               (SajuController 로그는 '오행 찾기 요청' 한 줄뿐 — SajuControllerLoggingTests). 사용 통계는 종류(endpoint)·키(ohaeng)·시각만.
-              시행일 '2026년 11월 25일'은 배포일 자리표시 — 배포일로 바꿀 것(설계 docs/plan-ohaeng-2026-11.md §8·§10) */}
+              시행일 '2026년 11월 25일' = /ohaeng 배포일(설계 docs/plan-ohaeng-2026-11.md §8·§10) */}
           <section>
             <h2 style={sectionTitle}>1. 수집하는 정보</h2>
             <p style={{ ...body, marginBottom: 10 }}>

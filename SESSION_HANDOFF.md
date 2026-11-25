@@ -5,6 +5,28 @@
 
 ---
 
+## 마지막 세션 요약 (2026-11-25 — 2파 배포: 부족한 오행 찾기(/saju/elements·/ohaeng)·순우리말 리포트)
+
+**발단**: 1파(11/23) 운영 확인이 끝나(운영 API 대조 + 11/25 Render Logs '방문자별 버킷' — 직전 홉 ::1 신뢰, 경고 없음) 사용자 '왜 지금 안 하고?' → 11/30 예정이던 2파를 당겨 배포.
+
+**커밋**(feat/ohaeng-1119 의 ac6f023·2949013·280a5a2 를 main 위로 cherry-pick, 충돌 없음 — 한자 입력(3파)은 넣지 않았다):
+백엔드 `feat(saju)` POST /api/v1/saju/elements(SajuDtoMapper 주석만 사실대로 고침) · 프런트 `feat(ohaeng)` /ohaeng + /analysis 사주 카드 보정·절기 줄 + 처리방침 출생지 항목 ·
+`feat(insights)` 순우리말 리포트 · 마지막 커밋(프런트+문서) 리포트에 사랑·하나·하루 문장, sitemap /pure-korean lastmod, 날짜 자리표시 주석 정리, CLAUDE.md·이 파일.
+날짜 자리표시 2026-11-25 = 배포일(그대로 둠 — 11/26 이후로 밀렸다면 privacy 83행·sitemap lastModified·리포트 date/updated·스크립트 SCOPE_CUTOFF 를 바꿀 것).
+
+**확인**: dotnet test 2,705 · npm test 289 · next build --webpack 21,136쪽(/ohaeng ○, 경고 0) · 리포트 표 재계산 대조·audit_insights_tables 225행 불일치 0 ·
+로컬 브라우저 /ohaeng(2000-01-01 00:20 부산 → 己卯 丙子 丁巳 壬子, −24분, 주소·localStorage 에 입력값 없음, 콘솔 오류 0)·/guide/pure-korean-names·/pure-korean 링크·/analysis '출생 시각이 없어 진태양시 보정은 하지 않았어요'.
+배포 전 검토 워크플로(백엔드·프런트·리포트·운영 4관점 + 반박 검증): must 0. 반영한 should = 리포트 문장·push 순서(문서 커밋을 맨 끝에 두지 않음).
+
+**push 순서(사용자)**: ① 백엔드 커밋만 `git push origin <백엔드 커밋>:main`(Vercel 건너뜀) → Render Live·운영 curl 200 확인 → ② `git push`(맨 위 = 프런트+문서 커밋, [skip render] 없음 — Render 가 같은 코드로 한 번 더 배포, 무해).
+배포 뒤 확인: 운영 /ohaeng(1985-06-05 시각 없음 → 일주 乙亥·'날짜를 그대로 썼고 출생지 보정은 하지 않았어요', 2024-02-04 시각 없음 → 입춘 절기 줄), /sitemap.xml 에 /ohaeng·/guide/pure-korean-names,
+Vercel 은 Turbopack 빌드라 로컬(webpack)과 다를 수 있음 — 운영 HTML 로 확인.
+
+**다음**: 3파 12/7~12/11 한자 입력(feat/ohaeng-1119 를 main 위로 rebase — ac6f023·2949013·280a5a2 는 같은 패치라 건너뛰어짐. 부정 훈 A 197자 불용 추가 + /hanja·/name 재생성·dump-hanja-pick·성씨 꼬리 문장) ·
+블로그 '이름에 쓰는 한자 현'은 3파 전에 발행(불용 추가로 '피하는 글자' 수가 바뀜 — docs/naver-blog/strategy.md) · 4파 12/14 주 광고 로더 범위.
+
+---
+
 ## 마지막 세션 요약 (2026-11-23 — 애드센스 2차 거절 뒤 1파 배포 준비: 속도 제한·사주 계산 수정)
 
 **발단**: 11/23 애드센스 2차 거절(같은 사유 '가치가 별로 없는 콘텐츠'). 진단(읽기 전용 워크플로) 결론 = ① 광고 로더가 루트 layout 에서 모든 쪽에 실려 애드센스가 보는 범위의 99.8%가 같은 틀 자동 쪽

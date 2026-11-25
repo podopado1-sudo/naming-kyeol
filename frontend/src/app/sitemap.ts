@@ -24,7 +24,7 @@ const ROUTES: Array<{
   changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
   /**
    * 그 화면의 내용이 바뀐 날(YYYY-MM-DD) — 없으면 아래 공통 lastModified. 새 화면·내용이 바뀐 화면만 준다
-   * (2026-11 /ohaeng 설계 §7 — '2026-11-25' 는 배포일 자리표시, 배포일로 바꿀 것 · 설계 §10)
+   * (2026-11 /ohaeng 설계 §7 — '2026-11-25' 는 /ohaeng·순우리말 리포트 배포일)
    */
   lastModified?: string;
 }> = [
@@ -39,7 +39,7 @@ const ROUTES: Array<{
   { path: "analysis", priority: 0.8, changeFrequency: "monthly" },
 
   // 보조 추천 도구
-  { path: "pure-korean", priority: 0.7, changeFrequency: "monthly" },
+  { path: "pure-korean", priority: 0.7, changeFrequency: "monthly", lastModified: "2026-11-25" }, // 순우리말 리포트 링크
   { path: "creative", priority: 0.7, changeFrequency: "monthly" },
   { path: "three-syllable", priority: 0.7, changeFrequency: "monthly" },
   { path: "required-char", priority: 0.7, changeFrequency: "monthly" },
