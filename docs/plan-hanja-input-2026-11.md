@@ -1949,7 +1949,7 @@ C4~C7 프런트에 대한 검증 지적 31건(모두 should)을 처리한 기록
 
 ### 27-5. 확인하지 못한 것 · 남은 일
 
-- **백엔드 성씨 문장**(지적 #13 의 뒤 절반 — open): `HanjaInput.SurnameLeaveEmptyTail`·`SurnameNoneMessage` 가 대표 한자 표에 없는 성씨에도 '비워 두면 기본으로 두는 성씨 한자로 계산해요'라고 한다. 고치려면 성씨가 표에 있는지로 꼬리를 가르고 백엔드 테스트 6곳(`EvaluateHanjaApiTests`·`HanjaInputTests`·`ToolAccuracyRegressionTests`)을 함께 고친다. 프런트 타입·화면만으로는 풀 수 없다(서버 문장을 그대로 띄운다).
+- **백엔드 성씨 문장**(지적 #13 의 뒤 절반 — 2026-11-25 해결: `HanjaInput.SurnameLeaveEmptyTail(surname)` 이 표 안·표 밖·판정 API 로 맺음을 가른다, 테스트 `HanjaU62ForbiddenTests.SurnameTail_*`. 아래는 옛 기록): `HanjaInput.SurnameLeaveEmptyTail`·`SurnameNoneMessage` 가 대표 한자 표에 없는 성씨에도 '비워 두면 기본으로 두는 성씨 한자로 계산해요'라고 한다. 고치려면 성씨가 표에 있는지로 꼬리를 가르고 백엔드 테스트 6곳(`EvaluateHanjaApiTests`·`HanjaInputTests`·`ToolAccuracyRegressionTests`)을 함께 고친다. 프런트 타입·화면만으로는 풀 수 없다(서버 문장을 그대로 띄운다).
 - 실기(터치·화면 읽기 프로그램·인앱 브라우저) — 알림 영역을 늘 두는 처리와 포커스 이동이 실제 화면 읽기 프로그램에서 어떻게 읽히는지는 듣지 못했다(브라우저 도구로 DOM·포커스만 봤다). 375px 폭(360·1280 만).
 - 직접 입력의 '확인하는 중…'·한글만 친 상태 안내도 `role="status"` 를 글과 함께 끼운다 — 지적 범위 밖이라 그대로 두었다(입력 칸이 `aria-describedby` 로 그 문장을 잇는다).
 - 결과 화면 다음 단계 카드의 `추천에는 생년월일이 필요해요`(예전 문장) — '출생일'로 맞출지는 이 기능 밖이다.

@@ -30,7 +30,7 @@
 - **로깅:** Serilog (Console + 파일 `logs/nameform-{date}.log`, 최근 30개 파일 보존 — 일 롤링)
 - **인증:** API Key 미들웨어 (`UseApiKeyAuthentication`)
 - **CORS:** `localhost:3000` 허용 (appsettings에서 환경별 오리진 관리)
-- **테스트:** xUnit (2,705 테스트, 2026-11-25 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
+- **테스트:** xUnit (2,925 테스트, 2026-11-25 — 엔진별 단위 테스트 + 품질 회귀 테스트 포함)
 
 ### 프론트엔드
 - **프레임워크:** Next.js 16.2 (App Router) + React 19.2 + TypeScript 5
@@ -54,7 +54,7 @@ dotnet restore
 # 프로젝트 실행 (포트 5000/5001)
 dotnet run
 
-# 테스트 실행 (NameForm.slnx 경유 — 2,705개, 2026-11-25)
+# 테스트 실행 (NameForm.slnx 경유 — 2,925개, 2026-11-25)
 dotnet test
 
 # Swagger UI: https://localhost:5001/swagger
@@ -78,9 +78,13 @@ npm run build
 # 린트
 npm run lint
 
-npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-11-25 기준 289개, 10-28 기준 249)
+npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-11-25 기준 490개, 10-28 기준 249)
            # 대비 테스트: tests/amber-contrast.test.mjs(amber-warm-700)·tests/palette-contrast.test.mjs(text-3·오행·골드·결과 화면 글자 토큰),
            # 공용 헬퍼 tests/color-utils.mjs(globals.css·Tailwind theme.css 실제 값, WCAG 대비, CIEDE2000 — *.test.mjs 가 아니라 따로 돌지 않는다)
+           # 앱 코드(.ts)를 읽는 테스트는 tests/resolve-ts.mjs 훅을 먼저 import 하고 앱 모듈을 동적 import 한다(확장자 없는 상대 import 풀기)
+
+# ⚠️ git worktree 에서는 frontend/node_modules 가 본 트리로 가는 정션이라 Turbopack(기본 번들러)이 거부한다 —
+#    next dev --webpack · next build --webpack 으로 돌린다(정션을 지우거나 npm install 하지 않는다)
 ```
 
 ### 환경 변수
@@ -123,7 +127,7 @@ D:\MyDev\NameForm\
 │   │   ├── app/                        ← App Router 라우트 (12개 화면)
 │   │   ├── components/                 ← layout / results / ui (shadcn)
 │   │   └── lib/                        ← api.ts (API 클라이언트), types.ts, utils.ts
-│   └── public/
+│   └── public/                         ← 정적 자산. data/hanja-pick/v1 = /evaluate 한자 고르기의 음절별 후보 파일(dump-hanja-pick 산출 — 손으로 고치지 않는다)
 └── Unihan_*.txt                        ← Unicode 한자 원본 데이터 (3파일, ~13MB)
 ```
 
@@ -152,6 +156,14 @@ D:\MyDev\NameForm\
           │                               (옛 '한자 정보를 찾지 못해'·'한자 정보가 부족하여' — 불용으로 뺀 음절은 사전에 있다). 프론트
           │                               tests/note-polarity.test.mjs 사례 표가 이 리터럴을 대조하니 문구를 바꾸면 같이 고칠 것. /evaluate 조화 카드의
           │                               usedFallback 경고도 같은 말('배정할 한자가 없는 음절이 있어 기본값으로 계산했어요' — 옛 '한자 정보 부족으로')
+          │                               ⚠️ 2026-11 한자 입력: 사용자가 한자를 고른 /evaluate 요청(선택 인자 picks — `HanjaPicks`)은 자동 배정을 지금과 똑같이 먼저 구한 뒤
+          │                               고른 칸만 덮어쓴다. 지정 없는 요청은 옛 코드 경로 그대로다(`HarmonyAutoPathPinTests` 가 고치기 전 산식 사본과 격자를 대조).
+          │                               지정한 요청에서만 나오는 노트: 수리 기준 노트 = 이름 조각 + 성씨 조각 + '획수는 유니코드 총획 기준이라 … 수리는 참고로 봐 주세요'
+          │                               (`SuriBasisNoteForPicks`), 사용자가 비운 칸이 있으면 '한자를 두지 않아 기본값을 사용했습니다'·'한자를 두지 않은 음절이 있어 획수 기반
+          │                               추정을 사용했습니다'·'한자를 두지 않은 음절이 있어 획수 조화를 낮춰 계산했습니다 (감산)'. 모두 지금 극성 키워드(참고·추정·기본값·감산)가
+          │                               잡는다 — 프론트 tests/note-polarity.test.mjs 가 조각 단위로 대조하니 문구를 바꾸면 같이 고칠 것.
+          │                               조화 성별 보정(글자마다 +5/−3)은 쓸 수 없는 글자(불용·뜻 없음 — `IsUsableNameHanja` 거짓)를 건너뛴다(미학 성별 보너스와 같은 규칙.
+          │                               자동 배정은 그런 글자를 고르지 않아 자동 경로 결과는 그대로). 계약은 아래 'API 엔드포인트'의 한자 입력 계약 요약
           │     RankerEngine            → 최종 점수 = aesthetic * 0.7 + harmony * 0.3
           │     ExplanationEngine       → 추천 이유 3줄 생성
           │     RarityScoringEngine     → 희귀도/독창성 점수
@@ -315,8 +327,9 @@ D:\MyDev\NameForm\
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
 | POST | `/api/v1/name-analysis` | 이름 분석 (한자/사주/음령오행) |
-| POST | `/api/v1/recommendations/evaluate` | 이름 상세 평가 (Aesthetic·Harmony Breakdown) |
+| POST | `/api/v1/recommendations/evaluate` | 이름 상세 평가 (Aesthetic·Harmony Breakdown). 2026-11-25 한자 입력: 선택 요청 필드 `nameHanja`·`lastNameHanja`, 응답 `hanjaSummary`·`hanjaCandidates[].candidates[].fact` — 아래 계약 요약 |
 | POST | `/api/v1/saju/elements` | 부족한 오행 찾기(/ohaeng, 2026-11-25) — `birthDate`(필수, 1900-01-01~오늘 KST)·`birthTime`(선택 HH:mm)·`birthplaceCode`(선택, 17개 시·도)로 사주 원국·오행 개수·용신과 오행별 이름 한자 예. 이름·성별은 받지 않고, 입력값을 DB·서버 로그에 남기지 않는다(로그는 '오행 찾기 요청' 한 줄, 사용 통계는 키 `ohaeng` 만 — `SajuControllerLoggingTests`). 리미터 `expensive`(분 20회 — /evaluate·/search 와 한 버킷) |
+| POST | `/api/v1/hanja/resolve` | 한자 한 글자 판정(2026-11-25) — `text`·`syllable`(선택)·`target`(선택 `"surname"`). 그 음절 칸에 넣을 수 있는지(`ok`·`reading_mismatch`·`not_in_dictionary`·`not_hanja` — 모두 200). 전역 리미터만 받고 값은 로그·통계에 남기지 않는다 |
 
 ### 조회/메타
 | 메서드 | 경로 | 설명 |
@@ -342,6 +355,58 @@ D:\MyDev\NameForm\
 |--------|------|------|
 | POST | `/api/v1/usage/event` | 프론트 탭 클릭 이벤트 수신 (`tab_view`만 허용, sendBeacon 대상) |
 | GET | `/api/v1/usage/summary` | 기간별 사용량 집계 조회 (`days` 기본 30, 최대 365) |
+
+### 한자 입력 계약 요약 (2026-11, 2026-11-25 배포 — /evaluate 음절별 한자 고르기)
+
+설계·법규 사실 확인·구현 기록은 `docs/plan-hanja-input-2026-11.md`(§4 API 계약 · §5 검증 규칙 · §20 법규 사실 · §21~§27 구현 기록 — 앞 절과 어긋나면 §20 이후가 이긴다).
+사용자 결정(§15)은 권고안으로 구현해 두었다 — 다르게 정하면 그 절의 표대로 되돌린다.
+
+- **요청** `nameHanja`·`lastNameHanja`(둘 다 선택, 문자열): 자리마다 한자 한 글자 / `*` 자동 / `-` 한자 없이 한글로(성씨는 `-` 를 받지 않는다). 한자는 Rune 으로,
+  이름·성씨는 한글 음절 수로 센다. 두 필드가 정리 뒤 모두 비면 **옛 코드 경로 그대로**(picks = null — 응답에 `hanjaSummary`·`fact` 만 더 붙는다).
+  한자 필드를 지정하면 이름·성씨(Trim)가 한글 음절(가~힣)만이어야 한다. 전부 `*`, (대표 한자 표에 있는 성씨에서) 표의 글자와 같은 성씨 한자,
+  자동 배정이 null 인 음절(봄·빛·몰)의 `-` 는 검사를 지난 뒤 '지정 없음'으로 접는다. 호환 한자·이체 선택자·강희 부수 코드는 받아서 통합 한자로 싣는다(`HanjaInput`)
+- **독음 판정**(`HanjaInput.ReadsAs`): 사전 독음 + 하드코딩 글자의 사전 파일 독음 보충 표(均 연·林 임·流 유) + 그 두음 꼴(한쪽 방향, 이름 글자의 자리 무관 — 규칙 별표 1 '주' 1·
+  선례 제200909-2호). 불용 글자·뜻 없는 글자는 **막지 않고 계산한다**(`HanjaFact.forbidden`·`hasMeaning` 으로 알림). 고른 불용 글자는 후보 표·강점 줄에 넣지 않는다
+- **응답** `hanjaSummary`(한자를 지정하지 않은 요청에도 싣는다 — `userHanja: false`): `nameHanja`·`lastNameHanja` 정규 꼴(그대로 다시 보내면 직렬화까지 같은 응답 — 한 번에 수렴),
+  `surname{hangul, source: default|user|estimated, strokes, chars[]}`, `syllables[]{syllable, source: user|auto|none|unavailable, fills[], hanja}`,
+  `elementFit{yongshin, heeshin, gishin, lacking, excessive, counts}`(출생일이 있을 때만). **이름·성씨가 한글 음절만이 아니면 `null`**(프런트는 블록 없이 예전 화면).
+  성씨 글자의 `forbidden`·`common` 은 늘 false(성씨는 인명용 한자 제한을 받지 않는다 — 성씨 칸에는 훈·'이름에 피하는 글자' 표시를 그리지 않는다).
+  `hanjaCandidates[].candidates[].fact` = 그 글자를 그 음절 칸에 넣었을 때의 글자 사실(후보 표의 '이 글자로'가 응답을 기다리지 않고 그릴 값)
+- **400** `{error, code, target: name|surname, slot}` — 첫 문제 하나만, 예외를 던지지 않고 바로 BadRequest(넣은 글자가 예외 문구로 로그에 남지 않게).
+  code 7종 `name_not_hangul`·`name_hanja_count`·`surname_hanja_count`·`surname_none`·`not_hanja`·`not_in_dictionary`·`reading_mismatch`.
+  **`slot: -1` = 칸 하나의 문제가 아니다**(앞의 셋 — 화면은 칸을 열지 않고 문장만 띄운다). 성씨 칸의 문장은 성씨용이다('인명용 독음'·'인명용 한자 조회'를 말하지 않는다).
+  성씨 칸 문장의 맺음(2026-11-25 — `HanjaInput.SurnameLeaveEmptyTail`): 대표 한자 표에 있는 성씨 '비워 두면 기본으로 두는 성씨 한자로 계산해요.' · 표 밖 성씨 '… 이 사이트가 추정한 성씨 한자로 …'(프런트 `lib/hanja-pick-text.ts` 와 같은 말) ·
+  성씨를 모르는 판정 API '… 이 사이트가 성씨 한자를 정해 …'
+  깨진 문자열(홀로 남은 서로게이트)은 여기까지 오지 못하고 프레임워크의 영문 400 이 나간다 — 프런트 `cleanHanjaText` 가 보내기 전에 지운다
+- **`POST /api/v1/hanja/resolve`** `{text(8자 이하), syllable?(한글 음절 한 글자), target?("surname")}` → 200 `{status, character, hanja, acceptedSyllables, message, suggestion}`.
+  `HanjaController` 는 전역 리미터(분 60회)만 받는다 — `RecommendationsController`(expensive 분 20회)에 두면 글자를 확인할 때마다 평가 한도를 깎는다.
+  `target: "surname"` 이면 문장이 성씨용이고 `forbidden`·`common` 이 false. 프런트는 붙여 넣은 원문이 아니라 뽑은 한자 한 코드포인트만 보낸다(`firstHanCodePoint`)
+- **정적 후보 파일** `frontend/public/data/hanja-pick/v1/{음절 코드포인트 16진 소문자}.json` 489개 + `index.json`(`counts`·`syllables{all, usable, autoEmpty}`·`surnames`) —
+  `dotnet run -- dump-hanja-pick`(한 줄 JSON·줄바꿈 없음 — core.autocrlf 저장소라 바이트가 흔들리지 않게, 두 번 돌려 차이 0). 기본값(false·빈 목록)인 필드는 생략한다
+  (`common`·`forbidden`·`hasMeaning`·`basic`·`vReasons`) — **`hasMeaning` 이 없는 글자 = 뜻 풀이 없는 글자**. 묶음 순서 = 먼저 보여 드리는 글자 → 그 밖의 글자 → 이름에 피하는 글자·뜻 풀이 없는 글자.
+  **화면에 쓰는 숫자의 기준은 커밋된 `index.json`** 이다(2026-11-25 불용 12차 뒤 값 — 글자 9,105 · 음절 489 · (글자, 음절) 10,027쌍 · 이름에 피하는 글자 1,188(12차 전 991) ·
+  먼저 보여 드리는 글자 271 · 쓸 수 있는 글자 8,547쌍 · 가장 많은 음절 '유' 138자 · 자동 배정이 비는 음절 15개). 설명 글(`EvaluateHanjaGuide`)도 빌드 때 이 파일을 읽는다.
+  백엔드 `HanjaPickStaticFilesTests`(파싱한 값 대조)와 프런트 `tests/hanja-pick.test.mjs`(hanja-seo.json 과 전수 대조)가 낡음을 막는다. robots 가 `/data/` 수집을 막는다(예의 바른 봇만)
+- **글자 사실을 만드는 곳은 하나** — `Application/Services/HanjaFactMapper.cs`(`hanjaSummary`·판정 API·정적 파일·후보 표의 `fact` 가 같은 함수). `hasMeaning` = 뜻에 한글 훈이 있음(`HanjaInput.HasKoreanGloss`)
+- **사용 통계 키**: 한자를 지정한 평가 = `evaluate-hanja`(지정 없음은 `evaluate` 그대로), 판정 API 는 기록 없음. 한자는 어떤 로그 템플릿에도 넣지 않는다(백엔드 테스트가 수집 로거로 확인)
+- **프런트**: 순수 모듈 `lib/hanja-pick.ts`(정리·한자 판정·칸 파생 `deriveSlots`·주소 꼴·해시)·`lib/ohaeng-relation.ts`(관계·역할 — `lib/hanja-seo`·`lib/name-seo` 가 다시 내보낸다)·
+  `lib/hanja-pick-store.ts`(음절 파일은 설계 §8-6 의 다섯 때에만 받는다 — ⓐ 칸을 열 때 ⓑ 링크(#pick)로 들고 온 글자가 들어갈 음절이 이름에 있을 때 ⓒ 주소로 한자가 온 칸
+  ⓓ #pick 도착 때 그 독음 ⓔ 붙여 넣은 글자를 나눠 넣을 자리. 이름을 칠 때마다 음절별로 받지 않는다)·`lib/hanja-pick-text.ts`·`lib/hanja-summary-text.ts`(화면 문장)·`lib/hanja-recalc.ts`,
+  컴포넌트 `HanjaSlots`·`HanjaPickerPanel`(성씨는 글자 격자)·`HanjaSummaryBlock`·`OhaengRelationChip`, 설명 글 `app/evaluate/EvaluateHanjaGuide.tsx`(서버 컴포넌트 — page.tsx 가 그려 넘긴다).
+  주소 `?hanja=瑞&lastHanja=劉`(끝의 `*` 생략·서명에 포함·평가 뒤 응답의 정규 꼴로 다시 쓴다), 글자 하나를 들고 오는 진입은 해시 `/evaluate#pick=글자&as=독음`(서버로 가지 않고, 읽은 뒤 주소에서 지운다).
+  결과 화면의 한자 바꾸기는 제자리 재계산(0.4초 묶기·응답 캐시 8·실패하면 마지막으로 계산된 조합으로 복귀 — 흐림(opacity) 대신 글 배지). 즐겨찾기 키에 한자(없으면 옛 키 그대로),
+  공유 링크는 생년월일을 빼고 화면에 보인 글자를 모두 싣는다. 클라이언트 컴포넌트는 큰 JSON 을 읽는 서버 전용 모듈(`lib/hanja-seo`·`lib/name-seo`)을 import 하지 않는다
+- **들어오는 길**: `/ohaeng` 한자 예 칸의 '맞춰 보기'(해시 링크·새 창 — 생년월일은 넘기지 않는다). `/name` 조합 카드의 '이 한자로 평가 →'(`/evaluate?name=…&hanja=…` — 성·성별 없음,
+  `rel="nofollow"`, 순우리말 pk 의 참고 조합에는 없다 — 관계 칩은 공용 `OhaengRelationChip`), `/hanja` 글자 상세 배너의 첫째 버튼 '‘瑞’ 글자로 이름 맞춰 보기 →'(`/evaluate#pick=…&as=독음 전부`,
+  피하는 글자는 배너 없음, BMP 밖 글자는 이 버튼만), 독음 쪽(배너와 같은 조건)·인덱스의 한 줄 `HanjaEvaluateLine`(쿼리·해시 없는 `/evaluate`, nofollow 없음) — 2026-11-23 세 커밋(설계 §26).
+  `/hanja`·`/name` 의 title·description·h1 과 기존 본문은 건드리지 않고 링크 줄만 더한다(검색 유입 보호 — 사용자 결정. `tests/evaluate-hanja-pages.test.mjs` 가 그 틀을 원문으로 고정한다)
+- **문구 규칙**(tests/evaluate-hanja-pages.test.mjs 가 새 파일에 건다): 사전에 없는 글자를 '출생신고에 쓸 수 없는 글자'·'대법원 목록에 없는 글자'라고 쓰지 않는다 — 이 사전(9,105자)은
+  대법원 인명용 한자 9,389자(2024-06-11 추가분까지 — 설계 §20-4)를 다 싣지 못한다. '인명용 한자 전부'라고 쓰지 않는다. 대법원 인명용 한자 조회는 이름만 적고 링크하지 않는다
+  (그 사이트의 링크 유의사항 — 조회는 한글 음 한 글자로만 된다). 한글·한자를 섞은 이름은 현행 가족관계등록예규 제638호 5.가 '수리할 수 있다'고 정한다 — 화면 문구(`MIXED_SCRIPT_NOTICE`·설명 글)에
+  예규 번호가 들어 있으니 **개정되면 함께 고칠 것**(확인 시점 2026년 11월, 원문 인용 `docs/plan-hanja-input-facts-2026-11.json`). '이름에 많이 쓰는 순'·'자주 쓰는 글자' 같은 빈도 주장을 쓰지 않는다
+  (빈출 322자는 손으로 모은 가점 목록이지 통계가 아니다 — 화면 이름은 '먼저 보여 드리는 글자'). 약자(wk) 표시는 화면에 내지 않는다. 길흉 단정·사람 검수 문장 금지는 사이트 공통.
+  자원오행 관계 칩은 /evaluate 에서 이름만 적는다('金剋木 · 상극' — /name 의 '상극(기운이 부딪침)'은 그대로)
+- **이번 범위 밖**: `/analysis` 한자 입력, 원획 병기, 두 조합 전용 비교 화면, 일본·중국 꼴 → 한국 정자 대응표 전체(지금은 손 목록 3자만 `suggestion`), 다른 화면의 /evaluate 링크에 한자 싣기
 
 ## 한자 데이터 구조
 
@@ -618,6 +683,10 @@ D:\MyDev\NameForm\
 `python scripts/build_name_seo_data.py`(combos·scores·stories·flags 병합) → `dotnet run -- dump-combo-glosses`
 (글로스가 name-seo.json을 읽음 — 중간 누락 시 stale). 수록 이름 목록 자체가 변하면 build 2회.
 /hanja 는 `dotnet run -- dump-hanja-quality`(nf·wk, S7) → `python scripts/build_hanja_seo_data.py` (이 순서가 /name 체인보다 먼저 — name 빌드가 hanja-seo 를 읽는다).
+그 뒤 `dotnet run -- dump-hanja-pick`(2026-11 — /evaluate 한자 고르기의 음절별 후보 파일 `frontend/public/data/hanja-pick/v1/`, /hanja 체인 뒤에 돌린다).
+⚠️ **한자 데이터(불용·약자 세트·자원오행·획수·성씨 대표 한자 표·뜻·빈출 목록)를 바꾸면 다시 덤프한다** — 안 하면 `dotnet test` 의 `HanjaPickStaticFilesTests` 가 실패하고,
+/hanja 체인만 돌리고 이 덤프를 빠뜨리면 프런트 `tests/hanja-pick.test.mjs`(음절 파일 ↔ hanja-seo.json 뜻 유무·불용 표시·획수·자원오행 전수 대조)가 실패한다.
+두 번 돌려 `git diff --stat -- frontend/public/data/hanja-pick` 차이 0 을 확인할 것. /evaluate 설명 글의 숫자는 `index.json` 을 따라간다(손으로 고칠 곳 없음).
 감사: `audit_combo_regressions.py`(A~F) + `audit_mean_combo_mismatch.py --fail` +
 `audit_insights_tables.py`(데이터 리포트 표의 대표 한자·뜻 칸 대조 — 뜻 칸은 json 을 자동으로 따라가지 않는다.
 불일치면 `--fix`로 뜻 칸만 교체, 대표 한자가 바뀌면 본문 서술을 손으로 다시 읽을 것. `--fix`도 고치지 않은 불일치가 남으면 exit 1).
@@ -748,7 +817,8 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 /name/[이름]       이름 뜻 SEO (공개 3,865쪽 — 2026-10-26 빌드 기준, 주간 드립으로 증가. 전체 수록 5,340명 중
                    1,475명은 개방 대기 · 통계·미학 점수·한자 조합 + 이름별 OG/트위터 공유 카드도 공개 수만큼 정적 생성)
 /search            이름 추천 (구 /baby — 301 리다이렉트 구성됨)
-/evaluate          이름 평가
+/evaluate          이름 평가 (2026-11-25: 음절별 한자 칸 — 한자를 직접 고르고 결과에서 바꿔 다시 계산. 메타 제목 '이름 평가 · 아기 이름 한자 정하기',
+                   정적 본문에 설명 글 '아기 이름 한자 정하기'(EvaluateHanjaGuide — 숫자는 index.json). `/evaluate?…` 쿼리 변형은 robots 가 막는다)
 /analysis          이름 분석
 /ohaeng            부족한 오행 찾기 (2026-11-25 — 생년월일·시각·출생지로 원국 오행 개수·용신·오행별 이름 한자 예, 정적 설명 글 + POST /saju/elements.
                    입력값은 주소·저장소에 남기지 않는다. 설계·검증 기록 docs/plan-ohaeng-2026-11.md)
@@ -779,6 +849,27 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 ### 백엔드
 - **API Key 인증**: 현재 단순 키 검증 — 본격 인증/인가 시스템 필요 (OAuth, JWT 등). 운영은 `Authentication__Enabled=false` 상태
 - **EF Core warning**: `Candidate.Reasons` 컬렉션에 ValueComparer 미설정 (동작엔 문제 없지만 경고 발생)
+- **한자 입력(2026-11, 2026-11-25 배포)의 알려진 이슈 · 사용자 결정 대기** — 근거와 재현은 `docs/plan-hanja-input-2026-11.md` §21-3:
+  - **후보 목록에 보이는 부정 훈 글자(U6-2)**: `docs/hanja-pick-negative-gloss-2026-11.md`(·`.json`) 의 세 갈래 가운데 **A 명백 부정 197자는 2026-11-25 불용 12차로 넣었다**
+    (커밋 '불용 12차' — 불용 991 → 1,188, 약자였던 娭·咢·媢·螞 는 약자에서 옮김, /name 데이터 바이트 동일). 영향 실측(배포 전 검토): /evaluate 자동 배정은 '병' 음절 + 용신 土 한 칸만
+    迸 → 甁(병 병)으로 바뀌고(이름 96,120회 중 102 — 병X 34명 × 성별 3, 종합 −5~+6), 출생일 없는 /evaluate·/search·/name 은 점수 변화 0. 후보 표(상위 5)는 7음절, 고르기 패널의 보이는 창은 38음절,
+    /analysis 상위 10 은 16음절에서 한 칸씩 바뀐다. **B 약함 416자·C 판단 필요 132자는 사용자 결정 대기** — 이번에 처음 12자 창에 새로 든 B 글자 黲(참)·炱(태), /analysis 10번째 칸에 든 綻(터질 탄, B)·
+    후보 표에 든 閽(문지기 혼)을 그 결정 때 함께 볼 것. 甁 의 보이는 훈 '병 병'이 病(불용)과 같은 글이라 '병(그릇)'으로 풀지도 그때 함께. 화면은 묶음 설명으로 '이 묶음 밖 글자의 뜻이 모두 이름에 어울린다는 말은 아니니 훈을 함께 보세요'라고 알린다
+  - **영문 뜻 글자 U+39B3(재)**: 사전 로더가 한글 뜻이 없는 글자에 Unihan 영문 뜻('to cultivate, …')을 채워 엔진은 이 글자를 쓸 수 있는 글자로 본다. 화면(후보 목록·글자 사실)에는 '뜻 풀이 없는 글자'로 싣게 했지만,
+    이 글자를 골라 평가하면 의미 메모·후보 표에는 영문 뜻이 그대로 나온다(자동 배정은 고르지 않는다 — 확장 영역이고 '재'에 기본 영역 글자가 있다). 고치려면 뜻 자료에 한글 훈을 넣거나 로더가 한글 없는 뜻을 버린다 —
+    어느 쪽이든 `IsUsableNameHanja` 가 바뀌어 자동 배정·점수 대조와 `dump-hanja-pick` 이 따른다
+  - **훈 자리에 훈이 아닌 글이 든 6자**(愞 '미상 난'·乻 '음차 늘'·乧 '음역자 둘'·乶 '음역자 볼'·乷 '음역자 살'·U+4117 '연')와 **칸의 음절과 훈 끝 독음이 다른 17쌍**(晷/귀 '그림자 구'·陌/맥 '일백 백' 등 — 목록은 설계서 §21-3):
+    사전 원자료의 표기다. 화면에서 특별 처리하지 않고 그대로 그린다. 乻 은 '늘' 음절의 자동 배정 글자라 뜻 유무를 바꾸면 기존 결과가 달라진다
+  - **빈출 목록의 U+614E 는 사전에 없는 글자**다(사전에 실린 꼴은 U+613C '삼갈 신'). 그래서 빈출 322자 가운데 사전에 있는 것은 321자, 그중 약자가 아닌 271자가 '먼저 보여 드리는 글자'다.
+    사전 꼴로 바꾸면 '신' 음절의 자동 배정·표시 순서와 /name 조합이 달라질 수 있다(재생성 체인) — 사용자 결정
+  - **공유 static 사전을 고치는 테스트는 `HanjaDictionaryMutationCollection` 에 둔다**(`CategoryClassificationTests`·`CategoryMappingTests`·`HanjaPickStaticFilesTests` 가 한 묶음 — 사전 항목을 잠깐 고치는 테스트가
+    정적 파일 대조와 동시에 돌면 대조가 흔들린다). 사전 항목을 고치는 테스트를 새로 쓰면 끝에 되돌리고 이 묶음에 넣을 것
+  - **깨진 문자열**(홀로 남은 서로게이트)이 든 본문은 프레임워크의 영문 400(ProblemDetails)이 나간다 — 기존 필드(`name`)도 같다. 화면이 보내기 전에 지운다
+  - **운영 이미지(Docker aspnet:10.0)에서 NFKC 정규화가 로컬과 같은지 확인하지 못했다** — 배포 뒤 `/hanja/resolve` 에 U+2FA6(강희 부수 金)·U+F9E1(호환 李)·U+FA6E(배정되지 않은 코드 → `not_hanja`)를 넣어 본다
+  - `/analysis`(이름 분석)는 한자를 받지 않는다(`NameAnalysisService` 는 picks 없이 채점 — 지금 결과 그대로). 미학 '의미' 10점은 음절 기준이라 고른 한자의 뜻을 반영하지 않는다(화면에 그렇게 적는다)
+  - 평가 요청 로그의 이름 평문과 500 응답의 예외 문구는 기존 문제 그대로다(이번에 고치지 않았다 — 새 엔드포인트 둘은 그렇게 만들지 않았다)
+  - ~~백엔드 성씨 문장의 끝이 늘 '기본 한자'~~ (2026-11-25 해결 — 커밋 '성씨 칸 맺음 문장', 위 계약 요약). 남은 가장자리: 사전에 그 소리로 읽는 한자가 하나도 없는 표 밖 성씨(궉)는
+    추정할 글자가 없는데도 '한자 없음'·사전에 없는 글자 문장이 '추정한 성씨 한자로'로 맺는다(프런트는 그 칸에 '-'를 보내지 않아 손으로 만든 주소·API 직접 호출에서만 닿는다 — 독음 불일치 문장은 이미 따로 다룬다)
 - ~~xUnit1026 경고~~ (2026-06-13 1건 + 잔여 1건 2026-07-30 수정 완료)
 - ~~미학 성별 보너스가 불용 글자의 GenderPref 도 센다~~ (2026-10-26 점수 정책으로 해결 — 불용 글자는 성별·의미·톤·자원오행 가점 어디서도 세지 않고 약자는 그대로 센다.
   기록·수치는 '주요 유틸리티' HanjaSelector)
@@ -1105,4 +1196,10 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   배포 전 4관점 검토(백엔드·프런트·리포트·운영 + 반박 검증) 반영: 리포트에 사랑·하나·하루(사전 밖이라 세지 않음) 한 문장, sitemap /pure-korean lastmod.
   남은 것: 백엔드 테스트가 /saju/elements 의 HTTP 계약(라우트·camelCase 키·리미터 속성)을 통합 테스트로 보지 않는다(컨트롤러 직접 호출만 — `RateLimitAppFactory` 로 하나 더할 것),
   레거시 POST /api/v1/recommendations 로그 템플릿에서 생년월일을 뺐다(설계 D4 — 처리방침과 맞춤, 프런트 ohaeng-privacy 테스트가 모든 컨트롤러 템플릿을 본다)
+- **3파 배포 (2026-11-25 — /evaluate 한자 입력·불용 12차·성씨 맺음)**: 2파와 같은 날 당겨 배포(사용자). feat/ohaeng-1119 의 한자 입력 커밋을 main 위로 cherry-pick(문서 커밋 0ff2744 는 빼고 이 문서에 새로 적음,
+  처리방침 주석 충돌은 두 주석을 합침) + 불용 12차 + 성씨 맺음 + 프런트 테스트 기준. 확인: dotnet test 2,925 · npm test 490 · tsc · lint · 재생성 두 번째 덤프 바뀜 0 · 감사 5종 통과.
+  배포 순서: 성씨 맺음 커밋(백엔드만 — Vercel 건너뜀)까지 먼저 push → Render Live·`/hanja/resolve` 200·한자를 실은 평가의 `hanjaSummary.userHanja` 확인 → 나머지 push(먼저 프런트가 뜨면 고른 한자가
+  옛 백엔드에서 조용히 무시되고 판정 API 가 404 — 배포 전 검토 INT-1). 배포 뒤 확인: /evaluate 정적 HTML 의 설명 글 숫자(1,188·9,105·489), /hanja/원 피하는 글자 4자, `/hanja/resolve` NFKC(U+2FA6·U+F9E1·U+FA6E), robots `/data/`.
+  **진입 링크를 빼고 내보내려면**(검색 유입이 가장 많은 /name·/hanja 템플릿 — 설계서 §26·§27-4, main 의 SHA): ②/name 링크만 빼기 = `git revert d271f57`, ③/hanja 링크만 빼기 = `60dc577` → `8a1b5f9` 차례로 revert,
+  모두 빼기 = `60dc577` → `8a1b5f9` → `d271f57` → `bfde5d8`(①칩 — ②를 두고 혼자 되돌릴 수 없다) 차례로. 그 뒤 검증 지적 반영 커밋(65fa479)이 같은 파일을 만지니 충돌은 손으로
 - **dev 환경 확인**: `Properties/launchSettings.json`으로 `dotnet run`만 쳐도 Development 모드 자동 적용됨

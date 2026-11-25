@@ -59,7 +59,7 @@ const ROUTES: Array<{
   { path: "privacy", priority: 0.3, changeFrequency: "yearly", lastModified: "2026-11-25" }, // 출생지 항목·오행 찾기 입력값·이름 평가의 한자 입력
 
   // 한자 사전 인덱스
-  { path: "hanja", priority: 0.8, changeFrequency: "monthly" },
+  { path: "hanja", priority: 0.8, changeFrequency: "monthly", lastModified: "2026-11-25" }, // 인덱스에 이름 평가 한 줄(HanjaEvaluateLine)
 
   // 이름 뜻 사전 인덱스
   { path: "name", priority: 0.8, changeFrequency: "weekly" },
