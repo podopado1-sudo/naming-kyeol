@@ -7,92 +7,11 @@ import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { Button } from "@/components/design/Primitives";
 import { TwinResultPage } from "@/components/design/TwinResult";
-import type {
-  TwinContext,
-  TwinThemeBlock,
-  TwinThemeKey,
-  TwinSharedType,
-} from "@/components/design/TwinResultTop";
+import type { TwinContext } from "@/components/design/TwinResultTop";
 
 import { twinNames } from "@/lib/api";
+import { mapTwinResponse, twinGenderTone } from "@/lib/twin-sets";
 import type { TwinNameResponse } from "@/lib/types";
-
-// ============================================================
-// 백엔드 → 디자인 타입 매핑
-// ============================================================
-const THEME_KEY_MAP: Record<string, TwinThemeKey> = {
-  공유글자: "shared_char",
-  공유의미: "shared_meaning",
-  공유톤: "shared_tone",
-};
-
-const SHARED_TYPE_MAP: Record<string, TwinSharedType> = {
-  공유글자: "char",
-  공유의미: "meaning",
-  공유톤: "tone",
-};
-
-const POSITIONS = ["첫째", "둘째", "셋째", "넷째"];
-
-function coherenceNote(score: number): string {
-  if (score >= 85) return "두 이름의 음운·의미·톤이 잘 맞물려요";
-  if (score >= 70) return "한 쌍으로서 안정적인 결을 가져요";
-  if (score >= 55) return "참고용 후보 — 다른 테마도 확인해보세요";
-  return "조화도가 낮아요. 조건을 바꿔보세요";
-}
-
-// 공유글자 추출 — 모든 자녀 이름에 공통으로 들어가는 글자
-function findSharedChar(names: { name: string }[]): string {
-  if (names.length < 2) return "";
-  const first = names[0].name;
-  for (const ch of first) {
-    if (names.slice(1).every((n) => n.name.includes(ch))) return ch;
-  }
-  return "";
-}
-
-function mapResponse(
-  response: TwinNameResponse
-): TwinThemeBlock[] {
-  return response.nameSets.map((set) => {
-    const key = THEME_KEY_MAP[set.theme] ?? "shared_char";
-    const sharedType = SHARED_TYPE_MAP[set.theme] ?? "char";
-
-    let sharedValue = "";
-    if (sharedType === "char") {
-      sharedValue = findSharedChar(set.names);
-    }
-
-    return {
-      key,
-      label: set.theme,
-      // 백엔드 공유의미 설명이 영문 카테고리 코드를 그대로 싣는다("'NATURE' 의미를 공유하는 이름 세트" — TwinNameEngine).
-      // 카테고리는 엔진 내부 글자 기준이라 보이는 한자와 다를 수 있어 이름을 붙이지 않고 일반 문장으로 바꾼다(2026-11-03)
-      description: /'[A-Z_]+'/.test(set.themeDescription ?? "")
-        ? "뜻 갈래(자연·덕목 등)가 같은 한자들의 소리로 지은 이름 세트"
-        : set.themeDescription,
-      coherence: set.coherenceScore,
-      coherenceNote: coherenceNote(set.coherenceScore),
-      shared: { type: sharedType, value: sharedValue },
-      pair: set.names.map((n, i) => ({
-        position: POSITIONS[i] ?? `${i + 1}번째`,
-        first: n.name,
-        sharedIndex:
-          sharedType === "char" && sharedValue
-            ? [...n.name]
-                .map((ch, idx) => (ch === sharedValue ? idx : -1))
-                .filter((x) => x >= 0)
-            : undefined,
-        scores: {
-          aesthetic: n.aestheticScore,
-          harmony: n.harmonyScore,
-          final: n.finalScore,
-        },
-        reasons: n.reasons,
-      })),
-    };
-  });
-}
 
 // ============================================================
 // 메인 페이지
@@ -127,18 +46,8 @@ export default function TwinPage() {
         lastName: lastName.trim().slice(0, 2),
         birthDate: birthDate || undefined,
         birthTime: birthTime || undefined,
-        gender:
-          gender === "none"
-            ? undefined
-            : gender === "male"
-              ? "Male"
-              : "Female",
-        tone:
-          tone === "neutral"
-            ? "Neutral"
-            : tone === "soft"
-              ? "Soft"
-              : "Strong",
+        // 서버 엔진은 소문자 값만 알아본다 — 대문자로 시작하는 값(Male·Soft)을 보내면 검사는 지나가지만 세트를 고를 때 성별·톤이 빠진다(lib/twin-sets.ts)
+        ...twinGenderTone(gender, tone),
         childCount: parseInt(childCount, 10),
       });
       setResult(data);
@@ -158,7 +67,7 @@ export default function TwinPage() {
 
   // 결과 있을 때 — 디자인 컴포넌트 렌더
   if (result && result.nameSets.length > 0) {
-    const themes = mapResponse(result);
+    const themes = mapTwinResponse(result);
     const ctx: TwinContext = {
       lastName,
       count: parseInt(childCount, 10),

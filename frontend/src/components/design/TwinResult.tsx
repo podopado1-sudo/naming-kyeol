@@ -5,7 +5,7 @@
  * 변환 사항:
  *   - React.useState/useRef → 명시적 import
  *   - TWIN_SAMPLE 글로벌 → context/themes props
- *   - Mark/Button → ./Mark, ./Primitives import
+ *   - Mark → ./Mark import
  *   - TwinSubHeader/ThemeTabs/ThemeBanner/CoherenceHero → ./TwinResultTop
  *   - PairCard/ConnectorVisual → ./TwinResultCards
  */
@@ -14,9 +14,9 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { Mark } from "./Mark";
-import { Button } from "./Primitives";
 import {
   CoherenceHero,
+  SetChips,
   ThemeBanner,
   ThemeTabs,
   TwinSubHeader,
@@ -24,16 +24,26 @@ import {
   type TwinThemeBlock,
 } from "./TwinResultTop";
 import { ConnectorVisual, PairCard } from "./TwinResultCards";
+import {
+  groupTwinSets,
+  pickTwinSet,
+  twinSetLabel,
+  twinSummaryLine,
+} from "@/lib/twin-sets";
 
 // ============================================================
 // OtherThemePreview — 비활성 테마 미리보기 카드
 // ============================================================
 function OtherThemePreview({
   theme,
+  setCount,
   lastName,
   onJump,
 }: {
+  /** 그 테마의 첫 세트(조화도가 가장 높은 세트) */
   theme: TwinThemeBlock;
+  /** 그 테마의 세트 수 */
+  setCount: number;
   lastName: string;
   onJump: () => void;
 }) {
@@ -137,7 +147,7 @@ function OtherThemePreview({
           gap: 3,
         }}
       >
-        {theme.label} 세트 보기 →
+        {theme.label} 세트{setCount > 1 ? ` ${setCount}개` : ""} 보기 →
       </div>
     </div>
   );
@@ -159,21 +169,32 @@ export function TwinResultPage({
   onSave?: () => void;
   editHref?: string;
 }) {
-  const [current, setCurrent] = useState<string>(themes[0]?.key ?? "");
+  // themes 는 세트 목록이다(같은 테마의 세트가 여럿) — 고른 것은 세트 id 로 기억하고, 탭은 테마별 묶음으로 그린다(lib/twin-sets.ts)
+  const [currentId, setCurrentId] = useState<string>(themes[0]?.id ?? "");
   const [fadeKey, setFadeKey] = useState(0);
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  const theme = themes.find((t) => t.key === current) ?? themes[0];
+  const theme = pickTwinSet(themes, currentId);
   if (!theme) return null;
 
-  const onTabChange = (k: string) => {
-    if (k === current) return;
-    setCurrent(k);
+  const groups = groupTwinSets(themes);
+  const group = groups.find((g) => g.key === theme.key) ?? groups[0];
+
+  const selectSet = (id: string) => {
+    if (id === theme.id) return;
+    setCurrentId(id);
     setFadeKey((x) => x + 1);
   };
 
+  // 테마 탭 — 그 테마의 첫 세트(조화도가 가장 높은 세트)로 간다
+  const onTabChange = (k: string) => {
+    if (k === theme.key) return;
+    const next = groups.find((g) => g.key === k);
+    if (next) selectSet(next.sets[0].id);
+  };
+
   const gridCols = context.count >= 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)";
-  const otherThemes = themes.filter((t) => t.key !== current);
+  const otherGroups = groups.filter((g) => g.key !== theme.key);
 
   const jumpToTabs = (k: string) => {
     onTabChange(k);
@@ -294,7 +315,7 @@ export function TwinResultPage({
               margin: 0,
             }}
           >
-            3가지 테마로 각각 어울리는 한 쌍을 골랐어요.
+            {twinSummaryLine(groups)}
           </p>
         </section>
 
@@ -308,11 +329,29 @@ export function TwinResultPage({
           }}
         >
           <ThemeTabs
-            themes={themes}
-            current={current}
+            themes={groups.map((g) => ({
+              key: g.key,
+              label: g.label,
+              count: g.sets.length,
+            }))}
+            current={theme.key}
             onChange={onTabChange}
           />
         </div>
+
+        {/* 이 테마의 세트 고르기 — 세트가 하나뿐이면 그리지 않는다 */}
+        {group.sets.length > 1 && (
+          <div style={{ marginBottom: 20 }}>
+            <SetChips
+              sets={group.sets.map((s) => ({
+                id: s.id,
+                label: twinSetLabel(s),
+              }))}
+              current={theme.id}
+              onChange={selectSet}
+            />
+          </div>
+        )}
 
         {/* Banner */}
         <div style={{ marginBottom: 24 }}>
@@ -366,7 +405,9 @@ export function TwinResultPage({
             )}
           </div>
 
-          {/* Primary CTAs */}
+          {/* 다른 세트로 — 세트가 하나뿐이면 갈 곳이 없으니 그리지 않는다.
+              (2026-11-26: 여기 있던 '이 세트로 결정하기 ✓' 단추는 동작이 없어 없앴다. 이름별 자세히 보기는 카드 안에 있다) */}
+          {themes.length > 1 && (
           <div
             style={{
               marginTop: 40,
@@ -376,12 +417,6 @@ export function TwinResultPage({
               gap: 12,
             }}
           >
-            <Button
-              variant="primary"
-              style={{ padding: "14px 28px", fontSize: 15 }}
-            >
-              이 세트로 결정하기 ✓
-            </Button>
             <button
               type="button"
               onClick={() =>
@@ -402,13 +437,14 @@ export function TwinResultPage({
                 textDecorationThickness: 1,
               }}
             >
-              다른 테마 보기 ↑
+              다른 세트 보기 ↑
             </button>
           </div>
+          )}
         </div>
 
         {/* Other themes horizontal scroll */}
-        {otherThemes.length > 0 && (
+        {otherGroups.length > 0 && (
           <div style={{ marginTop: 72 }}>
             <div
               style={{
@@ -429,12 +465,13 @@ export function TwinResultPage({
                 paddingBottom: 8,
               }}
             >
-              {otherThemes.map((t) => (
+              {otherGroups.map((g) => (
                 <OtherThemePreview
-                  key={t.key}
-                  theme={t}
+                  key={g.key}
+                  theme={g.sets[0]}
+                  setCount={g.sets.length}
                   lastName={context.lastName}
-                  onJump={() => jumpToTabs(t.key)}
+                  onJump={() => jumpToTabs(g.key)}
                 />
               ))}
             </div>
@@ -477,24 +514,24 @@ export function TwinResultPage({
             다른 경로로 작명하기 ↓
           </Link>
           <div style={{ display: "flex", gap: 16 }}>
-            <a
-              href="#"
+            <Link
+              href="/about"
               style={{
                 color: "var(--color-text-3)",
                 textDecoration: "none",
               }}
             >
               이름의 결에 대하여
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              href="/contact"
               style={{
                 color: "var(--color-text-3)",
                 textDecoration: "none",
               }}
             >
               문의
-            </a>
+            </Link>
           </div>
         </div>
       </footer>

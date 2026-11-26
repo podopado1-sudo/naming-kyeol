@@ -22,6 +22,8 @@ export interface TwinContext {
 }
 
 export interface TwinThemeBlock {
+  /** 세트마다 다른 값 — 같은 테마의 세트가 여럿이라 key(테마)로는 세트를 가릴 수 없다 */
+  id: string;
   key: TwinThemeKey;
   label: string;
   description: string;
@@ -127,21 +129,26 @@ export function TwinSubHeader({
 }
 
 // ============================================================
-// ThemeTabs — 공유글자/공유의미/공유톤 segmented control
+// ThemeTabs — 공유글자/공유의미/공유톤 segmented control (테마당 탭 하나)
 // ============================================================
 export function ThemeTabs({
   themes,
   current,
   onChange,
 }: {
-  themes: { key: string; label: string }[];
+  /** 테마별 한 줄 — key 가 겹치면 안 된다(lib/twin-sets.ts groupTwinSets 의 묶음). count 는 그 테마의 세트 수 */
+  themes: { key: string; label: string; count?: number }[];
   current: string;
   onChange: (key: string) => void;
 }) {
   return (
     <div
+      role="group"
+      aria-label="테마"
       style={{
         display: "inline-flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
         padding: 4,
         background: "var(--color-surface-2)",
         borderRadius: 999,
@@ -153,6 +160,7 @@ export function ThemeTabs({
           <button
             key={t.key}
             type="button"
+            aria-pressed={active}
             onClick={() => onChange(t.key)}
             style={{
               appearance: "none",
@@ -175,6 +183,75 @@ export function ThemeTabs({
             }}
           >
             {t.label}
+            {t.count != null && t.count > 1 && (
+              <span
+                style={{
+                  marginLeft: 6,
+                  fontFamily: "Inter",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: "var(--color-text-2)",
+                }}
+              >
+                {t.count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================
+// SetChips — 한 테마 안의 세트 고르기(세트가 둘 이상일 때). 이름표는 그 세트의 이름들
+// ============================================================
+export function SetChips({
+  sets,
+  current,
+  onChange,
+}: {
+  sets: { id: string; label: string }[];
+  current: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="이 테마의 이름 세트"
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: 8,
+      }}
+    >
+      {sets.map((s) => {
+        const active = s.id === current;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(s.id)}
+            style={{
+              appearance: "none",
+              cursor: "pointer",
+              padding: "7px 14px",
+              borderRadius: 999,
+              fontFamily: "var(--font-sans)",
+              fontSize: 13.5,
+              fontWeight: active ? 600 : 500,
+              border: active
+                ? "1px solid var(--color-navy)"
+                : "1px solid var(--color-border)",
+              backgroundColor: "var(--color-surface)",
+              color: active ? "var(--color-navy)" : "var(--color-text-2)",
+              transition: "all 200ms cubic-bezier(.2,.6,.2,1)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {s.label}
           </button>
         );
       })}
