@@ -56,6 +56,7 @@ import {
   slotNote,
   type PasteReport,
 } from "@/lib/hanja-pick-text";
+import { todayKst } from "@/lib/ohaeng";
 import type { HanjaFact } from "@/lib/types";
 
 import { HanjaPickerPanel } from "./HanjaPickerPanel";
@@ -1259,12 +1260,10 @@ function DateInput({
   const formatted = value
     ? `${value.slice(0, 4)}년 ${parseInt(value.slice(5, 7), 10)}월 ${parseInt(value.slice(8, 10), 10)}일`
     : "";
-  // SSR/hydration 안전: 서버 스냅샷은 undefined, 클라이언트에서만 today 계산
-  const today = useSyncExternalStore(
-    emptySubscribe,
-    () => new Date().toISOString().slice(0, 10),
-    () => undefined,
-  );
+  // SSR/hydration 안전: 서버 스냅샷은 undefined, 클라이언트에서만 today 계산.
+  // 오늘은 한국 시간(todayKst — /ohaeng 과 같은 함수). 옛 toISOString() 은 UTC 날짜라 한국 0~9시에는 max 가 어제가 되어
+  // 오늘 태어난 아기의 생년월일을 고를 수 없었다(2026-11-26)
+  const today = useSyncExternalStore(emptySubscribe, () => todayKst(), () => undefined);
   return (
     <div style={{ position: "relative" }}>
       <input
