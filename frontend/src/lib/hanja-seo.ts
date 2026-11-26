@@ -114,7 +114,17 @@ export function hasDetailPage(record: HanjaSeoRecord): boolean {
   return Boolean(record.m && record.s);
 }
 
-/** 코어(c) 먼저 → 등급(확정·예외·이견·미상) → 획수 → 코드 순. 옛 '검수 등급 S 먼저'를 코어 여부로 옮겼다(옛 S ⊂ 코어) */
+/**
+ * 마지막 동점 기준 — 로캘을 'en' 으로 고정한다(2026-11-26). 로캘 없는 localeCompare 는 빌드 환경의 기본 로캘을 따라
+ * 이 PC 의 Node(ko-KR — 한자를 독음 순)와 Vercel(en 순)이 같은 순위 글자를 다르게 놓았다(독음 쪽 카드·ItemList·
+ * '함께 쓰기 좋은 오행' 대표 글자·같은 음 상위 12 — 3파 운영 검증). 'en' = 지금 운영 순서(ICU 루트와 같음).
+ * 'und' 는 기본 로캘로 풀릴 수 있고, 코드포인트 비교는 확장 A 자리 때문에 운영 순서를 바꾼다.
+ * 'en' 은 로캘 덧칠만 막는다 — 한자 순서 자체는 ICU 데이터(공식 Node full-icu 의 CLDR 루트, 부수·획 순)가 정한다
+ * (ICU 72.1·78.2 는 9,105자 전부 같음. Chromium 계열 데이터 implicithan 이면 달라진다 — tests/hanja-sort-locale.test.mjs 손 사례가 잡는다)
+ */
+const TIE_COLLATOR = new Intl.Collator("en");
+
+/** 코어(c) 먼저 → 등급(확정·예외·이견·미상) → 획수 → 'en' 정렬 순. 옛 '검수 등급 S 먼저'를 코어 여부로 옮겼다(옛 S ⊂ 코어) */
 function compareByCoreGradeStrokes(a: string, b: string): number {
   const ca = DATA[a].c ? 0 : 1;
   const cb = DATA[b].c ? 0 : 1;
@@ -125,7 +135,7 @@ function compareByCoreGradeStrokes(a: string, b: string): number {
   const sa = DATA[a].s ?? 99;
   const sb = DATA[b].s ?? 99;
   if (sa !== sb) return sa - sb;
-  return a.localeCompare(b);
+  return TIE_COLLATOR.compare(a, b);
 }
 
 // ---------------------------------------------------------------

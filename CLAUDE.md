@@ -78,7 +78,7 @@ npm run build
 # 린트
 npm run lint
 
-npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-11-25 기준 490개, 10-28 기준 249)
+npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-11-26 기준 494개, 10-28 기준 249)
            # 대비 테스트: tests/amber-contrast.test.mjs(amber-warm-700)·tests/palette-contrast.test.mjs(text-3·오행·골드·결과 화면 글자 토큰),
            # 공용 헬퍼 tests/color-utils.mjs(globals.css·Tailwind theme.css 실제 값, WCAG 대비, CIEDE2000 — *.test.mjs 가 아니라 따로 돌지 않는다)
            # 앱 코드(.ts)를 읽는 테스트는 tests/resolve-ts.mjs 훅을 먼저 import 하고 앱 모듈을 동적 import 한다(확장자 없는 상대 import 풀기)
@@ -1151,11 +1151,15 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   'UsageEvents already exists'에서 멈춰 `Candidates` · `UserFeedbacks` 가 끝내 안 생긴다 — /smart 응답에서 standard(한자 이름) 탭이 말없이 빠진다. **띄우기 전에 0바이트 `nameform.db` 를 만들어 둘 것**(운영 PostgreSQL 은 무관).
 
 ### 프론트엔드
-- **한자 목록 동점 정렬이 빌드 로캘을 따른다**(2026-11-26 3파 운영 검증에서 확인 — 2026-06-13 aa6a183 부터, 3파 회귀 아님): `lib/hanja-seo.ts` `compareByCoreGradeStrokes` 의 마지막 기준
-  `a.localeCompare(b)` 에 로캘이 없어, 이 PC 의 Node(기본 ko-KR — 한자를 독음 순)와 Vercel 빌드(ICU 루트 = 'en' 과 같은 순서)가 같은 순위 글자를 다르게 놓는다. 운영은 en 순이다.
-  로컬 빌드와 운영이 다른 곳: 독음 쪽 카드 순서 261/489쪽·ItemList 상위 50 256쪽(15쪽은 구성까지 — 수 臹/須), 글자 상세 '함께 쓰기 좋은 오행' 대표 글자(木·火·金·水), 같은 음 상위 12(상세 4,372쪽).
-  그래서 **로컬 빌드끼리의 의미 대조는 운영 한자 쪽의 순서·선택을 보증하지 못한다** — 운영과 대조할 때는 en 정렬로 예측할 것(스크래치 기록: 3파 검증 651/651 이 en 예측과 일치).
-  고정하려면 지금 운영 순서를 지키는 'en' 을 명시한다(코드포인트 비교는 확장 A 위치 때문에 67쪽이 바뀌고, 'und' 는 이 PC 에서 ko-KR 로 풀린다). 순서를 단언하는 테스트는 없다
+- ~~**한자 목록 동점 정렬이 빌드 로캘을 따른다**~~ (2026-11-26 해결 — `lib/hanja-seo.ts` `compareByCoreGradeStrokes` 의 마지막 기준을 `new Intl.Collator("en")` 으로 고정, 운영 출력 무변):
+  옛 로캘 없는 `a.localeCompare(b)`(2026-06-13 aa6a183 부터)는 이 PC 의 Node(기본 ko-KR — 한자를 독음 순)와 Vercel(en 순)이 같은 순위 글자를 다르게 놓아, 로컬 빌드와 운영이
+  독음 쪽 카드 순서 261/489·ItemList 256(15쪽은 구성까지 — 수 臹/須)·글자 상세 '함께 쓰기 좋은 오행' 대표 글자와 같은 음 상위 12(8,404/9,016쪽)에서 달랐다(3파 운영 검증).
+  고친 뒤 이 PC 의 lib 출력 = 운영: 독음 489쪽 전부(카드·ItemList)·상세 1,300쪽 표본(시드 20261126)·독립 재대조 상세 400·독음 60(시드 777, 구획 제목 기준 추출) 불일치 0.
+  'en' 을 고른 이유: 지금 운영 순서다. 'und' 는 이 PC 에서 ko-KR 로 풀리고, 코드포인트 비교는 확장 A 자리 때문에 독음 67쪽이 바뀐다.
+  ⚠️ 'en' 은 로캘 덧칠만 막는다 — 한자 순서 자체는 ICU 데이터(공식 Node full-icu 의 CLDR 루트, 부수·획 순)가 정한다. ICU 72.1(Windows icu.dll)·78.2(Node 24)는 9,105자 전부 같지만,
+  Chromium 계열 데이터(implicithan — 기본 영역 먼저, 예: VS Code Electron 을 node 로)면 ItemList 62쪽이 달라진다. Vercel 빌드의 Node 판은 저장소에 고정돼 있지 않다(engines·.nvmrc 없음 —
+  대시보드 설정). 회귀는 `tests/hanja-sort-locale.test.mjs` — 같은 순위 이웃이 'en' 순인지(전 독음), 운영에서 확인한 손 사례(가·수 = 'ko' 와 갈림, 온·은·산·이 = 확장 A 동점 —
+  implicithan·코드포인트 비교와 갈림, Electron ICU 로 돌리면 이 테스트가 실패하는 것을 확인), 대표 글자, 로캘 없는 localeCompare 재유입
 - **한자 서체 범위**: 사이트 한자 폰트(layout.tsx next/font Noto Serif KR — Google 조각 373개)는 기본 영역 4,620/20,992자·확장 A/B 0자만 담는다
   (2026-10-26 빌드 CSS 실측). /name 조합 글자 798자 중 112자(璱·嗛·黚·馜·唹 등, 897쌍)와 /hanja 확장 영역 글자는 기기 폰트로 그려진다 —
   한 서체로 맞추려면 폰트 교체나 서브셋 자체 호스팅이 필요(폰트 파일 반입·디자인 결정). /name 조합은 확장 영역 쌍을 빈칸 채우기로 쓰지 않는다(HanjaSelector)
