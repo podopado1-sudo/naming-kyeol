@@ -20,6 +20,10 @@ feat 의 문서 커밋(0ff2744)과 5c378b2·9c253c4 의 CLAUDE.md·이 파일 �
 **push 순서(사용자)**: ① `git push origin <성씨 맺음 커밋>:main`(백엔드만 — Vercel 건너뜀) → Render Live·`POST /api/v1/hanja/resolve` 200·한자를 실은 평가의 `hanjaSummary.userHanja` 확인 → ② `git push`(맨 위 = 문서·sitemap 커밋, 프런트를 바꿔 Vercel 빌드).
 ② 를 먼저 하면 그 사이 고른 한자가 옛 백엔드에서 조용히 무시된다. push ① 이 11/26 0시를 넘겨, 날짜 자리(처리방침 시행일·sitemap evaluate·ohaeng·privacy·hanja)를 2026-11-26 으로 옮긴 커밋을 맨 위에 더했다([skip render] — cc0500d 뒤 백엔드 변경 없음).
 
+**배포·운영 확인(11/26)**: ① cc0500d push → Render 에서 /hanja/resolve 200·evaluate nameHanja 의 hanjaSummary.userHanja true·NFKC(U+2FA6 金·U+F9E1 李·U+FA6E not_hanja)·寃 forbidden·성씨 맺음 세 갈래 확인 → 날짜 자리 커밋 68cd5ca([skip render] — push ② 가 11/26 이라 처리방침 시행일·sitemap evaluate·ohaeng·privacy·hanja 를 2026-11-26 으로) → ② push, Vercel 10:32 KST.
+운영 검증 워크플로(4갈래 + 반박): 표본 1,412쪽 모두 200 — 루트 22·이름 404쪽은 기대 차이와 글자까지 같고, 한자 651쪽의 차이는 모두 빌드 로캘 정렬(CLAUDE.md 프런트 알려진 이슈 — 3파 회귀 아님, en 예측과 651/651 일치)·후보 파일 490개 sha256 저장소와 같음·robots(/data/ 만 추가)·sitemap(4쪽 lastmod 만)·sitemap-hanja 바이트 동일·API 계약(resolve 60쌍 사실 차이 0·evaluate 정규 꼴 왕복 12/12 바이트 동일·400 코드 7종·A197 forbidden)·브라우저 PC/휴대폰(칸 열기·고르기·제자리 재계산·柳 불일치 문장·진입 링크 셋·가로 넘침 0·콘솔 오류 0) 통과. 남은 것은 info 뿐(resolve 길이 400 이 ProblemDetails 꼴, /data/hanja-pick/v1/ 폴더 주소가 index.json, 평가 폼 성별·톤 버튼 aria-pressed 없음 — 2파부터).
+블로그 초안 현·작명일기④ 숫자·사진 고침(11/26 — docs/naver-blog/strategy.md 4줄).
+
 **블로그 영향**: 발행한 '이름에 쓰는 한자 원'(11/25) 본문 1·8·30줄 '피하는 글자 怨 하나' → 사이트는 怨·寃·蜿·冤 넷(고칠지 사용자 결정). 미발행 초안 현(피하는 글자 眩 1 → 6자, 남은 54 → 49)·
 작명일기④(993 → 사이트 표시 1,188)는 배포 뒤 고쳐 발행(docs/naver-blog/strategy.md).
 
