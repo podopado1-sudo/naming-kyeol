@@ -356,7 +356,7 @@ D:\MyDev\NameForm\
 | POST | `/api/v1/usage/event` | 프론트 탭 클릭 이벤트 수신 (`tab_view`만 허용, sendBeacon 대상) |
 | GET | `/api/v1/usage/summary` | 기간별 사용량 집계 조회 (`days` 기본 30, 최대 365) |
 
-### 한자 입력 계약 요약 (2026-11, 2026-11-25 배포 — /evaluate 음절별 한자 고르기)
+### 한자 입력 계약 요약 (2026-11, 2026-11-26 배포 — /evaluate 음절별 한자 고르기)
 
 설계·법규 사실 확인·구현 기록은 `docs/plan-hanja-input-2026-11.md`(§4 API 계약 · §5 검증 규칙 · §20 법규 사실 · §21~§27 구현 기록 — 앞 절과 어긋나면 §20 이후가 이긴다).
 사용자 결정(§15)은 권고안으로 구현해 두었다 — 다르게 정하면 그 절의 표대로 되돌린다.
@@ -849,7 +849,7 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 ### 백엔드
 - **API Key 인증**: 현재 단순 키 검증 — 본격 인증/인가 시스템 필요 (OAuth, JWT 등). 운영은 `Authentication__Enabled=false` 상태
 - **EF Core warning**: `Candidate.Reasons` 컬렉션에 ValueComparer 미설정 (동작엔 문제 없지만 경고 발생)
-- **한자 입력(2026-11, 2026-11-25 배포)의 알려진 이슈 · 사용자 결정 대기** — 근거와 재현은 `docs/plan-hanja-input-2026-11.md` §21-3:
+- **한자 입력(2026-11, 2026-11-26 배포)의 알려진 이슈 · 사용자 결정 대기** — 근거와 재현은 `docs/plan-hanja-input-2026-11.md` §21-3:
   - **후보 목록에 보이는 부정 훈 글자(U6-2)**: `docs/hanja-pick-negative-gloss-2026-11.md`(·`.json`) 의 세 갈래 가운데 **A 명백 부정 197자는 2026-11-25 불용 12차로 넣었다**
     (커밋 '불용 12차' — 불용 991 → 1,188, 약자였던 娭·咢·媢·螞 는 약자에서 옮김, /name 데이터 바이트 동일). 영향 실측(배포 전 검토): /evaluate 자동 배정은 '병' 음절 + 용신 土 한 칸만
     迸 → 甁(병 병)으로 바뀌고(이름 96,120회 중 102 — 병X 34명 × 성별 3, 종합 −5~+6), 출생일 없는 /evaluate·/search·/name 은 점수 변화 0. 후보 표(상위 5)는 7음절, 고르기 패널의 보이는 창은 38음절,
@@ -1196,7 +1196,7 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   배포 전 4관점 검토(백엔드·프런트·리포트·운영 + 반박 검증) 반영: 리포트에 사랑·하나·하루(사전 밖이라 세지 않음) 한 문장, sitemap /pure-korean lastmod.
   남은 것: 백엔드 테스트가 /saju/elements 의 HTTP 계약(라우트·camelCase 키·리미터 속성)을 통합 테스트로 보지 않는다(컨트롤러 직접 호출만 — `RateLimitAppFactory` 로 하나 더할 것),
   레거시 POST /api/v1/recommendations 로그 템플릿에서 생년월일을 뺐다(설계 D4 — 처리방침과 맞춤, 프런트 ohaeng-privacy 테스트가 모든 컨트롤러 템플릿을 본다)
-- **3파 배포 (2026-11-25 — /evaluate 한자 입력·불용 12차·성씨 맺음)**: 2파와 같은 날 당겨 배포(사용자). feat/ohaeng-1119 의 한자 입력 커밋을 main 위로 cherry-pick(문서 커밋 0ff2744 는 빼고 이 문서에 새로 적음,
+- **3파 배포 (2026-11-26 — /evaluate 한자 입력·불용 12차·성씨 맺음)**: 2파 다음 날로 당겨 배포(사용자 — 11-25 준비, push 는 11-26 0시 넘어). 처리방침 시행일·sitemap evaluate·ohaeng·privacy·hanja lastmod = 2026-11-26. feat/ohaeng-1119 의 한자 입력 커밋을 main 위로 cherry-pick(문서 커밋 0ff2744 는 빼고 이 문서에 새로 적음,
   처리방침 주석 충돌은 두 주석을 합침) + 불용 12차 + 성씨 맺음 + 프런트 테스트 기준. 확인: dotnet test 2,925 · npm test 490 · tsc · lint · 재생성 두 번째 덤프 바뀜 0 · 감사 5종 통과.
   배포 순서: 성씨 맺음 커밋(백엔드만 — Vercel 건너뜀)까지 먼저 push → Render Live·`/hanja/resolve` 200·한자를 실은 평가의 `hanjaSummary.userHanja` 확인 → 나머지 push(먼저 프런트가 뜨면 고른 한자가
   옛 백엔드에서 조용히 무시되고 판정 API 가 404 — 배포 전 검토 INT-1). 배포 뒤 확인: /evaluate 정적 HTML 의 설명 글 숫자(1,188·9,105·489), /hanja/원 피하는 글자 4자, `/hanja/resolve` NFKC(U+2FA6·U+F9E1·U+FA6E), robots `/data/`.
