@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { Button } from "@/components/design/Primitives";
 import { DualResultPage } from "@/components/design/DualResult";
-import type { DualCandidate, DualMode } from "@/components/design/DualCard";
+import type { DualCandidate } from "@/components/design/DualCard";
 import type { DualContext } from "@/components/design/DualResult";
 
 import { dualName } from "@/lib/api";
@@ -82,20 +82,49 @@ interface SubmittedQuery {
 
 /** 출생일을 비우고 제출했을 때의 오류 — 칸의 aria-invalid 도 이 문구가 떠 있는 동안만 켠다(/parent-based·/rare-surname 과 같은 말) */
 const BIRTH_DATE_REQUIRED = "생년월일을 입력해 주세요.";
-const ERROR_ID = "dual-name-error";
-const BIRTH_DATE_ID = "dual-name-birthDate";
+
+/**
+ * 영어 이름 칸의 예시 — 실제로 후보가 나오는 이름만(성별과 무관하게: 후보가 있는지는 음절마다 쓸 수 있는 인명용 한자가 있는지로만 갈린다).
+ * 예전 '예: Philip, Grace, Noah' 의 Grace(그레이스)는 그·레·스에 쓸 한자가 없어 0건이었고, Philip 은 남자 출생일에 따라 駜 '살찔'이 나왔다.
+ * tests/fix1127-dual.test.mjs 가 data/english_korean_names.json 과 public/data/hanja-pick/v1/index.json 으로 이 이름들의 후보를 확인한다
+ */
+const ENGLISH_NAME_PLACEHOLDER = "예: Noah, Hannah";
+
+/**
+ * 결과 화면에 적을 영어 이름 — 넣은 값 그대로 쓰되, 후보가 그 이름(대소문자 무시 — 백엔드 FindByEnglishName 과 같은 비교)이면
+ * 후보 표기(noah → Noah)로. 비워 두면 "" — 예전에는 첫 후보의 영어 이름(Philip)으로 채워 '선호 Philip'처럼 고른 적 없는 값을 보였다
+ */
+function shownEnglishName(typed: string, candidates: DualNameCandidate[]): string {
+  if (!typed) return "";
+  const lower = typed.toLowerCase();
+  return (
+    candidates.find((c) => c.englishEquivalent.toLowerCase() === lower)
+      ?.englishEquivalent ?? typed
+  );
+}
 
 // ============================================================
 // 메인 페이지
 // ============================================================
 export default function DualNamePage() {
+  // 라벨 ↔ 칸 연결(htmlFor ↔ id) — 예전에는 출생일 칸만 이어져 화면 읽기 프로그램이 성씨·영어 이름·성별·톤·시각 칸 이름을 읽지 못했다
+  // (/ohaeng 과 같은 방식)
+  const uid = useId();
+  const LAST_NAME_ID = `${uid}-lastName`;
+  const ENGLISH_ID = `${uid}-english`;
+  const GENDER_ID = `${uid}-gender`;
+  const TONE_ID = `${uid}-tone`;
+  const BIRTH_DATE_ID = `${uid}-birthDate`;
+  const BIRTH_TIME_ID = `${uid}-birthTime`;
+  const ERROR_ID = `${uid}-error`;
+
   const [lastName, setLastName] = useState("");
   const [preferredEnglishName, setPreferredEnglishName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [gender, setGender] = useState<"none" | "male" | "female">("none");
+  // 톤은 후보를 바꾸지 않는다(DualNameEngine 이 받기만 하고 쓰지 않음) — 결과 카드 '이 이름 평가하기'(/evaluate) 점수에만 쓰인다
   const [tone, setTone] = useState<"neutral" | "soft" | "strong">("neutral");
-  const [mode] = useState<DualMode>("phonetic");
 
   const [candidates, setCandidates] = useState<DualNameCandidate[] | null>(
     null
@@ -167,14 +196,14 @@ export default function DualNamePage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // 결과 있을 때 — 디자인 페이지
+  // 결과 있을 때 — 디자인 페이지. '← 조건 수정'(onRegenerate)은 결과만 지워 이 폼으로 돌아온다(입력값은 그대로)
   if (candidates && candidates.length > 0 && submitted) {
-    const englishLabel =
-      submitted.preferredEnglishName || candidates[0]?.englishEquivalent || "";
     const ctx: DualContext = {
       lastName: submitted.lastName,
-      preferredEnglishName: englishLabel,
-      mode,
+      preferredEnglishName: shownEnglishName(
+        submitted.preferredEnglishName,
+        candidates
+      ),
       gender: submitted.gender === "none" ? "any" : submitted.gender,
       tone: submitted.tone,
       birthDate: submitted.birthDate,
@@ -252,8 +281,9 @@ export default function DualNamePage() {
             gap: 16,
           }}
         >
-          <Field label="성씨">
+          <Field label="성씨" htmlFor={LAST_NAME_ID}>
             <Input
+              id={LAST_NAME_ID}
               placeholder="예: 김"
               value={lastName}
               // IME 조합 중 slice로 자르면 한글 입력이 끊기므로 제출 시에만 2자 제한
@@ -262,23 +292,21 @@ export default function DualNamePage() {
             />
           </Field>
 
-          <Field label="선호 영어 이름 (선택)">
+          <Field label="선호 영어 이름 (선택)" htmlFor={ENGLISH_ID}>
             <Input
-              placeholder="예: Philip, Grace, Noah"
+              id={ENGLISH_ID}
+              placeholder={ENGLISH_NAME_PLACEHOLDER}
               value={preferredEnglishName}
               onChange={setPreferredEnglishName}
             />
           </Field>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 12,
-            }}
-          >
-            <Field label="성별">
+          {/* 휴대폰 폭(640px 미만)은 한 줄에 칸 하나 — 톤 라벨이 두 줄로 접혀 옆 칸과 높이가 어긋나지 않게.
+              인라인 style 은 미디어 쿼리를 못 받아 격자는 className */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="성별" htmlFor={GENDER_ID}>
               <Select
+                id={GENDER_ID}
                 value={gender}
                 onChange={(v) => setGender(v as typeof gender)}
                 options={[
@@ -288,8 +316,11 @@ export default function DualNamePage() {
                 ]}
               />
             </Field>
-            <Field label="톤">
+            {/* 톤은 후보(영어 이름·한글·한자)를 바꾸지 않는다 — DualNameEngine 이 받기만 하고 읽지 않는다. 쓰이는 곳은 카드의
+                '이 이름 평가하기'(/evaluate 미학 점수)뿐이라 라벨에 그대로 적는다(엔진이 톤을 쓰게 하는 일은 백엔드 몫) */}
+            <Field label="톤 (이름 평가 점수에만 쓰여요)" htmlFor={TONE_ID}>
               <Select
+                id={TONE_ID}
                 value={tone}
                 onChange={(v) => setTone(v as typeof tone)}
                 options={[
@@ -301,13 +332,9 @@ export default function DualNamePage() {
             </Field>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1.4fr 1fr",
-              gap: 12,
-            }}
-          >
+          {/* 휴대폰 폭(640px 미만)은 날짜·시각을 위아래로 — 예전 '1.4fr 1fr' 한 줄은 date(약 154px)·time(약 133px) 칸의 최소 폭이
+              375px 카드 안쪽 폭(263px)보다 커서 시각 칸이 카드 테두리를 12px 넘었다(fe-specialty-a/S1-15) */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.4fr_1fr]">
             {/* 출생일 — 백엔드 필수(없으면 400). 표시는 이 폼의 '(선택)'과 같은 꼴의 '(필수)'(/parent-based·/rare-surname 과 같은 말).
                 native required 는 달지 않는다 — 브라우저 말풍선('이 입력란을 작성하세요.')이 먼저 떠 handleSubmit 이 돌지 않고
                 아래 오류 상자의 '생년월일을 입력해 주세요.'가 나오지 않는다. 대신 aria-required, 빈 채로 제출해 그 오류가 떠 있는
@@ -326,15 +353,21 @@ export default function DualNamePage() {
                 ariaDescribedBy={birthDateMissing ? ERROR_ID : undefined}
               />
             </Field>
-            <Field label="출생 시각 (선택 · 시주 반영)">
-              <Input type="time" value={birthTime} onChange={setBirthTime} />
+            <Field label="출생 시각 (선택 · 시주 반영)" htmlFor={BIRTH_TIME_ID}>
+              <Input
+                id={BIRTH_TIME_ID}
+                type="time"
+                value={birthTime}
+                onChange={setBirthTime}
+              />
             </Field>
           </div>
 
           {/* 0건 — 예전에는 아무 말 없이 폼만 다시 보였다. 이중 이름은 모든 음절에 한자가 있어야 해서, 한글 소리에 이름에 쓸 만한
               인명용 한자가 없는 음절이 있으면(Emily·Amy 의 '에' — 2026-10-26 점수 정책 뒤 후보 0) 후보가 빠진다.
-              영어 이름이 없을 때 결과를 가르는 것은 성별(EnglishKoreanNameMap.GetByGender)뿐이다 — 톤·출생일은
-              DualNameEngine.GenerateDualNamesAsync 가 받기만 하고 쓰지 않아 '톤을 바꿔'라고 권하지 않는다 */}
+              영어 이름이 없을 때 후보가 있는지를 가르는 것은 성별(EnglishKoreanNameMap.GetByGender)뿐이다 — 톤은
+              DualNameEngine.GenerateDualNamesAsync 가 받기만 하고 쓰지 않고, 출생일·시각은 2026-10-28 부터 음절마다 고르는 한자(용신)에만
+              쓰여 후보가 있는지는 바꾸지 않는다(배정이 비는지는 불용·뜻 유무로만 갈린다). 그래서 '톤·출생일을 바꿔'라고 권하지 않는다 */}
           {candidates && candidates.length === 0 && !error && (
             <div
               role="status"
@@ -399,12 +432,13 @@ function Field({
   children,
 }: {
   label: string;
-  /** 칸 id — 주면 라벨이 칸의 접근 이름이 된다(출생일: aria-required·aria-invalid 를 읽을 때 칸 이름이 함께 나오게) */
-  htmlFor?: string;
+  /** 칸 id — 라벨이 칸의 접근 이름이 되고 라벨을 누르면 칸에 초점이 간다(출생일: aria-required·aria-invalid 를 읽을 때 칸 이름이 함께 나오게) */
+  htmlFor: string;
   children: React.ReactNode;
 }) {
+  // minWidth 0 — 격자 칸(기본 min-width: auto)이 date·time 입력의 최소 폭 아래로 줄지 못해 카드 밖으로 밀던 것을 막는다
   return (
-    <div>
+    <div style={{ minWidth: 0 }}>
       <label
         htmlFor={htmlFor}
         style={{
@@ -457,6 +491,7 @@ function Input({
       aria-describedby={ariaDescribedBy}
       style={{
         width: "100%",
+        minWidth: 0,
         boxSizing: "border-box",
         fontFamily: "var(--font-sans)",
         fontSize: 14,
@@ -476,20 +511,26 @@ function Input({
 }
 
 function Select({
+  id,
   value,
   onChange,
   options,
 }: {
+  /** 라벨 htmlFor 와 짝 — 없으면 화면 읽기 프로그램이 칸 이름을 읽지 못한다 */
+  id: string;
   value: string;
   onChange: (v: string) => void;
   options: { v: string; l: string }[];
 }) {
   return (
     <select
+      id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{
         width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
         fontFamily: "var(--font-sans)",
         fontSize: 14,
         color: "var(--color-text)",

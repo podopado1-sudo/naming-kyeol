@@ -18,15 +18,16 @@
  *   - '이 이름 평가하기'는 새 탭 — 이중 이름 결과는 페이지 React 상태에만 있어 같은 탭으로 갔다 돌아오면 후보를 잃는다
  *   - 휴대폰 폭(640px 미만)은 한국어·영어 블록을 세로로 쌓고 연결선을 숨긴다 (2026-10-28) — 3열 격자의 한국어 열이 375px 에서
  *     약 72px 라 음절 칩이 영어 이름·연결선을 덮었다(HEAD 부터, 넷째 열을 걷어낸 뒤에도 남음)
+ *   - 카드 선택(누르면 테두리·체크 표시) 제거 (2026-11-27) — 선택은 결과 화면 아래 '○○으로 결정하기 ✓' 단추만을 위한 상태였는데
+ *     그 단추에 동작이 없었다(저장·이동·안내 없음 — 쌍둥이 '이 세트로 결정하기'를 11/26 에 지운 것과 같은 방향).
+ *     연결 방식(mode) prop 도 뺐다 — 백엔드는 영한 음역 지도 하나뿐이고 화면에 방식을 고르는 길이 없어 늘 'phonetic' 이었다
  */
 "use client";
 
 import { useState } from "react";
 
-export type DualMode = "phonetic" | "semantic" | "free";
-
 export interface DualCandidate {
-  /** 응답 배열 순서(1부터) — 카드 선택·key 용 식별자. 품질 순위가 아니니 카드에 순위처럼 그리지 않는다 */
+  /** 응답 배열 순서(1부터) — key 용 식별자. 품질 순위가 아니니 카드에 순위처럼 그리지 않는다 */
   rank: number;
   englishName: string;
   koreanFull: string;
@@ -85,73 +86,32 @@ function SyllableRow({
 
 export function DualCard({
   cand,
-  selected,
-  onSelect,
-  mode,
   lastName,
   evaluateHref,
 }: {
   cand: DualCandidate;
-  selected: boolean;
-  onSelect: (rank: number) => void;
-  mode: DualMode;
   lastName: string;
   /** 이 후보를 /evaluate 로 — 성씨·이름·출생일·성별·톤을 담은 URL (DualResult 가 만든다) */
   evaluateHref: string;
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  const highlightSyllables = mode === "phonetic";
+  // 음역(소리 옮기기)이 이 화면의 유일한 연결 방식이라 음절 칩은 늘 강조한다(예전 mode === "phonetic" 일 때와 같은 모양)
+  const highlightSyllables = true;
 
   return (
+    // 인쇄할 때 카드 한 장이 쪽 경계에서 갈리지 않게(print:break-inside-avoid)
     <div
+      className="print:break-inside-avoid"
       style={{
         background: "var(--color-surface)",
         borderRadius: "var(--radius-xl)",
-        border: selected
-          ? "2px solid var(--color-teal)"
-          : "1px solid var(--color-border)",
-        boxShadow: selected ? "var(--shadow-md)" : "var(--shadow-sm)",
+        border: "1px solid var(--color-border)",
+        boxShadow: "var(--shadow-sm)",
         padding: "22px 24px",
         position: "relative",
-        transition: "all 200ms cubic-bezier(.2,.6,.2,1)",
-        cursor: "pointer",
       }}
-      onClick={() => onSelect(cand.rank)}
     >
-      {selected && (
-        <div
-          style={{
-            position: "absolute",
-            top: 14,
-            right: 16,
-            width: 22,
-            height: 22,
-            borderRadius: "50%",
-            background: "var(--color-teal)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-          }}
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path
-              d="M2.5 6L5 8.5L9.5 3.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-      )}
-
       {/* 휴대폰 폭(640px 미만)은 한국어 → 영어 세로 쌓기, 연결선 숨김. 3열 격자는 sm 부터 — 한 줄 375px 에서 한국어 열이
           약 72px 라 32px 음절 칩 줄(김+2음절 129px·3음절 약 172px·4음절 약 206px, 남궁+3음절 약 194px)이 연결선·영어 이름을
           덮고 한자 뜻('아리따울 나')이 베이지 상자를 넘쳤다(김올리비아·김다이아나·김조나단·남궁소피아 실측, 2026-10-28).
@@ -307,10 +267,9 @@ export function DualCard({
           />
         </div>
 
-        {/* Right: English */}
-        {/* 3열일 때 위 14px(sm:pt-3.5) — 선택 표시(오른쪽 위 22px 원, 카드 위에서 14px)의 아래에서 글자가 시작하게. 긴 이름(Catherine)이
-            좁은 폭에서 열을 넘쳐도 원과 겹치지 않는다. 세로로 쌓으면 한국어 블록 아래라 원과 만나지 않아 뺀다(격자 gap 20 만) */}
-        <div className="sm:pt-3.5" style={{ minWidth: 0 }}>
+        {/* Right: English — 예전 3열 위 여백 14px(sm:pt-3.5)는 카드 선택 표시(오른쪽 위 22px 원)를 피하던 몫이라 선택을 걷어내며 뺐다(2026-11-27).
+            긴 이름(Catherine)은 줄바꿈 가능한 곳에서 넘기고(overflowWrap) 열 밖으로 나가지 않게 한다 */}
+        <div style={{ minWidth: 0, overflowWrap: "anywhere" }}>
           <div
             style={{
               fontFamily: "Inter",
@@ -360,13 +319,14 @@ export function DualCard({
         {/* 일반 <a> — /evaluate 정적 라우트의 클라이언트 라우터 캐시가 이전 ?name=... 을 재사용하는 잔상 버그 우회
             (favorites·search 와 같은 이유). 새 탭으로 연다 — 결과가 이 페이지 React 상태에만 있어 같은 탭으로 갔다 돌아오면
             후보를 잃는다. ↗ 는 새 탭 표시(장식 — aria-hidden, 새 탭은 aria-label 끝 '(새 탭)'이 알린다).
-            aria-label 은 보이는 글자로 시작해(WCAG 2.5.3) 후보 N개의 링크를 스크린리더 목록에서 가른다 */}
+            aria-label 은 보이는 글자로 시작해(WCAG 2.5.3) 후보 N개의 링크를 스크린리더 목록에서 가른다.
+            인쇄에서는 숨긴다(data-hide-print — 종이에서 누를 수 없는 조작) */}
         <a
           href={evaluateHref}
           target="_blank"
           rel="noopener"
           aria-label={`이 이름 평가하기: ${lastName}${cand.koreanFull} (새 탭)`}
-          onClick={(e) => e.stopPropagation()}
+          data-hide-print
           style={{
             fontSize: 12,
             fontWeight: 500,
@@ -418,10 +378,7 @@ export function DualCard({
         >
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(!expanded);
-            }}
+            onClick={() => setExpanded(!expanded)}
             style={{
               appearance: "none",
               background: "transparent",
