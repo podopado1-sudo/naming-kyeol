@@ -915,7 +915,8 @@
      이제 인쇄된다 — 그 안의 단추·링크는 data-hide-print 로 숨긴다(여러 묶음 공통 약속).
    - 막대·점수 타일·오행 칩·희귀도 칸은 배경색으로만 그린다. 브라우저 인쇄 기본값('배경 그래픽' 꺼짐)에서는 막대가 하나도 찍히지 않고
      종합 타일(차콜 바탕 + 종이색 글자)은 바탕이 빠져 연회색 숫자만 남았다 → print-color-adjust: exact 로 화면 그대로 찍는다.
-     그만큼 바탕이 찍히니 쪽 바탕(html·body)은 흰색, 장식(먹 번짐·종이 결)은 뺀다.
+     그만큼 바탕이 찍히니 쪽 바탕(html·body)은 흰색, 장식(먹 번짐·종이 결)은 뺀다. 링크는 글자를 둘레 색으로 덮으므로 링크 자신의
+     바탕도 지운다(짙은 단추형 링크가 검은 상자에 검은 글자로 찍히지 않게 — 아래 a 규칙).
    - 쪽 나눔: section 마다 break-inside: avoid 라 큰 묶음이 통째로 다음 쪽으로 밀려 /evaluate 가 빈 자리 많은 5쪽, /ohaeng 은 1쪽에
      폼만 찍혔다(K5 · 11/26 EX-6). 큰 묶음은 쪽 경계에서 나뉘게 두고, 점수 행·타일 줄·짧은 카드만 한 쪽에 둔다.
      (옛 .breakdown-panel 은 어디에도 없는 클래스였다 — 실제 패널은 .eval-breakdown 이고, 수백 px 라 통째로 묶지 않는다)
@@ -972,10 +973,14 @@
     background: transparent !important;
     border-color: #ddd !important;
   }
-  /* 링크 색은 검정으로 (잉크 절약) */
+  /* 링크 — 글자는 둘레 글자색(잉크 절약), 링크 자신의 바탕은 지운다. 위 exact 로 짙은 바탕 단추형 링크(bg-navy·인라인
+     var(--color-navy) + 흰 글자 — /hanja·/name·/guide·/method 의 '이름 추천받기 →' 등)의 바탕이 찍히는데 글자는 inherit 로
+     검정이 되어 검은 상자에 검은 글자가 찍혔다(사용자가 '배경 그래픽'을 켜면 exact 전에도 그랬다). 링크 바탕은 꾸밈뿐이다 —
+     막대·타일·칩은 링크가 아니고, 링크 안 자식의 바탕은 그대로 찍힌다 */
   a {
     color: inherit !important;
     text-decoration: none !important;
+    background: none !important;
   }
   /* 쪽 나눔 — 제목은 다음 내용과 같은 쪽에, 짧은 블록만 쪼개지 않는다(section 은 쪼개질 수 있다) */
   h1,

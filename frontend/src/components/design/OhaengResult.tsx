@@ -204,9 +204,11 @@ export function OhaengResult({
             <p style={{ ...bodyText, marginTop: 12 }}>
               {saju.yongshin.strengthDescription} {saju.yongshin.yongshinReason}
             </p>
+            {/* 둘째 문장이 가리키는 설명 글(page.tsx 의 OhaengGuide)은 결과가 있는 인쇄에서 빠진다 — 같은 표지로 함께 뺀다
+                (:has() 를 모르는 브라우저는 설명 글도 이 문장도 찍는다) */}
             <p style={{ ...smallNote, marginTop: 10 }}>
-              용신은 억부·조후 가운데 무엇을 앞세우느냐에 따라 달라져, 다른 곳에서 본 용신과 다를 수 있어요.
-              ‘없는 오행’과 용신이 어떻게 다른지는 아래 설명에 적었어요.
+              용신은 억부·조후 가운데 무엇을 앞세우느냐에 따라 달라져, 다른 곳에서 본 용신과 다를 수 있어요.{" "}
+              <span data-hide-print-with-result>‘없는 오행’과 용신이 어떻게 다른지는 아래 설명에 적었어요.</span>
             </p>
           </div>
         )}
@@ -218,7 +220,9 @@ export function OhaengResult({
             <p style={smallNote}>
               이 사이트가 이름 글자로 꼽아 둔 한자(사용 통계는 아닙니다) 가운데 부수 기준 자원오행이 그 오행인 글자를 오행마다
               12자까지 골랐습니다. 성별은 보지 않았고,
-              이 글자를 써야 한다는 뜻은 아닙니다. 독음을 누르면 한자 사전에서 같은 독음의 글자를 볼 수 있어요.
+              이 글자를 써야 한다는 뜻은 아닙니다.{" "}
+              {/* 종이에서는 누를 수 없는 조작 안내 — 인쇄에서 뺀다 */}
+              <span data-hide-print>독음을 누르면 한자 사전에서 같은 독음의 글자를 볼 수 있어요.</span>
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 22, marginTop: 18 }}>
               {data.elementHanja.map((g) => (

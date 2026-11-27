@@ -173,6 +173,25 @@ test("배경색으로만 그린 막대·타일이 '배경 그래픽' 꺼짐에�
   assert.match(read("src", "components", "design", "CompanyResult.tsx"), /className="[^"]*\brounded-full\b[^"]*\bbg-surface-2\b[^"]*"/);
 });
 
+test("링크 — 글자를 둘레 색(inherit)으로 덮는 규칙은 링크 자신의 바탕도 지운다(짙은 단추형 링크가 검은 상자에 검은 글자로 찍히지 않게)", () => {
+  // 검토 지적(11-27): * 의 exact 로 bg-navy·인라인 var(--color-navy)(#14120f) 링크 바탕이 찍히는데, a { color: inherit } 가 흰 글자를
+  // 둘레 글자색(#000·#14120f)으로 덮어 '이름 추천받기 →' 같은 CTA 가 검은 상자만 남았다. 링크를 exact 에서 빼도 사용자가 '배경 그래픽'을
+  // 켜면 같은 일이 나므로 바탕 지우기가 답이다 — 막대·타일·칩은 링크가 아니고, 링크 안 자식의 바탕은 그대로 찍힌다.
+  const linkSel = /(^|[\s>+~(])a(?![\w-])/;
+  const recolors = RULES.filter((r) => r.selectors.some((s) => linkSel.test(s)) && /(^|[\s;])color:\s*inherit/.test(r.body));
+  assert.ok(rulesWith("a").some((r) => recolors.includes(r)), "a { color: inherit } 규칙을 읽지 못함 — 파서를 볼 것");
+  for (const r of recolors) {
+    assert.match(r.body, /(^|[\s;])background:\s*none\s*!important/, `${r.selectors.join(", ")} — 글자색만 덮고 바탕을 남긴다`);
+  }
+  // 링크 바탕을 다시 칠하는 인쇄 규칙이 없다
+  for (const r of RULES) {
+    if (recolors.includes(r) || !r.selectors.some((s) => linkSel.test(s))) continue;
+    assert.doesNotMatch(r.body, /background(-color)?:\s*(?!none|transparent)/, r.selectors.join(", "));
+  }
+  // exact 는 * 전체에 그대로(막대·타일은 링크가 아니라 영향 없음)
+  assert.ok(declares("*", /(^|[\s;])print-color-adjust:\s*exact/));
+});
+
 // ─── K5 — 쪽 나눔 ───────────────────────────────────────────────
 
 test("쪽 나눔 — section 을 통째로 묶지 않고 점수 행·타일 줄·짧은 카드만 묶는다(K5)", () => {
@@ -238,4 +257,22 @@ test("/ohaeng 인쇄 — '맞춰 보기'·그 안내·다음 단계 링크 카�
   assert.match(result, /<div style=\{\{ \.\.\.card, padding: "22px 22px" \}\}>\s*<h3 style=\{cardTitle\}>오행별 이름 한자 예<\/h3>/);
   assert.match(result, /function HanjaItem[\s\S]*?<li\s+className="print:break-inside-avoid"/);
   assert.equal([...result.matchAll(/print:break-inside-avoid/g)].length, 4);
+});
+
+test("/ohaeng 인쇄 — 종이에 없는 것을 가리키는 문장('아래 설명'·'독음을 누르면')은 빼고, 앞 문장은 남긴다", () => {
+  const result = stripJsComments(read("src", "components", "design", "OhaengResult.tsx"));
+  // '아래 설명'이 가리키는 설명 글(page.tsx 의 OhaengGuide)과 같은 표지 — 설명 글이 빠질 때만 함께 빠진다(:has() 를 모르면 둘 다 찍힌다)
+  assert.match(
+    result,
+    /용신은 억부·조후 가운데 무엇을 앞세우느냐에 따라 달라져, 다른 곳에서 본 용신과 다를 수 있어요\.\{" "\}\s*<span data-hide-print-with-result>‘없는 오행’과 용신이 어떻게 다른지는 아래 설명에 적었어요\.<\/span>\s*<\/p>/,
+  );
+  assert.match(read("src", "app", "ohaeng", "page.tsx"), /<div data-hide-print-with-result>\s*<OhaengGuide \/>\s*<\/div>/);
+  // 종이에서는 누를 수 없는 조작 안내
+  assert.match(
+    result,
+    /이 글자를 써야 한다는 뜻은 아닙니다\.\{" "\}\s*<span data-hide-print>독음을 누르면 한자 사전에서 같은 독음의 글자를 볼 수 있어요\.<\/span>\s*<\/p>/,
+  );
+  // 감싸지 않은 채 남은 같은 문장이 없다
+  assert.equal([...result.matchAll(/아래 설명에 적었어요/g)].length, 1);
+  assert.equal([...result.matchAll(/독음을 누르면/g)].length, 1);
 });
