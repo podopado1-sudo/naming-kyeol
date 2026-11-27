@@ -7,6 +7,7 @@ import { OhaengRelationChip } from "@/components/design/OhaengRelationChip";
 import { Badge } from "@/components/ui/badge";
 import { HanjaGradeBadge } from "@/components/hanja/HanjaBadges";
 import { ScoreBreakdownCard } from "@/components/results/ScoreBreakdownCard";
+import { adsEnabled, isAdPage } from "@/lib/ad-scope";
 import { evaluateComboHref } from "@/lib/hanja-pick";
 import { ELEMENT_KO, getHanja, getReadingChars } from "@/lib/hanja-seo";
 import { getInsight, type Insight } from "@/lib/insights";
@@ -84,6 +85,41 @@ function nameKind(rec: NameSeoRecord): NameKind {
   return "hanja";
 }
 
+/** 그 음절로 읽는 한자가 사전에 있는가 — '음절별 한자 전체 보기'에서 /hanja/[독음] 링크가 되는 음절 */
+function hasSyllableHanja(name: string): boolean {
+  return syllablesOf(name).some((syl) => getReadingChars(syl) !== undefined);
+}
+
+/**
+ * 이 쪽에 한자가 한 글자라도 보이는가 — 한자 조합이 있거나 음절 한자 링크가 하나라도 있으면 참.
+ * 둘 다 없는 쪽(바른·으뜸·푸른 — 2026-11-27 공개 이름 기준)은 검색 설명에서 '이름에 쓰는 한자를 확인하세요'를 약속하지 않는다
+ */
+function showsAnyHanja(name: string, rec: NameSeoRecord): boolean {
+  return !!rec.combos?.length || hasSyllableHanja(name);
+}
+
+/**
+ * 뜻도 서사도 없는 이름(외래 이름 밖 — 나나·라라)의 '이름 뜻' 아래 한 줄. 제목 바로 아래가 비어 통계가 왔다(2026-11-27).
+ * 뒷문장은 이 쪽에 실제로 있는 것만 가리킨다(조합 → 한자 조합, 음절 한자 링크 → '음절별 한자 전체 보기')
+ */
+function noMeanNote(kind: NameKind, hasCombos: boolean, syllableHanja: boolean): string {
+  const base = "이 이름은 뜻풀이를 따로 적지 않았습니다.";
+  if (kind !== "hanja") return base;
+  if (hasCombos) return `${base} 한자에 따라 뜻이 달라지니 아래 한자 조합을 함께 보세요.`;
+  if (syllableHanja) return `${base} 음절마다 그 소리로 읽는 한자는 아래 ‘음절별 한자 전체 보기’에서 볼 수 있습니다.`;
+  return base;
+}
+
+/**
+ * 광고 경계를 넘는 링크는 미리 받지 않는다(2026-11-27). 광고를 켠 빌드에서는 광고 화면(lib/ad-scope.ts isAdPage)과 광고 밖 화면
+ * 사이의 이동을 AdsenseNavigationGuard 가 새 문서로 열어, next/link 가 미리 받아 둔 RSC 를 쓰지 않는다. 광고를 켜지 않은 빌드(로컬)는
+ * 가드가 아무 일도 하지 않으니 지금 동작(기본 미리 받기) 그대로 둔다(undefined). from·href 는 같은 사이트 경로(쿼리·해시는 뗀다).
+ * 같은 함수가 app/hanja/page.tsx·app/name/page.tsx·app/hanja/[slug]/page.tsx 에 있다 — tests/fix1127-static-seo.test.mjs 가 네 벌이 글자 그대로 같은지 본다.
+ */
+function adBoundaryPrefetch(from: string, href: string): false | undefined {
+  return adsEnabled() && isAdPage(from) !== isAdPage(href.split(/[?#]/)[0]) ? false : undefined;
+}
+
 /** 외래 이름(fx)인데 뜻이 없을 때 '이름 뜻' 아래 한 줄 — 어원이 갈리거나 원어 이름이 없어 비운 이름(S7 데이터 단계) */
 const FOREIGN_NO_MEAN_NOTE =
   "한자 없이 한글로 쓰는 이름이라 한자 뜻이 따로 없습니다. 어원이 분명하지 않아 뜻풀이는 적지 않았습니다.";
@@ -119,6 +155,9 @@ export async function generateMetadata({
   // 외래 이름(fx)의 뜻은 어원 문장('히브리어 야곱에서 이어진'·'셰익스피어 희곡에서 처음 쓰인')이라
   // "'…' 뜻을 담습니다"가 어색하다 — "…이름입니다"로 쓰고, 한자 조합이 없으니 '한자를 확인하세요'도 뺀다
   const foreign = nameKind(rec) === "foreign";
+  // 쪽에 한자가 한 글자도 없는 이름(조합도 음절 한자 링크도 없다 — 바른·으뜸·푸른)도 '한자를 확인하세요'를 뺀다(2026-11-27).
+  // 그 밖의 쪽 설명은 그대로다(조합이 없어도 음절 한자 링크가 있으면 — 겨울 '울' 한자 7자 — 한자를 볼 수 있다)
+  const noHanjaPart = foreign || !showsAnyHanja(name, rec);
   const meanPart = !rec.mean
     ? ""
     : foreign
@@ -127,7 +166,7 @@ export async function generateMetadata({
   const scorePart = rec.sc ? ` 발음·미학 점수 ${rec.sc.t}점.` : "";
   const title = `${name} 이름 뜻 — 인기 순위·한자·의미`;
   const description = `${name}: ${GENDER_LABEL[gender]}.${meanPart} 출생신고 통계 기준 인기 순위와 남녀 비율${
-    foreign ? "을" : ", 이름에 쓰는 한자를"
+    noHanjaPart ? "을" : ", 이름에 쓰는 한자를"
   } 확인하세요.${scorePart}`;
   const canonical = `/name/${encodeURIComponent(name)}`;
   return {
@@ -146,15 +185,16 @@ export async function generateMetadata({
 // UI 조각
 // ---------------------------------------------------------------
 
-function Breadcrumb({ name }: { name: string }) {
+/** from = 이 쪽의 경로(이름 상세 — 광고 밖 화면). 홈·사전 인덱스(광고 화면)로 가는 두 링크가 경계를 넘는다 */
+function Breadcrumb({ name, from }: { name: string; from: string }) {
   return (
     <nav aria-label="breadcrumb" className="mb-8 text-sm text-text-2">
-      <Link href="/" className="text-teal-700 no-underline hover:underline">
+      <Link href="/" prefetch={adBoundaryPrefetch(from, "/")} className="text-teal-700 no-underline hover:underline">
         홈
       </Link>
       <span className="mx-2 text-paper-line">/</span>
       {/* 부모는 도구(/search)가 아니라 사전 인덱스 — JSON-LD BreadcrumbList와 같게 (2026-10-21) */}
-      <Link href="/name" className="text-teal-700 no-underline hover:underline">
+      <Link href="/name" prefetch={adBoundaryPrefetch(from, "/name")} className="text-teal-700 no-underline hover:underline">
         이름 뜻 사전
       </Link>
       <span className="mx-2 text-paper-line">/</span>
@@ -369,9 +409,12 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
   const related = relatedInsights(name, rec);
   const kind = nameKind(rec);
   const hasCombos = !!rec.combos?.length;
+  /** 이 쪽의 경로 — 광고 밖 화면(링크의 미리 받기를 정할 때 쓴다) */
+  const here = `/name/${encodeURIComponent(name)}`;
 
-  // 음절별 /hanja/[독음] 링크 (해당 음절이 한자 독음으로 존재할 때만)
-  const syllableLinks = syllables.map((syl) => ({
+  // 음절별 /hanja/[독음] 링크 (해당 음절이 한자 독음으로 존재할 때만). 같은 음절이 두 번 든 이름(나나·라라·아리아)은 그 음절을 한 번만 —
+  // 같은 칩이 두 번 나오고 React key 가 겹쳤다(2026-11-27)
+  const syllableLinks = [...new Set(syllables)].map((syl) => ({
     syl,
     chars: getReadingChars(syl),
   }));
@@ -380,7 +423,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
     <>
       <Header />
       <main className="mx-auto max-w-3xl px-6 pb-20 pt-16">
-        <Breadcrumb name={name} />
+        <Breadcrumb name={name} from={here} />
 
         {/* Hero */}
         <div className="mb-10">
@@ -410,6 +453,12 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
           )}
           {!rec.mean && kind === "foreign" && (
             <p className="mt-2 text-sm text-text-2">{FOREIGN_NO_MEAN_NOTE}</p>
+          )}
+          {/* 뜻도 서사도 없는 이름(나나·라라)은 '이름 뜻' 제목 바로 아래에 아무 말 없이 통계가 왔다(2026-11-27) — 외래 이름은 위 문장 */}
+          {!rec.mean && !rec.story && kind !== "foreign" && (
+            <p className="mt-2 text-sm text-text-2">
+              {noMeanNote(kind, hasCombos, hasSyllableHanja(name))}
+            </p>
           )}
           {rec.story && kind !== "foreign" && (
             <p className="mt-3 border-l-2 border-gold pl-3 text-[15px] leading-relaxed text-navy">
@@ -610,6 +659,7 @@ function NamePage({ name, rec }: { name: string; rec: NameSeoRecord }) {
                 <li key={insight.slug}>
                   <Link
                     href={`/guide/${insight.slug}`}
+                    prefetch={adBoundaryPrefetch(here, `/guide/${insight.slug}`)}
                     className="block rounded-xl border border-paper-line bg-paper-card px-4 py-3 no-underline transition hover:border-teal"
                   >
                     <span className="block text-sm font-semibold text-navy">

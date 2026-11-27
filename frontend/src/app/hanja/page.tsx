@@ -13,13 +13,27 @@ import {
   getReadingChars,
 } from "@/lib/hanja-seo";
 import { AdsenseLoader } from "@/components/AdsenseLoader";
+import { adsEnabled, isAdPage } from "@/lib/ad-scope";
 
 /**
  * /hanja — 인명용 한자 사전 인덱스.
- * 독음 767개를 초성 ㄱ~ㅎ 그룹으로 탐색. 전부 정적 생성.
+ * 독음 489개를 초성 ㄱ~ㅎ 그룹으로 탐색. 전부 정적 생성.
  */
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://namingkyeol.com";
+
+/** 이 화면의 경로 — 광고 화면(lib/ad-scope.ts). 여기서 가는 독음 쪽·도구 화면은 모두 광고 밖이다 */
+const PAGE_PATH = "/hanja";
+
+/**
+ * 광고 경계를 넘는 링크는 미리 받지 않는다(2026-11-27). 광고를 켠 빌드에서는 광고 화면(lib/ad-scope.ts isAdPage)과 광고 밖 화면
+ * 사이의 이동을 AdsenseNavigationGuard 가 새 문서로 열어, next/link 가 미리 받아 둔 RSC 를 쓰지 않는다. 광고를 켜지 않은 빌드(로컬)는
+ * 가드가 아무 일도 하지 않으니 지금 동작(기본 미리 받기) 그대로 둔다(undefined). from·href 는 같은 사이트 경로(쿼리·해시는 뗀다).
+ * 같은 함수가 app/name/page.tsx·app/hanja/[slug]/page.tsx·app/name/[slug]/page.tsx 에 있다 — tests/fix1127-static-seo.test.mjs 가 네 벌이 글자 그대로 같은지 본다.
+ */
+function adBoundaryPrefetch(from: string, href: string): false | undefined {
+  return adsEnabled() && isAdPage(from) !== isAdPage(href.split(/[?#]/)[0]) ? false : undefined;
+}
 
 export const metadata: Metadata = {
   // 제목은 바꾸지 않는다(계획 §7-1). 설명의 '오행 검수 등급'은 사실과 달라(옛 값은 뜻 기반 자동 판정) 고쳤다(계획 §4-2)
@@ -44,8 +58,13 @@ const CONSONANT_ORDER = [
 export default function HanjaIndexPage() {
   const groups = getConsonantGroups();
   const popular = getPopularReadings(12);
-  const totalChars = getAllDetailChars().length;
-  const totalReadings = getAllReadings().length;
+  const allReadings = getAllReadings();
+  const totalReadings = allReadings.length;
+  // 글자 수는 독음 쪽들이 싣는 글자(getReadingChars)를 겹치지 않게 센 값 — 사전 수록 9,105자(2026-11-27). 아래 '글자가 많은 독음'의
+  // 숫자와 독음 쪽 머리말도 이 기준이다. 옛 머리말은 상세 쪽이 있는 글자(뜻·획수가 모두 있는 9,016자)를 총수로 적어 같은 화면 안에서도
+  // 기준이 갈렸다(/about·/method 는 9,105자). 상세 쪽 수는 기준을 밝혀 따로 적는다
+  const totalChars = new Set(allReadings.flatMap((reading) => getReadingChars(reading) ?? [])).size;
+  const detailChars = getAllDetailChars().length;
 
   return (
     <>
@@ -62,7 +81,8 @@ export default function HanjaIndexPage() {
         <p className="mb-8 max-w-2xl text-[15px] leading-relaxed text-text-2">
           이름에 쓰는 한자 {totalChars.toLocaleString()}자를 독음{" "}
           {totalReadings}개로 정리했습니다. 뜻·획수와 함께 부수 기준 자원오행과 그
-          판정 근거(확정·이견)를 표시합니다.
+          판정 근거(확정·이견)를 표시하며, 뜻과 획수가 모두 있는{" "}
+          {detailChars.toLocaleString()}자는 글자마다 상세 쪽을 두었습니다.
         </p>
 
         {/* 자원오행 등급 읽는 법 — 뱃지 문구는 components/hanja/HanjaBadges.tsx 와 같다 */}
@@ -116,6 +136,7 @@ export default function HanjaIndexPage() {
               <Link
                 key={reading}
                 href={`/hanja/${encodeURIComponent(reading)}`}
+                prefetch={adBoundaryPrefetch(PAGE_PATH, `/hanja/${encodeURIComponent(reading)}`)}
                 className="rounded-full border border-paper-line bg-paper-card px-4 py-2 text-sm font-medium text-navy no-underline transition hover:border-teal"
               >
                 {reading}
@@ -151,6 +172,7 @@ export default function HanjaIndexPage() {
                       <Link
                         key={reading}
                         href={`/hanja/${encodeURIComponent(reading)}`}
+                        prefetch={adBoundaryPrefetch(PAGE_PATH, `/hanja/${encodeURIComponent(reading)}`)}
                         className="rounded-md border border-paper-line bg-paper-card px-2.5 py-1 text-sm text-navy no-underline transition hover:border-teal"
                       >
                         {reading}
@@ -171,6 +193,7 @@ export default function HanjaIndexPage() {
           </p>
           <Link
             href="/required-char"
+            prefetch={adBoundaryPrefetch(PAGE_PATH, "/required-char")}
             className="inline-block rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-navy-600"
           >
             필수 글자로 이름 추천받기 →

@@ -34,6 +34,7 @@ import {
   splitAvoidedChars,
   standardCharOf,
 } from "@/lib/hanja-seo";
+import { adsEnabled, isAdPage } from "@/lib/ad-scope";
 import { evaluatePickHref } from "@/lib/hanja-pick";
 import { josa } from "@/lib/josa";
 import { isNameUsableRecord, noHanjaSyllableNote } from "@/lib/no-hanja";
@@ -163,14 +164,29 @@ export async function generateMetadata({
 // 공통 UI 조각
 // ---------------------------------------------------------------
 
-function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
+/**
+ * 광고 경계를 넘는 링크는 미리 받지 않는다(2026-11-27). 광고를 켠 빌드에서는 광고 화면(lib/ad-scope.ts isAdPage)과 광고 밖 화면
+ * 사이의 이동을 AdsenseNavigationGuard 가 새 문서로 열어, next/link 가 미리 받아 둔 RSC 를 쓰지 않는다. 광고를 켜지 않은 빌드(로컬)는
+ * 가드가 아무 일도 하지 않으니 지금 동작(기본 미리 받기) 그대로 둔다(undefined). from·href 는 같은 사이트 경로(쿼리·해시는 뗀다).
+ * 같은 함수가 app/hanja/page.tsx·app/name/page.tsx·app/name/[slug]/page.tsx 에 있다 — tests/fix1127-static-seo.test.mjs 가 네 벌이 글자 그대로 같은지 본다.
+ */
+function adBoundaryPrefetch(from: string, href: string): false | undefined {
+  return adsEnabled() && isAdPage(from) !== isAdPage(href.split(/[?#]/)[0]) ? false : undefined;
+}
+
+/** from = 이 쪽의 경로(독음·글자 상세 — 광고 밖 화면). 사전 인덱스(/hanja — 광고 화면)로 가는 첫 링크가 경계를 넘는다 */
+function Breadcrumb({ from, items }: { from: string; items: { label: string; href?: string }[] }) {
   return (
     <nav aria-label="breadcrumb" className="mb-8 text-sm text-text-2">
       {items.map((item, i) => (
         <span key={item.label}>
           {i > 0 && <span className="mx-2 text-paper-line">/</span>}
           {item.href ? (
-            <Link href={item.href} className="text-teal-700 no-underline hover:underline">
+            <Link
+              href={item.href}
+              prefetch={adBoundaryPrefetch(from, item.href)}
+              className="text-teal-700 no-underline hover:underline"
+            >
               {item.label}
             </Link>
           ) : (
@@ -276,6 +292,7 @@ function ReadingPage({ reading, chars }: { reading: string; chars: string[] }) {
       <Header />
       <main className="mx-auto max-w-4xl px-6 pb-20 pt-16">
         <Breadcrumb
+          from={`/hanja/${encodeURIComponent(reading)}`}
           items={[
             { label: "한자 사전", href: "/hanja" },
             { label: `'${reading}' 한자` },
@@ -324,8 +341,10 @@ function ReadingPage({ reading, chars }: { reading: string; chars: string[] }) {
           )}
         </p>
 
+        {/* 글자 카드 격자 — 휴대폰 폭(640px 미만)에도 열을 정한다(grid-cols-1 = repeat(1, minmax(0, 1fr))). 열 정의가 없으면 auto 열 하나가
+            되어 훈이 긴 카드(truncate — 줄바꿈 없음)의 글 폭이 열 폭이 됐다: 375 폭 /hanja/돈 문서 폭 496px(2026-11-27). 아래 세 격자도 같다 */}
         {usable.length > 0 && (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {usable.map((char) => (
               <HanjaCharCard key={char} char={char} record={getHanja(char)!} />
             ))}
@@ -345,7 +364,7 @@ function ReadingPage({ reading, chars }: { reading: string; chars: string[] }) {
               글자입니다. 대법원 인명용 한자 목록에 있는지와는 별개인 이 사이트의 기준이며, 글자의
               뜻과 획수는 그대로 볼 수 있습니다.
             </p>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {avoided.map((char) => (
                 <HanjaCharCard
                   key={char}
@@ -453,6 +472,8 @@ function HanjaLink({ char }: { char: string }) {
 
 function CharPage({ char }: { char: string }) {
   const record = getHanja(char)!;
+  /** 이 쪽의 경로 — 광고 밖 화면(링크의 미리 받기를 정할 때 쓴다) */
+  const here = `/hanja/${encodeURIComponent(char)}`;
   const meaningParts = record.m!.split("/");
   const primaryReading = record.r[0];
   // 같은 음 목록도 이름에 쓰는 글자 먼저, 피하는 글자(nf)는 뒤로
@@ -573,6 +594,7 @@ function CharPage({ char }: { char: string }) {
       <Header />
       <main className="mx-auto max-w-3xl px-6 pb-20 pt-16">
         <Breadcrumb
+          from={here}
           items={[
             { label: "한자 사전", href: "/hanja" },
             {
@@ -666,6 +688,7 @@ function CharPage({ char }: { char: string }) {
               {/* 판정 순서·등급을 설명하는 절로 바로 간다 — 앵커 id 는 method/page.tsx '04 · 자원오행 기준' (2026-10-23 운영 검증 CONTENT-4) */}
               <Link
                 href="/method#resource-element"
+                prefetch={adBoundaryPrefetch(here, "/method#resource-element")}
                 className="text-teal-700 no-underline hover:underline"
               >
                 작명 원리 보기
@@ -716,7 +739,7 @@ function CharPage({ char }: { char: string }) {
               )}{" "}
               글자와 조합하면 자원오행 흐름이 자연스럽습니다.
             </p>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {[generates, generatedBy]
                 .filter((e): e is string => Boolean(e))
                 .flatMap((e) => getRepresentativeChars(e, 3))
@@ -733,7 +756,7 @@ function CharPage({ char }: { char: string }) {
             <h2 className="mb-4 text-base font-semibold text-navy">
               같은 음 &lsquo;{primaryReading}&rsquo;의 다른 한자
             </h2>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {sameReading.slice(0, 12).map((c) => (
                 <HanjaCharCard key={c} char={c} record={getHanja(c)!} />
               ))}

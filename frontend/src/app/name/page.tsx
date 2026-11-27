@@ -11,6 +11,7 @@ import {
   getPublishedDripNames,
 } from "@/lib/name-seo";
 import { AdsenseLoader } from "@/components/AdsenseLoader";
+import { adsEnabled, isAdPage } from "@/lib/ad-scope";
 
 /**
  * /name — 이름 뜻 사전 인덱스.
@@ -19,6 +20,19 @@ import { AdsenseLoader } from "@/components/AdsenseLoader";
  */
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://namingkyeol.com";
+
+/** 이 화면의 경로 — 광고 화면(lib/ad-scope.ts). 여기서 가는 이름 상세·도구 화면은 모두 광고 밖이다 */
+const PAGE_PATH = "/name";
+
+/**
+ * 광고 경계를 넘는 링크는 미리 받지 않는다(2026-11-27). 광고를 켠 빌드에서는 광고 화면(lib/ad-scope.ts isAdPage)과 광고 밖 화면
+ * 사이의 이동을 AdsenseNavigationGuard 가 새 문서로 열어, next/link 가 미리 받아 둔 RSC 를 쓰지 않는다. 광고를 켜지 않은 빌드(로컬)는
+ * 가드가 아무 일도 하지 않으니 지금 동작(기본 미리 받기) 그대로 둔다(undefined). from·href 는 같은 사이트 경로(쿼리·해시는 뗀다).
+ * 같은 함수가 app/hanja/page.tsx·app/hanja/[slug]/page.tsx·app/name/[slug]/page.tsx 에 있다 — tests/fix1127-static-seo.test.mjs 가 네 벌이 글자 그대로 같은지 본다.
+ */
+function adBoundaryPrefetch(from: string, href: string): false | undefined {
+  return adsEnabled() && isAdPage(from) !== isAdPage(href.split(/[?#]/)[0]) ? false : undefined;
+}
 
 const INDEX_LIMIT = 1000;
 
@@ -84,6 +98,7 @@ export default function NameIndexPage() {
               <Link
                 key={name}
                 href={`/name/${encodeURIComponent(name)}`}
+                prefetch={adBoundaryPrefetch(PAGE_PATH, `/name/${encodeURIComponent(name)}`)}
                 className="rounded-full border border-paper-line bg-paper-card px-4 py-2 text-sm font-medium text-navy no-underline transition hover:border-teal"
               >
                 {name}
@@ -110,6 +125,7 @@ export default function NameIndexPage() {
                 <Link
                   key={name}
                   href={`/name/${encodeURIComponent(name)}`}
+                  prefetch={adBoundaryPrefetch(PAGE_PATH, `/name/${encodeURIComponent(name)}`)}
                   className="rounded-md border border-paper-line bg-paper-card px-2.5 py-1 text-sm text-navy no-underline transition hover:border-teal"
                 >
                   {name}
@@ -143,6 +159,7 @@ export default function NameIndexPage() {
                       <Link
                         key={name}
                         href={`/name/${encodeURIComponent(name)}`}
+                        prefetch={adBoundaryPrefetch(PAGE_PATH, `/name/${encodeURIComponent(name)}`)}
                         className="rounded-md border border-paper-line bg-paper-card px-2.5 py-1 text-sm text-navy no-underline transition hover:border-teal"
                       >
                         {name}
@@ -163,6 +180,7 @@ export default function NameIndexPage() {
           </p>
           <Link
             href="/search"
+            prefetch={adBoundaryPrefetch(PAGE_PATH, "/search")}
             className="inline-block rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-navy-600"
           >
             이름 추천받기 →

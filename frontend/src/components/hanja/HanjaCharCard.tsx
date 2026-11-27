@@ -42,10 +42,12 @@ export function HanjaCharCard({
   const linked = hasDetailPage(record);
   const standard = standardCharOf(record);
 
+  // min-w-0(카드·링크 둘 다): 격자 칸 안에서 카드가 훈 줄(truncate — 줄바꿈 없음)의 글 폭으로 늘어나지 않게 한다. 휴대폰 폭에서 훈이 긴 카드
+  // 하나가 1열 격자 폭을 끌어올려 쪽이 옆으로 넘쳤다(2026-11-27 — /hanja/돈 375 폭 문서 폭 496px). 격자 쪽은 grid-cols-1 로 열을 정한다
   const body = (
     <div
       className={cn(
-        "flex h-full items-center gap-3 rounded-lg border border-paper-line bg-paper-card p-3 transition",
+        "flex h-full min-w-0 items-center gap-3 rounded-lg border border-paper-line bg-paper-card p-3 transition",
         linked && "hover:border-teal hover:shadow-sm",
       )}
     >
@@ -87,7 +89,7 @@ export function HanjaCharCard({
   return (
     <Link
       href={`/hanja/${encodeURIComponent(char)}`}
-      className="block no-underline"
+      className="block min-w-0 no-underline"
     >
       {body}
     </Link>
