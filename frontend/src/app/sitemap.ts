@@ -41,7 +41,7 @@ const ROUTES: Array<{
   // 보조 추천 도구
   { path: "pure-korean", priority: 0.7, changeFrequency: "monthly", lastModified: "2026-11-25" }, // 순우리말 리포트 링크
   { path: "creative", priority: 0.7, changeFrequency: "monthly" },
-  { path: "three-syllable", priority: 0.7, changeFrequency: "monthly" },
+  { path: "three-syllable", priority: 0.7, changeFrequency: "monthly", lastModified: "2026-11-27" }, // 머리말 '성 뒤에 세 글자'(옛 '성씨 포함' — 엔진은 성 + 세 음절)·결과 화면이 처음으로 그려짐
   { path: "required-char", priority: 0.7, changeFrequency: "monthly" },
   { path: "parent-based", priority: 0.7, changeFrequency: "monthly" },
   { path: "twin", priority: 0.6, changeFrequency: "monthly" },
@@ -56,7 +56,7 @@ const ROUTES: Array<{
   // 운영 페이지
   { path: "about", priority: 0.4, changeFrequency: "yearly" },
   { path: "contact", priority: 0.4, changeFrequency: "yearly" },
-  { path: "privacy", priority: 0.3, changeFrequency: "yearly", lastModified: "2026-11-26" }, // 출생지 항목·오행 찾기 입력값(11-25)·이름 평가의 한자 입력(11-26 — 시행일)
+  { path: "privacy", priority: 0.3, changeFrequency: "yearly", lastModified: "2026-11-27" }, // 출생지 항목·오행 찾기 입력값(11-25)·이름 평가의 한자 입력(11-26)·광고 스크립트를 싣는 화면(11-27 — 시행일)
 
   // 한자 사전 인덱스
   { path: "hanja", priority: 0.8, changeFrequency: "monthly", lastModified: "2026-11-26" }, // 인덱스에 이름 평가 한 줄(HanjaEvaluateLine)

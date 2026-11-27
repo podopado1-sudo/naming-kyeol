@@ -42,6 +42,22 @@
   이미지 키 없는 `...OG_SITE`만 펼친다. 아예 안 쓰면 og:url·og:title이 홈 값으로 상속된다(`"use client"` 페이지는 옆 `layout.tsx`에 metadata)
 - **조사는 `lib/josa.ts`(`withJosa`·`josa`·`hasBatchim`)로 고른다** — 이름·독음 같은 변수 뒤 조사를 템플릿에 '은(는)'·'(으)로'·'이(가)'로
   박지 말 것(검색 설명문에 "지우은(는)"이 노출됐던 AS-5). 괄호형은 헬퍼가 비한글로 끝나는 말에만 폴백으로 쓴다
+- ⚠️ **애드센스 로더·사이트 확인 메타는 편집·허브 화면에만 싣는다 (2026-11-27 — 개인정보)**: 홈·/guide(리포트 포함)·/method·/about·/name·/hanja **인덱스**
+  (`lib/ad-scope.ts` `isAdPage` 가 단일 목록, 그리는 곳은 `components/AdsenseLoader.tsx` 를 쓰는 여섯 파일). 루트 레이아웃 `<head>` 에 있던 시절에는 도구 화면을
+  새로 열면 광고 요청(`googleads.g.doubleclick.net/pagead/ads` 의 url)에 `/evaluate?lastName=…&name=…&birthDate=…` 가 통째로 실려 Google 로 갔다(11/26 운영 확인).
+  범위는 11/23 애드센스 2차 거절 진단 권고 1(사용자 결정 — 원래 4파 12/14 주, 같은 틀 자동 쪽·도구·404 제외)을 당겨 적용한 것이다.
+  한 번 돈 광고 스크립트는 클라이언트 이동 뒤에도 문서에 남으므로 **광고 화면 ↔ 광고 밖 화면 경계를 넘는 이동은 양쪽 모두 새 문서**다(루트의
+  `components/AdsenseNavigationGuard.tsx` — 캡처 단계 클릭 가로채기·Next 보다 먼저 받는 popstate·경로 감시 받침, Hero 의 /search 이동은 `needsFreshDocument`).
+  광고 ID 가 없는 빌드(로컬)에서는 아무 일도 하지 않는다. 판정은 우리 로더 `<script>` 태그로만 한다(`window.adsbygoogle` 은 광고 차단 확장이 만들어 두기도 해
+  끝없는 새로 읽기가 된다). `next.config.ts` Referrer-Policy 는 **strict-origin**(옛 strict-origin-when-cross-origin 은 같은 사이트 이동에 쿼리까지 넘겨 다음 화면의
+  document.referrer — 광고 요청의 ref — 에 입력값이 실렸다). 방침 5항이 이 셋을 그대로 적는다. `tests/adsense-placement.test.mjs` 가 싣는 곳·가드·헤더를 고정한다.
+  새 편집 화면에 광고를 실으려면 `AD_EXACT_PATHS` 와 그 화면 파일을 함께 고치고, 그 화면 주소에 입력값이 들어가지 않는지 확인할 것
+- **3글자·순우리말 단독 화면의 응답 꼴 (2026-11-27)**: 서버는 3글자에 후보 배열(`ThreeSyllableCandidate[]`), 순우리말에 `{lastName, candidates, totalCount}` 를 준다 —
+  옛 화면은 둘 다 `{names,totalCount}` 로 읽어 결과를 한 번도 그리지 못했다(처음부터). `lib/specialty-candidates.ts` 가 /search 탭과 같은 규칙으로 옮기고, /search 탭 칩도
+  `normalizeSpecialtyTags` 로 같은 꼴(영문 코드 칩 → 한글, 점수 이름표 '발음', 순우리말 성별 칩 없음). '상세 보기'·저장은 `SmartNameCandidate.evaluateHanja`(주소 꼴)를
+  /evaluate 에 싣는다 — 순우리말 음절 '-', 엔진 한자 조각 '主(주)' 는 그 한자, 서버가 '-'를 접는 음절(색인에 없음·autoEmpty — 바·봄·몰)은 '*'
+  (서버 `hanjaSummary.nameHanja` 와 같은 꼴이어야 즐겨찾기 키가 하나다 — 색인 `public/data/hanja-pick/v1/index.json` 을 import). 한자 조각이 없는 3글자 큐레이션 후보는 싣지 않는다
+  (서버 `BuildCuratedComponents` 가 앞 두 음절 + 끝 음절로 기계적으로 잘라 솔이슬 → 솔이 + 슬)
 
 ## 빌드 명령어
 
@@ -78,7 +94,7 @@ npm run build
 # 린트
 npm run lint
 
-npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-11-26 기준 504개, 10-28 기준 249)
+npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-11-27 기준 520개, 10-28 기준 249)
            # 대비 테스트: tests/amber-contrast.test.mjs(amber-warm-700)·tests/palette-contrast.test.mjs(text-3·오행·골드·결과 화면 글자 토큰),
            # 공용 헬퍼 tests/color-utils.mjs(globals.css·Tailwind theme.css 실제 값, WCAG 대비, CIEDE2000 — *.test.mjs 가 아니라 따로 돌지 않는다)
            # 앱 코드(.ts)를 읽는 테스트는 tests/resolve-ts.mjs 훅을 먼저 import 하고 앱 모듈을 동적 import 한다(확장자 없는 상대 import 풀기)
@@ -1151,6 +1167,11 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   'UsageEvents already exists'에서 멈춰 `Candidates` · `UserFeedbacks` 가 끝내 안 생긴다 — /smart 응답에서 standard(한자 이름) 탭이 말없이 빠진다. **띄우기 전에 0바이트 `nameform.db` 를 만들어 둘 것**(운영 PostgreSQL 은 무관).
 
 ### 프론트엔드
+- **광고 경계 이동의 남은 것 (2026-11-27)**: 광고 ID 를 켠 운영에서는 홈·/guide·/name·/hanja 인덱스 ↔ 다른 화면 이동이 모두 새 문서라 클라이언트 이동보다 느리다(정적 쪽이라
+  체감은 작다고 봄 — 재지 않았다). 운영 확인은 배포 뒤(가짜 값으로): 도구 화면 HTML 에 로더 없음, /guide → '이름 평가' 가 새 문서, 응답 헤더 Referrer-Policy strict-origin,
+  광고 요청 url·ref 에 쿼리 없음. 광고 화면의 스크립트가 Navigation API(`navigation.entries()`)로 같은 사이트 이전 기록 주소를 읽는 것은 막지 못한다(브라우저 기능 — 애드센스가
+  그렇게 한다는 근거는 없다). 순우리말 엔진 사전의 genderFit 이 출생 통계와 어긋나는 이름이 있어(이삭 female — /name/이삭 남 823·여 27, 도담·빛가람) 화면 칩에서는 뺐지만
+  성별 거르기에는 그대로 쓰인다(이름 품질 작업). 3글자 큐레이션 조각은 기계적 2 + 1 이라 평가 링크에 한자를 싣지 않는다(데이터에 음절별 한글·한자 표시가 생기면 싣는다)
 - ~~**한자 목록 동점 정렬이 빌드 로캘을 따른다**~~ (2026-11-26 해결 — `lib/hanja-seo.ts` `compareByCoreGradeStrokes` 의 마지막 기준을 `new Intl.Collator("en")` 으로 고정, 운영 출력 무변):
   옛 로캘 없는 `a.localeCompare(b)`(2026-06-13 aa6a183 부터)는 이 PC 의 Node(기본 ko-KR — 한자를 독음 순)와 Vercel(en 순)이 같은 순위 글자를 다르게 놓아, 로컬 빌드와 운영이
   독음 쪽 카드 순서 261/489·ItemList 256(15쪽은 구성까지 — 수 臹/須)·글자 상세 '함께 쓰기 좋은 오행' 대표 글자와 같은 음 상위 12(8,404/9,016쪽)에서 달랐다(3파 운영 검증).

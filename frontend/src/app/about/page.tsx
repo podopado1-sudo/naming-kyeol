@@ -3,6 +3,7 @@ import { BASE_OPEN_GRAPH } from "@/lib/og";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 import { Compass, BookOpen, Feather, ShieldCheck } from "lucide-react";
+import { AdsenseLoader } from "@/components/AdsenseLoader";
 
 export const metadata: Metadata = {
   title: "서비스 소개 — 이름의 결을 만든 이유",
@@ -44,6 +45,7 @@ const VALUES = [
 export default function AboutPage() {
   return (
     <>
+      <AdsenseLoader />
       <Header />
       <main
         style={{

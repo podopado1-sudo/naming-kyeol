@@ -9,6 +9,7 @@ import { WhyKyeol } from "@/components/design/WhyKyeol";
 import { BrushDivider } from "@/components/design/BrushDivider";
 import { ApiWarmup } from "@/components/design/ApiWarmup";
 import { getAllInsights, type InsightMeta } from "@/lib/insights";
+import { AdsenseLoader } from "@/components/AdsenseLoader";
 
 /**
  * 홈 — 서버 컴포넌트 (2026-10-21).
@@ -22,6 +23,7 @@ export default function HomePage() {
 
   return (
     <>
+      <AdsenseLoader />
       <Header current="home" />
 
       <main>

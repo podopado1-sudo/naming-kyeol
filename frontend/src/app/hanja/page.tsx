@@ -12,6 +12,7 @@ import {
   getPopularReadings,
   getReadingChars,
 } from "@/lib/hanja-seo";
+import { AdsenseLoader } from "@/components/AdsenseLoader";
 
 /**
  * /hanja — 인명용 한자 사전 인덱스.
@@ -48,6 +49,8 @@ export default function HanjaIndexPage() {
 
   return (
     <>
+      {/* 인덱스만 — /hanja/[독음|글자] 쪽(같은 틀 자동 쪽)에는 싣지 않는다(lib/ad-scope.ts) */}
+      <AdsenseLoader />
       <Header />
       <main className="mx-auto max-w-4xl px-6 pb-20 pt-16">
         <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-teal">

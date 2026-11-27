@@ -84,7 +84,15 @@ export interface SmartNameCandidate {
   story?: string;
   /** 배정된 음절별 한자 글자(예: "友晶"). 한자 카테고리 한정, 없으면 undefined. */
   hanja?: string;
+  /**
+   * '상세 보기'·저장이 /evaluate 링크에 실을 한자 — 주소 꼴(칸마다 한자 / `-` 한자 없이 / `*` 자동, lib/hanja-pick.ts canonicalHanja).
+   * 화면 전용(서버 응답에 없다 — lib/specialty-candidates.ts 가 채운다). 순우리말 이슬 → "--", 3글자 온누주 → "--主".
+   * 없으면 예전처럼 한자 없이 넘겨 /evaluate 가 자동으로 고른다.
+   */
+  evaluateHanja?: string;
   score?: number;
+  /** score 의 이름표 — 없으면 'FINAL'(종합). 순우리말·3글자는 발음 점수라 '발음'(lib/specialty-candidates.ts) */
+  scoreLabel?: string;
   /** 미학 점수 (한자 카테고리 한정, 0~100). 없으면 undefined. */
   aestheticScore?: number;
   /** 조화 점수 (한자 카테고리 한정, 0~100). 없으면 undefined. */
@@ -473,10 +481,46 @@ export interface RareSurnameCandidate {
 }
 
 // ============================================================
-// Common Response (individual engines may return this)
+// 3글자·순우리말 단독 엔드포인트 응답 (2026-11-27 — 서버 DTO 그대로)
+// 옛 NameRecommendationResponse({names,totalCount})는 대응하는 서버 DTO 가 없어 두 화면이 결과를 못 그렸다
+// (lib/specialty-candidates.ts 가 결과 화면 꼴로 옮긴다)
 // ============================================================
-export interface NameRecommendationResponse {
-  names: SmartNameCandidate[];
+
+/** POST /recommendations/three-syllable — 이 후보의 배열을 그대로 준다 (Application/Engines/IThreeSyllableEngine.cs) */
+export interface ThreeSyllableCandidate {
+  /** 성을 뺀 세 음절 */
+  name: string;
+  /** 성 + 이름 */
+  fullName: string;
+  meaning: string;
+  /** "pure-korean" | "hanja" | "mixed" */
+  nameType: string;
+  /** 엔진이 붙인 조합 요소 ('누리'·'서', '온누'·'主(주)') — 화면 칩으로는 쓰지 않는다 */
+  components: string[];
+  pronunciationScore: number;
+  genderTag?: string;
+  toneTag?: string;
+  phonologyNotes: PhonologyNote[];
+}
+
+/** POST /recommendations/pure-korean 후보 (Application/DTOs/PureKoreanRequestDto.cs PureKoreanCandidateDto) */
+export interface PureKoreanCandidate {
+  fullName: string;
+  name: string;
+  meaning: string;
+  /** 말뿌리 풀이 ('우람하다 — 크고 당당한 모습') */
+  origin: string;
+  /** "male" | "female" | "neutral" */
+  genderFit: string;
+  /** "soft" | "strong" | "neutral" */
+  toneFit: string;
+  pronunciationScore: number;
+}
+
+/** POST /recommendations/pure-korean 응답 */
+export interface PureKoreanResponse {
+  lastName: string;
+  candidates: PureKoreanCandidate[];
   totalCount: number;
 }
 

@@ -16,6 +16,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { toast } from "sonner";
 import { trackTabView } from "@/lib/api";
 import { toggleFavorite, useIsFavorite } from "@/lib/favorites";
+import { normalizeSpecialtyTags } from "@/lib/specialty-candidates";
 import type { CandidateDetailContext } from "@/lib/useCandidateDetail";
 import type {
   PhonologyNote,
@@ -60,6 +61,10 @@ interface UICandidate {
   /** hasDetailScores가 true일 때만 의미 있음 */
   harmony: number;
   finalScore: number;
+  /** finalScore 의 이름표 — 'FINAL'(종합) 또는 순우리말·3글자의 '발음' */
+  scoreLabel: string;
+  /** '상세 보기'가 /evaluate 에 실을 한자(주소 꼴) — SmartNameCandidate.evaluateHanja */
+  evaluateHanja?: string;
   /**
    * 백엔드 희귀도를 받은 후보인지 — RARITY 막대 표시 여부. 값은 표준 탭의 '희귀도:N' 태그
    * (SmartRecommendationService.BuildStandardTags)에서만 온다.
@@ -120,6 +125,8 @@ function mapCandidate(c: SmartNameCandidate): UICandidate {
     aesthetics: c.aestheticScore ?? 0,
     harmony: c.harmonyScore ?? 0,
     finalScore: Math.round(score),
+    scoreLabel: c.scoreLabel ?? "FINAL",
+    evaluateHanja: c.evaluateHanja,
     hasRarity: rarity != null,
     rarity: rarity ?? 0,
     tags: c.tags ?? [],
@@ -231,7 +238,7 @@ function mapResponse(
       totalInCategory: cat.names.length,
       names: (cat.type === "required-char"
         ? cat.names.map(normalizeRequiredCharCandidate)
-        : cat.names
+        : cat.names.map((n) => normalizeSpecialtyTags(cat.type, n))
       ).map(mapCandidate),
     };
     const prev = seen.get(cat.type);
@@ -258,7 +265,7 @@ function mapResponse(
         candidate: mapCandidate(
           res.topPick.categoryType === "required-char"
             ? normalizeRequiredCharCandidate(res.topPick.candidate)
-            : res.topPick.candidate
+            : normalizeSpecialtyTags(res.topPick.categoryType, res.topPick.candidate)
         ),
       }
     : null;
@@ -837,7 +844,7 @@ function TopPickCard({
                 letterSpacing: "0.06em",
               }}
             >
-              SCORE OUT OF 100
+              {c.scoreLabel === "FINAL" ? "SCORE OUT OF 100" : `${c.scoreLabel} 점수 · 100점 만점`}
             </span>
           )}
         </div>
@@ -943,7 +950,7 @@ function TopPickCard({
                   letterSpacing: "0.08em",
                 }}
               >
-                FINAL
+                {c.scoreLabel}
               </div>
             </div>
           )}
@@ -1441,7 +1448,7 @@ function CandidateCard({
                 letterSpacing: "0.08em",
               }}
             >
-              FINAL
+              {c.scoreLabel}
             </div>
           </div>
         )}
@@ -1861,7 +1868,8 @@ export function SmartResultPage({
   onRegenerate?: () => void;
   /** 없으면 저장 버튼이 TopPick 이름을 즐겨찾기(/favorites)에 넣고 뺀다 */
   onSave?: () => void;
-  onCandidateDetail?: (fullName: string) => void;
+  /** 두 번째 인자 = 카드의 평가 링크 한자(주소 꼴, 없으면 undefined) — /evaluate 가 카드와 같은 이름을 채점하게 */
+  onCandidateDetail?: (fullName: string, evaluateHanja?: string) => void;
   /**
    * 즐겨찾기에 함께 남길 요청 맥락(API 값) — /favorites에서 /evaluate로 다시 열 때
    * 같은 조건으로 평가되도록. 없으면 requestSummary.date만 출생일로 쓴다.
@@ -1873,7 +1881,12 @@ export function SmartResultPage({
   // ---- TopPick 즐겨찾기 (onSave를 안 넘긴 페이지의 기본 저장 동작) ----
   const rawTop = data.topPick?.candidate ?? null;
   const favBirthDate = favoriteContext?.birthDate ?? requestSummary.date;
-  const topSaved = useIsFavorite(rawTop?.fullName ?? "", favBirthDate);
+  // 저장도 카드의 한자(순우리말 '--' 등)를 남긴다 — '다시 보기'가 /evaluate 에서 같은 이름을 채점하게(즐겨찾기 키에 한자가 든다)
+  // (다른 카테고리는 normalizeSpecialtyTags 가 그대로 돌려줘 evaluateHanja 가 없다 — 예전 저장 키 그대로)
+  const topHanja = rawTop
+    ? normalizeSpecialtyTags(data.topPick?.categoryType ?? "", rawTop).evaluateHanja
+    : undefined;
+  const topSaved = useIsFavorite(rawTop?.fullName ?? "", favBirthDate, topHanja);
   function saveTopPick() {
     if (!rawTop) return;
     const ln = requestSummary.lastName;
@@ -1890,6 +1903,7 @@ export function SmartResultPage({
       birthTime: favoriteContext?.birthTime,
       gender: favoriteContext?.gender,
       tone: favoriteContext?.tone,
+      hanja: topHanja,
       finalScore:
         scored && rawTop.score != null ? Math.round(rawTop.score) : undefined,
       aestheticScore: scored ? rawTop.aestheticScore : undefined,
@@ -2018,7 +2032,7 @@ export function SmartResultPage({
         {topPick && (
           <TopPickCard
             pick={topPick}
-            onDetail={() => onCandidateDetail?.(topPick.candidate.fullName)}
+            onDetail={() => onCandidateDetail?.(topPick.candidate.fullName, topPick.candidate.evaluateHanja)}
           />
         )}
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BASE_OPEN_GRAPH } from "@/lib/og";
+import { AdsenseLoader } from "@/components/AdsenseLoader";
 
 export const metadata: Metadata = {
   title: "작명 가이드",
@@ -15,6 +16,12 @@ export const metadata: Metadata = {
   },
 };
 
+// 작명 가이드·데이터 리포트(/guide·/guide/[slug]) — 광고 로더를 싣는 편집 화면(lib/ad-scope.ts)
 export default function GuideLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      {children}
+      <AdsenseLoader />
+    </>
+  );
 }

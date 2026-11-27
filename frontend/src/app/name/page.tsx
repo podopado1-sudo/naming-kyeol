@@ -10,6 +10,7 @@ import {
   getNameConsonantGroups,
   getPublishedDripNames,
 } from "@/lib/name-seo";
+import { AdsenseLoader } from "@/components/AdsenseLoader";
 
 /**
  * /name — 이름 뜻 사전 인덱스.
@@ -57,6 +58,8 @@ export default function NameIndexPage() {
 
   return (
     <>
+      {/* 인덱스만 — /name/[이름] 상세(같은 틀 자동 쪽)에는 싣지 않는다(lib/ad-scope.ts) */}
+      <AdsenseLoader />
       <Header />
       <main className="mx-auto max-w-4xl px-6 pb-20 pt-16">
         <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-teal">

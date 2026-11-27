@@ -1040,8 +1040,10 @@ test("개인정보처리방침 — 고른 한자·판정 요청·음절 파일 �
   // 1항 브라우저 저장 — 즐겨찾기에 고른 한자
   assert.ok(policy.includes("출생일·출생 시각·성별·톤·고른 한자·점수는 이용자 브라우저(localStorage)에만 저장되며"));
   assert.match(read("src", "lib", "favorites.ts"), /hanja\?: string;[\s\S]*?lastHanja\?: string;/);
-  // 5항 — 광고 요청에 화면 주소가 포함될 수 있다(단정하지 않는다 — 실제 전송은 확인하지 못했다)
-  assert.ok(policy.includes("광고를 불러오는 요청에는 광고가 실리는 화면의 주소가 포함될 수 있습니다(1항에 적은 대로 도구 화면의 주소에는 입력값이 들어갈 수 있습니다)."));
+  // 5항 — 광고 요청에 화면 주소가 포함될 수 있다. 2026-11-27: 운영에서 실제로 쿼리째 가는 것을 확인해 광고 로더를 읽을거리 화면에만 싣고
+  // 도구 화면에는 싣지 않는다(tests/adsense-placement.test.mjs 가 싣는 곳을 고정한다 — 방침과 코드가 같은 말을 한다)
+  assert.ok(policy.includes("광고를 불러오는 요청에는 그 화면의 주소가 포함될 수 있습니다. 그래서 광고 스크립트는 홈·작명 가이드·데이터 리포트·작명 원리·소개와 이름 뜻 사전·한자 사전의 목록 화면처럼 주소에 입력값이 들어가지 않는 화면에만 싣고, 이름 추천·평가 같은 도구 화면에는 싣지 않습니다. 광고를 싣는 화면에서 다른 화면으로 옮기면 페이지를 새로 불러와 광고 스크립트가 따라가지 않게 하며, 사이트 안에서 화면을 옮길 때 이전 화면의 주소는 도메인까지만 넘깁니다."));
+  assert.doesNotMatch(policy, /도구 화면의 주소에는 입력값이 들어갈 수 있습니다\)\./);
 
   // 방침이 말한 대로인가 — 판정 API 는 값을 로그·사용 통계에 남기지 않는다(실행 확인은 백엔드 테스트의 수집 로거)
   const ctrlDir = join(ROOT, "..", "Api", "Controllers");
@@ -1171,8 +1173,9 @@ test("sitemap·robots — /evaluate 는 바뀐 날을 자기 lastModified 로(�
   const dateOf = (path) =>
     new RegExp(`\\{ path: "${path}", priority: [\\d.]+, changeFrequency: "\\w+", lastModified: "(\\d{4}-\\d{2}-\\d{2})" \\}`).exec(sitemap)?.[1];
   assert.ok(dateOf("evaluate"), "evaluate 줄에 lastModified 가 없다");
-  assert.equal(dateOf("evaluate"), dateOf("privacy"), "방침과 같은 날(같은 배포)");
+  // 3파(2026-11-26)는 평가·오행 찾기·방침이 한 배포였다. 2026-11-27 방침 5항(광고 스크립트를 싣는 화면)만 따로 고쳐 방침은 그 뒤 날짜다
   assert.equal(dateOf("evaluate"), dateOf("ohaeng"));
+  assert.ok(dateOf("privacy") >= dateOf("evaluate"), "방침은 평가 화면 배포일 이후(한자 입력 항목을 실은 날 이후)");
   assert.match(sitemap, /\{ path: "evaluate", priority: 0\.8, changeFrequency: "monthly", lastModified: "/);
   const robots = read(...ROBOTS);
   assert.match(robots, /const STATIC_DATA = "\/data\/";/);

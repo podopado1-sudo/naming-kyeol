@@ -5,6 +5,8 @@ export interface CandidateDetailContext {
   birthTime?: string; // "HH:MM"
   gender?: string;    // API value: "male"/"female"/"none"
   tone?: string;      // API value: "soft"/"strong"/"neutral"
+  /** 이름 한자 — /evaluate 주소 꼴(순우리말 "--" 등, SmartNameCandidate.evaluateHanja). 없으면 /evaluate 가 자동으로 고른다 */
+  hanja?: string;
 }
 
 /**
@@ -19,6 +21,7 @@ export function useCandidateDetail() {
     const params = new URLSearchParams();
     if (ln) params.set("lastName", ln);
     if (first) params.set("name", first);
+    if (ctx?.hanja) params.set("hanja", ctx.hanja);
     if (ctx?.birthDate) params.set("birthDate", ctx.birthDate);
     if (ctx?.birthTime) params.set("birthTime", ctx.birthTime);
     if (ctx?.gender) params.set("gender", ctx.gender);

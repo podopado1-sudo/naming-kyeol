@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BASE_OPEN_GRAPH } from "@/lib/og";
+import { AdsenseLoader } from "@/components/AdsenseLoader";
 
 export const metadata: Metadata = {
   title: "작명 원리",
@@ -15,6 +16,12 @@ export const metadata: Metadata = {
   },
 };
 
+// 작명 원리 — 광고 로더를 싣는 편집 화면(lib/ad-scope.ts)
 export default function MethodLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <AdsenseLoader />
+      {children}
+    </>
+  );
 }

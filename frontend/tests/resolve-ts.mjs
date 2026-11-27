@@ -11,6 +11,7 @@
 import { registerHooks } from "node:module";
 
 registerHooks({
+  // 앱 코드의 JSON import(`with { type: "json" }`)는 node 가 그대로 읽는다 — 확장자 붙이기만 맡는다
   resolve(specifier, context, nextResolve) {
     try {
       return nextResolve(specifier, context);

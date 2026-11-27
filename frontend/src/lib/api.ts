@@ -16,7 +16,8 @@ import type {
   NameAnalysisResponse,
   RareSurnameRequest,
   RareSurnameResponse,
-  NameRecommendationResponse,
+  PureKoreanResponse,
+  ThreeSyllableCandidate,
   NameEvaluationRequest,
   NameEvaluationResponse,
   CompanyNamingRequest,
@@ -238,7 +239,7 @@ export function smart(
 // 순우리말 이름
 export function pureKorean(
   req: PureKoreanRequest
-): Promise<NameRecommendationResponse> {
+): Promise<PureKoreanResponse> {
   return request("/recommendations/pure-korean", req);
 }
 
@@ -249,10 +250,10 @@ export function creative(
   return request("/recommendations/creative", req);
 }
 
-// 3글자 이름
+// 3글자 이름 — ThreeSyllableCandidate[] 직접 반환 (creative 와 같은 꼴)
 export function threeSyllable(
   req: ThreeSyllableRequest
-): Promise<NameRecommendationResponse> {
+): Promise<ThreeSyllableCandidate[]> {
   return request("/recommendations/three-syllable", req);
 }
 

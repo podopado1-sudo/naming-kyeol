@@ -3,6 +3,7 @@ import { Noto_Serif_KR, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { AdsenseNavigationGuard } from "@/components/AdsenseNavigationGuard";
 import { BASE_OPEN_GRAPH } from "@/lib/og";
 
 // Pretendard Variable (한글 본문/제목) — 로컬 폰트
@@ -29,13 +30,9 @@ const inter = Inter({
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://namingkyeol.com";
-// 애드센스 게시자 ID (예: ca-pub-1234...). Vercel 환경변수로 주입 — 미설정이면 스크립트·메타태그를
-// 렌더하지 않으므로 심사 전·로컬에서 무해. 설정 후 재배포 필요(빌드 타임 주입).
-// 로더는 next/script가 아니라 <head>의 정적 <script async>로 싣는다 — 애드센스 안내("각 페이지의 <head>")와
-// 같고, JS를 실행하지 않는 검증 크롤러도 페이지 소스에서 스니펫을 찾을 수 있다(React 19가 async 스크립트를
-// head로 호이스팅·중복 제거). 배치 방침(docs/naver-blog/strategy.md): 광고 유닛은 콘텐츠 페이지(/name·/hanja)만,
-// 도구 페이지 제외 — 여기서는 로더만 싣는다.
-const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+// 애드센스: ⚠️ 2026-11-27 로더(adsbygoogle.js)와 사이트 확인 메타(google-adsense-account)를 루트에서 뺐다 — 편집·허브 화면
+// (lib/ad-scope.ts — 홈·/guide·/method·/about·/name·/hanja 인덱스)만 components/AdsenseLoader.tsx 로 싣는다. 루트에 두면 도구 화면 주소
+// (이름·생년월일)가 광고 요청에 실려 나갔다. 광고 화면에서 다른 화면으로 옮길 때는 AdsenseNavigationGuard 가 새 문서로 연다.
 const SITE_NAME = "이름의 결";
 // 붙여 쓴 "이름의결"은 네이버가 이름+의결(議決)로 형태소 분리해 국회·회의 문서에 묻힌다
 // (띄어 쓴 "이름의 결"은 1위 — 2026-09-14 실측). 검색엔진에 같은 사이트의 다른 표기임을 알린다.
@@ -96,7 +93,6 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
   // 애드센스 사이트 연결용 메타태그 — 정적 HTML <head>에 들어가므로 JS를 실행하지 않는
   // 구글 검증 크롤러도 인식한다(next/script afterInteractive는 하이드레이션 후 주입이라 소스에 없음).
-  ...(ADSENSE_CLIENT ? { other: { "google-adsense-account": ADSENSE_CLIENT } } : {}),
   // 검색엔진 사이트 소유 확인 (Google/Naver/Daum)
   verification: {
     // Naver Search Advisor — searchadvisor.naver.com에 사이트 등록 후 받은 값
@@ -179,17 +175,11 @@ export default function RootLayout({
             ]),
           }}
         />
-        {ADSENSE_CLIENT && (
-          <script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-            crossOrigin="anonymous"
-          />
-        )}
       </head>
       <body className="min-h-full">
         {children}
         <Toaster position="top-right" />
+        <AdsenseNavigationGuard />
       </body>
     </html>
   );

@@ -20,10 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { threeSyllable } from "@/lib/api";
-import type {
-  NameRecommendationResponse,
-  SmartRecommendationResponse,
-} from "@/lib/types";
+import type { SmartRecommendationResponse } from "@/lib/types";
+import {
+  NAME_TYPE_LABEL as NAMETYPE_LABEL,
+  specialtyGenderTone,
+  wrapThreeSyllableResponse,
+} from "@/lib/specialty-candidates";
 import {
   SmartResultPage,
   type RequestSummary,
@@ -31,42 +33,6 @@ import {
 import { useCandidateDetail } from "@/lib/useCandidateDetail";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
-
-// ============================================================
-// 어댑터
-// ============================================================
-function wrapAsSmartResponse(
-  res: NameRecommendationResponse,
-  lastName: string
-): SmartRecommendationResponse {
-  const names = res.names ?? [];
-  return {
-    lastName,
-    isRareSurname: false,
-    categories: [
-      {
-        type: "three-syllable",
-        label: "3글자 이름",
-        engineUsed: "ThreeSyllableEngine",
-        names,
-      },
-    ],
-    totalCount: res.totalCount ?? names.length,
-    topPick: names.length
-      ? {
-          categoryType: "three-syllable",
-          categoryLabel: "3글자 이름",
-          candidate: names[0],
-        }
-      : null,
-  };
-}
-
-const NAMETYPE_LABEL: Record<string, string> = {
-  "pure-korean": "순우리말",
-  hanja: "한자",
-  mixed: "혼합",
-};
 
 export default function ThreeSyllablePage() {
   const [lastName, setLastName] = useState("");
@@ -94,22 +60,11 @@ export default function ThreeSyllablePage() {
     try {
       const data = await threeSyllable({
         lastName: lastName.trim(),
-        gender:
-          gender === "none"
-            ? undefined
-            : gender === "male"
-              ? "Male"
-              : "Female",
-        tone:
-          tone === "neutral"
-            ? "Neutral"
-            : tone === "soft"
-              ? "Soft"
-              : "Strong",
+        ...specialtyGenderTone(gender, tone),
         nameType,
         count: parseInt(count, 10),
       });
-      setResult(wrapAsSmartResponse(data, lastName.trim()));
+      setResult(wrapThreeSyllableResponse(data, lastName.trim()));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "요청 중 오류가 발생했어요."
@@ -146,7 +101,8 @@ export default function ThreeSyllablePage() {
         requestSummary={requestSummary}
         editHref="/three-syllable"
         onRegenerate={handleReset}
-        onCandidateDetail={(fn) => navDetail(lastName, fn, { gender, tone })}
+        // 카드의 한자(순우리말 음절은 '-' — 한자 없이)를 평가 링크에 싣는다. 빼면 /evaluate 가 한자를 자동으로 골라 다른 이름을 채점한다
+        onCandidateDetail={(fn, hanja) => navDetail(lastName, fn, { gender, tone, hanja })}
         // 저장(TopPick)에도 성별·톤을 남긴다 — 없으면 /favorites가 옛 저장분으로 보고
         // 선우리를 선우+리로 다시 나누고, 다시 보기가 성별·톤 없이 평가된다 (2026-10-21)
         favoriteContext={{ gender, tone }}
@@ -161,10 +117,10 @@ export default function ThreeSyllablePage() {
       <header className="mb-10 space-y-3 text-center">
         <p className="eyebrow">THREE SYLLABLE · 3글자 이름</p>
         <h1 className="text-3xl md:text-4xl font-medium leading-snug tracking-tight text-navy">
-          성씨 포함 세 글자, 또렷한 결
+          성 뒤에 세 글자, 또렷한 결
         </h1>
         <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
-          성씨를 포함해 3글자로 흐르는 이름을 추천해드릴게요. 순우리말·한자·혼합 중 선택할 수 있어요.
+          성 뒤에 세 글자로 흐르는 이름(김누리서처럼)을 추천해드릴게요. 순우리말·한자·혼합 중 선택할 수 있어요.
         </p>
       </header>
 

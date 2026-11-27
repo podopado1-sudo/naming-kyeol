@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "./Primitives";
 import { ambiguousCompoundSurname, splitFullName } from "@/lib/name-split";
 import { ENGLISH_NAME_MAX, englishNameProblem } from "@/lib/english-name";
+import { needsFreshDocument } from "@/lib/ad-scope";
 
 // 타이핑 효과는 수묵화 톤과 어울리지 않아 제거됨.
 // 헤드라인은 글자별 잉크 드롭 (.ink-char) 으로 표시.
@@ -134,7 +135,11 @@ export function Hero({
       return;
     }
     if (payload.mode === "recommend") {
-      router.push(recommendHref(payload));
+      const href = recommendHref(payload);
+      // 홈은 광고 로더를 싣는 화면이다(lib/ad-scope.ts). 로더가 돈 문서로 /search 에 가면 입력값(성·생년월일·부모 이름)이 든 주소와
+      // 광고 스크립트가 한 문서에 있게 되므로 새 문서로 연다. 로더가 없으면(로컬·미설정) 예전처럼 클라이언트 이동
+      if (needsFreshDocument("/search")) window.location.assign(href);
+      else router.push(href);
     } else {
       // 풀 페이지 이동 — /evaluate 정적 라우트의 클라이언트 라우터 캐시가
       // 이전 ?name=... 을 재사용하는 문제 우회 (검색 상세보기와 동일 처리).

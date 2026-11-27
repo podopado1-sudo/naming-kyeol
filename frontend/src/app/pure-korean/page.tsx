@@ -21,10 +21,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { pureKorean } from "@/lib/api";
-import type {
-  NameRecommendationResponse,
-  SmartRecommendationResponse,
-} from "@/lib/types";
+import type { SmartRecommendationResponse } from "@/lib/types";
+import {
+  specialtyGenderTone,
+  wrapPureKoreanResponse,
+} from "@/lib/specialty-candidates";
 import {
   SmartResultPage,
   type RequestSummary,
@@ -32,37 +33,6 @@ import {
 import { useCandidateDetail } from "@/lib/useCandidateDetail";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
-
-// ============================================================
-// 어댑터: NameRecommendationResponse → SmartRecommendationResponse
-// 단일 카테고리(pure-korean)로 래핑해 SmartResultPage에서 동일 UX
-// ============================================================
-function wrapAsSmartResponse(
-  res: NameRecommendationResponse,
-  lastName: string
-): SmartRecommendationResponse {
-  const names = res.names ?? [];
-  return {
-    lastName,
-    isRareSurname: false,
-    categories: [
-      {
-        type: "pure-korean",
-        label: "순우리말 이름",
-        engineUsed: "PureKoreanNameEngine",
-        names,
-      },
-    ],
-    totalCount: res.totalCount ?? names.length,
-    topPick: names.length
-      ? {
-          categoryType: "pure-korean",
-          categoryLabel: "순우리말 이름",
-          candidate: names[0],
-        }
-      : null,
-  };
-}
 
 export default function PureKoreanPage() {
   const [lastName, setLastName] = useState("");
@@ -89,21 +59,10 @@ export default function PureKoreanPage() {
     try {
       const data = await pureKorean({
         lastName: lastName.trim(),
-        gender:
-          gender === "none"
-            ? undefined
-            : gender === "male"
-              ? "Male"
-              : "Female",
-        tone:
-          tone === "neutral"
-            ? "Neutral"
-            : tone === "soft"
-              ? "Soft"
-              : "Strong",
+        ...specialtyGenderTone(gender, tone),
         count: parseInt(count, 10),
       });
-      setResult(wrapAsSmartResponse(data, lastName.trim()));
+      setResult(wrapPureKoreanResponse(data, lastName.trim()));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "요청 중 오류가 발생했어요."
@@ -144,7 +103,8 @@ export default function PureKoreanPage() {
         requestSummary={requestSummary}
         editHref="/pure-korean"
         onRegenerate={handleReset}
-        onCandidateDetail={(fn) => navDetail(lastName, fn, { gender, tone })}
+        // 카드의 한자(순우리말 음절은 '-' — 한자 없이)를 평가 링크에 싣는다. 빼면 /evaluate 가 한자를 자동으로 골라 다른 이름을 채점한다
+        onCandidateDetail={(fn, hanja) => navDetail(lastName, fn, { gender, tone, hanja })}
         // 저장(TopPick)에도 성별·톤을 남긴다 — 없으면 /favorites가 옛 저장분으로 보고
         // 선우리를 선우+리로 다시 나누고, 다시 보기가 성별·톤 없이 평가된다 (2026-10-21)
         favoriteContext={{ gender, tone }}

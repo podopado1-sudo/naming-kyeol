@@ -54,7 +54,11 @@ const securityHeaders = [
   { key: "Content-Security-Policy", value: ContentSecurityPolicy },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  // 2026-11-27 strict-origin(옛 strict-origin-when-cross-origin): 같은 사이트 안 이동에도 주소 전체가 아니라 도메인만 넘긴다.
+  // 옛 정책은 같은 사이트 이동에 쿼리까지 넘겨, /evaluate?lastName=…&birthDate=… 에서 광고 로더를 싣는 화면(/name·/guide 등)을
+  // 새 문서로 열면 그 화면의 document.referrer — 광고 요청의 ref 값 — 에 이름·생년월일이 실렸다(검증 지적, lib/ad-scope.ts).
+  // 다른 사이트로 가는 요청은 예전과 같다(도메인만). 문서 하나는 처음 받은 정책을 클라이언트 이동 내내 쓰므로 모든 화면에 같은 값을 둔다.
+  { key: "Referrer-Policy", value: "strict-origin" },
   {
     key: "Permissions-Policy",
     value:

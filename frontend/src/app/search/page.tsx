@@ -57,7 +57,7 @@ function BabyNamingInner({
 }) {
   const searchParams = useSearchParams();
 
-  function handleCandidateDetail(fullName: string) {
+  function handleCandidateDetail(fullName: string, evaluateHanja?: string) {
     // fullName = lastName + firstName (예: "허기태"). 분리해서 /evaluate로 이동.
     // 추천 요청의 컨텍스트(생일·시간·성별·톤)도 함께 전달 → 자동 평가
     const ln = lastName.trim();
@@ -65,6 +65,8 @@ function BabyNamingInner({
     const params = new URLSearchParams();
     if (ln) params.set("lastName", ln);
     if (first) params.set("name", first);
+    // 순우리말·3글자 후보는 카드의 한자(순우리말은 '-' — 한자 없이)를 싣는다. 없으면 /evaluate 가 자동으로 고른다
+    if (evaluateHanja) params.set("hanja", evaluateHanja);
     if (birthDate) params.set("birthDate", birthDate);
     if (birthTime) params.set("birthTime", birthTime);
     if (gender) params.set("gender", gender);
