@@ -1,7 +1,8 @@
 // /dual-name 입력 폼·결과 화면 고침 고정 (2026-11-27 버그 목록 G-dual) — `npm test`
 //
 //   dual-tone-ignored            톤 칸 라벨 '톤 (이름 평가 점수에만 쓰여요)', 결과 칩 '평가 톤 …'(엔진이 톤을 읽지 않는다 — 평가 링크에만)
-//   dual-english-label-fallback  영어 이름을 비운 결과에 첫 후보의 영어 이름(Philip)을 '선호 영어 이름'으로 쓰지 않는다
+//   dual-english-label-fallback  영어 이름을 비운 결과에 첫 후보의 영어 이름(Philip)을 '선호 영어 이름'으로 쓰지 않는다.
+//                                머리 문장·0건 안내가 기본 목록(겹치는 영어 이름·성별 무관이면 남녀 섞임)과 맞는다(검토 반영)
 //   dual-dead-controls           '○○으로 결정하기 ✓'·카드 선택·'다른 연결 방식'·'↻ 연결 방식 바꾸기'·'↻ 새로 생성'을 지우고
 //                                '← 조건 수정'은 onRegenerate 단추 하나, footer 는 /about·/contact
 //   dual-placeholder-no-results  영어 이름 예시(placeholder)는 실제로 후보가 나오는 이름 — 서버 데이터로 확인
@@ -51,20 +52,44 @@ const ENGINE_FORBIDDEN = (() => {
  */
 function hasDualCandidate(english) {
   const lower = english.toLowerCase();
+  return MAP.filter((m) => m.english.toLowerCase() === lower).some((m) => m.korean.some(koreanMakesCandidate));
+}
+
+/** DualNameEngine.CreateCandidate 가 이 한글 표기로 후보를 내는가(근거는 hasDualCandidate 주석) */
+function koreanMakesCandidate(ko) {
   const syllableOk = (s) => {
     const e = PICK_INDEX.syllables[s];
     return !!e && e.usable > 0 && !e.autoEmpty;
   };
-  return MAP.filter((m) => m.english.toLowerCase() === lower).some((m) =>
-    m.korean.some(
-      (ko) =>
-        ko.length >= 2 &&
-        [...ko].every((c) => c >= "가" && c <= "힣") &&
-        !ENGINE_FORBIDDEN.some((f) => ko.includes(f)) &&
-        [...ko].every(syllableOk)
-    )
+  return (
+    ko.length >= 2 &&
+    [...ko].every((c) => c >= "가" && c <= "힣") &&
+    !ENGINE_FORBIDDEN.some((f) => ko.includes(f)) &&
+    [...ko].every(syllableOk)
   );
 }
+
+/**
+ * 영어 이름을 비웠을 때 DualNameEngine 기본 분기가 내는 [영어 이름, 한글 표기] 목록.
+ * EnglishKoreanNameMap.GetByGender — 'none' 이면 지도 전체(파일 순서), 아니면 그 성별 + gender 'none' 항목. 한글 표기마다
+ * 성 + 이름 3~5음절만 CreateCandidate, 20개에서 멈춘다. 성씨 길이만 결과를 가른다(용신은 후보 유무를 바꾸지 않는다 — 위 주석)
+ */
+function defaultDualList(surnameLength, gender) {
+  const mappings = gender === "none" ? MAP : MAP.filter((m) => m.gender === gender || m.gender === "none");
+  const out = [];
+  for (const m of mappings) {
+    for (const ko of m.korean) {
+      const total = surnameLength + ko.length;
+      if (total < 3 || total > 5) continue;
+      if (koreanMakesCandidate(ko)) {
+        out.push({ english: m.english, korean: ko, gender: m.gender });
+        if (out.length >= 20) return out;
+      }
+    }
+  }
+  return out;
+}
+const DEFAULT_CASES = [1, 2].flatMap((len) => ["none", "male", "female"].map((g) => [len, g]));
 
 test("후보 판정이 운영에서 확인한 사례와 맞는다 — Grace·Emily 0건, Philip·Noah·Hannah 있음", () => {
   // Grace(그레이스): 레·스가 사전 독음이 아니다 — 운영 'grace'+여 → 빈 배열(버그 목록 rt-specialty/SP-13)
@@ -147,6 +172,51 @@ test("영어 이름을 비우면 첫 후보의 영어 이름으로 채우지 않
   // 비교 표에 영어 이름 열
   assert.match(RESULT_CODE, /\["#", "영어", "한국어", "한자", "의미", "평가"\]/);
   assert.match(RESULT_CODE, /\{c\.englishName\}/);
+});
+
+test("영어 이름을 비운 결과의 머리 문장은 참이다 — 같은 영어 이름이 한글 표기마다 두 장 나올 때만 그 예를 든다", () => {
+  // 기본 목록은 한글 표기마다 카드를 따로 낸다 — 지금 데이터에서는 성씨 길이 1·2 × 성별 셋 모두 겹치는 영어 이름이 있다
+  // (김 무관·남: Ryan 라이언·리안, Isaac 아이작·이삭 / 여: Rosa 로사·로자). 그래서 '카드마다 영어 이름이 달라요'는 거짓이었다
+  for (const [len, gender] of DEFAULT_CASES) {
+    const list = defaultDualList(len, gender);
+    assert.ok(list.length > 0, `성 ${len}자·${gender}: 기본 목록이 비지 않는다`);
+    const counts = new Map();
+    for (const c of list) counts.set(c.english, (counts.get(c.english) ?? 0) + 1);
+    assert.ok([...counts.values()].some((n) => n > 1), `성 ${len}자·${gender}: 같은 영어 이름이 두 장 이상`);
+  }
+  // 버그 재현(성 김·2025-03-02·성별 무관·영어 이름 비움)에서 서버가 준 첫 카드와 같다 — 시뮬레이션이 엔진과 어긋나지 않았는지
+  assert.deepEqual(
+    defaultDualList(1, "none").slice(0, 5).map((c) => `${c.english} ${c.korean}`),
+    ["Philip 필립", "Daniel 단열", "John 요한", "Peter 피터", "Noah 노아"]
+  );
+  assert.ok(!RESULT_CODE.includes("카드마다 영어 이름이 달라요"), "옛 거짓 문장");
+  assert.match(RESULT_CODE, /영어 이름을 모았어요\. 카드마다 영어 이름을 함께 적었어요\./);
+  // 겹침 예는 화면의 카드에서 찾았을 때만(영어 이름을 넣은 결과에서는 찾지 않는다)
+  assert.match(RESULT_CODE, /const spellingRepeat = english \? null : firstRepeatedEnglish\(candidates\);/);
+  assert.match(
+    RESULT_CODE,
+    /spellingRepeat\s*\?\s*` 같은 영어 이름도 한글 표기마다 카드가 따로 있어요\(\$\{spellingRepeat\.english\}: \$\{spellingRepeat\.koreans\.join\("·"\)\}\)\.`\s*:\s*""/
+  );
+  assert.match(RESULT_CODE, /if \(koreans\.length > 1\) return \{ english, koreans \};/, "두 장 이상인 영어 이름만 예로 든다");
+});
+
+test("영어 이름 0건 안내의 '칸을 비워 두면 …'은 성별 무관이면 '성별에 맞는'이라고 하지 않는다", () => {
+  // 비운 기본 목록: 성별을 고르면 그 성별 영어 이름만, 무관이면 지도 전체(남녀가 섞인다 — 지금 남자 16·여자 4)
+  for (const len of [1, 2]) {
+    const none = new Set(defaultDualList(len, "none").map((c) => c.gender));
+    assert.ok(none.has("male") && none.has("female"), `성 ${len}자·무관: 남녀가 섞인 목록`);
+    for (const g of ["male", "female"]) {
+      assert.ok(defaultDualList(len, g).every((c) => c.gender === g), `성 ${len}자·${g}: 그 성별 영어 이름만`);
+    }
+  }
+  assert.match(
+    PAGE_CODE,
+    /function blankEnglishSuggestion\(gender: SubmittedQuery\["gender"\]\): string \{\s*return gender === "none"\s*\?\s*"한자를 붙일 수 있는 영어 이름으로 이중 이름을 추천해 드려요"\s*:\s*"성별에 맞는 이중 이름을 추천해 드려요";/
+  );
+  assert.match(PAGE_CODE, /칸을 비워 두면 \$\{blankEnglishSuggestion\(shownGender\)\}\./);
+  // 결과와 같은 요청의 성별(제출 스냅샷) — 응답을 기다리는 동안 성별 칸을 바꿔도 그 값으로 말하지 않게
+  assert.match(PAGE_CODE, /const shownGender = submitted\?\.gender \?\? "none";/);
+  assert.doesNotMatch(PAGE_CODE, /칸을 비워 두면 성별에 맞는/, "성별과 무관하게 '성별에 맞는'으로 고정한 옛 문장");
 });
 
 // ------------------------------------------------------------

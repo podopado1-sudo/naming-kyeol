@@ -103,6 +103,17 @@ function shownEnglishName(typed: string, candidates: DualNameCandidate[]): strin
   );
 }
 
+/**
+ * 영어 이름으로 0건일 때 '칸을 비워 두면 …' 뒤 문장 — 비운 기본 목록(백엔드 EnglishKoreanNameMap.GetByGender)은 성별을 고르면 그 성별
+ * 영어 이름만 담지만, '무관'이면 지도 전체를 파일 순서로 읽어(지금 남자 16·여자 4) 성별에 맞춘 목록이 아니다.
+ * 결과 머리 제목도 '무관'이면 '성별에 맞춘'을 뺀다(DualResult)
+ */
+function blankEnglishSuggestion(gender: SubmittedQuery["gender"]): string {
+  return gender === "none"
+    ? "한자를 붙일 수 있는 영어 이름으로 이중 이름을 추천해 드려요"
+    : "성별에 맞는 이중 이름을 추천해 드려요";
+}
+
 // ============================================================
 // 메인 페이지
 // ============================================================
@@ -220,6 +231,7 @@ export default function DualNamePage() {
 
   // 0건 안내의 영어 이름도 실제로 요청한 값(제출 스냅샷) — 응답을 기다리는 동안 칸을 고쳐도 고친 이름이 찍히지 않게
   const shownEnglish = submitted?.preferredEnglishName ?? "";
+  const shownGender = submitted?.gender ?? "none";
 
   // 입력 폼
   return (
@@ -381,7 +393,7 @@ export default function DualNamePage() {
               }}
             >
               {shownEnglish
-                ? `입력한 영어 이름(${shownEnglish})으로는 한자 이중 이름을 찾지 못했어요. 한글로 옮긴 소리 가운데 이름에 쓸 만한 인명용 한자가 없는 음절이 있거나, 아직 준비되지 않은 영어 이름이에요. 다른 영어 이름을 넣거나 칸을 비워 두면 성별에 맞는 이중 이름을 추천해 드려요.`
+                ? `입력한 영어 이름(${shownEnglish})으로는 한자 이중 이름을 찾지 못했어요. 한글로 옮긴 소리 가운데 이름에 쓸 만한 인명용 한자가 없는 음절이 있거나, 아직 준비되지 않은 영어 이름이에요. 다른 영어 이름을 넣거나 칸을 비워 두면 ${blankEnglishSuggestion(shownGender)}.`
                 : "조건에 맞는 이중 이름을 찾지 못했어요. 성별을 바꾸거나 영어 이름을 넣어 다시 시도해 보세요."}
             </div>
           )}

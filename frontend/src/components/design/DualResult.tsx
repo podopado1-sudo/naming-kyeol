@@ -64,6 +64,25 @@ const TONE_LABEL: Record<DualContext["tone"], string> = {
   strong: "강함",
 };
 
+/**
+ * 같은 영어 이름이 카드 두 장 이상에 나온 첫 영어 이름(카드 순서)과 그 한글 표기들 — 없으면 null.
+ * 영어 이름을 비운 기본 목록은 백엔드가 지도(data/english_korean_names.json)의 한글 표기마다 카드를 따로 만든다(DualNameEngine 기본 분기)
+ */
+function firstRepeatedEnglish(
+  candidates: DualCandidate[]
+): { english: string; koreans: string[] } | null {
+  const byEnglish = new Map<string, string[]>();
+  for (const c of candidates) {
+    const koreans = byEnglish.get(c.englishName) ?? [];
+    koreans.push(c.koreanFull);
+    byEnglish.set(c.englishName, koreans);
+  }
+  for (const [english, koreans] of byEnglish) {
+    if (koreans.length > 1) return { english, koreans };
+  }
+  return null;
+}
+
 // ============================================================
 // DualSubHeader — 결과를 받은 조건 칩
 // ============================================================
@@ -339,8 +358,8 @@ function CompareTable({
   context: DualContext;
 }) {
   const [open, setOpen] = useState(false);
-  // '#' = 행 번호(응답 순서 번호, 순위 아님 — 백엔드 영한 이름 지도 파일 순서다). '영어' 열 — 영어 이름을 비운 결과는 카드마다
-  // 영어 이름이 달라(Philip·Daniel·John …) 표만 봐서는 어느 영어 이름의 후보인지 알 수 없었다.
+  // '#' = 행 번호(응답 순서 번호, 순위 아님 — 백엔드 영한 이름 지도 파일 순서다). '영어' 열 — 영어 이름을 비운 결과는 여러
+  // 영어 이름이 섞여(Philip·Daniel·John …, 같은 영어 이름의 다른 한글 표기도) 표만 봐서는 어느 영어 이름의 후보인지 알 수 없었다.
   // 마지막 열은 옛 '최종'(순번으로 지어낸 점수) 자리 — 평가 화면 링크
   const headers = ["#", "영어", "한국어", "한자", "의미", "평가"];
   const lastCol = headers.length - 1;
@@ -536,6 +555,8 @@ export function DualResultPage({
   const koreanLabel = [...new Set(candidates.map((c) => c.koreanFull))].join(" · ");
   const genderWord =
     context.gender === "male" ? "남자" : context.gender === "female" ? "여자" : "";
+  // 영어 이름을 비운 결과에서 두 장 이상 나온 첫 영어 이름 — 머리 설명 문장의 예(없으면 그 문장을 쓰지 않는다)
+  const spellingRepeat = english ? null : firstRepeatedEnglish(candidates);
 
   return (
     <div
@@ -662,7 +683,7 @@ export function DualResultPage({
             }}
           >
             {/* 영문 이름 뒤라 받침을 판정할 수 없다 — 조사 갈림이 없는 '에'로 ('Emma과' 방지).
-                영어 이름을 비운 결과는 첫 후보의 영어 이름을 쓰지 않는다(카드마다 영어 이름이 다르다) */}
+                영어 이름을 비운 결과는 첫 후보의 영어 이름을 쓰지 않는다(카드에 여러 영어 이름이 섞여 있다) */}
             {english
               ? `‘${english}’에 어울리는 한국 이름`
               : `${genderWord ? "성별에 맞춘 " : ""}한·영 이중 이름 ${candidates.length}가지`}
@@ -675,13 +696,20 @@ export function DualResultPage({
               margin: 0,
             }}
           >
+            {/* 비운 결과의 영어 이름은 대부분 카드마다 다르지만 같은 영어 이름이 한글 표기마다 두 장 나오기도 한다
+                (김 무관·남 — Ryan 라이언·리안, Isaac 아이작·이삭). 예전 '카드마다 영어 이름이 달라요'는 그 화면과 어긋났다 —
+                겹치는 영어 이름이 실제로 보일 때만 그 예를 든다 */}
             {english
               ? `음운과 의미를 잇는 ${candidates.length}가지 제안`
-              : `영어 이름 칸을 비워 두어 한자를 붙일 수 있는 ${genderWord ? `${genderWord} ` : ""}영어 이름을 모았어요. 카드마다 영어 이름이 달라요.`}
+              : `영어 이름 칸을 비워 두어 한자를 붙일 수 있는 ${genderWord ? `${genderWord} ` : ""}영어 이름을 모았어요. 카드마다 영어 이름을 함께 적었어요.${
+                  spellingRepeat
+                    ? ` 같은 영어 이름도 한글 표기마다 카드가 따로 있어요(${spellingRepeat.english}: ${spellingRepeat.koreans.join("·")}).`
+                    : ""
+                }`}
           </p>
         </section>
 
-        {/* Mapping banner — 영어 이름을 넣었을 때만(비우면 영어 이름이 카드마다 달라 한 쌍으로 보일 수 없다) */}
+        {/* Mapping banner — 영어 이름을 넣었을 때만(비우면 여러 영어 이름이 섞여 한 쌍으로 보일 수 없다) */}
         {english && (
           <div style={{ marginBottom: 32 }}>
             <MappingBanner english={english} koreanLabel={koreanLabel} />
