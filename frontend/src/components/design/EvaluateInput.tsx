@@ -4,7 +4,7 @@
  *
  * 변환 사항:
  *   - React.useState → 명시적 import
- *   - injectStyles IIFE → useEffect (SSR 안전)
+ *   - injectStyles IIFE → 폼 안의 <style>{EVAL_INPUT_CSS}</style> (2026-11-27 — 옛 useEffect 는 <head> 에 범위 없는 날짜 칸 규칙을 넣고 지우지 않았다)
  *   - onSubmit prop 추가 (외부에서 평가 요청 트리거)
  *   - 2026-10-21: 자체 미니 헤더·푸터를 걷고 사이트 Header/Footer를 쓴다. 소개(h1)·점수 설명이
  *     정적 HTML에 실리도록 EvaluateIntro / EvaluateAbout으로 분리 — 예전에는 페이지 전체가
@@ -31,6 +31,7 @@ import { BookOpen, Leaf, Music } from "lucide-react";
 
 import {
   deriveSlots,
+  firstHanCodePoint,
   isHangulSyllables,
   pickSyllablesIn,
   seedChoices,
@@ -56,6 +57,13 @@ import {
   slotNote,
   type PasteReport,
 } from "@/lib/hanja-pick-text";
+import {
+  SURNAME_MAX_LENGTH,
+  cleanNameInput,
+  nameInputMessage,
+  nameInputProblem,
+  type NameInputProblem,
+} from "@/lib/name-input";
 import { todayKst } from "@/lib/ohaeng";
 import type { HanjaFact } from "@/lib/types";
 
@@ -112,11 +120,109 @@ export interface EvalFieldError {
 const SETTLE_MS = 300;
 const SETTLE_COMPOSING_MS = 700;
 
-/** 칸 줄을 만들 수 있는 값인가 — 비었거나 한글 음절(가~힣)만. 낱자모가 남았으면 null(직전 칸 줄을 그대로 둔다) */
+/** 칸 줄을 만들 수 있는 값인가 — 비었거나 한글 음절(가~힣)만. 낱자모가 남았으면 null(직전 칸 줄을 그대로 둔다). 다듬기는 제출과 같다(앞뒤 공백·NFC) */
 function settleable(value: string): string | null {
-  const text = value.trim();
+  const text = cleanNameInput(value);
   return text === "" || isHangulSyllables(text) ? text : null;
 }
+
+// ── 성·이름 칸 검사(순수 함수) — 시작 ─────────────────────────────
+// 2026-11-27 evaluate-input-validation: 옛 폼은 /^[가-힣ㄱ-ㅎㅏ-ㅣ]*$/ 를 다듬지 않은 값에 걸어 낱자모('ㅋㅋ')는 제출되고,
+// 끝 공백('김 ')·영문 성('Kim')은 까닭 없이 '이름을 입력해주세요'로 잠겼다(성 칸 경고·aria-invalid 없음). 다듬기·판정·문구는
+// lib/name-input 하나를 쓴다(서버도 나중에 같은 검사를 넣는다). 한자 이름 입력(K1)은 설계 중이라 지금은 한자·영문을 까닭과 함께 막는다.
+// tests/fix1127-evaluate-input.test.mjs 가 이 구역(시작·끝 줄 사이)을 떼어 값으로 돌려 본다 — import 없이 쓰는 이름은
+// lib/name-input 의 넷과 firstHanCodePoint 뿐이어야 한다.
+
+/** 이름 칸 글자 수 — 서버(NameEvaluateRequestDto.Name)가 1~10자를 받는다 */
+const NAME_MAX_LENGTH = 10;
+
+type NameField = "lastName" | "firstName";
+
+const NAME_FIELDS: Record<NameField, { label: string; max: number }> = {
+  lastName: { label: "성씨", max: SURNAME_MAX_LENGTH },
+  firstName: { label: "이름", max: NAME_MAX_LENGTH },
+};
+
+/** 한자를 넣었을 때 덧붙이는 길 안내 — 이 폼의 한자는 한글 이름 아래의 칸 줄에서 고른다 */
+const HANJA_GOES_IN_SLOTS = "한자는 한글로 넣은 뒤 아래 한자 칸에서 고를 수 있어요.";
+
+/** 제출 단추 글 — 칸마다 까닭 하나(성씨 칸부터) */
+const SUBMIT_READY = "이 이름 살펴보기";
+const SUBMIT_LABELS: Record<NameField, Record<NameInputProblem, string>> = {
+  lastName: {
+    empty: "성씨를 입력해주세요",
+    jamo: "글자를 끝까지 입력해주세요",
+    space: "띄어쓰기 없이 입력해주세요",
+    "not-hangul": "성씨를 한글로 입력해주세요",
+    "too-long": "성씨가 너무 길어요",
+  },
+  firstName: {
+    empty: "이름을 입력해주세요",
+    jamo: "글자를 끝까지 입력해주세요",
+    space: "띄어쓰기 없이 입력해주세요",
+    "not-hangul": "이름을 한글로 입력해주세요",
+    "too-long": "이름이 너무 길어요",
+  },
+};
+
+interface NameFieldCheck {
+  /** 다듬은 값(앞뒤 공백 제거·NFC) — 미리보기·글자 수·제출에 쓴다 */
+  value: string;
+  problem: NameInputProblem | null;
+}
+
+function checkNameField(field: NameField, raw: string): NameFieldCheck {
+  const value = cleanNameInput(raw);
+  return { value, problem: nameInputProblem(value, NAME_FIELDS[field].max) };
+}
+
+/**
+ * 화면에 알릴 문제 — 낱자모는 칸 줄을 맞춘 뒤에도 그 값 그대로일 때만(jamoSettled). 한글을 치는 동안에는 음절마다 첫 자음이
+ * 낱자모라('서' 다음 'ㅇ' → '서ㅇ' → '서유') 그때마다 경고·단추가 깜빡이지 않게 알리지 않는다 — 제출은 그래도 막는다(canSubmit).
+ */
+function shownProblem(check: NameFieldCheck, jamoSettled: boolean): NameInputProblem | null {
+  return check.problem === "jamo" && !jamoSettled ? null : check.problem;
+}
+
+/** 칸 아래 경고 — 없으면 null. 빈 칸은 제출 단추가 알린다 */
+function nameFieldWarning(field: NameField, check: NameFieldCheck, jamoSettled: boolean): string | null {
+  const problem = shownProblem(check, jamoSettled);
+  if (problem === null || problem === "empty") return null;
+  const { label, max } = NAME_FIELDS[field];
+  const text = nameInputMessage(problem, label, max);
+  return problem === "not-hangul" && firstHanCodePoint(check.value) ? `${text} ${HANJA_GOES_IN_SLOTS}` : text;
+}
+
+/** 제출 단추 글 — 둘 다 비면 '이름을 입력해주세요'(옛 문구), 그 밖에는 성씨 칸의 까닭부터 */
+function submitLabel(last: NameInputProblem | null, first: NameInputProblem | null): string {
+  if (last === "empty" && first === "empty") return SUBMIT_LABELS.firstName.empty;
+  if (last !== null) return SUBMIT_LABELS.lastName[last];
+  if (first !== null) return SUBMIT_LABELS.firstName[first];
+  return SUBMIT_READY;
+}
+// ── 성·이름 칸 검사 — 끝 ─────────────────────────────────────────
+
+/**
+ * 입력 폼 안에서만 쓰는 스타일 — 폼과 함께 그려지고 폼이 사라지면 함께 없어진다(2026-11-27 evaluate-date-style-leak).
+ * 옛 코드는 useEffect 로 <head> 에 `input[type="date"]` 전부의 날짜 글자를 투명하게 하는 규칙을 넣고 지우지 않아, /evaluate 를 본 뒤
+ * 옮겨 간 다른 도구 화면(/search·/twin …)의 생년월일이 빈칸처럼 보였다. 날짜 칸 규칙은 모두 .eval-date 아래로 좁힌다.
+ * - 값이 있으면 기본 날짜 글자를 숨기고 덮개('2025년 3월 2일')를 보인다. 칸에 포커스가 있으면 덮개를 숨기고 기본 글자를 되살린다
+ *   (옛 규칙은 포커스 때 기본 글자만 되살려 덮개와 겹쳤다).
+ * - ::-webkit-datetime-edit 은 Firefox 가 모르는 선택자라 다른 선택자와 한 규칙에 묶지 않는다(묶으면 규칙째 버려진다).
+ * - 출생일·시각 줄은 480px 이하에서 한 줄에 하나(2026-11-27 evaluate-time-field-overflow — 375 폭에서 시각 칸이 카드 밖으로 밀렸다).
+ */
+const EVAL_INPUT_CSS = `
+@keyframes evalFadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { @keyframes evalFadeIn { from { opacity: 1; } to { opacity: 1; } } }
+.eval-birth-row { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+@media (max-width: 480px) { .eval-birth-row { grid-template-columns: minmax(0, 1fr); } }
+.eval-date input[type="date"] { color: var(--color-text-3); }
+.eval-date[data-filled] input[type="date"] { color: transparent; }
+.eval-date input[type="date"]:focus { color: var(--color-text); }
+.eval-date input[type="date"]::-webkit-datetime-edit { color: transparent; }
+.eval-date input[type="date"]:focus::-webkit-datetime-edit { color: var(--color-text); }
+.eval-date:focus-within .eval-date-overlay { visibility: hidden; }
+`;
 
 // ============================================================
 // EvaluateIntro — eyebrow + h1 + 안내 (정적, 입력 화면 맨 위)
@@ -366,6 +472,14 @@ export function EvaluateInputPage({
   const noteBase = `${uid}-hanja-note`;
   // 이름 칸 — 들고 온 글자의 띠를 닫으면 포커스를 여기로 옮긴다(누른 [닫기]가 띠째 사라져 포커스가 body 로 떨어지지 않게)
   const firstNameId = `${uid}-first-name`;
+  // 라벨 잇기(2026-11-27 labels-evaluate) — 칸이 하나인 절은 제목이 그 칸의 <label htmlFor>, 칸이 여럿인 절은 제목 id 를 묶음이 aria-labelledby 로 잇는다
+  const nameTitleId = `${uid}-name-title`;
+  const birthDateId = `${uid}-birth-date`;
+  const genderTitleId = `${uid}-gender-title`;
+  const toneTitleId = `${uid}-tone-title`;
+  // 성·이름 칸 경고 문장 — 칸의 aria-describedby
+  const lastHintId = `${uid}-last-hint`;
+  const firstHintId = `${uid}-first-hint`;
 
   const store = usePickStore();
   // 색인은 이름과 무관한 고정 주소다 — 폼이 뜰 때 한 번 받는다(잠긴 칸·성씨 기본 한자를 안다)
@@ -384,14 +498,16 @@ export function EvaluateInputPage({
   const [paste, setPaste] = useState<PasteReport | null>(null);
   const [focusRequest, setFocusRequest] = useState<{ id: string; n: number } | null>(null);
 
-  // 조합이 끝난 성·이름 — 칸 줄은 이 값으로만 다시 그린다. 낱자모가 남은 값은 받지 않고 직전 값을 둔다(unsettled 로 알린다)
+  // 조합이 끝난 성·이름 — 칸 줄은 이 값으로만 다시 그린다. 낱자모가 남은 값은 받지 않고 직전 값을 둔다(아래 committed 로 알린다)
   const [settled, setSettled] = useState(() => ({
     lastName: settleable(seed?.lastName ?? "") ?? "",
     firstName: settleable(seed?.firstName ?? "") ?? "",
   }));
-  const [unsettled, setUnsettled] = useState(() => ({
-    lastName: settleable(seed?.lastName ?? "") === null,
-    firstName: settleable(seed?.firstName ?? "") === null,
+  // 마지막으로 칸 줄을 맞춘 때(조합 끝·입력이 멈춤·칸을 떠남)의 입력값 그대로 — 낱자모 안내는 지금 값이 이것과 같을 때만 띄운다.
+  // 옛 unsettled(맞춘 때 낱자모였나)는 그 뒤에 더 친 값에도 남아 있어 다음 음절의 첫 자음에서 안내가 깜빡였다
+  const [committed, setCommitted] = useState(() => ({
+    lastName: seed?.lastName ?? "",
+    firstName: seed?.firstName ?? "",
   }));
   const composingRef = useRef(false);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -413,10 +529,10 @@ export function EvaluateInputPage({
       const firstName = first ?? prev.firstName;
       return lastName === prev.lastName && firstName === prev.firstName ? prev : { lastName, firstName };
     });
-    setUnsettled((prev) =>
-      prev.lastName === (last === null) && prev.firstName === (first === null)
+    setCommitted((prev) =>
+      prev.lastName === next.lastName && prev.firstName === next.firstName
         ? prev
-        : { lastName: last === null, firstName: first === null }
+        : { lastName: next.lastName, firstName: next.firstName }
     );
   }
 
@@ -626,34 +742,26 @@ export function EvaluateInputPage({
     .filter((item) => store.failed.has(item.syllable) && liveKeys.has(item.key) && !userChoices.has(item.key))
     .map((item) => item.syllable);
 
-  // SSR 안전: useEffect로 style inject
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (document.getElementById("eval-input-style")) return;
-    const s = document.createElement("style");
-    s.id = "eval-input-style";
-    s.textContent = `
-      @keyframes evalFadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
-      @media (prefers-reduced-motion: reduce) { @keyframes evalFadeIn { from { opacity: 1; } to { opacity: 1; } } }
-      input[type="date"]::-webkit-datetime-edit { color: transparent; }
-      input[type="date"]:focus::-webkit-datetime-edit { color: var(--color-text); }
-    `;
-    document.head.appendChild(s);
-  }, []);
-
-  const KOREAN_RE = /^[가-힣ㄱ-ㅎㅏ-ㅣ]*$/;
-  const lastValid = !lastName || KOREAN_RE.test(lastName);
-  const firstValid = !firstName || KOREAN_RE.test(firstName);
-  const total = (lastName + firstName).replace(/[^\S]/g, "").length;
+  // 성·이름 칸 검사 — 다듬은 값(앞뒤 공백·NFC)으로 판정하고 그 값을 보낸다(위 '성·이름 칸 검사' 구역)
+  const lastCheck = checkNameField("lastName", lastName);
+  const firstCheck = checkNameField("firstName", firstName);
+  // 낱자모가 칸 줄을 맞춘 뒤에도 그대로 남은 칸 — 한글을 치는 동안의 첫 자음은 세지 않는다
+  const lastJamoSettled = lastCheck.problem === "jamo" && committed.lastName === lastName;
+  const firstJamoSettled = firstCheck.problem === "jamo" && committed.firstName === firstName;
+  const lastWarning = nameFieldWarning("lastName", lastCheck, lastJamoSettled);
+  const firstWarning = nameFieldWarning("firstName", firstCheck, firstJamoSettled);
+  const total = (lastCheck.value + firstCheck.value).replace(/\s/g, "").length;
   const tooLong = total > 5;
-  const canSubmit =
-    lastValid && firstValid && lastName.trim() !== "" && firstName.trim() !== "";
+  const canSubmit = lastCheck.problem === null && firstCheck.problem === null;
 
-  // 낱자모가 남아 칸을 만들지 못한 값(한글 입력 자체가 틀린 값은 위의 '한글로 입력해주세요'가 알린다)
-  const jamoPending = (unsettled.firstName && firstValid) || (unsettled.lastName && lastValid);
+  // 낱자모가 남아 칸을 만들지 못한 값(한글이 아닌 글자·띄어쓰기는 칸 아래 경고가 알린다)
+  const jamoPending = firstJamoSettled || lastJamoSettled;
 
   function handleSubmit() {
     if (!canSubmit || loading) return;
+    // 다듬은 값을 보낸다 — 칸에 남은 앞뒤 공백이 주소·서명·한자 칸 계산에 실리지 않게
+    const lastName = lastCheck.value;
+    const firstName = firstCheck.value;
     // 제출 직전에는 지금 값으로 칸을 다시 계산한다(조합이 끝나기를 기다리지 않는다). 한글 음절만이 아닌 쪽은 한자를 싣지 않는다.
     // 확인을 기다리는 칸('확인 중' — 주소로 온 한자·들고 온 글자)은 그 글자를 그대로 싣는다 — 서버가 다시 검사하고, 틀리면 400 으로 그 칸이 열린다
     const now = deriveSlots({ lastName, firstName }, choices, pick, store.index, store.files);
@@ -671,9 +779,16 @@ export function EvaluateInputPage({
   }
 
   const buttonReady = canSubmit && !loading;
+  // 단추의 모양·글은 화면에 알린 문제로 정한다 — 한글을 치는 동안의 첫 자음(아직 알리지 않은 낱자모)에서는 바뀌지 않는다. 누를 수 있는지는 buttonReady
+  const shownLast = shownProblem(lastCheck, lastJamoSettled);
+  const shownFirst = shownProblem(firstCheck, firstJamoSettled);
+  const buttonLooksReady = shownLast === null && shownFirst === null && !loading;
 
   return (
     <>
+      {/* 이 폼의 스타일(날짜 칸·출생일 줄·미리보기 등장) — 폼이 사라지면 함께 없어진다. 규칙은 .eval-date·.eval-birth-row 아래로만 */}
+      <style>{EVAL_INPUT_CSS}</style>
+
       {/* 들고 온 글자(#pick)의 띠 — 음절 파일로 확인된 글자만 여기까지 온다. 글자는 폼이 뜬 뒤에 오므로 알림 영역(span role=status)은
           늘 두고 안의 글만 바꾼다(글과 함께 영역째 끼우면 화면 읽기 프로그램이 첫 문장을 놓칠 수 있다). 띠가 없을 때는 높이 0 */}
       <div
@@ -734,8 +849,10 @@ export function EvaluateInputPage({
           padding: 0,
         }}
       >
-        <Section title="이름" subtitle={`총 ${total}자`}>
+        <Section title="이름" subtitle={`총 ${total}자`} titleId={nameTitleId}>
           <div
+            role="group"
+            aria-labelledby={nameTitleId}
             style={{
               display: "grid",
               gridTemplateColumns: "30% 1fr",
@@ -754,7 +871,8 @@ export function EvaluateInputPage({
               }}
               onBlur={() => commitSettle({ lastName, firstName })}
               placeholder="예: 김"
-              invalid={!lastValid}
+              invalid={lastWarning !== null}
+              describedBy={lastWarning !== null ? lastHintId : undefined}
               ariaLabel="성"
             />
             <Input
@@ -770,20 +888,29 @@ export function EvaluateInputPage({
               }}
               onBlur={() => commitSettle({ lastName, firstName })}
               placeholder="예: 서윤"
-              invalid={!firstValid}
+              invalid={firstWarning !== null}
+              describedBy={firstWarning !== null ? firstHintId : undefined}
               ariaLabel="이름"
             />
           </div>
-          {!firstValid && (
-            <FieldHint kind="warn">한글로 입력해주세요</FieldHint>
+          {/* 칸마다 까닭 한 줄(lib/name-input 문구) — 성씨 칸이 먼저. 빈 칸은 제출 단추가 알린다 */}
+          {lastWarning !== null && (
+            <FieldHint kind="warn" id={lastHintId}>
+              {lastWarning}
+            </FieldHint>
           )}
-          {firstValid && tooLong && (
+          {firstWarning !== null && (
+            <FieldHint kind="warn" id={firstHintId}>
+              {firstWarning}
+            </FieldHint>
+          )}
+          {lastWarning === null && firstWarning === null && tooLong && (
             <FieldHint kind="warn">
               긴 이름은 평가 정확도가 낮아질 수 있어요
             </FieldHint>
           )}
           <div style={{ marginTop: 14 }}>
-            <NamePreview lastName={lastName} firstName={firstName} />
+            <NamePreview lastName={lastCheck.value} firstName={firstCheck.value} />
           </div>
 
           {/* 한자 칸 — 늘 보인다(접는 것은 고르기 패널뿐). 이름을 넣기 전에는 안내 한 줄 */}
@@ -891,15 +1018,16 @@ export function EvaluateInputPage({
 
         <Divider />
 
-        <Section title="출생일">
+        <Section title="출생일" htmlFor={birthDateId}>
+          {/* 칸 나눔(1.4 : 1, 480px 이하 한 줄에 하나)은 EVAL_INPUT_CSS 의 .eval-birth-row — 인라인으로 두면 좁은 폭 규칙이 이기지 못한다 */}
           <div
+            className="eval-birth-row"
             style={{
               display: "grid",
-              gridTemplateColumns: "1.4fr 1fr",
               gap: 10,
             }}
           >
-            <DateInput value={birth} onChange={setBirth} />
+            <DateInput id={birthDateId} value={birth} onChange={setBirth} />
             <input
               type="time"
               value={birthTime}
@@ -907,6 +1035,7 @@ export function EvaluateInputPage({
               style={{
                 appearance: "none",
                 width: "100%",
+                minWidth: 0,
                 boxSizing: "border-box",
                 fontFamily: "var(--font-sans)",
                 fontSize: 15,
@@ -954,24 +1083,26 @@ export function EvaluateInputPage({
 
         <Divider />
 
-        <Section title="성별">
+        <Section title="성별" titleId={genderTitleId}>
           <Segmented
             options={["남", "여", "중립"]}
             value={gender}
             onChange={(v) =>
               setGender(v as EvalSubmitPayload["gender"])
             }
+            labelledBy={genderTitleId}
           />
           <FieldHint>중립은 성별 무관 평가를 진행해요</FieldHint>
         </Section>
 
         <Divider />
 
-        <Section title="톤">
+        <Section title="톤" titleId={toneTitleId}>
           <Segmented
             options={["부드러운", "중립", "강한"]}
             value={tone}
             onChange={(v) => setTone(v as EvalSubmitPayload["tone"])}
+            labelledBy={toneTitleId}
           />
           <button
             type="button"
@@ -989,11 +1120,16 @@ export function EvaluateInputPage({
             </span>
             톤이 평가에 어떻게 반영되나요?
           </button>
+          {/* 결과에 실제로 보이는 것만 말한다(2026-11-27 evaluate-tone-help-text) — 옛 '입력 톤과 이름의 실제 톤을 함께 보여드립니다'는
+              그리는 줄이 없었다(응답의 toneReason 은 결과 화면이 읽지 않는다). 점수 규칙은 AestheticEngine.EvaluateToneBonus(±8, 중립 0) */}
           {openToneHelp && (
             <div style={helpBodyStyle}>
               톤은 발음·받침·자음 강도에 대한 선호를 의미해요.
               <br />
-              평가 시 입력 톤과 이름의 실제 톤을 함께 보여드립니다.
+              고른 톤에 이름의 자음·모음이 잘 맞으면 미학 점수에 톤 보너스가 붙고, 부드러운 톤인데 된소리(ㄲ·ㄸ·ㅃ·ㅆ·ㅉ)로
+              시작하는 음절이 있으면 줄어요.
+              <br />
+              붙거나 줄어든 점수는 결과의 미학 점수에 ‘톤 보너스’ 줄로 보여요. 중립을 고르면 톤은 점수에 들어가지 않아요.
             </div>
           )}
         </Section>
@@ -1014,10 +1150,10 @@ export function EvaluateInputPage({
               style={{
                 width: "100%",
                 padding: "16px 22px",
-                background: buttonReady
+                background: buttonLooksReady
                   ? "var(--color-ink-jiao)"
                   : "var(--color-surface-2)",
-                color: buttonReady
+                color: buttonLooksReady
                   ? "var(--color-background)"
                   : "var(--color-text-3)",
                 border: "none",
@@ -1025,24 +1161,19 @@ export function EvaluateInputPage({
                 fontFamily: "var(--font-serif)",
                 fontSize: 15,
                 fontWeight: 700,
-                cursor: buttonReady ? "pointer" : "default",
+                cursor: buttonLooksReady ? "pointer" : "default",
                 letterSpacing: "0.1em",
                 transition: "all 180ms",
               }}
             >
-              {loading
-                ? "살펴보는 중이에요…"
-                : canSubmit
-                  ? "이 이름 살펴보기"
-                  : firstName.trim() !== "" && lastName.trim() === ""
-                    ? "성씨를 입력해주세요"
-                    : "이름을 입력해주세요"}
+              {/* 막힌 까닭을 칸마다 하나씩(성씨 칸부터) — 옛 단추는 성씨 칸이 틀려도 '이름을 입력해주세요'였다 */}
+              {loading ? "살펴보는 중이에요…" : submitLabel(shownLast, shownFirst)}
             </button>
-            {buttonReady && (
+            {buttonLooksReady && (
               <span className="sumi-stamp-name" aria-hidden>名</span>
             )}
           </div>
-          {canSubmit && !loading && !birth && (
+          {buttonLooksReady && !birth && (
             <div
               style={{
                 marginTop: 10,
@@ -1148,13 +1279,32 @@ export function EvaluateInputPage({
 // ============================================================
 // Reusable atoms
 // ============================================================
+/**
+ * 절 제목 — 칸이 하나면(htmlFor) 그 칸의 <label>, 칸이 여럿이면(titleId) 묶음이 aria-labelledby 로 잇는 글.
+ * 옛 제목은 모두 짝 없는 <label> 이라 화면 읽기 프로그램이 출생일 칸을 이름 없이 읽었다(2026-11-27 labels-evaluate).
+ * letterSpacing·marginBottom 은 .sumi-form label(globals.css)이 label 에 주던 값 — 글로 바꾼 제목도 같은 모양이게 적어 둔다.
+ */
+const sectionTitleStyle: CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: "var(--color-text)",
+  letterSpacing: "0.02em",
+  marginBottom: 6,
+};
+
 function Section({
   title,
   subtitle,
+  htmlFor,
+  titleId,
   children,
 }: {
   title: string;
   subtitle?: string;
+  /** 절의 칸이 하나일 때 그 칸의 id */
+  htmlFor?: string;
+  /** 절의 칸이 여럿일 때 제목에 줄 id(묶음의 aria-labelledby) */
+  titleId?: string;
   children: ReactNode;
 }) {
   return (
@@ -1167,15 +1317,15 @@ function Section({
           marginBottom: 12,
         }}
       >
-        <label
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: "var(--color-text)",
-          }}
-        >
-          {title}
-        </label>
+        {htmlFor ? (
+          <label htmlFor={htmlFor} style={sectionTitleStyle}>
+            {title}
+          </label>
+        ) : (
+          <span id={titleId} style={sectionTitleStyle}>
+            {title}
+          </span>
+        )}
         {subtitle && (
           <span
             style={{
@@ -1206,6 +1356,7 @@ function Input({
   onBlur,
   placeholder,
   invalid,
+  describedBy,
   ariaLabel,
 }: {
   id?: string;
@@ -1216,13 +1367,18 @@ function Input({
   onCompositionEnd?: (v: string) => void;
   onBlur?: () => void;
   placeholder?: string;
+  /** 칸 아래 경고가 떠 있다 — 테두리 색과 aria-invalid */
   invalid?: boolean;
+  /** 그 경고 문장의 id */
+  describedBy?: string;
   ariaLabel?: string;
 }) {
   return (
     <input
       id={id}
       aria-label={ariaLabel}
+      aria-invalid={invalid || undefined}
+      aria-describedby={describedBy}
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
@@ -1250,10 +1406,16 @@ function Input({
 
 const emptySubscribe = () => () => {};
 
+/**
+ * 생년월일 칸 — 값이 있으면 기본 날짜 글자 대신 '2025년 3월 2일' 덮개를 보이고, 포커스가 있으면 덮개를 숨긴다(색 규칙은 EVAL_INPUT_CSS 의 .eval-date).
+ * 덮개는 오른쪽 달력 아이콘 앞(40px)에서 끊는다(2026-11-27 evaluate-time-field-overflow). 칸 이름은 절 제목 label(htmlFor = id)
+ */
 function DateInput({
+  id,
   value,
   onChange,
 }: {
+  id: string;
   value: string;
   onChange: (v: string) => void;
 }) {
@@ -1265,8 +1427,9 @@ function DateInput({
   // 오늘 태어난 아기의 생년월일을 고를 수 없었다(2026-11-26)
   const today = useSyncExternalStore(emptySubscribe, () => todayKst(), () => undefined);
   return (
-    <div style={{ position: "relative" }}>
+    <div className="eval-date" data-filled={value ? "" : undefined} style={{ position: "relative", minWidth: 0 }}>
       <input
+        id={id}
         type="date"
         value={value}
         max={today}
@@ -1274,10 +1437,10 @@ function DateInput({
         style={{
           appearance: "none",
           width: "100%",
+          minWidth: 0,
           boxSizing: "border-box",
           fontFamily: "var(--font-sans)",
           fontSize: 15,
-          color: value ? "transparent" : "var(--color-text-3)",
           padding: "12px 14px",
           background: "var(--color-surface)",
           border: "1px solid var(--color-border)",
@@ -1285,13 +1448,20 @@ function DateInput({
           outline: "none",
         }}
       />
+      {/* 칸의 값은 화면 읽기 프로그램이 칸에서 읽는다 — 덮개는 보이는 글일 뿐이라 숨긴다 */}
       {value && (
         <div
+          className="eval-date-overlay"
+          aria-hidden
           style={{
             position: "absolute",
             left: 14,
+            right: 40,
             top: "50%",
             transform: "translateY(-50%)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
             fontFamily: "var(--font-sans)",
             fontSize: 15,
             color: "var(--color-text)",
@@ -1309,13 +1479,18 @@ function Segmented({
   options,
   value,
   onChange,
+  labelledBy,
 }: {
   options: string[];
   value: string;
   onChange: (v: string) => void;
+  /** 절 제목 id — 단추 묶음의 이름(성별·톤) */
+  labelledBy?: string;
 }) {
   return (
     <div
+      role="group"
+      aria-labelledby={labelledBy}
       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${options.length}, 1fr)`,
@@ -1331,6 +1506,7 @@ function Segmented({
           <button
             type="button"
             key={opt}
+            aria-pressed={active}
             onClick={() => onChange(opt)}
             style={{
               appearance: "none",
@@ -1358,15 +1534,19 @@ function Segmented({
 function FieldHint({
   children,
   kind = "info",
+  id,
 }: {
   children: ReactNode;
   kind?: "info" | "warn";
+  /** 칸이 aria-describedby 로 이을 때 */
+  id?: string;
 }) {
   const color =
     kind === "warn" ? "var(--color-amber-warm-700)" : "var(--color-text-3)";
   return (
     <div
-      style={{ marginTop: 8, fontSize: 12.5, color, lineHeight: 1.5 }}
+      id={id}
+      style={{ marginTop: 8, fontSize: 12.5, color, lineHeight: 1.5, wordBreak: "keep-all" }}
     >
       {children}
     </div>
