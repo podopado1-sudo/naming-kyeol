@@ -1,7 +1,7 @@
 // 11/27 버그 목록 묶음 G-parent-rare — /parent-based·/rare-surname 폼과 결과 화면(SmartResultParent·SmartResultRare) — `npm test`
 //
 // 고정하는 것(버그 key):
-//  - parent-rare-dead-links: '← 조건 수정'·'↻ 새로 생성'은 onRegenerate 단추(옛 조건 수정은 같은 경로 Link 라 무동작), 꼬리 링크는 /about·/contact(옛 '#')
+//  - parent-rare-dead-links: '← 조건 수정'은 onRegenerate 단추(옛 조건 수정은 같은 경로 Link 라 무동작), 폼으로만 돌아가던 '↻ 새로 생성'은 지움(엔진이 같은 입력에 같은 후보), 꼬리 링크는 /about·/contact(옛 '#')
 //  - parent-based-input-unvalidated·rare-surname-input-unvalidated: 성씨·부모 이름 칸의 한글·길이·복성 검사(lib/name-input)와 maxLength
 //  - labels-parent-rare: 라벨 htmlFor ↔ 칸 id(Base UI Select 는 트리거 id)
 //  - parent-rare-tabs-under-header: 탭 줄을 고정 머리말 아래로(옛 계산은 배너 위 80px — 탭 줄이 머리말 밑으로 숨었다)
@@ -309,12 +309,16 @@ test("어댑터 — 방식 코드 원값과 부모 성을 결과 화면에 넘�
 // ─── 죽은 링크·단추 ────────────────────────────────────────────────
 
 for (const rel of [PARENT_RESULT, RARE_RESULT]) {
-  test(`${rel} — '← 조건 수정'·'↻ 새로 생성'은 onRegenerate 단추, 꼬리 링크는 /about·/contact`, () => {
+  test(`${rel} — '← 조건 수정' 하나만 onRegenerate 단추('↻ 새로 생성' 없음), 꼬리 링크는 /about·/contact`, () => {
     const code = stripComments(read(rel));
     assert.doesNotMatch(code, /href="#"/, "빈 링크가 남았다");
     assert.doesNotMatch(code, /editHref/, "같은 경로로 가는 '조건 수정' Link 가 남았다");
     assert.match(code, /<button\s+type="button"\s+onClick=\{onRegenerate\}\s+data-hide-print\s+style=\{\w+\}\s*>\s*← 조건 수정/);
-    assert.match(code, /<div data-hide-print[^>]*>\s*\{onRegenerate && \(\s*<button type="button" onClick=\{onRegenerate\}[^>]*>\s*↻ 새로 생성/);
+    // 다시 만들지 않고 폼으로만 돌아가던 '↻ 새로 생성'은 지웠다 — 폼으로 가는 길은 머리의 '← 조건 수정' 하나
+    assert.doesNotMatch(code, /새로 생성/, "폼으로만 돌아가는 '↻ 새로 생성' 단추가 남았다");
+    assert.equal((code.match(/onClick=\{onRegenerate\}/g) || []).length, 1, "onRegenerate 단추는 머리의 '← 조건 수정' 하나");
+    // 저장 단추 자리는 핸들러가 있을 때만, 인쇄에서는 숨긴다
+    assert.match(code, /\{onSave && \(\s*<div data-hide-print[^>]*>\s*<button type="button" onClick=\{onSave\}[^>]*>\s*♡ 이 결과 저장/);
     assert.match(code, /<footer\s+data-hide-print/);
     assert.match(code, /<Link\s+href="\/about"[\s\S]*?이름의 결에 대하여\s*<\/Link>/);
     assert.match(code, /<Link\s+href="\/contact"[\s\S]*?문의\s*<\/Link>/);

@@ -300,12 +300,10 @@ function RarityChip({ level }: { level: number }) {
 function SubHeaderRare({
   summary,
   rarityLevel,
-  onRegenerate,
   onSave,
 }: {
   summary: RareSummary;
   rarityLevel: number;
-  onRegenerate?: () => void;
   onSave?: () => void;
 }) {
   const isCompound = summary.isCompound;
@@ -338,20 +336,16 @@ function SubHeaderRare({
         {summary.gender && <span style={chipNeutral}>{summary.gender}</span>}
         {summary.tone && <span style={chipNeutral}>{summary.tone}</span>}
       </div>
-      {/* 조작 단추는 인쇄에서 숨긴다(data-hide-print). '↻ 새로 생성'은 머리의 '← 조건 수정'과 같은 onRegenerate —
-          입력값이 남은 폼으로 돌아간다. 핸들러가 없으면 그리지 않는다(눌러도 아무 일 없는 단추를 두지 않는다) */}
-      <div data-hide-print style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-        {onRegenerate && (
-          <button type="button" onClick={onRegenerate} style={btnGhostR}>
-            ↻ 새로 생성
-          </button>
-        )}
-        {onSave && (
+      {/* 옛 '↻ 새로 생성'은 지웠다(2026-11-27) — 희귀 성씨 엔진은 같은 입력에 같은 후보를 돌려줘 다시 만들지 않고
+          폼으로 돌아가기만 했다. 폼으로 돌아가는 길은 머리의 '← 조건 수정'(onRegenerate) 하나다.
+          저장 단추는 핸들러가 있을 때만 그리고 인쇄에서 숨긴다(data-hide-print) */}
+      {onSave && (
+        <div data-hide-print style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <button type="button" onClick={onSave} style={btnGhostR}>
             ♡ 이 결과 저장
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1611,7 +1605,8 @@ export function SmartResultRarePage({
   initialTab?: string;
   expandFirstCard?: boolean;
   /**
-   * '← 조건 수정'·'↻ 새로 생성' — 결과를 지우고 입력값이 남은 폼으로 돌아간다(페이지의 handleReset).
+   * 머리의 '← 조건 수정' — 결과를 지우고 입력값이 남은 폼으로 돌아간다(페이지의 handleReset). 옛 '↻ 새로 생성'은
+   * 같은 핸들러라 다시 만들지 않고 폼으로만 돌아가서 지웠다(엔진이 같은 입력에 같은 후보를 준다).
    * 옛 '← 조건 수정'은 같은 경로(editHref)로 가는 Link 라 눌러도 결과 화면이 그대로였다(2026-11-27)
    */
   onRegenerate?: () => void;
@@ -1701,12 +1696,7 @@ export function SmartResultRarePage({
         )}
       </header>
 
-      <SubHeaderRare
-        summary={data.requestSummary}
-        rarityLevel={data.rarityLevel}
-        onRegenerate={onRegenerate}
-        onSave={onSave}
-      />
+      <SubHeaderRare summary={data.requestSummary} rarityLevel={data.rarityLevel} onSave={onSave} />
 
       <main>
         <RareHero data={data} />
