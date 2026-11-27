@@ -128,6 +128,21 @@ const PAIR_CASES = [
   ["김민호", ["김민호", ""]],
   ["김 민호", ["김 민호", ""]],
   ["", ["", ""]],
+  // 가름표 없이 2자 낱말이 섞인 두 분(2026-11-27 hero-parent-name-split — 옛 규칙은 아버지 '지 + 호서윤'으로 합쳤다)
+  ["지호 서윤", ["지호", "서윤"]],
+  ["김지호 서윤", ["김지호", "서윤"]],
+  ["지호 이서윤", ["지호", "이서윤"]],
+  // 세 낱말·네 낱말 꼴 — 1자 낱말·복성 뒤 낱말은 그 사람의 이름
+  ["김 철 이서윤", ["김 철", "이서윤"]],
+  ["남궁 민 이서윤", ["남궁 민", "이서윤"]],
+  ["김민호 이 수정", ["김민호", "이 수정"]],
+  ["김 민호 이 수정", ["김 민호", "이 수정"]],
+  // 한 분 — 복성 + 이름은 띄어 써도 한 분, 끝에 1자 낱말이 남는 오타 띄어쓰기는 예전처럼 통째로
+  ["남궁 민호", ["남궁 민호", ""]],
+  ["선우 진", ["선우 진", ""]],
+  ["김민 호", ["김민 호", ""]],
+  // 가름표 하나만 있고 한쪽이 비면 그 한 분
+  ["김민호 ·", ["김민호", ""]],
 ];
 
 for (const [input, expected] of PAIR_CASES) {
@@ -135,3 +150,16 @@ for (const [input, expected] of PAIR_CASES) {
     assert.deepEqual(splitParentPair(input), expected);
   });
 }
+
+// 두 분으로 가른 값이 /search 의 splitParentName 을 거쳐 어떤 성·이름이 되나 — 어머니 이름이 사라지지 않는다
+test("'지호 서윤' → 아버지 이름 '지호'·어머니 이름 '서윤'(2자는 성을 자르지 않는다)", () => {
+  const [father, mother] = splitParentPair("지호 서윤");
+  assert.deepEqual(splitParentName(father), { surname: "", name: "지호" });
+  assert.deepEqual(splitParentName(mother), { surname: "", name: "서윤" });
+});
+
+test("'김 철 이서윤' → 아버지 김 + 철 · 어머니 이 + 서윤", () => {
+  const [father, mother] = splitParentPair("김 철 이서윤");
+  assert.deepEqual(splitParentName(father), { surname: "김", name: "철" });
+  assert.deepEqual(splitParentName(mother), { surname: "이", name: "서윤" });
+});

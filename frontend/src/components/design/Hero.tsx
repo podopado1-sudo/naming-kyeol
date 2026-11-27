@@ -11,12 +11,19 @@
  */
 "use client";
 
-import { Fragment, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useId, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./Primitives";
-import { ambiguousCompoundSurname, splitFullName } from "@/lib/name-split";
+import { ambiguousCompoundSurname, readParentPair, splitFullName } from "@/lib/name-split";
 import { ENGLISH_NAME_MAX, englishNameProblem } from "@/lib/english-name";
 import { needsFreshDocument } from "@/lib/ad-scope";
+import {
+  SURNAME_MAX_LENGTH,
+  cleanNameInput,
+  nameInputMessage,
+  nameInputProblem,
+} from "@/lib/name-input";
+import { withJosa } from "@/lib/josa";
 
 // 타이핑 효과는 수묵화 톤과 어울리지 않아 제거됨.
 // 헤드라인은 글자별 잉크 드롭 (.ink-char) 으로 표시.
@@ -25,7 +32,11 @@ import { needsFreshDocument } from "@/lib/ad-scope";
 /**
  * InkChars — 텍스트를 한 글자씩 분해해 .ink-char 애니메이션을 부여.
  * baseDelay: 첫 글자 등장까지 대기 (ms)
- * step:      글자 간 간격 (ms, default 80)
+ * step:      글자 간 간격 (ms, default 80 — 공백도 한 칸으로 센다)
+ *
+ * 글자마다 inline-block 이라 그대로 두면 아무 글자 사이에서나 줄이 바뀐다(휴대폰 폭에서 '증명됩니 / 다.' —
+ * keep-all 은 inline-block 사이에 듣지 않는다, 2026-11-27 hero-mobile-text). 그래서 낱말마다 줄바꿈 없는 span 으로
+ * 묶고(마침표도 앞 글자와 같은 낱말) 낱말 사이에는 보통 공백을 둬 줄은 공백에서만 바뀐다.
  */
 function InkChars({
   text,
@@ -36,30 +47,76 @@ function InkChars({
   baseDelay?: number;
   step?: number;
 }) {
+  const chars = Array.from(text);
+  // 낱말 = 공백이 아닌 글자 묶음, start = 그 낱말 첫 글자의 원문 위치(지연 계산용)
+  const words: { start: number; chars: string[] }[] = [];
+  for (let i = 0; i < chars.length; i++) {
+    if (chars[i] === " ") continue;
+    const last = words[words.length - 1];
+    if (last && last.start + last.chars.length === i) last.chars.push(chars[i]);
+    else words.push({ start: i, chars: [chars[i]] });
+  }
   return (
     <>
-      {Array.from(text).map((ch, i) => {
-        if (ch === " ") {
-          // 공백은 너비만 보존, 애니메이션 제외
-          return (
-            <span key={i} className="ink-char ink-char--space">
-              &nbsp;
-            </span>
-          );
-        }
-        return (
-          <span
-            key={i}
-            className="ink-char"
-            style={{ animationDelay: `${baseDelay + i * step}ms` }}
-          >
-            {ch}
+      {words.map((word, wi) => (
+        <Fragment key={word.start}>
+          {wi > 0 && " "}
+          <span style={{ whiteSpace: "nowrap" }}>
+            {word.chars.map((ch, ci) => (
+              <span
+                key={ci}
+                className="ink-char"
+                style={{ animationDelay: `${baseDelay + (word.start + ci) * step}ms` }}
+              >
+                {ch}
+              </span>
+            ))}
           </span>
-        );
-      })}
+        </Fragment>
+      ))}
     </>
   );
 }
+
+/** 빈 칸·잘못된 칸 알림 흔들기 — globals.css nk-shake 와 같은 움직임 */
+const SHAKE_KEYFRAMES: Keyframe[] = [
+  { transform: "translateX(0)", offset: 0 },
+  { transform: "translateX(-5px)", offset: 0.18 },
+  { transform: "translateX(5px)", offset: 0.36 },
+  { transform: "translateX(-3px)", offset: 0.54 },
+  { transform: "translateX(3px)", offset: 0.72 },
+  { transform: "translateX(-1px)", offset: 0.9 },
+  { transform: "translateX(0)", offset: 1 },
+];
+
+/**
+ * 칸으로 커서를 보내고 흔든다. 옛 코드는 칸의 key 를 바꿔 다시 마운트해서 흔들었는데, focus() 다음에 마운트가
+ * 일어나 커서가 사라졌다(2026-11-27 hero-guide-text-focus — 클릭 뒤 activeElement 가 BODY).
+ * 이제 칸은 그대로 두고 Web Animations 로 매번 다시 흔든다. 줄인 움직임 설정이면 흔들지 않는다.
+ */
+function notifyField(el: HTMLElement | null) {
+  if (!el) return;
+  el.focus();
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (!reduceMotion && typeof el.animate === "function") {
+    el.animate(SHAKE_KEYFRAMES, {
+      duration: 480,
+      easing: "cubic-bezier(0.36, 0.07, 0.19, 0.97)",
+    });
+  }
+}
+
+/**
+ * Hero 그림 — 미리 줄여 둔 WebP(800·1200·1600w, 원본 1672×941 비율)를 싣는다. next/image 는 쓰지 않는다
+ * (Vercel 이미지 최적화 과금 — 사용자 결정). WebP 를 못 읽는 브라우저만 원본 PNG(1.3MB)를 받는다.
+ * 옛 코드는 휴대폰에서도 그 PNG 를 그대로 받았다(2026-11-27 hero-image-unoptimized).
+ * sizes 는 globals.css .hero-illustration-wrap 의 폭: 600px 이하는 4:3 상자를 object-fit: cover 로 채워
+ * 그림 폭 = 상자 폭 × 4/3 × 1672/941(≈ 1.34배), 601~900px 은 섹션 안쪽 + 32px, 그 위는 섹션 폭(최대 1120px).
+ */
+const HERO_IMAGE_SRCSET =
+  "/hero-illustration-800.webp 800w, /hero-illustration-1200.webp 1200w, /hero-illustration-1600.webp 1600w";
+const HERO_IMAGE_SIZES =
+  "(max-width: 600px) calc((100vw - 64px) * 1.34), (max-width: 900px) calc(100vw - 32px), (max-width: 1120px) 100vw, 1120px";
 
 export type HeroStartPayload =
   | {
@@ -167,20 +224,33 @@ export function Hero({
   // evaluate inputs
   const [evalQuery, setEvalQuery] = useState("");
 
-  // 필수 입력 누락 시 shake 안내용
+  // 필수 입력 누락 시 흔들기·주홍 밑줄 안내용
   // birth input은 recommend/evaluate 모드 모두 동일 ref 공유 (한 번에 한 모드만 렌더됨)
   const lastNameRef = useRef<HTMLInputElement | null>(null);
-  // 한글 IME 조합 중 slice로 값을 자르면 조합이 끊겨 글자가 지워지므로,
-  // 조합 중에는 원본을 유지하고 조합 종료 시점에만 2자 제한을 적용한다.
-  const lastNameComposingRef = useRef(false);
   const evalQueryRef = useRef<HTMLInputElement | null>(null);
   const birthRef = useRef<HTMLInputElement | null>(null);
-  const [shakeKey, setShakeKey] = useState(0); // 재트리거용 key
+  // 단추를 한 번 눌러 본 뒤에만 빈 칸을 주홍 밑줄로 표시한다(모드마다 따로)
+  const [recommendTried, setRecommendTried] = useState(false);
+  const [evaluateTried, setEvaluateTried] = useState(false);
+  // 성씨 칸 검사 — 빈 칸이 아닌 문제(金·ㅅ·영문·3자 이상)는 단추를 눌렀을 때 문장으로 알리고, 칸을 고치면 지운다.
+  // 옛 칸은 빈 값만 막고 입력을 2자로 잘라('김서윤' → '김서') 그대로 /search 로 보냈다(2026-11-27 hero-surname-unvalidated).
+  // 실제 성씨인지(사전)는 보지 않는다 — 희귀 성씨 도구가 목록 밖 성도 받는다(lib/name-input.ts)
+  const [surnameError, setSurnameError] = useState<string | null>(null);
+  const lastNameEmpty = !cleanNameInput(lastName);
 
-  function notifyEmpty(ref: React.RefObject<HTMLInputElement | null>) {
-    ref.current?.focus();
-    setShakeKey((k) => k + 1);
-  }
+  // 라벨 ↔ 칸 연결(2026-11-27 labels-hero — 화면 읽기 프로그램이 성씨 칸을 '예: 김'으로만 읽었다)
+  const uid = useId();
+  const fieldId = (name: string) => `${uid}-${name}`;
+
+  // 부모 이름 한 칸을 /search 가 어떻게 가를지 미리 보여 준다(같은 함수 — lib/name-split readParentPair)
+  const parentReading = readParentPair(parentName);
+  const parentHint = !parentName.trim()
+    ? null
+    : parentReading.unclear
+      ? `'${parentReading.father}' 한 분으로 읽어요. 두 분이면 '김민호 · 이수정'처럼 가운뎃점(·)으로 나눠 주세요.`
+      : parentReading.mother
+        ? `아버지 ${parentReading.father} · 어머니 ${withJosa(parentReading.mother, "으로/로")} 읽어요.`
+        : null;
 
   // 헤드라인 — 글자별 잉크 드롭 reveal (붓이 종이 위에 한 글자씩 쓰는 느낌)
   const HERO_LINE_1 = "결이 고운 이름은";
@@ -202,6 +272,18 @@ export function Hero({
     fontWeight: 500,
     marginBottom: 6,
     display: "block",
+  };
+
+  // 칸 아래 한 줄 안내(부모 이름 읽기)와 오류 문장(성씨) — 영어 이름 오류와 같은 꼴
+  const fieldNoteStyle: CSSProperties = {
+    margin: "6px 0 0",
+    fontSize: 12,
+    lineHeight: 1.5,
+    color: "var(--color-text-3)",
+  };
+  const fieldErrorStyle: CSSProperties = {
+    ...fieldNoteStyle,
+    color: "var(--color-vermilion)",
   };
 
   // 평가 입력이 어떻게 나뉘는지 미리 보여 준다 — 붙여 쓴 '선우진'은 선 + 우진으로 읽으므로
@@ -242,19 +324,24 @@ export function Hero({
       {/* 붓요정 Hero 일러스트 — 반응형은 globals.css .hero-illustration-wrap 참조.
           Desktop: section padding 까지 확장, Mobile: 컨테이너 안에 fit + 더 정사각 비율. */}
       <div className="hero-illustration-wrap">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/hero-illustration.png"
-          alt="이름의 결 마스코트 — 붓요정이 名 두루마리를 들고 있는 모습"
-          style={{
-            display: "block",
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center 60%",
-            filter: "drop-shadow(0 10px 24px rgba(44, 42, 38, 0.08))",
-          }}
-        />
+        <picture style={{ display: "block", width: "100%", height: "100%" }}>
+          <source type="image/webp" srcSet={HERO_IMAGE_SRCSET} sizes={HERO_IMAGE_SIZES} />
+          <img
+            src="/hero-illustration.png"
+            width={1672}
+            height={941}
+            fetchPriority="high"
+            alt="이름의 결 마스코트 — 붓요정이 名 두루마리를 들고 있는 모습"
+            style={{
+              display: "block",
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center 60%",
+              filter: "drop-shadow(0 10px 24px rgba(44, 42, 38, 0.08))",
+            }}
+          />
+        </picture>
       </div>
 
       <div
@@ -272,8 +359,10 @@ export function Hero({
         </div>
         <h1
           style={{
-            // 반응형 — 모바일 28px → 데스크탑 52px 사이에서 viewport 비례 스케일
-            fontSize: "clamp(26px, 6vw, 52px)",
+            // 반응형 — 모바일 22px → 데스크탑 52px 사이에서 viewport 비례 스케일.
+            // 아래 끝이 22px 인 것은 둘째 줄('시간이 흐를수록 증명됩니다.' ≈ 12.4em)이 360·375 폭(글 자리 296·311px)에서
+            // 한 줄에 들게 — 26px 이면 세 줄이 됐다(2026-11-27 hero-mobile-text). 434px 이상은 예전과 같다
+            fontSize: "clamp(22px, 6vw, 52px)",
             lineHeight: 1.3,
             fontWeight: 700,
             letterSpacing: "-0.02em",
@@ -282,7 +371,7 @@ export function Hero({
             marginBottom: 20,
             wordBreak: "keep-all",
           }}
-          aria-label="결이 고운 이름은 시간이 흐를수록 그 가치를 증명합니다."
+          aria-label={`${HERO_LINE_1} ${HERO_LINE_2}`}
         >
           {/* 1줄: 옅은 농도(濃) — 한 글자씩 80ms 간격 */}
           <span
@@ -387,41 +476,41 @@ export function Hero({
           >
             {mode === "recommend" && (
               <div>
+                {/* 성씨 · 성별 · 톤 — 640px 미만은 성씨 한 줄 + 성별·톤 두 칸(3칸이면 375 폭에서 '상관없음'·'부드럽게'가
+                    잘렸다 — hero-mobile-text), 그 위는 예전 3칸. 열은 className 으로(인라인 grid 는 미디어 쿼리를 이긴다) */}
                 <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1.1fr 1.1fr",
-                    gap: 10,
-                    marginBottom: 12,
-                  }}
+                  className="grid grid-cols-2 gap-2.5 sm:grid-cols-[1fr_1.1fr_1.1fr]"
+                  style={{ marginBottom: 12 }}
                 >
-                  <div>
-                    <label style={labelStyle}>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label htmlFor={fieldId("lastName")} style={labelStyle}>
                       성씨{" "}
                       <span style={{ color: "var(--color-text-3)" }}>
-                        (2자 이내)
+                        (필수 · 2자 이내)
                       </span>
                     </label>
                     <input
                       ref={lastNameRef}
-                      key={`lastName-${shakeKey}`}
+                      id={fieldId("lastName")}
                       value={lastName}
                       onChange={(e) => {
-                        const v = e.target.value;
-                        setLastName(
-                          lastNameComposingRef.current ? v : v.slice(0, 2)
-                        );
-                      }}
-                      onCompositionStart={() => {
-                        lastNameComposingRef.current = true;
-                      }}
-                      onCompositionEnd={(e) => {
-                        lastNameComposingRef.current = false;
-                        setLastName(e.currentTarget.value.slice(0, 2));
+                        // 2자로 자르지 않는다 — 넘치면 단추를 누를 때 '2글자까지' 안내(옛 자르기는 '김서윤'을 '김서'로 보냈다)
+                        setLastName(e.target.value);
+                        if (surnameError) setSurnameError(null);
                       }}
                       placeholder="예: 김"
+                      autoComplete="off"
+                      aria-required="true"
+                      aria-invalid={
+                        surnameError || (recommendTried && lastNameEmpty)
+                          ? true
+                          : undefined
+                      }
+                      aria-describedby={
+                        surnameError ? fieldId("lastName-error") : undefined
+                      }
                       className={
-                        !lastName.trim() && shakeKey > 0
+                        surnameError || (recommendTried && lastNameEmpty)
                           ? "sumi-field sumi-field--needs"
                           : "sumi-field"
                       }
@@ -429,8 +518,11 @@ export function Hero({
                     />
                   </div>
                   <div>
-                    <label style={labelStyle}>성별</label>
+                    <label htmlFor={fieldId("gender")} style={labelStyle}>
+                      성별
+                    </label>
                     <select
+                      id={fieldId("gender")}
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
                       className="sumi-field"
@@ -449,8 +541,11 @@ export function Hero({
                     </select>
                   </div>
                   <div>
-                    <label style={labelStyle}>톤</label>
+                    <label htmlFor={fieldId("tone")} style={labelStyle}>
+                      톤
+                    </label>
                     <select
+                      id={fieldId("tone")}
                       value={tone}
                       onChange={(e) => setTone(e.target.value)}
                       className="sumi-field"
@@ -469,6 +564,15 @@ export function Hero({
                     </select>
                   </div>
                 </div>
+                {surnameError && (
+                  <p
+                    id={fieldId("lastName-error")}
+                    role="alert"
+                    style={{ ...fieldErrorStyle, margin: "-4px 0 12px" }}
+                  >
+                    {surnameError}
+                  </p>
+                )}
 
                 <div
                   style={{
@@ -479,20 +583,22 @@ export function Hero({
                   }}
                 >
                   <div>
-                    <label style={labelStyle}>
+                    <label htmlFor={fieldId("birth")} style={labelStyle}>
                       생년월일{" "}
                       <span style={{ color: "var(--color-text-3)" }}>
-                        (사주 반영)
+                        (필수 · 사주 반영)
                       </span>
                     </label>
                     <input
                       ref={birthRef}
-                      key={`birth-${shakeKey}`}
+                      id={fieldId("birth")}
                       type="date"
                       value={birth}
                       onChange={(e) => setBirth(e.target.value)}
+                      aria-required="true"
+                      aria-invalid={recommendTried && !birth ? true : undefined}
                       className={
-                        !birth && shakeKey > 0
+                        recommendTried && !birth
                           ? "sumi-field sumi-field--needs"
                           : "sumi-field"
                       }
@@ -500,7 +606,7 @@ export function Hero({
                     />
                   </div>
                   <div>
-                    <label style={labelStyle}>
+                    <label htmlFor={fieldId("birthTime")} style={labelStyle}>
                       출생 시각{" "}
                       <span
                         style={{
@@ -513,6 +619,7 @@ export function Hero({
                       </span>
                     </label>
                     <input
+                      id={fieldId("birthTime")}
                       type="time"
                       value={birthTime}
                       onChange={(e) => setBirthTime(e.target.value)}
@@ -614,28 +721,43 @@ export function Hero({
                       </span>
                     </div>
                     <div style={{ gridColumn: "1 / -1" }}>
-                      <label style={labelStyle}>
+                      <label htmlFor={fieldId("parentName")} style={labelStyle}>
                         부모 이름{" "}
                         <span style={{ color: "var(--color-text-3)" }}>
                           (서사 연결)
                         </span>
                       </label>
                       <input
+                        id={fieldId("parentName")}
                         value={parentName}
                         onChange={(e) => setParentName(e.target.value)}
                         placeholder="예: 김민호 · 이수정"
+                        autoComplete="off"
+                        aria-describedby={
+                          parentHint ? fieldId("parentName-note") : undefined
+                        }
                         className="sumi-field"
-                      style={fieldStyle}
+                        style={fieldStyle}
                       />
+                      {/* /search 가 아버지·어머니 칸을 어떻게 채울지 — 두 분으로 가르면 확인, 한 분으로도 두 분으로도
+                          읽히면 가운뎃점 안내(2026-11-27 hero-parent-name-split — '지호 서윤'이 아버지 '지 + 호서윤'이 됐다) */}
+                      {parentHint && (
+                        <p id={fieldId("parentName-note")} style={fieldNoteStyle}>
+                          {parentHint}
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <label style={labelStyle}>스토리 키워드</label>
+                      <label htmlFor={fieldId("story")} style={labelStyle}>
+                        스토리 키워드
+                      </label>
                       <input
+                        id={fieldId("story")}
                         value={story}
                         onChange={(e) => setStory(e.target.value)}
                         placeholder="예: 바다, 새벽"
                         className="sumi-field"
-                      style={fieldStyle}
+                        style={fieldStyle}
                       />
                     </div>
                     <div>
@@ -695,12 +817,21 @@ export function Hero({
                   <Button
                     variant="primary"
                     onClick={() => {
-                      if (!lastName.trim()) {
-                        notifyEmpty(lastNameRef);
+                      const surname = cleanNameInput(lastName);
+                      const surnameProblem = nameInputProblem(surname, SURNAME_MAX_LENGTH);
+                      if (surnameProblem) {
+                        setRecommendTried(true);
+                        setSurnameError(
+                          surnameProblem === "empty"
+                            ? null
+                            : nameInputMessage(surnameProblem, "성씨", SURNAME_MAX_LENGTH)
+                        );
+                        notifyField(lastNameRef.current);
                         return;
                       }
                       if (!birth) {
-                        notifyEmpty(birthRef);
+                        setRecommendTried(true);
+                        notifyField(birthRef.current);
                         return;
                       }
                       if (englishNameIssue) {
@@ -711,13 +842,13 @@ export function Hero({
                       }
                       start({
                         mode: "recommend",
-                        lastName,
+                        lastName: surname,
                         gender,
                         tone,
                         birth,
                         birthTime,
-                        parentName,
-                        story,
+                        parentName: parentName.trim(),
+                        story: story.trim(),
                         englishName: englishName.trim(),
                       });
                     }}
@@ -736,8 +867,10 @@ export function Hero({
                   {/* 朱印 名 도장 — 작품 인증 도장 메타포 */}
                   <span className="sumi-stamp-name" aria-hidden>名</span>
                 </div>
-                {/* 안내 — 빈 항목을 우선순위 순서로 한 줄씩 노출 */}
-                {(!lastName.trim() || !birth) && (
+                {/* 안내 — 빈 필수 항목을 우선순위 순서로 한 줄씩 노출. 생년월일도 필수다(단추가 막는다) —
+                    옛 문구 '성씨를 입력하면 결과를 바로 보여드려요'·'생년월일을 입력하면 사주 조화도 함께'는 성씨만으로
+                    시작하던 때 그대로라 날짜 칸만 흔들리는 이유를 알 수 없었다(2026-11-27 hero-guide-text-focus) */}
+                {(lastNameEmpty || !birth) && (
                   <div
                     style={{
                       marginTop: 10,
@@ -748,9 +881,9 @@ export function Hero({
                       letterSpacing: "0.01em",
                     }}
                   >
-                    {!lastName.trim()
-                      ? "성씨를 입력하면 결과를 바로 보여드려요."
-                      : "생년월일을 입력하면 사주 조화도 함께 살펴봐요."}
+                    {lastNameEmpty
+                      ? "성씨와 생년월일을 넣으면 결과를 바로 보여드려요."
+                      : "생년월일을 넣으면 결과를 바로 보여드려요."}
                   </div>
                 )}
               </div>
@@ -758,25 +891,28 @@ export function Hero({
 
             {mode === "evaluate" && (
               <div>
-                {/* Row 1: 분석할 이름 + 성별 + 톤 (이름 추천 폼과 동일한 컬럼 비율) */}
+                {/* Row 1: 분석할 이름 + 성별 + 톤 (이름 추천 폼과 같은 칸 나눔 — 640px 미만은 이름 한 줄 + 성별·톤 두 칸) */}
                 <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1.1fr 1.1fr",
-                    gap: 10,
-                    marginBottom: 12,
-                  }}
+                  className="grid grid-cols-2 gap-2.5 sm:grid-cols-[1fr_1.1fr_1.1fr]"
+                  style={{ marginBottom: 12 }}
                 >
-                  <div>
-                    <label style={labelStyle}>분석할 이름</label>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label htmlFor={fieldId("evalQuery")} style={labelStyle}>
+                      분석할 이름
+                    </label>
                     <input
                       ref={evalQueryRef}
-                      key={`evalQuery-${shakeKey}`}
+                      id={fieldId("evalQuery")}
                       value={evalQuery}
                       onChange={(e) => setEvalQuery(e.target.value)}
                       placeholder="예: 김서준"
+                      autoComplete="off"
+                      aria-required="true"
+                      aria-invalid={
+                        evaluateTried && !evalQuery.trim() ? true : undefined
+                      }
                       className={
-                        !evalQuery.trim() && shakeKey > 0
+                        evaluateTried && !evalQuery.trim()
                           ? "sumi-field sumi-field--needs"
                           : "sumi-field"
                       }
@@ -784,8 +920,11 @@ export function Hero({
                     />
                   </div>
                   <div>
-                    <label style={labelStyle}>성별</label>
+                    <label htmlFor={fieldId("evalGender")} style={labelStyle}>
+                      성별
+                    </label>
                     <select
+                      id={fieldId("evalGender")}
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
                       className="sumi-field"
@@ -804,8 +943,11 @@ export function Hero({
                     </select>
                   </div>
                   <div>
-                    <label style={labelStyle}>톤</label>
+                    <label htmlFor={fieldId("evalTone")} style={labelStyle}>
+                      톤
+                    </label>
                     <select
+                      id={fieldId("evalTone")}
                       value={tone}
                       onChange={(e) => setTone(e.target.value)}
                       className="sumi-field"
@@ -834,7 +976,7 @@ export function Hero({
                   }}
                 >
                   <div>
-                    <label style={labelStyle}>
+                    <label htmlFor={fieldId("evalBirth")} style={labelStyle}>
                       생년월일{" "}
                       <span style={{ color: "var(--color-text-3)" }}>
                         (선택 · 사주 반영)
@@ -843,6 +985,7 @@ export function Hero({
                     {/* 평가에서 출생일은 선택 — 빈칸 강조(--needs)를 하지 않는다 */}
                     <input
                       ref={birthRef}
+                      id={fieldId("evalBirth")}
                       type="date"
                       value={birth}
                       onChange={(e) => setBirth(e.target.value)}
@@ -851,7 +994,7 @@ export function Hero({
                     />
                   </div>
                   <div>
-                    <label style={labelStyle}>
+                    <label htmlFor={fieldId("evalBirthTime")} style={labelStyle}>
                       출생 시각{" "}
                       <span
                         style={{
@@ -864,6 +1007,7 @@ export function Hero({
                       </span>
                     </label>
                     <input
+                      id={fieldId("evalBirthTime")}
                       type="time"
                       value={birthTime}
                       onChange={(e) => setBirthTime(e.target.value)}
@@ -883,7 +1027,8 @@ export function Hero({
                     variant="primary"
                     onClick={() => {
                       if (!evalQuery.trim()) {
-                        notifyEmpty(evalQueryRef);
+                        setEvaluateTried(true);
+                        notifyField(evalQueryRef.current);
                         return;
                       }
                       // 출생일은 선택 — 없으면 미학 점수만 평가한다(/evaluate 입력 폼과 같은 계약)
@@ -975,6 +1120,7 @@ export function Hero({
                     onClick={(e) => {
                       e.preventDefault();
                       setLastName(n);
+                      setSurnameError(null);
                     }}
                     href="#"
                     style={{
@@ -1001,7 +1147,9 @@ export function Hero({
                     onClick={(e) => {
                       e.preventDefault();
                       setEvalQuery(n);
-                      start({ mode: "evaluate", name: n, gender, tone });
+                      // 넣어 둔 생년월일·시각도 싣는다 — 단추로 갈 때와 같은 값(2026-11-27 hero-eval-links-drop-birth —
+                      // 옛 링크는 날짜를 버려 조화 점수 없이 미학만 채점했다). 날짜 없는 시각은 evaluateHref 가 버린다
+                      start({ mode: "evaluate", name: n, gender, tone, birth, birthTime });
                     }}
                     href="#"
                     style={{

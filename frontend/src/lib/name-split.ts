@@ -110,17 +110,82 @@ export function splitParentName(input: string): { surname: string; name: string 
   return { surname: parts.lastName, name: parts.name };
 }
 
+/** 홈 Hero 한 칸 '부모 이름'을 읽은 결과 — 아버지·어머니 칸 값과, 다르게도 읽힐 수 있는 입력인지 */
+export interface ParentPairReading {
+  father: string;
+  mother: string;
+  /**
+   * 한 분으로 읽었지만 두 분일 수도 있는 입력('선우 서윤'·'김민 호'·'지호 서윤 하린'·붙여 쓴 '김민호이수정') —
+   * 홈 Hero 가 "두 분이면 가운뎃점(·)으로 나눠 주세요"를 띄운다
+   */
+  unclear: boolean;
+}
+
+const PARENT_SEPARATOR_CHARS = /[·•,/&+]/;
+const PARENT_SEPARATOR = /\s*[·•,/&+]\s*/;
+
+/** 성 없이 이름만 쓴 한 분('지호')이나 성까지 붙여 쓴 한 분('김민호'·'남궁서연')으로 볼 낱말 — 2~4자 */
+function isWholeNameWord(word: string): boolean {
+  return word.length >= 2 && word.length <= 4;
+}
+
 /**
- * 홈 Hero 의 한 칸 '부모 이름'(placeholder '예: 김민호 · 이수정')을 아버지·어머니 두 칸 값으로 — ·, /, &, + 로 가른다.
- * 가름표가 없으면 띄어 쓴 두 낱말이 모두 3자 이상일 때만 두 사람으로 본다("김민호 이수정"). 그 밖은 한 사람(아버지 칸).
- * 옛 /search 는 한 칸 값을 아버지 이름 칸에 그대로 넣어 '김' + '민호·이수정'이 됐다.
+ * 띄어 쓴 낱말을 사람 단위로 묶는다 — 1자 낱말이나 복성 뒤에 1~3자 낱말이 오면 '성 이름' 한 분('김 철'·'남궁 민'),
+ * 나머지 낱말은 2~4자일 때만 한 분. 묶을 수 없거나 세 분 이상이면 null.
  */
-export function splitParentPair(input: string): [string, string] {
+function groupParentWords(words: string[]): string[] | null {
+  const people: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const next = words[i + 1];
+    const surnameLike = word.length === 1 || COMPOUND_SURNAMES.includes(word);
+    if (surnameLike && next !== undefined && next.length <= 3) {
+      people.push(`${word} ${next}`);
+      i++;
+      continue;
+    }
+    if (!isWholeNameWord(word)) return null;
+    people.push(word);
+  }
+  return people.length <= 2 ? people : null;
+}
+
+/**
+ * 홈 Hero 의 한 칸 '부모 이름'(placeholder '예: 김민호 · 이수정')을 아버지·어머니 두 칸 값으로 읽는다.
+ *
+ * 규칙 (위에서부터)
+ * 1. 가름표(·, /, &, +, 쉼표)가 있으면 그것으로 가른다 — 앞의 두 조각
+ * 2. 띄어 쓴 낱말을 사람 단위로 묶는다(groupParentWords) — 두 분이면 두 칸
+ *    "김민호 이수정"·"지호 서윤"(2자는 이름만 — splitParentName 이 성을 자르지 않는다)·"김지호 서윤"·
+ *    "김 철 이서윤"·"남궁 민 이서윤"·"김민호 이 수정"·"김 민호 이 수정"
+ * 3. 한 분으로 묶이면 아버지 칸 — "김 민호"·"남궁 민호". 다만 두 낱말이 모두 2~4자면 두 분으로도 읽혀 unclear('선우 서윤' — 선우는 흔한 이름)
+ * 4. 묶을 수 없으면(1자 낱말이 끝에 남음 '김민 호'·세 분 이상·5자 이상 낱말) 예전처럼 통째로 아버지 칸 + unclear
+ *
+ * 왜(2026-11-27 hero-parent-name-split): 옛 규칙은 가름표가 없으면 두 낱말이 모두 3자 이상일 때만 두 분으로 봐
+ * '지호 서윤'이 아버지 '지 + 호서윤'이 되고 어머니 이름이 사라졌다. 옛 /search 는 한 칸 값을 아버지 이름 칸에 그대로 넣어 '김' + '민호·이수정'이 됐다.
+ */
+export function readParentPair(input: string): ParentPairReading {
   const trimmed = input.trim();
-  if (!trimmed) return ["", ""];
-  const bySeparator = trimmed.split(/\s*[·•,/&+]\s*/).filter((s) => s.length > 0);
-  if (bySeparator.length >= 2) return [bySeparator[0], bySeparator[1]];
+  if (!trimmed) return { father: "", mother: "", unclear: false };
+  if (PARENT_SEPARATOR_CHARS.test(trimmed)) {
+    const parts = trimmed.split(PARENT_SEPARATOR).filter((s) => s.length > 0);
+    return { father: parts[0] ?? "", mother: parts[1] ?? "", unclear: false };
+  }
   const words = trimmed.split(/\s+/);
-  if (words.length === 2 && words.every((w) => w.length >= 3)) return [words[0], words[1]];
-  return [trimmed, ""];
+  if (words.length === 1) {
+    // 붙여 쓴 한 낱말 — 5자 이상이면 두 분을 붙여 쓴 것일 수 있다('김민호이수정')
+    return { father: trimmed, mother: "", unclear: trimmed.length > 4 };
+  }
+  const people = groupParentWords(words);
+  if (people?.length === 2) return { father: people[0], mother: people[1], unclear: false };
+  if (people?.length === 1) {
+    return { father: people[0], mother: "", unclear: words.length === 2 && words.every(isWholeNameWord) };
+  }
+  return { father: trimmed, mother: "", unclear: true };
+}
+
+/** readParentPair 의 [아버지, 어머니] — /search 가 Hero 에서 받은 parentName 을 두 칸으로 나눌 때 쓴다 */
+export function splitParentPair(input: string): [string, string] {
+  const { father, mother } = readParentPair(input);
+  return [father, mother];
 }
