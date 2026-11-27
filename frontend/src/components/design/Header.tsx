@@ -26,11 +26,11 @@ import {
  * 예전에는 버튼·메뉴 링크를 누를 때만 닫혀, 연 채 스크롤하면 sticky 머리말이 메뉴만큼 길어진 채 본문 위쪽을 가리고 따라왔다.
  * 지금은 ① Esc ② 머리말 바깥 누름(pointerdown — 터치 스크롤의 시작도 여기 든다) ③ 연 자리에서 MENU_CLOSE_SCROLL_PX 넘게 스크롤
  * ④ 경로 변경 때 닫힌다. 여닫기 버튼에는 aria-expanded·aria-controls(메뉴 id)를 단다.
+ * 메뉴는 머리말 아래에 겹쳐 그린다(position: absolute — sticky 머리말이 기준 상자). 머리말 안 블록이던 때는 메뉴를 닫으면
+ * 머리말이 메뉴 높이(약 215px)만큼 줄어 본문이 올라갔는데, ② 는 누름(pointerdown) 때 닫고 휴대폰은 손을 뗀 뒤 그 자리를 다시 찾아
+ * click 을 보내므로, 본문을 눌러 메뉴를 닫으면 그만큼 아래에 있던 다른 카드·입력 칸이 눌렸다. 겹쳐 그리면 닫아도 본문이 움직이지 않는다.
  */
 const MENU_CLOSE_SCROLL_PX = 40;
-// 연 직후 잠깐의 스크롤은 기준점만 옮긴다 — 메뉴가 열려 머리말이 길어지면 브라우저가 화면 위치를 맞추느라(scroll anchoring)
-// 스크롤 사건을 낼 수 있는데, 그건 사람이 내린 스크롤이 아니다
-const MENU_SCROLL_SETTLE_MS = 300;
 
 // 메뉴에 없는 화면(/company·/hanja·/name·/analysis 등)은 "none" — 어떤 메뉴도 켜지 않는다(기본값, header-nav.ts)
 export function Header({
@@ -65,8 +65,8 @@ export function Header({
   useEffect(() => {
     if (!menuOpen) return;
     const closeMenu = () => setMenuOpen(false);
-    const openedAt = performance.now();
-    let baseY = window.scrollY;
+    // 메뉴가 본문 위에 겹쳐 열려 화면 배치가 바뀌지 않으므로, 연 순간의 스크롤 위치가 그대로 기준이다
+    const baseY = window.scrollY;
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
@@ -81,10 +81,6 @@ export function Header({
       closeMenu();
     }
     function onScroll() {
-      if (performance.now() - openedAt < MENU_SCROLL_SETTLE_MS) {
-        baseY = window.scrollY;
-        return;
-      }
       if (Math.abs(window.scrollY - baseY) > MENU_CLOSE_SCROLL_PX) closeMenu();
     }
 
@@ -264,11 +260,21 @@ export function Header({
         </div>
       </div>
 
-      {/* 모바일 전용 드롭다운 메뉴 (640px 이하에서만 노출) */}
+      {/* 모바일 전용 드롭다운 메뉴 (640px 이하에서만 노출) — 본문 위에 겹쳐 그린다(여닫아도 본문이 움직이지 않게, 위 머리말 주석) */}
       <div
         ref={menuRef}
         id={menuId}
         className={`site-header-mobile${menuOpen ? " open" : ""}`}
+        style={{
+          position: "absolute",
+          top: "100%",
+          left: 0,
+          right: 0,
+          zIndex: 1,
+          // 겹친 메뉴의 아래 끝을 본문과 가른다(마지막 링크는 밑줄이 없다 — globals.css)
+          borderBottom: "1px solid var(--color-divider)",
+          boxShadow: "var(--shadow-md)",
+        }}
       >
         {NAV_ITEMS.map((item) => (
           <Link

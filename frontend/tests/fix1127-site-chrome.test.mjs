@@ -238,13 +238,35 @@ test("모바일 메뉴 — 열려 있을 때만 Esc·바깥 누름·스크롤 �
   assert.match(body, /if \(focusInMenu\) burgerRef\.current\?\.focus\(\);/);
   // ② 머리말 바깥 누름만 — 머리말 안(버튼·메뉴 링크)은 제 동작에 맡긴다
   assert.match(body, /if \(e\.target instanceof Node && headerRef\.current\?\.contains\(e\.target\)\) return;\s*closeMenu\(\);/);
-  // ③ 연 자리에서 일정 거리 넘게 스크롤 — 연 직후 잠깐(scroll anchoring)은 기준점만 옮긴다
-  assert.match(body, /if \(Math\.abs\(window\.scrollY - baseY\) > MENU_CLOSE_SCROLL_PX\) closeMenu\(\);/);
-  assert.match(body, /if \(performance\.now\(\) - openedAt < MENU_SCROLL_SETTLE_MS\) \{\s*baseY = window\.scrollY;\s*return;\s*\}/);
+  // ③ 연 자리에서 일정 거리 넘게 스크롤 — 메뉴가 겹쳐 열려 배치가 바뀌지 않으니 연 순간의 위치가 기준(옛 300ms 기다림 없음)
+  assert.match(body, /const baseY = window\.scrollY;/);
+  assert.match(body, /function onScroll\(\) \{\s*if \(Math\.abs\(window\.scrollY - baseY\) > MENU_CLOSE_SCROLL_PX\) closeMenu\(\);\s*\}/);
+  assert.doesNotMatch(HEADER, /MENU_SCROLL_SETTLE_MS|openedAt/);
   const px = Number(/const MENU_CLOSE_SCROLL_PX = (\d+);/.exec(HEADER)?.[1]);
-  const ms = Number(/const MENU_SCROLL_SETTLE_MS = (\d+);/.exec(HEADER)?.[1]);
   assert.ok(px >= 16 && px <= 120, `스크롤 거리 ${px}px`);
-  assert.ok(ms >= 100 && ms <= 600, `기다림 ${ms}ms`);
+});
+
+// 검토 반영(2026-11-27): 메뉴가 머리말 안 블록(display: block)이던 때는 바깥 누름(pointerdown)으로 닫는 순간 머리말이 메뉴 높이만큼 줄어
+// 본문이 올라갔고, 휴대폰은 손을 뗀 뒤 그 자리를 다시 찾아 click 을 보내 그만큼 아래의 다른 카드·입력 칸이 눌렸다.
+// 메뉴를 sticky 머리말 기준의 겹친 상자로 그리면 여닫아도 본문 배치가 그대로다.
+test("모바일 메뉴 — 본문 위에 겹쳐 그려, 닫아도 본문이 움직이지 않는다(누른 자리가 다른 요소로 넘어가지 않게)", () => {
+  // 기준 상자 = sticky 머리말(위치 지정 요소)
+  assert.match(HEADER, /<header\s+ref=\{headerRef\}[\s\S]*?style=\{\{\s*position: "sticky",\s*top: 0,/);
+  const menu = /<div\s+ref=\{menuRef\}([\s\S]*?)>\s*\{NAV_ITEMS\.map\(/.exec(HEADER)?.[1] ?? "";
+  assert.ok(menu, "모바일 메뉴 div 를 찾지 못했다");
+  const style = /style=\{\{([\s\S]*?)\}\}/.exec(menu)?.[1] ?? "";
+  assert.match(style, /position: "absolute"/);
+  assert.match(style, /top: "100%"/);
+  assert.match(style, /left: 0/);
+  assert.match(style, /right: 0/);
+  assert.match(style, /zIndex: \d+/);
+  // 열린 메뉴의 display 는 globals.css 가 정한다 — 인라인에서 display 를 덮지 않는다(640px 넘으면 숨김 유지)
+  assert.doesNotMatch(style, /display:/);
+  const css = read("src/app/globals.css");
+  assert.match(css, /\.site-header-mobile \{\s*display: none;\s*\}/);
+  assert.match(css, /@media \(max-width: 640px\) \{[\s\S]*?\.site-header-mobile\.open \{\s*display: block;/);
+  // 머리말 안에서 메뉴 높이를 다시 차지하는 쪽으로 되돌리지 않는다(인라인 position 이 absolute 가 아니면 위에서 실패)
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ""), /\.site-header-mobile[^{]*\{[^}]*position:\s*(?:static|relative)/);
 });
 
 test("모바일 메뉴 — 여닫기 버튼이 aria-expanded·aria-controls 로 메뉴를 가리키고, 참조가 제자리에 걸린다", () => {
