@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -36,7 +36,17 @@ import {
 import { cn } from "@/lib/utils";
 import { smart } from "@/lib/api";
 import { ENGLISH_NAME_MAX, englishNameProblem } from "@/lib/english-name";
+import { firstHanCodePoint, isHangulSyllables } from "@/lib/hanja-pick";
+import { requestPickFile } from "@/lib/hanja-pick-store";
+import { josa } from "@/lib/josa";
+import {
+  cleanNameInput,
+  nameInputMessage,
+  nameInputProblem,
+  SURNAME_MAX_LENGTH,
+} from "@/lib/name-input";
 import { splitParentName, splitParentPair } from "@/lib/name-split";
+import { KEYWORD_HANGUL_REQUIRED, keywordHasHangul } from "@/lib/parent-naming";
 import type {
   SmartRecommendationRequest,
   SmartRecommendationResponse,
@@ -49,6 +59,241 @@ const HERO_SUBLINES = [
   "결이 고운 이름은 시간이 흐를수록 그 가치를 증명합니다.",
 ];
 
+/** 스토리 키워드 글자 수 — 백엔드 SmartRecommendationRequestDto.StoryKeyword 의 StringLength(50) */
+const STORY_KEYWORD_MAX = 50;
+/** '추가 옵션' 접기 칸의 값 */
+const OPTIONS_PANEL = "options";
+
+// ============================================================
+// 폼 값 · 제출 스냅샷 · 새로 고침 복원 (2026-11-27 버그 목록 G-search)
+//
+// - 폼의 처음 값은 주소 쿼리(홈 Hero·/evaluate '비슷한 이름 추천'·검색 SearchAction)에서 읽는다.
+// - 추천 요청을 시작하면 주소에서 쿼리를 걷는다(search-query-persists — 부모 이름·생년월일이 결과 화면 내내 주소창·기록에 남아
+//   복사·공유로 따라가고, 받은 사람이 열면 autoStart 로 추천이 한 번 더 돌았다). 걷은 뒤의 새로 고침·뒤로 가기는
+//   같은 기록 칸(history.state 의 표)일 때만 이 탭의 sessionStorage 에서 폼 값과 마지막 결과를 되살린다 — 자동 재요청 없이.
+//   다른 길로 /search 에 새로 오면(헤더 링크 등 — 표가 없는 기록 칸) 빈 폼이다.
+// - 결과 화면(조건 칩·'상세 보기'·저장)은 제출 때 잡은 값(SubmittedQuery)만 쓴다(form-snapshot-search — 응답을 기다리는 동안
+//   폼을 고치면 고친 값이 링크·저장에 실렸다. /dual-name 의 SubmittedQuery 와 같은 방식).
+// ============================================================
+
+/** 폼 값 전체 — 주소 쿼리나 세션 저장에서 처음 값을 채운다 */
+interface SearchForm {
+  lastName: string;
+  /** "none" | "male" | "female" */
+  gender: string;
+  birthDate: string;
+  birthTime: string;
+  /** "neutral" | "soft" | "strong" */
+  tone: string;
+  /** 용신 기반 추천 파라미터(옛 링크의 ?preferredElement=) — 화면에서 고치지 않는다 */
+  preferredElement: string;
+  includePureKorean: boolean;
+  includeThreeSyllable: boolean;
+  includeCreative: boolean;
+  includeTwin: boolean;
+  includeParentBased: boolean;
+  includeDualName: boolean;
+  includeRequiredChar: boolean;
+  fatherName: string;
+  motherName: string;
+  storyKeyword: string;
+  englishName: string;
+  requiredChar: string;
+  requiredCharPosition: string;
+  requiredHanja: string;
+  preferredMeanings: string;
+}
+
+/** 쿼리 → 폼 처음 값. 쿼리가 비면 기본값이다 */
+function formFromQuery(params: Pick<URLSearchParams, "get">): SearchForm {
+  const g = params.get("gender");
+  const t = params.get("tone");
+  const parentName = params.get("parentName") ?? "";
+  const story = params.get("story") ?? "";
+  const englishName = params.get("englishName") ?? "";
+  // 홈 Hero 의 한 칸 '부모 이름'('김민호 · 이수정')은 아버지·어머니 두 칸으로 가른다
+  const [father, mother] = splitParentPair(parentName);
+  return {
+    lastName: params.get("lastName") ?? "",
+    gender: g === "male" || g === "female" ? g : "none",
+    birthDate: params.get("birthDate") ?? "",
+    birthTime: params.get("birthTime") ?? "",
+    tone: t === "soft" || t === "strong" ? t : "neutral",
+    preferredElement: params.get("preferredElement") ?? "",
+    includePureKorean: true,
+    includeThreeSyllable: true,
+    includeCreative: true,
+    includeTwin: false,
+    // 부모 이름이나 스토리 키워드가 들어오면 부모 기반 토글을 켠다 — Hero 가 '값을 입력하면 해당 추천 카테고리(부모 기반·…)가
+    // 자동으로 켜집니다'라고 안내한다(옛 화면은 story 를 읽지 않아 키워드가 통째로 버려졌다 — story-keyword-dropped)
+    includeParentBased: Boolean(parentName || story),
+    // 영어 이름이 들어오면 dual-name 토글을 켠다
+    includeDualName: Boolean(englishName),
+    includeRequiredChar: false,
+    fatherName: father,
+    motherName: mother,
+    storyKeyword: story.slice(0, STORY_KEYWORD_MAX),
+    englishName,
+    requiredChar: "",
+    requiredCharPosition: "any",
+    // 항렬자 한자 (선택) — 형제자매 공유 한자
+    requiredHanja: "",
+    // 의미 선호 키워드 — 입력은 콤마/공백 구분 문자열, 요청 시 배열로 분해
+    preferredMeanings: "",
+  };
+}
+
+/**
+ * 결과를 받은 요청의 입력 — 결과 화면(조건 칩·'상세 보기' 링크·저장)은 이 값을 쓴다.
+ * 응답을 기다리는 동안(콜드 스타트 30초 안팎) 폼을 바꿔도 결과와 다른 조건이 링크·저장에 실리지 않게 제출 때 잡아 둔다.
+ */
+interface SubmittedQuery {
+  /** 요청에 보낸 성씨 그대로(다듬은 값) */
+  lastName: string;
+  birthDate: string;
+  birthTime: string;
+  gender: string;
+  tone: string;
+  includePureKorean: boolean;
+  includeCreative: boolean;
+}
+
+/** 응답과 그 요청의 입력 — 늘 한 덩어리로 바꾼다 */
+interface SearchOutcome {
+  data: SmartRecommendationResponse;
+  query: SubmittedQuery;
+}
+
+/** 이 탭의 세션 저장 키 — 마지막 /search 요청의 폼 값과 결과(탭을 닫으면 브라우저가 지운다) */
+const RESTORE_STORAGE_KEY = "nameform:search-restore";
+/** history.state 안의 표 — 저장한 값이 이 기록 칸에서 보낸 요청의 것인지 */
+const RESTORE_HISTORY_KEY = "nameformSearch";
+/** 결과를 되살리는 시한 — 오래된 결과(배포 사이에 응답 꼴이 바뀌었을 수 있다)는 폼 값만 되살린다 */
+const RESTORE_RESULT_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+
+interface StoredSearch {
+  v: 1;
+  token: string;
+  savedAt: number;
+  form: SearchForm;
+  outcome?: SearchOutcome;
+}
+
+/** 저장해 둔 폼 값 — 아는 칸만, 같은 타입일 때만 받는다(모르는 값은 기본값) */
+function storedForm(raw: unknown): SearchForm | null {
+  if (!raw || typeof raw !== "object") return null;
+  const form: SearchForm = formFromQuery(new URLSearchParams());
+  const src = raw as Record<string, unknown>;
+  const out = form as unknown as Record<string, unknown>;
+  for (const key of Object.keys(form)) {
+    if (typeof src[key] === typeof out[key]) out[key] = src[key];
+  }
+  return form;
+}
+
+/** 저장해 둔 결과 — 꼴이 다르면 버린다 */
+function storedOutcome(raw: unknown): SearchOutcome | null {
+  if (!raw || typeof raw !== "object") return null;
+  const { data, query } = raw as Partial<SearchOutcome>;
+  if (!data || typeof data.lastName !== "string" || !Array.isArray(data.categories)) return null;
+  if (!data.categories.every((c) => !!c && typeof c.type === "string" && Array.isArray(c.names))) return null;
+  if (!query || typeof query !== "object") return null;
+  const strings = [query.lastName, query.birthDate, query.birthTime, query.gender, query.tone];
+  if (!strings.every((s) => typeof s === "string")) return null;
+  if (typeof query.includePureKorean !== "boolean" || typeof query.includeCreative !== "boolean") return null;
+  return { data, query };
+}
+
+function historyToken(): string | null {
+  try {
+    const state = window.history.state as Record<string, unknown> | null;
+    const token = state?.[RESTORE_HISTORY_KEY];
+    return typeof token === "string" ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 같은 기록 칸(새로 고침·뒤로 가기)이면 저장해 둔 폼 값·결과. 아니면 null */
+function readRestorable(): { token: string; form: SearchForm; outcome: SearchOutcome | null } | null {
+  if (typeof window === "undefined") return null;
+  const token = historyToken();
+  if (!token) return null;
+  try {
+    const raw = window.sessionStorage.getItem(RESTORE_STORAGE_KEY);
+    if (!raw) return null;
+    const stored = JSON.parse(raw) as Partial<StoredSearch> | null;
+    if (!stored || stored.v !== 1 || stored.token !== token || typeof stored.savedAt !== "number") return null;
+    const form = storedForm(stored.form);
+    if (!form) return null;
+    const fresh = Date.now() - stored.savedAt <= RESTORE_RESULT_MAX_AGE_MS;
+    return { token, form, outcome: fresh ? storedOutcome(stored.outcome) : null };
+  } catch {
+    return null;
+  }
+}
+
+/** 세션 저장 — 결과가 커서 못 담으면 폼 값만. 저장소를 못 쓰면 아무것도 하지 않는다(복원만 안 될 뿐) */
+function writeRestorable(token: string, form: SearchForm, outcome: SearchOutcome | null) {
+  const base: StoredSearch = { v: 1, token, savedAt: Date.now(), form };
+  try {
+    window.sessionStorage.setItem(RESTORE_STORAGE_KEY, JSON.stringify(outcome ? { ...base, outcome } : base));
+  } catch {
+    try {
+      window.sessionStorage.setItem(RESTORE_STORAGE_KEY, JSON.stringify(base));
+    } catch {
+      // 저장소를 못 쓰는 환경(사생활 보호 모드 등) — 복원 없이 그대로
+    }
+  }
+}
+
+function newRestoreToken(): string {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  } catch {
+    // 아래 대체 값
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+/**
+ * 주소에서 쿼리를 걷고 이 기록 칸에 표를 단다(새 기록을 쌓지 않는다).
+ * Next 가 감싼 history.replaceState 로 부른다 — useSearchParams 가 함께 바뀌고(autoStart 가 꺼진다) 화면 상태는 그대로다
+ * (App Router 는 쿼리만 다른 같은 경로에서 상태를 지우지 않는다). 첫 문서의 autoStart 는 마운트 효과에서 돌아, 같은 커밋이면
+ * 조상(AppRouter)의 효과 — history 를 감싸는 곳 — 보다 먼저라 한 틱 미룬다. data 에 Next 내부 값(__NA)을 넣지 않는다
+ * (넣으면 Next 가 주소 바뀜을 모른 채 지나가 다음 갱신 때 옛 주소로 되돌린다 — Next 가 내부 값을 스스로 옮겨 붙인다).
+ */
+function markEntryAndStripQuery(token: string) {
+  window.setTimeout(() => {
+    try {
+      window.history.replaceState({ [RESTORE_HISTORY_KEY]: token }, "", window.location.pathname + window.location.hash);
+    } catch {
+      // 주소를 못 바꾸면 그대로 둔다
+    }
+  }, 0);
+}
+
+/** 처음 값 — 쿼리가 있으면 쿼리(새로 들어온 길), 없으면 같은 기록 칸의 세션 저장, 그것도 없으면 기본값 */
+function initialSeed(params: Pick<URLSearchParams, "get" | "toString">): {
+  token: string | null;
+  form: SearchForm;
+  outcome: SearchOutcome | null;
+} {
+  if (params.toString() === "") {
+    const restored = readRestorable();
+    if (restored) return restored;
+  }
+  return { token: null, form: formFromQuery(params), outcome: null };
+}
+
+/** 필수 글자 칸과 항렬자 한자의 독음이 다를 때 — 한자 뒤에는 조사를 붙이지 않는다(독음을 모른다) */
+function requiredHanjaMismatchMessage(hanja: string, syllable: string): string {
+  return `‘${hanja}’ 글자는 이 사이트 사전에서 ‘${syllable}’${josa(syllable, "으로/로")} 읽지 않아요. 글자 칸을 항렬자의 음으로 고치거나 항렬자 칸을 비워 주세요.`;
+}
+
+// 서버 렌더에서 useLayoutEffect 경고를 피한다(이 폼은 클라이언트에서만 그려지지만 — useSearchParams 의 Suspense 경계)
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 function BabyNamingInner({
   onResultChange,
 }: {
@@ -56,163 +301,261 @@ function BabyNamingInner({
   onResultChange: (showingResult: boolean) => void;
 }) {
   const searchParams = useSearchParams();
+  // 처음 값은 마운트 때 한 번만 — 요청을 시작하면 주소에서 쿼리를 걷으므로 그 뒤의 searchParams 로 폼을 다시 채우지 않는다
+  const [seed] = useState(() => initialSeed(searchParams));
+  /** 이 기록 칸의 세션 저장 표 — 마지막으로 시작한 요청의 것 */
+  const entryToken = useRef<string | null>(null);
 
-  function handleCandidateDetail(fullName: string, evaluateHanja?: string) {
+  function handleCandidateDetail(query: SubmittedQuery, fullName: string, evaluateHanja?: string) {
     // fullName = lastName + firstName (예: "허기태"). 분리해서 /evaluate로 이동.
-    // 추천 요청의 컨텍스트(생일·시간·성별·톤)도 함께 전달 → 자동 평가
-    const ln = lastName.trim();
+    // 추천 요청의 컨텍스트(생일·시간·성별·톤)도 함께 전달 → 자동 평가. 값은 결과를 받은 요청의 것(지금 폼이 아니라)
+    const ln = query.lastName;
     const first = ln && fullName.startsWith(ln) ? fullName.slice(ln.length) : fullName;
     const params = new URLSearchParams();
     if (ln) params.set("lastName", ln);
     if (first) params.set("name", first);
     // 순우리말·3글자 후보는 카드의 한자(순우리말은 '-' — 한자 없이)를 싣는다. 없으면 /evaluate 가 자동으로 고른다
     if (evaluateHanja) params.set("hanja", evaluateHanja);
-    if (birthDate) params.set("birthDate", birthDate);
-    if (birthTime) params.set("birthTime", birthTime);
-    if (gender) params.set("gender", gender);
-    if (tone) params.set("tone", tone);
+    if (query.birthDate) params.set("birthDate", query.birthDate);
+    if (query.birthTime) params.set("birthTime", query.birthTime);
+    if (query.gender) params.set("gender", query.gender);
+    if (query.tone) params.set("tone", query.tone);
     // router.push 대신 풀 페이지 이동 — /evaluate는 정적(○) 라우트라 클라이언트
     // 라우터 캐시가 이전에 방문한 ?name=... 항목을 그대로 내놓아(다른 이름인데
     // 직전 평가 이름이 표시되던 버그) searchParams가 갱신되지 않는 문제를 우회.
     window.location.assign(`/evaluate?${params.toString()}`);
   }
 
-  // ---- form state (Hero에서 query로 들어오면 초기값 사용) ----
-  const initialGender = (() => {
-    const g = searchParams.get("gender");
-    if (g === "male" || g === "female") return g;
-    return "none";
-  })();
-  const initialTone = (() => {
-    const t = searchParams.get("tone");
-    if (t === "soft" || t === "strong") return t;
-    return "neutral";
-  })();
-  const queryParentName = searchParams.get("parentName") ?? "";
-  const queryEnglishName = searchParams.get("englishName") ?? "";
-  // story 키워드는 현재 이 폼에 없어 무시 (parent-based는 별도 페이지)
-
-  const [lastName, setLastName] = useState(searchParams.get("lastName") ?? "");
-  const [gender, setGender] = useState(initialGender);
-  const [birthDate, setBirthDate] = useState(searchParams.get("birthDate") ?? "");
+  // ---- form state (Hero에서 query로 들어오면 그 값, 새로 고침이면 세션 저장 값) ----
+  const [lastName, setLastName] = useState(seed.form.lastName);
+  const [gender, setGender] = useState(seed.form.gender);
+  const [birthDate, setBirthDate] = useState(seed.form.birthDate);
   const [birthDateError, setBirthDateError] = useState(false);
-  const [birthTime, setBirthTime] = useState(searchParams.get("birthTime") ?? "");
-  const [tone, setTone] = useState(initialTone);
+  const [birthTime, setBirthTime] = useState(seed.form.birthTime);
+  const [tone, setTone] = useState(seed.form.tone);
 
-  // 용신 기반 추천 파라미터
-  const preferredElement = searchParams.get("preferredElement") ?? undefined;
+  // 용신 기반 추천 파라미터 — 마운트 때 읽은 값(주소를 걷은 뒤에도 같은 값)
+  const preferredElement = seed.form.preferredElement || undefined;
 
   // toggles
-  const [includePureKorean, setIncludePureKorean] = useState(true);
-  const [includeThreeSyllable, setIncludeThreeSyllable] = useState(true);
-  const [includeCreative, setIncludeCreative] = useState(true);
-  const [includeTwin, setIncludeTwin] = useState(false);
-  // 부모 이름이 들어오면 parent-based 토글 자동 켜기
-  const [includeParentBased, setIncludeParentBased] = useState(
-    Boolean(queryParentName)
-  );
-  // 영어 이름이 들어오면 dual-name 토글 자동 켜기
-  const [includeDualName, setIncludeDualName] = useState(
-    Boolean(queryEnglishName)
-  );
-  const [includeRequiredChar, setIncludeRequiredChar] = useState(false);
+  const [includePureKorean, setIncludePureKorean] = useState(seed.form.includePureKorean);
+  const [includeThreeSyllable, setIncludeThreeSyllable] = useState(seed.form.includeThreeSyllable);
+  const [includeCreative, setIncludeCreative] = useState(seed.form.includeCreative);
+  const [includeTwin, setIncludeTwin] = useState(seed.form.includeTwin);
+  const [includeParentBased, setIncludeParentBased] = useState(seed.form.includeParentBased);
+  const [includeDualName, setIncludeDualName] = useState(seed.form.includeDualName);
+  const [includeRequiredChar, setIncludeRequiredChar] = useState(seed.form.includeRequiredChar);
 
-  // conditional fields — 홈 Hero 의 한 칸 '부모 이름'('김민호 · 이수정')은 아버지·어머니 두 칸으로 가른다
-  const [queryFather, queryMother] = splitParentPair(queryParentName);
-  const [fatherName, setFatherName] = useState(queryFather);
-  const [motherName, setMotherName] = useState(queryMother);
-  const [englishName, setEnglishName] = useState(queryEnglishName);
+  // conditional fields
+  const [fatherName, setFatherName] = useState(seed.form.fatherName);
+  const [motherName, setMotherName] = useState(seed.form.motherName);
+  const [storyKeyword, setStoryKeyword] = useState(seed.form.storyKeyword);
+  const [englishName, setEnglishName] = useState(seed.form.englishName);
   const englishNameIssue = englishNameProblem(englishName);
-  const [requiredChar, setRequiredChar] = useState("");
-  const [requiredCharPosition, setRequiredCharPosition] = useState("any");
-  // 항렬자 한자 (선택) — 형제자매 공유 한자
-  const [requiredHanja, setRequiredHanja] = useState("");
-  // 의미 선호 키워드 — 입력은 콤마/공백 구분 문자열, 요청 시 배열로 분해
-  const [preferredMeaningsInput, setPreferredMeaningsInput] = useState("");
+  const [requiredChar, setRequiredChar] = useState(seed.form.requiredChar);
+  const [requiredCharPosition, setRequiredCharPosition] = useState(seed.form.requiredCharPosition);
+  const [requiredHanja, setRequiredHanja] = useState(seed.form.requiredHanja);
+  const [preferredMeaningsInput, setPreferredMeaningsInput] = useState(seed.form.preferredMeanings);
+
+  // '추가 옵션' 펼침 — 그 안의 칸에서 제출이 막히면 펼쳐서 칸으로 옮긴다(Hero 에서 바로 온 값은 접힌 채 막힐 수 있다)
+  const [openOptions, setOpenOptions] = useState<string[]>([]);
+  const pendingFocus = useRef<string | null>(null);
+  useEffect(() => {
+    const id = pendingFocus.current;
+    if (!id) return;
+    pendingFocus.current = null;
+    document.getElementById(id)?.focus();
+  });
+  function focusField(id: string) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.focus();
+      return;
+    }
+    // 접힌 '추가 옵션' 안의 칸 — 펼쳐 그린 다음에 옮긴다
+    pendingFocus.current = id;
+    setOpenOptions([OPTIONS_PANEL]);
+  }
 
   // submission
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<SmartRecommendationResponse | null>(null);
+  const [outcome, setOutcome] = useState<SearchOutcome | null>(seed.outcome);
+
+  // 되살린 결과가 있으면 바깥 화면도 결과 꼴로(그리기 전에 — 헤더·소개가 한 번 비치지 않게). 표도 이어 쓴다
+  useIsoLayoutEffect(() => {
+    entryToken.current = seed.token;
+    if (seed.outcome) onResultChange(true);
+  }, []);
+
+  function currentForm(): SearchForm {
+    return {
+      lastName,
+      gender,
+      birthDate,
+      birthTime,
+      tone,
+      preferredElement: preferredElement ?? "",
+      includePureKorean,
+      includeThreeSyllable,
+      includeCreative,
+      includeTwin,
+      includeParentBased,
+      includeDualName,
+      includeRequiredChar,
+      fatherName,
+      motherName,
+      storyKeyword,
+      englishName,
+      requiredChar,
+      requiredCharPosition,
+      requiredHanja,
+      preferredMeanings: preferredMeaningsInput,
+    };
+  }
 
   // 결과 상태와 바깥 화면 전환을 한 번에 바꾼다 (같은 렌더에 묶여 깜빡임 없음)
-  function showResult(next: SmartRecommendationResponse | null) {
-    setResult(next);
+  function showResult(next: SearchOutcome | null) {
+    setOutcome(next);
     onResultChange(next !== null);
   }
 
   function handleReset() {
     showResult(null);
+    // 새로 고침해도 폼으로 돌아오게 — 저장해 둔 결과는 지우고 폼 값은 남긴다
+    if (entryToken.current) writeRestorable(entryToken.current, currentForm(), null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function runRecommend() {
-    if (!lastName.trim()) {
-      toast.error("성씨를 입력해주세요.");
+    if (loading) return;
+
+    // 성씨 — 다듬은 값(NFC·앞뒤 공백)을 보내고, 한글 1~2자가 아니면 막는다(search-surname-unvalidated —
+    // '金'·'ㅅ'·'K' 가 '희귀 성씨' 배너와 특이 성씨 탭을 받았다). 실제 성씨인지는 보지 않는다(희귀 성씨도 받는다)
+    const ln = cleanNameInput(lastName);
+    const surnameProblem = nameInputProblem(ln, SURNAME_MAX_LENGTH);
+    if (surnameProblem) {
+      toast.error(
+        surnameProblem === "empty"
+          ? "성씨를 입력해주세요."
+          : nameInputMessage(surnameProblem, "성씨", SURNAME_MAX_LENGTH)
+      );
+      focusField("lastName");
       return;
     }
 
     if (!birthDate) {
       setBirthDateError(true);
       toast.error("생년월일을 입력해주세요.");
-      document.getElementById("birthDate")?.focus();
+      focusField("birthDate");
       return;
     }
 
     if (includeDualName && englishNameIssue) {
       toast.error(englishNameIssue);
-      document.getElementById("englishName")?.focus();
+      focusField("englishName");
       return;
     }
 
-    // 필드명은 백엔드 SmartRecommendationRequestDto 그대로 — 없는 필드는 조용히 무시된다
-    // (includeTwin·englishName으로 보내 쌍둥이·영어 겸용 토글이 아무 효과 없던 전력).
-    // 부모 이름·영어 이름·필수 글자는 켜기 플래그가 없고 값이 있으면 카테고리가 붙으므로
-    // 토글이 꺼져 있으면 값을 보내지 않는 것으로 끈다.
-    // 부모 이름 칸은 성 포함 전체 이름('김철수') — 성과 이름으로 나눠 FatherSurname·FatherName 등으로 보낸다(2026-10-28).
-    // 옛 요청은 칸 값을 이름으로만 보내 부모 탭에 성 글자가 섞인 이름('수민김')이 나왔다
-    const father = includeParentBased ? splitParentName(fatherName) : { surname: "", name: "" };
-    const mother = includeParentBased ? splitParentName(motherName) : { surname: "", name: "" };
-    const req: SmartRecommendationRequest = {
-      lastName: lastName.trim(),
-      // 백엔드가 소문자로 비교하므로 그대로 전달 (대문자로 변환 시 gender/tone 보너스 누락)
-      gender: gender === "none" ? undefined : gender,
-      birthDate: birthDate || undefined,
-      birthTime: birthTime || undefined,
-      preferredFiveElement: preferredElement,
-      tone: tone,
-      includePureKorean,
-      includeThreeSyllable,
-      includeCreative,
-      isTwin: includeTwin,
-      fatherSurname: father.name && father.surname ? father.surname : undefined,
-      fatherName: father.name || undefined,
-      motherSurname: mother.name && mother.surname ? mother.surname : undefined,
-      motherName: mother.name || undefined,
-      preferredEnglishName:
-        includeDualName && englishName.trim() ? englishName.trim() : undefined,
-      requiredChar:
-        includeRequiredChar && requiredChar ? requiredChar : undefined,
-      requiredCharPosition:
-        includeRequiredChar && requiredCharPosition !== "any"
-          ? requiredCharPosition
-          : undefined,
-      requiredHanja:
-        includeRequiredChar && requiredHanja.trim() ? requiredHanja.trim() : undefined,
-      preferredMeanings: (() => {
-        const parsed = preferredMeaningsInput
-          .split(/[,\s]+/)
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
-        return parsed.length > 0 ? parsed : undefined;
-      })(),
-    };
+    // 스토리 키워드 — 부모 기반 탭을 켜는 값이다(백엔드 HasParentInfo). 한글이 없으면(tree·123·ㅋㅋ) 후보를 못 만드니 먼저 막는다
+    const story = includeParentBased ? storyKeyword.trim() : "";
+    if (story && !keywordHasHangul(story)) {
+      toast.error(KEYWORD_HANGUL_REQUIRED);
+      focusField("storyKeyword");
+      return;
+    }
+
+    // 필수 글자 · 항렬자 — 글자는 한글 한 글자, 항렬자는 한자 한 글자(호환 한자는 통합 한자로)
+    const reqChar = includeRequiredChar ? cleanNameInput(requiredChar) : "";
+    const reqHanjaText = includeRequiredChar ? requiredHanja.trim() : "";
+    const reqHanja = reqHanjaText ? firstHanCodePoint(reqHanjaText) : null;
+    if (reqChar && !(reqChar.length === 1 && isHangulSyllables(reqChar))) {
+      toast.error("필수 글자는 한글 한 글자로 입력해주세요.");
+      focusField("requiredChar");
+      return;
+    }
+    if (reqHanjaText && !reqHanja) {
+      toast.error("항렬자 칸에는 한자 한 글자를 입력해주세요.");
+      focusField("requiredHanja");
+      return;
+    }
 
     setLoading(true);
-    showResult(null);
-
     try {
+      // 두 칸을 다 넣었으면 항렬자가 그 글자로 읽히는지 — 음절별 후보 파일(public/data/hanja-pick/v1, 독음과 두음 꼴 포함 — 林 은 '임'·'림')에
+      // 그 한자가 있어야 한다(search-required-char-hanja-mismatch — '준' + 民 이 '김유준 · 있을 유 + 백성 민' 50개를 냈다).
+      // 파일을 못 받으면(연결 실패) 막지 않는다 — 서버가 다시 본다
+      if (reqChar && reqHanja) {
+        const facts = await requestPickFile(reqChar);
+        if (facts && !facts.some((f) => f.character === reqHanja)) {
+          toast.error(requiredHanjaMismatchMessage(reqHanja, reqChar));
+          focusField("requiredChar");
+          return;
+        }
+      }
+
+      // 필드명은 백엔드 SmartRecommendationRequestDto 그대로 — 없는 필드는 조용히 무시된다
+      // (includeTwin·englishName으로 보내 쌍둥이·영어 겸용 토글이 아무 효과 없던 전력).
+      // 부모 이름·스토리 키워드·영어 이름·필수 글자는 켜기 플래그가 없고 값이 있으면 카테고리가 붙으므로
+      // 토글이 꺼져 있으면 값을 보내지 않는 것으로 끈다.
+      // 부모 이름 칸은 성 포함 전체 이름('김철수') — 성과 이름으로 나눠 FatherSurname·FatherName 등으로 보낸다(2026-10-28).
+      // 옛 요청은 칸 값을 이름으로만 보내 부모 탭에 성 글자가 섞인 이름('수민김')이 나왔다
+      const father = includeParentBased ? splitParentName(fatherName) : { surname: "", name: "" };
+      const mother = includeParentBased ? splitParentName(motherName) : { surname: "", name: "" };
+      const req: SmartRecommendationRequest = {
+        lastName: ln,
+        // 백엔드가 소문자로 비교하므로 그대로 전달 (대문자로 변환 시 gender/tone 보너스 누락)
+        gender: gender === "none" ? undefined : gender,
+        birthDate: birthDate || undefined,
+        birthTime: birthTime || undefined,
+        preferredFiveElement: preferredElement,
+        tone: tone,
+        includePureKorean,
+        includeThreeSyllable,
+        includeCreative,
+        isTwin: includeTwin,
+        fatherSurname: father.name && father.surname ? father.surname : undefined,
+        fatherName: father.name || undefined,
+        motherSurname: mother.name && mother.surname ? mother.surname : undefined,
+        motherName: mother.name || undefined,
+        storyKeyword: story || undefined,
+        preferredEnglishName:
+          includeDualName && englishName.trim() ? englishName.trim() : undefined,
+        requiredChar: reqChar || undefined,
+        requiredCharPosition:
+          includeRequiredChar && requiredCharPosition !== "any"
+            ? requiredCharPosition
+            : undefined,
+        requiredHanja: reqHanja || undefined,
+        preferredMeanings: (() => {
+          const parsed = preferredMeaningsInput
+            .split(/[,\s]+/)
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+          return parsed.length > 0 ? parsed : undefined;
+        })(),
+      };
+      const query: SubmittedQuery = {
+        lastName: ln,
+        birthDate,
+        birthTime,
+        gender,
+        tone,
+        includePureKorean,
+        includeCreative,
+      };
+
+      // 요청을 시작한 뒤 주소에서 쿼리를 걷는다 — 새로 고침·뒤로 가기는 이 표로 세션 저장에서 되살린다
+      const form = currentForm();
+      const token = newRestoreToken();
+      entryToken.current = token;
+      writeRestorable(token, form, null);
+      markEntryAndStripQuery(token);
+
+      showResult(null);
       const data = await smart(req);
-      showResult(data);
+      const next: SearchOutcome = { data, query };
+      showResult(next);
+      if (entryToken.current === token) writeRestorable(token, form, next);
       if (data.categories.length === 0) {
         toast.info("조건에 맞는 이름을 찾지 못했습니다.");
       }
@@ -230,17 +573,18 @@ function BabyNamingInner({
     await runRecommend();
   }
 
-  // Hero에서 autoStart=1 + lastName 들어오면 자동 추천 (한 번만)
+  // Hero에서 autoStart=1 + lastName 들어오면 자동 추천 (한 번만 — 요청을 시작하면 주소에서 autoStart 를 걷는다)
   const autoStart = searchParams.get("autoStart") === "1";
   useEffect(() => {
-    if (autoStart && lastName.trim() && !result && !loading) {
+    if (autoStart && lastName.trim() && !outcome && !loading) {
       void runRecommend();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart]);
 
   // 결과 있으면 SmartResultPage 풀 페이지로 전환
-  if (result) {
+  if (outcome) {
+    const { data: result, query } = outcome;
     if (result.categories.length === 0) {
       return (
         <div className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -254,19 +598,19 @@ function BabyNamingInner({
       );
     }
     const requestSummary: RequestSummary = {
-      lastName: result.lastName || lastName,
-      date: birthDate || undefined,
+      lastName: result.lastName || query.lastName,
+      date: query.birthDate || undefined,
       gender:
-        gender === "male" ? "남" : gender === "female" ? "여" : "성별 무관",
+        query.gender === "male" ? "남" : query.gender === "female" ? "여" : "성별 무관",
       tone:
-        tone === "soft"
+        query.tone === "soft"
           ? "소프트 톤"
-          : tone === "strong"
+          : query.tone === "strong"
             ? "강한 톤"
             : "중립 톤",
       hanja: true,
-      pureKorean: includePureKorean,
-      creative: includeCreative,
+      pureKorean: query.includePureKorean,
+      creative: query.includeCreative,
     };
     return (
       <SmartResultPage
@@ -274,8 +618,15 @@ function BabyNamingInner({
         requestSummary={requestSummary}
         editHref="/search"
         onRegenerate={handleReset}
-        onCandidateDetail={handleCandidateDetail}
-        favoriteContext={{ birthDate, birthTime, gender, tone }}
+        onCandidateDetail={(fullName, evaluateHanja) =>
+          handleCandidateDetail(query, fullName, evaluateHanja)
+        }
+        favoriteContext={{
+          birthDate: query.birthDate,
+          birthTime: query.birthTime,
+          gender: query.gender,
+          tone: query.tone,
+        }}
       />
     );
   }
@@ -320,11 +671,11 @@ function BabyNamingInner({
               />
             </div>
 
-            {/* 성별 */}
+            {/* 성별 — 라벨은 htmlFor ↔ SelectTrigger id(Base UI 트리거는 button 이라 라벨이 이름이 된다 — labels-search) */}
             <div className="space-y-1.5">
-              <Label>성별</Label>
+              <Label htmlFor="gender">성별</Label>
               <Select value={gender} onValueChange={(v) => setGender(v ?? "none")}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="gender" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -374,9 +725,9 @@ function BabyNamingInner({
 
             {/* 톤 */}
             <div className="space-y-1.5">
-              <Label>톤</Label>
+              <Label htmlFor="tone">톤</Label>
               <Select value={tone} onValueChange={(v) => setTone(v ?? "neutral")}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="tone" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -390,37 +741,42 @@ function BabyNamingInner({
         </fieldset>
 
         {/* 추가 옵션 — Accordion으로 접기 */}
-        <Accordion>
-          <AccordionItem value="options" className="border rounded-lg px-4">
+        <Accordion value={openOptions} onValueChange={(v) => setOpenOptions(v as string[])}>
+          <AccordionItem value={OPTIONS_PANEL} className="border rounded-lg px-4">
             <AccordionTrigger className="text-sm font-semibold py-3">
               추가 옵션
             </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-3 pb-2">
                 <ToggleRow
+                  id="includePureKorean"
                   label="순우리말 포함"
                   checked={includePureKorean}
                   onCheckedChange={setIncludePureKorean}
                 />
                 <ToggleRow
+                  id="includeThreeSyllable"
                   label="3글자 이름 포함"
                   checked={includeThreeSyllable}
                   onCheckedChange={setIncludeThreeSyllable}
                 />
                 <ToggleRow
+                  id="includeCreative"
                   label="창의적 작명 포함"
                   checked={includeCreative}
                   onCheckedChange={setIncludeCreative}
                 />
                 <ToggleRow
+                  id="includeTwin"
                   label="쌍둥이"
                   checked={includeTwin}
                   onCheckedChange={setIncludeTwin}
                 />
 
-                {/* 부모 이름 활용 */}
+                {/* 부모 이름 · 스토리 키워드 활용 */}
                 <ToggleRow
-                  label="부모 이름 활용"
+                  id="includeParentBased"
+                  label="부모 이름·키워드 활용"
                   checked={includeParentBased}
                   onCheckedChange={setIncludeParentBased}
                 />
@@ -448,11 +804,29 @@ function BabyNamingInner({
                     <p className="text-[11px] text-muted-foreground sm:col-span-2">
                       성까지 넣어 주세요. 외자 이름은 &lsquo;김 철&rsquo;처럼 띄어 써요.
                     </p>
+                    {/* 스토리 키워드 — 홈 Hero 의 같은 칸이 ?story= 로 넘긴다. 부모 이름 없이 키워드만 있어도 백엔드가 부모 기반 탭을 붙인다(HasParentInfo) */}
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label htmlFor="storyKeyword">
+                        스토리 키워드 <span className="text-muted-foreground text-xs">(선택)</span>
+                      </Label>
+                      <Input
+                        id="storyKeyword"
+                        placeholder="예: 사랑, 희망, 빛"
+                        value={storyKeyword}
+                        onChange={(e) => setStoryKeyword(e.target.value)}
+                        maxLength={STORY_KEYWORD_MAX}
+                        autoComplete="off"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        자녀에게 담고 싶은 의미를 한글 한두 단어로 적어 주세요. 부모 이름 없이 키워드만 넣어도 돼요.
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 {/* 영어 이름 겸용 */}
                 <ToggleRow
+                  id="includeDualName"
                   label="영어 이름 겸용"
                   checked={includeDualName}
                   onCheckedChange={setIncludeDualName}
@@ -491,6 +865,7 @@ function BabyNamingInner({
 
                 {/* 필수 글자 */}
                 <ToggleRow
+                  id="includeRequiredChar"
                   label="필수 글자"
                   checked={includeRequiredChar}
                   onCheckedChange={setIncludeRequiredChar}
@@ -508,12 +883,12 @@ function BabyNamingInner({
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label>위치</Label>
+                        <Label htmlFor="requiredCharPosition">위치</Label>
                         <Select
                           value={requiredCharPosition}
                           onValueChange={(v) => setRequiredCharPosition(v ?? "any")}
                         >
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger id="requiredCharPosition" className="w-full">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -534,8 +909,9 @@ function BabyNamingInner({
                         maxLength={1}
                       />
                       <p className="text-xs text-muted-foreground">
-                        형제자매가 공유하는 한자를 입력하면 해당 한자만 사용해 이름을
-                        만들어요. 한글만 입력하면 일반 필수 글자로 동작합니다.
+                        형제자매가 함께 쓰는 한자를 넣으면 그 한자만 써서 이름을
+                        만들어요. 한자를 비우면 글자 칸의 한글로 찾아요. 두 칸을 다
+                        넣으면 항렬자의 음이 글자와 같아야 해요.
                       </p>
                     </div>
                   </div>
@@ -703,19 +1079,26 @@ export default function BabyNamingPage() {
 }
 
 // ---- helper ----
+/**
+ * 켜고 끄는 줄 — 라벨 htmlFor ↔ Switch id. Base UI Switch 는 id 를 숨은 checkbox 에 달아, 라벨을 눌러도 켜고 끌 수 있고
+ * 스위치(role=switch)는 그 라벨을 이름으로 읽는다(labels-search — 옛 줄은 라벨이 어디에도 이어지지 않아 cursor-pointer 만 있었다)
+ */
 function ToggleRow({
+  id,
   label,
   checked,
   onCheckedChange,
 }: {
+  id: string;
   label: string;
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
 }) {
   return (
     <div className="flex items-center justify-between">
-      <Label className="cursor-pointer">{label}</Label>
+      <Label htmlFor={id} className="cursor-pointer">{label}</Label>
       <Switch
+        id={id}
         checked={checked}
         onCheckedChange={(val) => onCheckedChange(val)}
       />
