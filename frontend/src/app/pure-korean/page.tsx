@@ -23,6 +23,8 @@ import {
 import { pureKorean } from "@/lib/api";
 import type { SmartRecommendationResponse } from "@/lib/types";
 import {
+  checkSpecialtySurname,
+  requestChipLabels,
   specialtyGenderTone,
   wrapPureKoreanResponse,
 } from "@/lib/specialty-candidates";
@@ -34,6 +36,17 @@ import { useCandidateDetail } from "@/lib/useCandidateDetail";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 
+/**
+ * 결과를 받은 요청의 입력 — 결과 화면(조건 칩·'상세 보기'·저장)은 이 값만 쓴다.
+ * 응답을 기다리는 동안(콜드 스타트 30초 안팎) 폼을 고쳐도 결과와 다른 조건이 링크·저장에 실리지 않게 제출 때 잡아 둔다(/dual-name 과 같은 꼴).
+ */
+interface SubmittedQuery {
+  /** 요청에 보낸 성씨(다듬은 값) */
+  lastName: string;
+  gender: string;
+  tone: string;
+}
+
 export default function PureKoreanPage() {
   const [lastName, setLastName] = useState("");
   const navDetail = useCandidateDetail();
@@ -41,28 +54,33 @@ export default function PureKoreanPage() {
   const [tone, setTone] = useState("neutral");
   const [count, setCount] = useState("10");
 
-  const [result, setResult] = useState<SmartRecommendationResponse | null>(
-    null
-  );
+  const [result, setResult] = useState<{
+    data: SmartRecommendationResponse;
+    query: SubmittedQuery;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!lastName.trim()) {
-      setError("성씨를 입력해주세요.");
+    if (loading) return;
+    const surname = checkSpecialtySurname(lastName);
+    if (surname.error) {
+      setError(surname.error);
+      document.getElementById("lastName")?.focus();
       return;
     }
+    const query: SubmittedQuery = { lastName: surname.value, gender, tone };
     setLoading(true);
     setError(null);
     setResult(null);
     try {
       const data = await pureKorean({
-        lastName: lastName.trim(),
-        ...specialtyGenderTone(gender, tone),
+        lastName: query.lastName,
+        ...specialtyGenderTone(query.gender, query.tone),
         count: parseInt(count, 10),
       });
-      setResult(wrapPureKoreanResponse(data, lastName.trim()));
+      setResult({ data: wrapPureKoreanResponse(data, query.lastName), query });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "요청 중 오류가 발생했어요."
@@ -80,34 +98,24 @@ export default function PureKoreanPage() {
   // ============================================================
   // 결과 화면 — SmartResultPage 재사용
   // ============================================================
-  if (result && result.totalCount > 0) {
+  if (result && result.data.totalCount > 0) {
+    const q = result.query;
     const requestSummary: RequestSummary = {
-      lastName,
-      gender:
-        gender === "none"
-          ? undefined
-          : gender === "male"
-            ? "남"
-            : "여",
-      tone:
-        tone === "neutral"
-          ? "중립"
-          : tone === "soft"
-            ? "부드러움"
-            : "강함",
+      lastName: q.lastName,
+      ...requestChipLabels(q.gender, q.tone),
       pureKorean: true,
     };
     return (
       <SmartResultPage
-        data={result}
+        data={result.data}
         requestSummary={requestSummary}
         editHref="/pure-korean"
         onRegenerate={handleReset}
         // 카드의 한자(순우리말 음절은 '-' — 한자 없이)를 평가 링크에 싣는다. 빼면 /evaluate 가 한자를 자동으로 골라 다른 이름을 채점한다
-        onCandidateDetail={(fn, hanja) => navDetail(lastName, fn, { gender, tone, hanja })}
+        onCandidateDetail={(fn, hanja) => navDetail(q.lastName, fn, { gender: q.gender, tone: q.tone, hanja })}
         // 저장(TopPick)에도 성별·톤을 남긴다 — 없으면 /favorites가 옛 저장분으로 보고
         // 선우리를 선우+리로 다시 나누고, 다시 보기가 성별·톤 없이 평가된다 (2026-10-21)
-        favoriteContext={{ gender, tone }}
+        favoriteContext={{ gender: q.gender, tone: q.tone }}
       />
     );
   }
@@ -156,12 +164,12 @@ export default function PureKoreanPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>성별</Label>
+              <Label htmlFor="pure-korean-gender">성별</Label>
               <Select
                 value={gender}
                 onValueChange={(v) => setGender(v ?? "none")}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="pure-korean-gender" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -173,12 +181,12 @@ export default function PureKoreanPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>톤</Label>
+              <Label htmlFor="pure-korean-tone">톤</Label>
               <Select
                 value={tone}
                 onValueChange={(v) => setTone(v ?? "neutral")}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="pure-korean-tone" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -190,12 +198,12 @@ export default function PureKoreanPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>추천 개수</Label>
+              <Label htmlFor="pure-korean-count">추천 개수</Label>
               <Select
                 value={count}
                 onValueChange={(v) => setCount(v ?? "10")}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="pure-korean-count" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -222,12 +230,15 @@ export default function PureKoreanPage() {
       </Card>
 
       {error && (
-        <div className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700">
+        <div
+          role="alert"
+          className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700"
+        >
           {error}
         </div>
       )}
 
-      {result && result.totalCount === 0 && (
+      {result && result.data.totalCount === 0 && (
         <div className="rounded-2xl border border-paper-line bg-paper-card p-10 text-center shadow-sm">
           <p className="eyebrow mb-3">RESULT · EMPTY</p>
           <h2 className="mb-3 text-2xl font-medium text-navy">

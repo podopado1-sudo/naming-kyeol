@@ -171,8 +171,9 @@ test("3글자 평가 링크 한자 — 한자 조각은 그 한자, 두 음절 �
 });
 
 test("'상세 보기'·저장이 카드의 한자를 /evaluate 로 넘긴다", () => {
+  // 성씨·성별·톤은 제출 때 잡아 둔 값(q — 2026-11-27 form-snapshot-specialty, tests/fix1127-specialty-pages.test.mjs)
   for (const page of ["app/three-syllable/page.tsx", "app/pure-korean/page.tsx"]) {
-    assert.match(read(page), /onCandidateDetail=\{\(fn, hanja\) => navDetail\(lastName, fn, \{ gender, tone, hanja \}\)\}/, page);
+    assert.match(read(page), /onCandidateDetail=\{\(fn, hanja\) => navDetail\(q\.lastName, fn, \{ gender: q\.gender, tone: q\.tone, hanja \}\)\}/, page);
   }
   assert.match(read("lib/useCandidateDetail.ts"), /if \(ctx\?\.hanja\) params\.set\("hanja", ctx\.hanja\);/);
   assert.match(read("app/search/page.tsx"), /if \(evaluateHanja\) params\.set\("hanja", evaluateHanja\);/);

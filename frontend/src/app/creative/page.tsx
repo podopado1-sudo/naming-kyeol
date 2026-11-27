@@ -20,11 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { creative } from "@/lib/api";
-import type {
-  CreativeCandidate,
-  SmartNameCandidate,
-  SmartRecommendationResponse,
-} from "@/lib/types";
+import type { SmartRecommendationResponse } from "@/lib/types";
+import {
+  checkSpecialtySurname,
+  requestChipLabels,
+  specialtyGenderTone,
+  wrapCreativeResponse,
+} from "@/lib/specialty-candidates";
 import {
   SmartResultPage,
   type RequestSummary,
@@ -33,45 +35,15 @@ import { useCandidateDetail } from "@/lib/useCandidateDetail";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 
-// ============================================================
-// 어댑터
-// ============================================================
-// 백엔드는 CreativeNameCandidate 원본 배열을 반환한다 — smart 경로의
-// SmartRecommendationService 창의 매핑과 동일 규칙으로 변환해 표시 일관성을 맞춘다.
-function wrapAsSmartResponse(
-  res: CreativeCandidate[],
-  lastName: string
-): SmartRecommendationResponse {
-  const names: SmartNameCandidate[] = (res ?? []).map((c) => ({
-    name: c.name,
-    fullName: c.fullName,
-    meaning: c.meaning,
-    story: c.story || undefined,
-    score: Math.round(c.creativityScore * 10) / 10,
-    tags: [c.concept, c.surnameConnection].filter(Boolean),
-    reasons: [],
-    phonologyNotes: [],
-  }));
-  return {
-    lastName,
-    isRareSurname: false,
-    categories: [
-      {
-        type: "creative",
-        label: "창의적 작명",
-        engineUsed: "CreativeNamingEngine",
-        names,
-      },
-    ],
-    totalCount: names.length,
-    topPick: names.length
-      ? {
-          categoryType: "creative",
-          categoryLabel: "창의적 작명",
-          candidate: names[0],
-        }
-      : null,
-  };
+/**
+ * 결과를 받은 요청의 입력 — 결과 화면(조건 칩·'상세 보기'·저장)은 이 값만 쓴다.
+ * 응답을 기다리는 동안(콜드 스타트 30초 안팎) 폼을 고쳐도 결과와 다른 조건이 링크·저장에 실리지 않게 제출 때 잡아 둔다(/dual-name 과 같은 꼴).
+ */
+interface SubmittedQuery {
+  /** 요청에 보낸 성씨(다듬은 값) */
+  lastName: string;
+  gender: string;
+  tone: string;
 }
 
 export default function CreativePage() {
@@ -81,39 +53,35 @@ export default function CreativePage() {
   const [tone, setTone] = useState("neutral");
   const [count, setCount] = useState("10");
 
-  const [result, setResult] = useState<SmartRecommendationResponse | null>(
-    null
-  );
+  const [result, setResult] = useState<{
+    data: SmartRecommendationResponse;
+    query: SubmittedQuery;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!lastName.trim()) {
-      setError("성씨를 입력해주세요.");
+    if (loading) return;
+    const surname = checkSpecialtySurname(lastName);
+    if (surname.error) {
+      setError(surname.error);
+      document.getElementById("lastName")?.focus();
       return;
     }
+    const query: SubmittedQuery = { lastName: surname.value, gender, tone };
     setLoading(true);
     setError(null);
     setResult(null);
     try {
+      // 서버(CreativeNamingEngine)는 소문자로 비교한다 — 다른 단독 화면과 같은 꼴('none' 은 보내지 않는다)
       const data = await creative({
-        lastName: lastName.trim(),
-        gender:
-          gender === "none"
-            ? undefined
-            : gender === "male"
-              ? "Male"
-              : "Female",
-        tone:
-          tone === "neutral"
-            ? "Neutral"
-            : tone === "soft"
-              ? "Soft"
-              : "Strong",
+        lastName: query.lastName,
+        ...specialtyGenderTone(query.gender, query.tone),
         count: parseInt(count, 10),
       });
-      setResult(wrapAsSmartResponse(data, lastName.trim()));
+      // 점수는 창의 점수라 이름표 '창의'(lib/specialty-candidates — 'FINAL'(종합)로 적지 않는다)
+      setResult({ data: wrapCreativeResponse(data, query.lastName), query });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "요청 중 오류가 발생했어요."
@@ -128,33 +96,23 @@ export default function CreativePage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  if (result && result.totalCount > 0) {
+  if (result && result.data.totalCount > 0) {
+    const q = result.query;
     const requestSummary: RequestSummary = {
-      lastName,
-      gender:
-        gender === "none"
-          ? undefined
-          : gender === "male"
-            ? "남"
-            : "여",
-      tone:
-        tone === "neutral"
-          ? "중립"
-          : tone === "soft"
-            ? "부드러움"
-            : "강함",
+      lastName: q.lastName,
+      ...requestChipLabels(q.gender, q.tone),
       creative: true,
     };
     return (
       <SmartResultPage
-        data={result}
+        data={result.data}
         requestSummary={requestSummary}
         editHref="/creative"
         onRegenerate={handleReset}
-        onCandidateDetail={(fn) => navDetail(lastName, fn, { gender, tone })}
+        onCandidateDetail={(fn) => navDetail(q.lastName, fn, { gender: q.gender, tone: q.tone })}
         // 저장(TopPick)에도 성별·톤을 남긴다 — 없으면 /favorites가 옛 저장분으로 보고
         // 선우리를 선우+리로 다시 나누고, 다시 보기가 성별·톤 없이 평가된다 (2026-10-21)
-        favoriteContext={{ gender, tone }}
+        favoriteContext={{ gender: q.gender, tone: q.tone }}
       />
     );
   }
@@ -194,12 +152,12 @@ export default function CreativePage() {
             </div>
 
             <div className="space-y-2">
-              <Label>성별</Label>
+              <Label htmlFor="creative-gender">성별</Label>
               <Select
                 value={gender}
                 onValueChange={(v) => setGender(v ?? "none")}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="creative-gender" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -211,12 +169,12 @@ export default function CreativePage() {
             </div>
 
             <div className="space-y-2">
-              <Label>톤</Label>
+              <Label htmlFor="creative-tone">톤</Label>
               <Select
                 value={tone}
                 onValueChange={(v) => setTone(v ?? "neutral")}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="creative-tone" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -228,12 +186,12 @@ export default function CreativePage() {
             </div>
 
             <div className="space-y-2">
-              <Label>추천 개수</Label>
+              <Label htmlFor="creative-count">추천 개수</Label>
               <Select
                 value={count}
                 onValueChange={(v) => setCount(v ?? "10")}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="creative-count" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -260,12 +218,15 @@ export default function CreativePage() {
       </Card>
 
       {error && (
-        <div className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700">
+        <div
+          role="alert"
+          className="mb-6 rounded-lg border border-amber-warm/50 bg-amber-50 p-4 text-sm text-amber-warm-700"
+        >
           {error}
         </div>
       )}
 
-      {result && result.totalCount === 0 && (
+      {result && result.data.totalCount === 0 && (
         <div className="rounded-2xl border border-paper-line bg-paper-card p-10 text-center shadow-sm">
           <p className="eyebrow mb-3">RESULT · EMPTY</p>
           <h2 className="mb-3 text-2xl font-medium text-navy">
