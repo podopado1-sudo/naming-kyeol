@@ -6,7 +6,6 @@
  */
 "use client";
 
-import Link from "next/link";
 import type { TwinPairEntry, TwinThemeBlock } from "./TwinResultTop";
 
 // ============================================================
@@ -59,18 +58,21 @@ export function PairCard({
   entry,
   theme,
   lastName,
-  detailHref = "/analysis",
+  detailHref,
 }: {
   entry: TwinPairEntry;
   theme: TwinThemeBlock;
   lastName: string;
-  detailHref?: string;
+  /** 같은 조건의 /evaluate 주소(lib/twin-sets.ts twinEvaluateHref) — 예전 기본값 '/analysis' 는 빈 입력 폼이었다 */
+  detailHref: string;
 }) {
   const sharedIdx =
     theme.shared.type === "char" ? entry.sharedIndex : undefined;
 
   return (
+    // print:break-inside-avoid — 인쇄할 때 카드가 쪽 경계에서 갈리지 않게(갈리면 세로 flex 의 마지막 줄이 테두리 밖에 찍혔다)
     <div
+      className="print:break-inside-avoid"
       style={{
         background: "var(--color-surface)",
         borderRadius: "var(--radius-xl)",
@@ -79,6 +81,7 @@ export function PairCard({
         padding: "24px 24px 22px",
         display: "flex",
         flexDirection: "column",
+        minWidth: 0,
         transition: "all 220ms cubic-bezier(.2,.6,.2,1)",
       }}
     >
@@ -283,28 +286,39 @@ export function PairCard({
         ))}
       </ul>
 
-      <div
-        style={{
-          height: 1,
-          background: "var(--color-divider)",
-          margin: "18px 0 14px",
-        }}
-      />
-
-      <Link
-        href={detailHref}
-        style={{
-          fontSize: 13,
-          fontWeight: 500,
-          color: "var(--color-teal)",
-          textDecoration: "none",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
-        상세 보기 <span>→</span>
-      </Link>
+      {/* 상세 보기 — 같은 조건의 /evaluate 를 새 탭으로(부모 기반·희귀 성씨 결과의 '이 이름 평가하기'와 같은 방식).
+          새 탭 — 결과가 이 페이지 React 상태에만 있어 같은 탭으로 갔다 돌아오면 입력 폼으로 돌아가 결과를 잃는다.
+          일반 <a> — /evaluate 정적 라우트의 클라이언트 라우터 캐시가 이전 ?name= 을 재사용하는 잔상 우회(next/link 금지).
+          ↗ 는 새 탭 표시(장식 — aria-hidden, 접근 이름 끝 '(새 탭)'이 알린다). 인쇄에서는 구분선과 함께 뺀다 */}
+      <div data-hide-print>
+        <div
+          style={{
+            height: 1,
+            background: "var(--color-divider)",
+            margin: "18px 0 14px",
+          }}
+        />
+        <a
+          href={detailHref}
+          target="_blank"
+          rel="noopener"
+          aria-label={`상세 보기: ${lastName}${entry.first} (새 탭)`}
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: "var(--color-teal)",
+            textDecoration: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          상세 보기
+          <span aria-hidden="true" style={{ fontSize: 11 }}>
+            ↗
+          </span>
+        </a>
+      </div>
     </div>
   );
 }

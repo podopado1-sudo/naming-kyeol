@@ -7,6 +7,7 @@
 "use client";
 
 import { Button } from "./Primitives";
+import { twinConditionChips } from "@/lib/twin-sets";
 
 // ============================================================
 // 공유 타입 (Twin 페이지 전체에서 사용)
@@ -14,11 +15,21 @@ import { Button } from "./Primitives";
 export type TwinThemeKey = "shared_char" | "shared_meaning" | "shared_tone";
 export type TwinSharedType = "char" | "meaning" | "tone";
 
+/**
+ * 결과 화면의 조건 — /twin 이 **제출 때** 잡은 값(요청에 실은 값 그대로)이다. 응답을 기다리는 동안 폼을 고쳐도 바뀌지 않는다.
+ * 예전 꼴(relation 'same'|'mixed'|'any')은 폼에 없는 값이라 늘 'any' → 칩 '미지정'이었다(2026-11-27 — 성별로 바꿈).
+ */
 export interface TwinContext {
+  /** 다듬은 성(요청에 보낸 값) */
   lastName: string;
+  /** 자녀 수(2·3) */
   count: number;
-  relation: "same" | "mixed" | "any";
+  gender: "none" | "male" | "female";
   tone: "soft" | "neutral" | "strong";
+  /** YYYY-MM-DD — /twin 은 서버 필수라 비어 있지 않다 */
+  birthDate: string;
+  /** HH:mm, "" = 미입력 */
+  birthTime: string;
 }
 
 export interface TwinThemeBlock {
@@ -43,31 +54,18 @@ export interface TwinPairEntry {
 }
 
 // ============================================================
-// TwinSubHeader — 입력 요약 chip + 액션
+// TwinSubHeader — 입력 요약 chip (+ 저장 단추를 넘기면 그 단추)
+// '↻ 새로 생성'은 지웠다(2026-11-27) — 쌍둥이 엔진은 같은 입력에 같은 세트를 돌려줘 다시 만들지 않고 입력 폼으로 돌아가기만 했다.
+// 폼으로 돌아가는 길은 위 머리의 '← 조건 수정' 하나다.
 // ============================================================
 export function TwinSubHeader({
   ctx,
-  onRegenerate,
   onSave,
 }: {
   ctx: TwinContext;
-  onRegenerate?: () => void;
   onSave?: () => void;
 }) {
-  const chips = [
-    `성 ${ctx.lastName}`,
-    `자녀 ${ctx.count}명`,
-    ctx.relation === "same"
-      ? "같은 성별"
-      : ctx.relation === "mixed"
-        ? "남녀 혼성"
-        : "미지정",
-    ctx.tone === "soft"
-      ? "소프트 톤"
-      : ctx.tone === "strong"
-        ? "강한 톤"
-        : "중립 톤",
-  ];
+  const chips = twinConditionChips(ctx);
 
   return (
     <div
@@ -113,16 +111,14 @@ export function TwinSubHeader({
             </span>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <Button variant="ghost" size="sm" onClick={onRegenerate}>
-            ↻ 새로 생성
-          </Button>
-          {onSave && (
+        {/* 조작 단추는 인쇄하지 않는다(globals.css [data-hide-print]) — 조건 칩은 남긴다 */}
+        {onSave && (
+          <div data-hide-print style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <Button variant="secondary" size="sm" onClick={onSave}>
               ♡ 이 결과 저장
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,9 +9,18 @@
  * ② 톤·성별 무시: 화면이 "Soft"·"Male" 처럼 대문자로 보냈는데 TwinNameController·TwinNameService 는 소문자로 바꾸지 않고
  *    TwinNameEngine 은 소문자와만 비교한다(tone == "soft") — 세트 고르기에서 톤·성별이 통째로 빠졌다
  *    (/required-char 가 2026-10-21 에 겪은 것과 같은 일). 소문자로 보낸다.
+ *
+ * 2026-11-27 에 더한 것(버그 목록 twin-result-wording·twin-detail-link-empty):
+ * ③ 결과 머리가 입력과 달랐다 — 성별 칩은 늘 '미지정'(relation:'any' 고정), 성·자녀 수·톤은 제출값이 아니라 지금 폼 값,
+ *    자녀가 3명이어도 '쌍둥이'·'한 쌍'·'두 이름'이었다. 칩·제목·조화도 문장을 제출 때 잡은 값과 자녀 수로 만든다.
+ * ④ 카드 '상세 보기'가 이름도 조건도 없는 빈 /analysis 로 갔다 — 같은 조건(성·이름·출생일·시각·성별·톤)의 /evaluate 링크를 만든다.
  */
+// node --test 가 이 파일을 바로 읽는다 — 값 import 는 별칭(@/) 대신 상대 경로로 쓴다(tests/resolve-ts.mjs 가 확장자를 붙여 찾는다)
+import { evaluateHref } from "../app/evaluate/evaluate-params";
+import { withJosa } from "./josa";
 import type { TwinNameResponse, TwinNamesRequest } from "./types";
 import type {
+  TwinContext,
   TwinSharedType,
   TwinThemeBlock,
   TwinThemeKey,
@@ -31,11 +40,68 @@ const SHARED_TYPE_MAP: Record<string, TwinSharedType> = {
 
 const POSITIONS = ["첫째", "둘째", "셋째", "넷째"];
 
-export function coherenceNote(score: number): string {
-  if (score >= 85) return "두 이름의 음운·의미·톤이 잘 맞물려요";
-  if (score >= 70) return "한 쌍으로서 안정적인 결을 가져요";
+/**
+ * 세트 조화도 문장. count 는 그 세트의 이름 수 — 세 이름 세트에 '두 이름'·'한 쌍'이라 쓰지 않는다(2026-11-27).
+ * 두 이름 세트의 문장은 예전 그대로다.
+ */
+export function coherenceNote(score: number, count = 2): string {
+  const three = count >= 3;
+  if (score >= 85) return `${three ? "세" : "두"} 이름의 음운·의미·톤이 잘 맞물려요`;
+  if (score >= 70) return three ? "한 세트로서 안정적인 결을 가져요" : "한 쌍으로서 안정적인 결을 가져요";
   if (score >= 55) return "참고용 후보 — 다른 세트도 확인해보세요";
   return "조화도가 낮아요. 조건을 바꿔보세요";
+}
+
+/** 자녀 수에 맞는 이름 — 3명이면 '세쌍둥이'(예전 화면은 3명에게도 '쌍둥이'였다) */
+export function twinGroupWord(count: number): string {
+  return count >= 3 ? "세쌍둥이" : "쌍둥이";
+}
+
+/** 결과 제목 — '김 씨 쌍둥이를 위한 이름 세트' / '김 씨 세쌍둥이를 위한 이름 세트' */
+export function twinResultTitle(lastName: string, count: number): string {
+  return `${lastName} 씨 ${withJosa(twinGroupWord(count), "을/를")} 위한 이름 세트`;
+}
+
+const GENDER_CHIP: Record<TwinContext["gender"], string> = {
+  male: "남아",
+  female: "여아",
+  none: "성별 무관",
+};
+
+// 입력 폼의 톤 이름(중립·부드러움·강함)과 같은 말로 — 예전 칩은 '소프트 톤'이었다
+const TONE_CHIP: Record<TwinContext["tone"], string> = {
+  neutral: "중립 톤",
+  soft: "부드러운 톤",
+  strong: "강한 톤",
+};
+
+/**
+ * 결과 머리의 조건 칩 — 제출 때 잡은 값(TwinContext)으로 만든다. 예전 칩은 성별 자리가 늘 '미지정'이었고(relation:'any' 고정),
+ * 성·자녀 수·톤은 응답을 기다리는 동안 고친 폼 값이 찍혔다.
+ */
+export function twinConditionChips(ctx: TwinContext): string[] {
+  const chips = [`성 ${ctx.lastName}`, `자녀 ${ctx.count}명`, GENDER_CHIP[ctx.gender], TONE_CHIP[ctx.tone]];
+  if (ctx.birthDate) chips.push(`출생일 ${ctx.birthDate}${ctx.birthTime ? ` ${ctx.birthTime}` : ""}`);
+  return chips;
+}
+
+/**
+ * 카드 '상세 보기' — 같은 조건의 /evaluate(출생일·시각·성별·톤을 싣는다. 부모 기반·희귀 성씨 결과의 '이 이름 평가하기'와 같은 꼴).
+ * 쌍둥이 카드 점수와 /evaluate 점수는 같은 채점(ScoringService)이라 같은 입력이면 같은 값이다.
+ * 예전 링크는 값 없는 '/analysis' 라 빈 입력 폼이 열렸다.
+ */
+export function twinEvaluateHref(ctx: TwinContext, first: string): string {
+  return evaluateHref(
+    {
+      lastName: ctx.lastName,
+      name: first,
+      birthDate: ctx.birthDate,
+      birthTime: ctx.birthTime,
+      gender: ctx.gender,
+      tone: ctx.tone,
+    },
+    { withBirth: true }
+  );
 }
 
 /** 공유글자 추출 — 모든 자녀 이름에 공통으로 들어가는 글자 */
@@ -69,7 +135,7 @@ export function mapTwinResponse(response: TwinNameResponse): TwinThemeBlock[] {
         ? "뜻 갈래(자연·덕목 등)가 같은 한자들의 소리로 지은 이름 세트"
         : set.themeDescription,
       coherence: set.coherenceScore,
-      coherenceNote: coherenceNote(set.coherenceScore),
+      coherenceNote: coherenceNote(set.coherenceScore, set.names.length),
       shared: { type: sharedType, value: sharedValue },
       pair: set.names.map((n, idx) => ({
         position: POSITIONS[idx] ?? `${idx + 1}번째`,
