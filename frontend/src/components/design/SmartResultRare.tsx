@@ -7,7 +7,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import type { PhonologyNote } from "@/lib/types";
 import { josa } from "@/lib/josa";
 
@@ -338,11 +338,14 @@ function SubHeaderRare({
         {summary.gender && <span style={chipNeutral}>{summary.gender}</span>}
         {summary.tone && <span style={chipNeutral}>{summary.tone}</span>}
       </div>
-      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-        <button type="button" onClick={onRegenerate} style={btnGhostR}>
-          ↻ 새로 생성
-        </button>
-        {/* onSave가 없으면 숨김 — 눌러도 아무 일 없는 버튼을 두지 않는다 */}
+      {/* 조작 단추는 인쇄에서 숨긴다(data-hide-print). '↻ 새로 생성'은 머리의 '← 조건 수정'과 같은 onRegenerate —
+          입력값이 남은 폼으로 돌아간다. 핸들러가 없으면 그리지 않는다(눌러도 아무 일 없는 단추를 두지 않는다) */}
+      <div data-hide-print style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        {onRegenerate && (
+          <button type="button" onClick={onRegenerate} style={btnGhostR}>
+            ↻ 새로 생성
+          </button>
+        )}
         {onSave && (
           <button type="button" onClick={onSave} style={btnGhostR}>
             ♡ 이 결과 저장
@@ -524,6 +527,7 @@ function RareTopPickCard({
     top.hanjaOptions.find((h) => h.isDefault) || top.hanjaOptions[0];
   return (
     <div
+      className="print:break-inside-avoid"
       style={{
         background: "var(--color-surface)",
         border: "1.5px solid var(--color-gold)",
@@ -650,6 +654,7 @@ function RareTopPickCard({
           href={top.evaluateHref}
           target="_blank"
           rel="noopener"
+          data-hide-print
           aria-label={`이 이름 평가하기: ${top.fullName} (새 탭)`}
           style={{
             fontSize: 13,
@@ -1024,6 +1029,7 @@ function RareCandidateCard({
   const activeHanja = c.hanjaOptions[activeHanjaIdx];
   return (
     <article
+      className="print:break-inside-avoid"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -1137,6 +1143,7 @@ function RareCandidateCard({
             href={c.evaluateHref}
             target="_blank"
             rel="noopener"
+            data-hide-print
             aria-label={`이 이름 평가하기: ${c.fullName} (새 탭)`}
             style={{
               display: "inline-block",
@@ -1207,6 +1214,7 @@ function RareCandidateCard({
       >
         <button
           type="button"
+          data-hide-print
           onClick={(e) => {
             e.stopPropagation();
             setOpen((o) => !o);
@@ -1455,13 +1463,21 @@ function CategoryTabsR({
   categories,
   active,
   onChange,
+  rowRef,
+  scrollerRef,
 }: {
   categories: RareUICategory[];
   active: string;
   onChange: (type: string) => void;
+  /** 탭 줄 — 탭을 바꾸면 이 줄을 고정 머리말 바로 아래로 올린다(scrollTabsIntoView) */
+  rowRef?: RefObject<HTMLDivElement | null>;
+  /** 가로로 넘치는 탭 칸 — 고른 탭을 가운데로 민다 */
+  scrollerRef?: RefObject<HTMLDivElement | null>;
 }) {
   return (
     <div
+      ref={rowRef}
+      data-hide-print
       style={{
         maxWidth: 920,
         margin: "40px auto 0",
@@ -1469,6 +1485,7 @@ function CategoryTabsR({
       }}
     >
       <div
+        ref={scrollerRef}
         style={{
           display: "flex",
           gap: 4,
@@ -1485,6 +1502,7 @@ function CategoryTabsR({
             <button
               key={cat.type}
               type="button"
+              aria-pressed={isActive}
               onClick={() => onChange(cat.type)}
               style={{
                 appearance: "none",
@@ -1539,6 +1557,46 @@ function CategoryTabsR({
   );
 }
 
+/** 머리의 '← 조건 수정' — 옛 Link 와 같은 모양의 글자 단추 */
+const editButtonR: CSSProperties = {
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  fontFamily: "var(--font-sans)",
+  fontSize: 13,
+  color: "var(--color-text-2)",
+  whiteSpace: "nowrap",
+};
+
+/** 고정 머리말 높이를 못 잴 때의 값(패딩 12 × 2 + 글자 줄 + 아래 선 — 375·1280 폭 모두 57px) */
+const STICKY_HEADER_FALLBACK = 57;
+
+/**
+ * 탭을 바꾼 뒤 탭 줄을 고정 머리말 바로 아래(8px 띄움)로 올리고, 고른 탭을 탭 칸 가로 가운데로 민다.
+ * 옛 계산은 배너 위 80px 를 목표로 해 그 위의 탭 줄(배너 위 20px 띄움 + 줄 높이 44px)이 57px 머리말 밑으로 숨었다(2026-11-27).
+ * 가로는 scrollIntoView 대신 탭 칸의 scrollLeft 를 직접 민다 — scrollIntoView 는 창 세로 스크롤까지 건드려 위의 부드러운 스크롤과 겹친다
+ */
+function scrollTabsIntoView(
+  header: HTMLElement | null,
+  row: HTMLElement | null,
+  scroller: HTMLElement | null
+) {
+  if (row) {
+    const headerH = header?.getBoundingClientRect().height || STICKY_HEADER_FALLBACK;
+    const y = row.getBoundingClientRect().top + window.scrollY - headerH - 8;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+  }
+  const tab = scroller?.querySelector<HTMLElement>('[aria-pressed="true"]');
+  if (scroller && tab) {
+    const s = scroller.getBoundingClientRect();
+    const t = tab.getBoundingClientRect();
+    const left = scroller.scrollLeft + (t.left - s.left) - (s.width - t.width) / 2;
+    scroller.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+  }
+}
+
 // ============================================================
 // SmartResultRarePage — 메인
 // ============================================================
@@ -1546,31 +1604,28 @@ export function SmartResultRarePage({
   data,
   initialTab,
   expandFirstCard = false,
-  editHref = "/rare-surname",
   onRegenerate,
   onSave,
 }: {
   data: RareResultData;
   initialTab?: string;
   expandFirstCard?: boolean;
-  editHref?: string;
+  /**
+   * '← 조건 수정'·'↻ 새로 생성' — 결과를 지우고 입력값이 남은 폼으로 돌아간다(페이지의 handleReset).
+   * 옛 '← 조건 수정'은 같은 경로(editHref)로 가는 Link 라 눌러도 결과 화면이 그대로였다(2026-11-27)
+   */
   onRegenerate?: () => void;
   onSave?: () => void;
 }) {
   const [tab, setTab] = useState(initialTab || "rare-surname");
-  const bannerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const tabsRowRef = useRef<HTMLDivElement>(null);
+  const tabsScrollerRef = useRef<HTMLDivElement>(null);
 
   const onTabChange = (t: string) => {
     setTab(t);
-    setTimeout(() => {
-      if (bannerRef.current) {
-        const y =
-          bannerRef.current.getBoundingClientRect().top +
-          window.scrollY -
-          80;
-        window.scrollTo({ top: y, behavior: "smooth" });
-      }
-    }, 30);
+    // 다시 그린 뒤(고른 탭의 aria-pressed 가 바뀐 뒤) 잰다
+    setTimeout(() => scrollTabsIntoView(headerRef.current, tabsRowRef.current, tabsScrollerRef.current), 30);
   };
 
   const activeCat =
@@ -1588,6 +1643,7 @@ export function SmartResultRarePage({
       }}
     >
       <header
+        ref={headerRef}
         style={{
           position: "sticky",
           top: 0,
@@ -1633,16 +1689,16 @@ export function SmartResultRarePage({
             Naming.kyeol
           </span>
         </Link>
-        <Link
-          href={editHref}
-          style={{
-            fontSize: 13,
-            color: "var(--color-text-2)",
-            textDecoration: "none",
-          }}
-        >
-          ← 조건 수정
-        </Link>
+        {onRegenerate && (
+          <button
+            type="button"
+            onClick={onRegenerate}
+            data-hide-print
+            style={editButtonR}
+          >
+            ← 조건 수정
+          </button>
+        )}
       </header>
 
       <SubHeaderRare
@@ -1659,9 +1715,12 @@ export function SmartResultRarePage({
           categories={data.categories}
           active={tab}
           onChange={onTabChange}
+          rowRef={tabsRowRef}
+          scrollerRef={tabsScrollerRef}
         />
 
-        <div ref={bannerRef}>
+        {/* 좌우 24px — 폰 폭에서 띠 바탕이 화면 끝에 붙지 않게(아래 카드 목록과 같은 여백). 데스크톱은 띠 최대 폭 920 그대로 */}
+        <div style={{ padding: "0 24px" }}>
           <RareSurnameBanner cat={activeCat} sa={data.surnameAnalysis} />
         </div>
 
@@ -1687,7 +1746,10 @@ export function SmartResultRarePage({
           ))}
         </div>
 
+        {/* 결과 화면 꼬리 — 링크뿐이라 인쇄에서 통째로 숨긴다. 옛 '이름의 결에 대하여'·'문의'는 주소가 '#'인 빈 링크(맨 위로 튈 뿐)였다 —
+            결과 화면은 사이트 Footer 를 그리지 않아 소개·문의로 가는 길이 이 둘뿐이다(2026-11-27) */}
         <footer
+          data-hide-print
           style={{
             marginTop: 64,
             padding: "32px 24px 48px",
@@ -1704,25 +1766,25 @@ export function SmartResultRarePage({
               gap: 16,
             }}
           >
-            <a
-              href="#"
+            <Link
+              href="/about"
               style={{
                 color: "var(--color-text-3)",
                 textDecoration: "none",
               }}
             >
               이름의 결에 대하여
-            </a>
-            <span style={{ color: "var(--color-divider)" }}>·</span>
-            <a
-              href="#"
+            </Link>
+            <span aria-hidden="true" style={{ color: "var(--color-divider)" }}>·</span>
+            <Link
+              href="/contact"
               style={{
                 color: "var(--color-text-3)",
                 textDecoration: "none",
               }}
             >
               문의
-            </a>
+            </Link>
           </div>
         </footer>
       </main>

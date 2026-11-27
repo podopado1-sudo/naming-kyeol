@@ -11,7 +11,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import type { PhonologyNote } from "@/lib/types";
 import { familyMeaningRoles } from "@/lib/parent-naming";
 
@@ -22,6 +22,11 @@ export type NamingModelKey = "phonetic" | "semantic" | "narrative";
 
 export interface ParentPerson {
   fullName: string;
+  /**
+   * 성 — 배너가 fullName 의 성 자리와 이름 자리를 가른다(2026-11-27: 옛 머리글자는 fullName 둘째 글자라 남궁민수 → '궁',
+   * 성 칸을 비운 지호 → '호'였고, 강조는 글자 값으로 비교해 정수정의 성 '정'까지 칠했다)
+   */
+  surname?: string;
   /** 성을 뺀 이름 — 배너가 계승 글자를 이 안에서 찾는다(전체 이름에서 찾으면 성 글자가 칠해진다) */
   givenName?: string;
   hanjaName?: string;
@@ -53,6 +58,12 @@ export interface ParentUICandidate {
   reasons: string[];
   phonologyNotes: PhonologyNote[];
   namingModel?: NamingModelKey;
+  /**
+   * 응답의 작명 방식 코드 원값(keyword-meaning·mother-surname 등 — 백엔드 ParentNamingModels). 화면에 그대로 내지 않는다 —
+   * 배너의 '키워드 "…" 매핑' 칩을 키워드 방식(keyword-*) 후보에만 붙이는 데 쓴다(2026-11-27: 옛 칩은 계승 꼴이 '가족 서사형'이기만 하면
+   * 붙어 키워드와 무관한 부모 공통 글자 잇기 후보에도 떴다)
+   */
+  namingCode?: string;
   /** '이 이름 평가하기' — /evaluate?lastName=…&name=…(+입력한 생년월일·시각·성별·톤) */
   evaluateHref: string;
 }
@@ -150,6 +161,19 @@ const btnGhostP: CSSProperties = {
   whiteSpace: "nowrap",
 };
 
+/** 머리의 '← 조건 수정' — 옛 Link 와 같은 모양의 글자 단추 */
+const editButtonP: CSSProperties = {
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  fontFamily: "var(--font-sans)",
+  fontSize: 13,
+  color: "var(--color-text-2)",
+  whiteSpace: "nowrap",
+};
+
 function Sep() {
   return (
     <span
@@ -219,7 +243,8 @@ function TagChipP({ label }: { label: string }) {
  * 새 탭으로 연다 — 후보 목록은 /parent-based 의 React 상태에만 있어 같은 탭으로 갔다 돌아오면 입력 폼으로 돌아가 후보를 잃는다.
  * next/link 가 아니라 일반 <a> — /evaluate 는 정적 라우트라 클라이언트 라우터 캐시가 이전 ?name= 결과를 다시 내놓는다
  * (app/favorites '다시 보기'와 같은 우회). 글자·↗ 는 teal 13·11px — 흰 카드(surface) 위 4.85:1. ↗ 는 새 탭 표시(aria-hidden —
- * 접근 이름이 '(새 탭)'으로 말한다). 접근 이름은 보이는 글자로 시작하고(라벨-이름 일치) 후보 이름을 붙여 목록의 링크가 서로 구분된다
+ * 접근 이름이 '(새 탭)'으로 말한다). 접근 이름은 보이는 글자로 시작하고(라벨-이름 일치) 후보 이름을 붙여 목록의 링크가 서로 구분된다.
+ * 인쇄에서는 숨긴다(data-hide-print — 종이에서 누를 수 없는 링크)
  */
 function EvaluateLinkP({ href, fullName }: { href: string; fullName: string }) {
   return (
@@ -227,6 +252,7 @@ function EvaluateLinkP({ href, fullName }: { href: string; fullName: string }) {
       href={href}
       target="_blank"
       rel="noopener"
+      data-hide-print
       aria-label={`이 이름 평가하기: ${fullName} (새 탭)`}
       style={{
         fontFamily: "var(--font-sans)",
@@ -248,12 +274,6 @@ function EvaluateLinkP({ href, fullName }: { href: string; fullName: string }) {
 // ============================================================
 // SubHeaderParent
 // ============================================================
-// 부모 동그라미 머리글자 — 성 다음 글자(이름 첫 글자). 성만 넣으면('김') 그 자리가 '' 라 빈 동그라미가 그려졌다 —
-// 그때는 첫 글자로 (2026-10-27, ParentChip·ParentNode 공용)
-function parentInitial(fullName: string): string {
-  return fullName.slice(1, 2) || fullName.slice(0, 1);
-}
-
 function ParentChip({
   role,
   person,
@@ -262,7 +282,7 @@ function ParentChip({
   person: ParentPerson;
 }) {
   const [open, setOpen] = useState(false);
-  const initial = parentInitial(person.fullName || "");
+  const initial = parentInitial(person);
   const isFather = role === "아빠";
   return (
     <span style={{ position: "relative" }}>
@@ -426,11 +446,14 @@ function SubHeaderParent({
           </span>
         )}
       </div>
-      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-        <button type="button" onClick={onRegenerate} style={btnGhostP}>
-          ↻ 새로 생성
-        </button>
-        {/* onSave가 없으면 숨김 — 눌러도 아무 일 없는 버튼을 두지 않는다 */}
+      {/* 조작 단추는 인쇄에서 숨긴다(data-hide-print). '↻ 새로 생성'은 머리의 '← 조건 수정'과 같은 onRegenerate —
+          입력값이 남은 폼으로 돌아간다. 핸들러가 없으면 그리지 않는다(눌러도 아무 일 없는 단추를 두지 않는다) */}
+      <div data-hide-print style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        {onRegenerate && (
+          <button type="button" onClick={onRegenerate} style={btnGhostP}>
+            ↻ 새로 생성
+          </button>
+        )}
         {onSave && (
           <button type="button" onClick={onSave} style={btnGhostP}>
             ♡ 이 결과 저장
@@ -444,14 +467,95 @@ function SubHeaderParent({
 // ============================================================
 // ParentHero + Family Mapping Banner
 // ============================================================
+// #region parent-banner — 배너 계산(순수 함수). tests/fix1127-parent-rare.test.mjs 가 이 구간을 떼어 돌린다 —
+// 구간 안에는 JSX·import 를 두지 않는다(familyMeaningRoles 는 테스트가 따로 import 해 넣는다)
+
+/**
+ * 부모 동그라미 머리글자 — 성을 뺀 이름의 첫 글자. 이름 없이 성만 넣었으면 그 첫 글자(빈 동그라미를 그리지 않는다 — 2026-10-27).
+ * 옛 꼴(fullName 둘째 글자)은 성을 한 글자로 가정해 복성 남궁민수 → '궁', 성 칸을 비운 지호 → '호'였다(2026-11-27, ParentChip·ParentNode 공용)
+ */
+function parentInitial(person: ParentPerson): string {
+  const given = (person.givenName ?? "").trim();
+  return given.slice(0, 1) || person.fullName.slice(0, 1);
+}
+
+/** fullName 앞의 성 글자 수 — surname 이 있으면 그 길이, 없으면 fullName 이 givenName 으로 끝날 때 그 앞부분 */
+function surnameLength(person: ParentPerson): number {
+  if (person.surname && person.fullName.startsWith(person.surname)) return person.surname.length;
+  const given = person.givenName ?? "";
+  if (given && person.fullName.endsWith(given)) return person.fullName.length - given.length;
+  return 0;
+}
+
+type ParentRoleKey = "father" | "mother";
+
+/** 설명 문장이 말한 부모 글자 하나 — 어느 부모의 성·이름 가운데 어느 글자가 아이 이름의 어느 음절이 됐는지 */
+interface DescribedParentChar {
+  role: ParentRoleKey;
+  /** 부모 쪽 글자(성 글자면 성 — 어머니 성씨 방식은 외자 성만 쓴다) */
+  syllable: string;
+  part: "given" | "surname";
+  /** 아이 이름에 들어간 음절 — 어머니 성씨 소리 잇기는 두음 꼴로 바꿔 잇기도 한다(이 → 리) */
+  childSyllable: string;
+}
+
+/**
+ * 설명 문장(백엔드 ParentBasedNamingEngine 이 방식마다 만드는 꼴)에서 부모 글자를 읽는다 — 배너가 이름 글자를 짐작하지 않고
+ * 설명이 말한 글자를 칠하게(2026-11-27: 옛 배너는 아이 이름 글자를 아버지 이름에서 먼저 찾아, 어머니 성씨 '이' + 짝 글자 '수'로 지은
+ * '이수'에서 아버지 민수의 '수'를 계승 글자로 칠했다). 읽는 꼴:
+ *  - "아버지와 어머니 이름에 함께 있는 'X'" (shared-syllable — 두 부모 모두)
+ *  - "아버지 이름 'GIVEN'의 'X'와 'Y'" · "… 'GIVEN'의 두 글자 순서를 바꾼" (parent-syllables 한 부모 변형)
+ *  - "아버지 이름 첫 글자 'X'" · "어머니 이름의 'X'" (parent-initials·parent-syllables·family-meaning·…-initial·…-syllable)
+ *  - "어머니 성씨 'S'를 첫 글자로" · "… 'S'를 끝 글자 'T'로 바꿔" · "… 'S'를 그대로 끝 글자로" (mother-surname·mother-sound)
+ * 키워드·성씨 뜻 방식은 부모 글자를 말하지 않아 빈 목록이다. 결과는 설명에 나온 순서
+ */
+function describedParentChars(description: string): DescribedParentChar[] {
+  const found: { at: number; ref: DescribedParentChar }[] = [];
+  const add = (at: number, role: ParentRoleKey, syllable: string, part: "given" | "surname", childSyllable = syllable) => {
+    found.push({ at, ref: { role, syllable, part, childSyllable } });
+  };
+  const roleOf = (word: string): ParentRoleKey => (word === "아버지" ? "father" : "mother");
+  for (const m of description.matchAll(/아버지와 어머니 이름에 함께 있는 '([가-힣])'/g)) {
+    add(m.index ?? 0, "father", m[1], "given");
+    add(m.index ?? 0, "mother", m[1], "given");
+  }
+  for (const m of description.matchAll(/(아버지|어머니) 이름 '([가-힣]+)'의 (?:'([가-힣])'[과와] '([가-힣])'|두 글자 순서를 바꾼)/g)) {
+    const chars = m[3] && m[4] ? [m[3], m[4]] : m[2].split("").reverse();
+    for (const ch of chars) add(m.index ?? 0, roleOf(m[1]), ch, "given");
+  }
+  for (const m of description.matchAll(/(아버지|어머니) 이름(?:의| 첫 글자) '([가-힣])'/g)) {
+    add(m.index ?? 0, roleOf(m[1]), m[2], "given");
+  }
+  for (const m of description.matchAll(/어머니 성씨 '([가-힣]{1,2})'[을를] (?:끝 글자 '([가-힣])'(?:으로|로) 바꿔)?/g)) {
+    add(m.index ?? 0, "mother", m[1], "surname", m[2] ?? m[1]);
+  }
+  return found.sort((a, b) => a.at - b.at).map((f) => f.ref);
+}
+
+/**
+ * 부모 fullName 안에서 그 글자의 자리 — 이름 글자는 성 뒤에서만, 성 글자는 성 안에서만 찾고 첫 자리 하나만 돌려준다
+ * (어머니 정수정의 이름 '정'을 칠할 때 성 '정'까지 칠하던 것 — 2026-11-27)
+ */
+function parentCharIndex(person: ParentPerson | undefined, syllable: string, part: "given" | "surname"): number | null {
+  if (!person || !syllable) return null;
+  const sLen = surnameLength(person);
+  const i =
+    part === "surname"
+      ? person.fullName.slice(0, sLen || person.fullName.length).indexOf(syllable)
+      : person.fullName.indexOf(syllable, sLen);
+  return i >= 0 ? i : null;
+}
+
 interface Bridge {
   /** 부모·아이 이름 강조 글자·주석 알약 글자 */
   color: string;
   /** 점선 연결선·화살표·주석 알약 테두리(비텍스트) — 글자만 짙은 토큰으로 옮겨도 선은 옛 색 그대로 */
   lineColor: string;
-  fatherChar: string | null;
-  motherChar: string | null;
-  childChar: string | null;
+  /** 칠할 글자 자리(부모 fullName 안) — 글자 값이 아니라 자리로 칠해 성·이름에 같은 글자가 있어도 한 번만 칠한다 */
+  fatherIdx: number | null;
+  motherIdx: number | null;
+  /** 칠할 글자 자리(아이 fullName 안 — 성 뒤) */
+  childIdx: number[];
   fatherHanja: string | null;
   motherHanja: string | null;
   childHanja: string | null;
@@ -464,78 +568,44 @@ function computeBridge(
   lastName: string
 ): Bridge {
   // 아이 이름(성 제외) — 옛 slice(1) 은 복성 아이의 둘째 성 글자를, 옛 3~4음절 이름('김김춘리')에서는 아버지 성을 계승 글자로 잡았다
-  const given = lastName && top.fullName.startsWith(lastName)
-    ? top.fullName.slice(lastName.length)
-    : top.fullName.slice(1);
+  const offset = lastName && top.fullName.startsWith(lastName) ? lastName.length : 1;
+  const given = top.fullName.slice(offset);
   const childChars = given.split("");
   const fGiven = parents.father?.givenName ?? "";
   const mGiven = parents.mother?.givenName ?? "";
-  if (top.namingModel === "phonetic") {
-    // 부모 이름(성 제외) 글자를 먼저 찾고, 없을 때만 전체 이름(어머니 성씨 잇기의 성 글자)
-    const f = parents.father?.fullName ?? "";
-    const m = parents.mother?.fullName ?? "";
-    let fatherChar: string | null = null;
-    let motherChar: string | null = null;
-    let childChar: string | null = null;
-    for (const [fs, ms] of [[fGiven, mGiven], [f, m]]) {
-      for (const ch of childChars) {
-        if (fs && fs.includes(ch)) {
-          fatherChar = ch;
-          childChar = ch;
-          break;
-        }
-        if (ms && ms.includes(ch)) {
-          motherChar = ch;
-          childChar = ch;
-          break;
-        }
-      }
-      if (childChar) break;
-    }
-    return {
-      color: "var(--color-teal)",
-      lineColor: "var(--color-teal)",
-      fatherChar,
-      motherChar,
-      childChar,
-      fatherHanja: null,
-      motherHanja: null,
-      childHanja: null,
-      annotation: null,
-    };
-  }
   if (top.namingModel === "semantic") {
     // 부모 이름 뜻 잇기 — 아이 이름 음절마다 그 음절을 준 부모와 백엔드가 풀이한 한자(hanjaName, 음절과 같은 길이).
     // 옛 코드는 방식 이름(anchor)에서 한자를 찾아 늘 null 이었다(2026-10-28)
     const hanja = top.hanjaName && top.hanjaName.length === childChars.length ? top.hanjaName.split("") : [];
-    let fatherChar: string | null = null;
-    let motherChar: string | null = null;
+    let fatherIdx: number | null = null;
+    let motherIdx: number | null = null;
     let fatherHanja: string | null = null;
     let motherHanja: string | null = null;
     const parts: string[] = [];
     // 음절을 준 부모는 설명 문장에서 읽는다 — 이름 칸에서 아버지 먼저 찾으면 두 부모 이름에 다 있는 음절(민수 + 수진 → '수민'의 '수')을
     // 설명("어머니 이름의 '수'…")과 반대로 아버지 글자로 칠했다(2026-10-28 2차 검증)
     const roles = familyMeaningRoles(top.meaning, childChars, fGiven, mGiven);
-    childChars.forEach((ch, i) => {
-      if (!hanja[i]) return;
-      if (!fatherChar && roles[i] === "father") {
-        fatherChar = ch;
+    for (let i = 0; i < childChars.length; i++) {
+      const ch = childChars[i];
+      if (!hanja[i]) continue;
+      if (fatherHanja === null && roles[i] === "father") {
+        fatherIdx = parentCharIndex(parents.father, ch, "given");
         fatherHanja = hanja[i];
         parts.push(`${ch}(${hanja[i]})`);
-      } else if (!motherChar && roles[i] === "mother") {
-        motherChar = ch;
+      } else if (motherHanja === null && roles[i] === "mother") {
+        motherIdx = parentCharIndex(parents.mother, ch, "given");
         motherHanja = hanja[i];
         parts.push(`${ch}(${hanja[i]})`);
       }
-    });
+    }
     return {
       // 부모 이름 강조 글자(13~32px, gold-50 바탕) — 옛 gold-600 은 gold-50 위 2.55:1 이라 골드 글자 토큰(2026-10-26 팔레트 #2).
       // 연결선·화살표·주석 알약 테두리는 옛 gold-600 그대로(비텍스트 — 짙은 갈색 선이 되지 않게, 같은 날 보완)
       color: "var(--color-gold-800)",
       lineColor: "var(--color-gold-600)",
-      fatherChar,
-      motherChar,
-      childChar: null,
+      fatherIdx,
+      motherIdx,
+      childIdx: [],
       fatherHanja,
       motherHanja,
       childHanja: null,
@@ -543,14 +613,45 @@ function computeBridge(
       annotation: parts.length > 0 ? `${parts.join(" + ")} · 의미축 잇기` : null,
     };
   }
-  // 가족 서사형 — 두 부모 이름에 함께 있는 글자(부모 공통 글자 잇기)가 아이 이름에 있으면 셋 다 그 글자를 칠한다
-  const shared = childChars.find((ch) => fGiven.includes(ch) && mGiven.includes(ch)) ?? null;
+  // 음운 계승형·가족 서사형 — 설명 문장이 말한 부모 글자만 칠한다. 아빠·엄마는 글자 하나씩, 아이는 그 글자들이 들어간 자리.
+  // 키워드·성씨 뜻 잇기는 부모 글자를 말하지 않아 칠하지 않는다(옛 서사형은 아이 이름 글자가 우연히 두 부모 이름에 다 있어도 칠했다)
+  const refs = describedParentChars(top.meaning);
+  let fatherIdx: number | null = null;
+  let motherIdx: number | null = null;
+  const childIdx: number[] = [];
+  for (const r of refs) {
+    const ci = given.indexOf(r.childSyllable);
+    if (ci < 0) continue; // 설명의 글자가 이름에 없다 — 칠하지 않는다
+    const pi = parentCharIndex(r.role === "father" ? parents.father : parents.mother, r.syllable, r.part);
+    if (pi === null) continue;
+    if (r.role === "father") {
+      if (fatherIdx !== null) continue;
+      fatherIdx = pi;
+    } else {
+      if (motherIdx !== null) continue;
+      motherIdx = pi;
+    }
+    if (!childIdx.includes(offset + ci)) childIdx.push(offset + ci);
+  }
+  // 설명에서 아무 글자도 못 읽은 음운 계승형(옛 응답 꼴)만 옛 방식 — 아이 이름 첫 글자부터 부모 이름(성 제외)에서 찾는다
+  if (refs.length === 0 && top.namingModel === "phonetic") {
+    for (let i = 0; i < childChars.length && childIdx.length === 0; i++) {
+      const ch = childChars[i];
+      const fi = fGiven.includes(ch) ? parentCharIndex(parents.father, ch, "given") : null;
+      const mi = fi === null && mGiven.includes(ch) ? parentCharIndex(parents.mother, ch, "given") : null;
+      if (fi !== null) fatherIdx = fi;
+      else if (mi !== null) motherIdx = mi;
+      else continue;
+      childIdx.push(offset + i);
+    }
+  }
+  const phonetic = top.namingModel === "phonetic";
   return {
-    color: "var(--color-navy)",
-    lineColor: "var(--color-navy)",
-    fatherChar: shared,
-    motherChar: shared,
-    childChar: shared,
+    color: phonetic ? "var(--color-teal)" : "var(--color-navy)",
+    lineColor: phonetic ? "var(--color-teal)" : "var(--color-navy)",
+    fatherIdx,
+    motherIdx,
+    childIdx: childIdx.sort((a, b) => a - b),
     fatherHanja: null,
     motherHanja: null,
     childHanja: null,
@@ -558,21 +659,28 @@ function computeBridge(
   };
 }
 
+/** 아이 카드의 '키워드 "…" 매핑' 칩 — 키워드 방식(keyword-meaning·keyword-sound) 후보에만. 키워드가 없으면 null */
+function keywordChipFor(top: ParentUICandidate, keyword: string | undefined): string | null {
+  return keyword && top.namingCode?.startsWith("keyword-") ? keyword : null;
+}
+// #endregion parent-banner
+
 function ParentNode({
   person,
   role,
-  highlightChar,
+  highlightIdx,
   highlightHanja,
   highlightColor,
 }: {
   person?: ParentPerson;
   role: string;
-  highlightChar: string | null;
+  /** 칠할 글자 자리(fullName 안) — computeBridge 가 성·이름 자리를 가려 정한다 */
+  highlightIdx: number | null;
   highlightHanja: string | null;
   highlightColor: string;
 }) {
   if (!person) return null;
-  const initial = parentInitial(person.fullName);
+  const initial = parentInitial(person);
   const chars = person.fullName.split("");
   const hanjaChars = (person.hanjaName || "").split("");
   const hl = highlightColor || "var(--color-teal)";
@@ -615,7 +723,7 @@ function ParentNode({
           <span
             key={i}
             style={
-              highlightChar && ch === highlightChar
+              i === highlightIdx
                 ? {
                     background: hlBg,
                     color: hl,
@@ -675,15 +783,17 @@ function ParentNode({
 function ChildNode({
   top,
   model,
-  keyword,
-  highlightChar,
+  keywordChip,
+  highlightIdx,
   highlightHanja,
   highlightColor,
 }: {
   top: ParentUICandidate;
   model: NamingModelKey | undefined;
-  keyword?: string;
-  highlightChar: string | null;
+  /** '키워드 "…" 매핑' 칩 글자 — 키워드 방식 후보일 때만(keywordChipFor), 아니면 null */
+  keywordChip: string | null;
+  /** 칠할 글자 자리(fullName 안 — 성 뒤) */
+  highlightIdx: number[];
   highlightHanja: string | null;
   highlightColor: string;
 }) {
@@ -705,7 +815,8 @@ function ChildNode({
         borderRadius: "var(--radius-lg)",
         padding: "20px 28px",
         textAlign: "center",
-        minWidth: 280,
+        // 폰 폭(375)에서는 배너 안쪽이 271px 라 280 고정이면 카드 오른쪽이 배너 밖(overflow hidden)으로 잘린다 — 칸 폭까지만
+        minWidth: "min(280px, 100%)",
         position: "relative",
         boxShadow: "0 12px 28px rgba(201,169,110,0.18)",
       }}
@@ -746,7 +857,7 @@ function ChildNode({
           <span
             key={i}
             style={
-              highlightChar && ch === highlightChar
+              highlightIdx.includes(i)
                 ? {
                     background: hlBg,
                     color: hl,
@@ -809,7 +920,7 @@ function ChildNode({
       <div style={{ marginTop: 12 }}>
         <EvaluateLinkP href={top.evaluateHref} fullName={top.fullName} />
       </div>
-      {model === "narrative" && keyword && (
+      {keywordChip && (
         <div
           style={{
             marginTop: 10,
@@ -822,7 +933,7 @@ function ChildNode({
             fontWeight: 500,
           }}
         >
-          키워드 &ldquo;{keyword}&rdquo; 매핑
+          키워드 &ldquo;{keywordChip}&rdquo; 매핑
         </div>
       )}
     </div>
@@ -921,14 +1032,14 @@ function FamilyMappingBanner({
           <ParentNode
             person={parents.father}
             role="아빠"
-            highlightChar={bridge.fatherChar}
+            highlightIdx={bridge.fatherIdx}
             highlightHanja={bridge.fatherHanja}
             highlightColor={bridge.color}
           />
           <ParentNode
             person={parents.mother}
             role="엄마"
-            highlightChar={bridge.motherChar}
+            highlightIdx={bridge.motherIdx}
             highlightHanja={bridge.motherHanja}
             highlightColor={bridge.color}
           />
@@ -969,8 +1080,8 @@ function FamilyMappingBanner({
         <ChildNode
           top={top}
           model={top.namingModel}
-          keyword={parents.keywords?.[0]}
-          highlightChar={bridge.childChar}
+          keywordChip={keywordChipFor(top, parents.keywords?.[0])}
+          highlightIdx={bridge.childIdx}
           highlightHanja={bridge.childHanja}
           highlightColor={bridge.color}
         />
@@ -1095,13 +1206,21 @@ function CategoryTabsP({
   categories,
   active,
   onChange,
+  rowRef,
+  scrollerRef,
 }: {
   categories: ParentUICategory[];
   active: string;
   onChange: (type: string) => void;
+  /** 탭 줄 — 탭을 바꾸면 이 줄을 고정 머리말 바로 아래로 올린다(scrollTabsIntoView) */
+  rowRef?: RefObject<HTMLDivElement | null>;
+  /** 가로로 넘치는 탭 칸 — 고른 탭을 가운데로 민다 */
+  scrollerRef?: RefObject<HTMLDivElement | null>;
 }) {
   return (
     <div
+      ref={rowRef}
+      data-hide-print
       style={{
         maxWidth: 920,
         margin: "40px auto 0",
@@ -1109,6 +1228,7 @@ function CategoryTabsP({
       }}
     >
       <div
+        ref={scrollerRef}
         style={{
           display: "flex",
           gap: 4,
@@ -1125,6 +1245,7 @@ function CategoryTabsP({
             <button
               key={cat.type}
               type="button"
+              aria-pressed={isActive}
               onClick={() => onChange(cat.type)}
               style={{
                 appearance: "none",
@@ -1182,12 +1303,15 @@ function CategoryTabsP({
 function BannerStat({
   label,
   children,
+  hidePrint,
 }: {
   label: string;
   children: ReactNode;
+  /** 인쇄에서 숨길 칸 — 조작 단추만 든 칸(작명 모델 켜고 끄기) */
+  hidePrint?: boolean;
 }) {
   return (
-    <div>
+    <div data-hide-print={hidePrint || undefined}>
       <div
         style={{
           fontFamily: "Inter, var(--font-sans)",
@@ -1302,7 +1426,7 @@ function ParentBasedBanner({
           padding: "16px 20px",
         }}
       >
-        <BannerStat label="작명 모델">
+        <BannerStat label="작명 모델" hidePrint>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {meta.modelsAvailable.map((m) => {
               const on = activeModels.includes(m.key);
@@ -1311,6 +1435,7 @@ function ParentBasedBanner({
                 <button
                   key={m.key}
                   type="button"
+                  aria-pressed={on}
                   onClick={() => onToggleModel(m.key)}
                   style={{
                     appearance: "none",
@@ -1459,6 +1584,7 @@ function ParentCandidateCard({
   const m = NAMING_MODELS[c.namingModel ?? "narrative"];
   return (
     <article
+      className="print:break-inside-avoid"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -1608,6 +1734,7 @@ function ParentCandidateCard({
         >
           <button
             type="button"
+            data-hide-print
             onClick={(e) => {
               e.stopPropagation();
               setOpen((o) => !o);
@@ -1757,6 +1884,7 @@ function GeneralCandidateCard({
   const c = candidate;
   return (
     <article
+      className="print:break-inside-avoid"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -1878,6 +2006,7 @@ function GeneralCandidateCard({
         >
           <button
             type="button"
+            data-hide-print
             onClick={(e) => {
               e.stopPropagation();
               setOpen((o) => !o);
@@ -1949,6 +2078,33 @@ function GeneralCandidateCard({
   );
 }
 
+/** 고정 머리말 높이를 못 잴 때의 값(패딩 12 × 2 + 글자 줄 + 아래 선 — 375·1280 폭 모두 57px) */
+const STICKY_HEADER_FALLBACK = 57;
+
+/**
+ * 탭을 바꾼 뒤 탭 줄을 고정 머리말 바로 아래(8px 띄움)로 올리고, 고른 탭을 탭 칸 가로 가운데로 민다.
+ * 옛 계산은 배너 위 80px 를 목표로 해 그 위의 탭 줄(배너 위 20px 띄움 + 줄 높이 44px)이 57px 머리말 밑으로 숨었다(2026-11-27).
+ * 가로는 scrollIntoView 대신 탭 칸의 scrollLeft 를 직접 민다 — scrollIntoView 는 창 세로 스크롤까지 건드려 위의 부드러운 스크롤과 겹친다
+ */
+function scrollTabsIntoView(
+  header: HTMLElement | null,
+  row: HTMLElement | null,
+  scroller: HTMLElement | null
+) {
+  if (row) {
+    const headerH = header?.getBoundingClientRect().height || STICKY_HEADER_FALLBACK;
+    const y = row.getBoundingClientRect().top + window.scrollY - headerH - 8;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+  }
+  const tab = scroller?.querySelector<HTMLElement>('[aria-pressed="true"]');
+  if (scroller && tab) {
+    const s = scroller.getBoundingClientRect();
+    const t = tab.getBoundingClientRect();
+    const left = scroller.scrollLeft + (t.left - s.left) - (s.width - t.width) / 2;
+    scroller.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+  }
+}
+
 // ============================================================
 // SmartResultParentPage — 메인
 // ============================================================
@@ -1957,7 +2113,6 @@ export function SmartResultParentPage({
   initialTab,
   initialActiveModels,
   expandFirstCard = false,
-  editHref = "/parent-based",
   onRegenerate,
   onSave,
 }: {
@@ -1965,7 +2120,10 @@ export function SmartResultParentPage({
   initialTab?: string;
   initialActiveModels?: NamingModelKey[];
   expandFirstCard?: boolean;
-  editHref?: string;
+  /**
+   * '← 조건 수정'·'↻ 새로 생성' — 결과를 지우고 입력값이 남은 폼으로 돌아간다(페이지의 handleReset).
+   * 옛 '← 조건 수정'은 같은 경로(editHref)로 가는 Link 라 눌러도 결과 화면이 그대로였다(2026-11-27)
+   */
   onRegenerate?: () => void;
   onSave?: () => void;
 }) {
@@ -1973,19 +2131,14 @@ export function SmartResultParentPage({
   const [activeModels, setActiveModels] = useState<NamingModelKey[]>(
     initialActiveModels || ["phonetic", "semantic", "narrative"]
   );
-  const bannerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const tabsRowRef = useRef<HTMLDivElement>(null);
+  const tabsScrollerRef = useRef<HTMLDivElement>(null);
 
   const onTabChange = (t: string) => {
     setTab(t);
-    setTimeout(() => {
-      if (bannerRef.current) {
-        const y =
-          bannerRef.current.getBoundingClientRect().top +
-          window.scrollY -
-          80;
-        window.scrollTo({ top: y, behavior: "smooth" });
-      }
-    }, 30);
+    // 다시 그린 뒤(고른 탭의 aria-pressed 가 바뀐 뒤) 잰다
+    setTimeout(() => scrollTabsIntoView(headerRef.current, tabsRowRef.current, tabsScrollerRef.current), 30);
   };
 
   const toggleModel = (key: NamingModelKey) => {
@@ -2020,6 +2173,7 @@ export function SmartResultParentPage({
       }}
     >
       <header
+        ref={headerRef}
         style={{
           position: "sticky",
           top: 0,
@@ -2065,16 +2219,16 @@ export function SmartResultParentPage({
             Naming.kyeol
           </span>
         </Link>
-        <Link
-          href={editHref}
-          style={{
-            fontSize: 13,
-            color: "var(--color-text-2)",
-            textDecoration: "none",
-          }}
-        >
-          ← 조건 수정
-        </Link>
+        {onRegenerate && (
+          <button
+            type="button"
+            onClick={onRegenerate}
+            data-hide-print
+            style={editButtonP}
+          >
+            ← 조건 수정
+          </button>
+        )}
       </header>
 
       <SubHeaderParent
@@ -2094,9 +2248,12 @@ export function SmartResultParentPage({
           categories={data.categories}
           active={tab}
           onChange={onTabChange}
+          rowRef={tabsRowRef}
+          scrollerRef={tabsScrollerRef}
         />
 
-        <div ref={bannerRef} data-banner-anchor>
+        {/* 좌우 24px — 폰 폭에서 띠 바탕이 화면 끝에 붙지 않게(아래 카드 목록과 같은 여백). 데스크톱은 띠 최대 폭 920 그대로 */}
+        <div data-banner-anchor style={{ padding: "0 24px" }}>
           {isParent ? (
             <ParentBasedBanner
               cat={activeCat}
@@ -2157,7 +2314,10 @@ export function SmartResultParentPage({
           )}
         </div>
 
+        {/* 결과 화면 꼬리 — 링크뿐이라 인쇄에서 통째로 숨긴다. 옛 '이름의 결에 대하여'·'문의'는 주소가 '#'인 빈 링크(맨 위로 튈 뿐)였다 —
+            결과 화면은 사이트 Footer 를 그리지 않아 소개·문의로 가는 길이 이 둘뿐이다(2026-11-27) */}
         <footer
+          data-hide-print
           style={{
             marginTop: 64,
             padding: "32px 24px 48px",
@@ -2187,25 +2347,25 @@ export function SmartResultParentPage({
               gap: 16,
             }}
           >
-            <a
-              href="#"
+            <Link
+              href="/about"
               style={{
                 color: "var(--color-text-3)",
                 textDecoration: "none",
               }}
             >
               이름의 결에 대하여
-            </a>
-            <span style={{ color: "var(--color-divider)" }}>·</span>
-            <a
-              href="#"
+            </Link>
+            <span aria-hidden="true" style={{ color: "var(--color-divider)" }}>·</span>
+            <Link
+              href="/contact"
               style={{
                 color: "var(--color-text-3)",
                 textDecoration: "none",
               }}
             >
               문의
-            </a>
+            </Link>
           </div>
         </footer>
       </main>

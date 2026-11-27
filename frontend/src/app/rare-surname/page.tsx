@@ -21,6 +21,13 @@ import {
 } from "@/components/ui/select";
 import { rareSurname } from "@/lib/api";
 import { josa } from "@/lib/josa";
+import {
+  cleanNameInput,
+  nameInputMessage,
+  nameInputProblem,
+  SURNAME_MAX_LENGTH,
+} from "@/lib/name-input";
+import { COMPOUND_SURNAMES } from "@/lib/name-split";
 import type { RareSurnameResponse } from "@/lib/types";
 import {
   evaluateHref,
@@ -51,6 +58,41 @@ const COMMON_COMPOUND_SURNAMES = [
 
 /** 백엔드 /recommendations/rare-surname 은 생년월일이 없으면 400 — 제출 전에 막고 이 문장을 오류 상자에 보인다 */
 const BIRTH_DATE_MISSING = "생년월일을 입력해 주세요.";
+
+// #region rare-surname-input — 성씨 칸 검사(순수 함수). tests/fix1127-parent-rare.test.mjs 가 이 구간을 떼어 돌린다 —
+// 구간 안에는 JSX·import 를 두지 않는다(lib 함수는 테스트가 따로 import 해 넣는다)
+
+/** 빈 성씨 칸 — 옛 화면 문구 그대로 */
+const SURNAME_EMPTY = "성씨를 입력해주세요.";
+
+/** 두 글자인데 복성 목록에 없는 성씨 — 성 + 이름 첫 글자('김민')나 '김씨'를 넣은 경우 */
+function compoundSurnameMessage(label: string, value: string): string {
+  return `${label} '${value}'${josa(value, "은/는")} 복성 목록(${COMPOUND_SURNAMES.join("·")})에 없어요. 성씨만 적어 주세요.`;
+}
+
+/**
+ * 성씨 칸의 문제 문장 — 없으면 null. 한글 음절 1~2자(lib/name-input)이고, 두 글자면 복성 목록(lib/name-split COMPOUND_SURNAMES —
+ * 백엔드 SurnameData.TwoCharSurnames 와 같은 10개)에 있어야 한다. 한 글자는 목록을 보지 않는다(희귀 성씨 도구라 목록 밖 성도 받는다).
+ * 옛 화면은 빈 칸만 보아 '金'·'ㄱ'·'김씨'·'남궁민'을 그대로 보냈고, 서버는 그 값을 희귀 성씨(두 글자 이상이면 화면이 '복성')로
+ * 판정해 '金원준'·'김씨원준' 같은 이름과 초성이 빈 발음 분석을 냈다(2026-11-27)
+ */
+function rareSurnameError(raw: string): string | null {
+  const value = cleanNameInput(raw);
+  const problem = nameInputProblem(value, SURNAME_MAX_LENGTH);
+  if (problem === "empty") return SURNAME_EMPTY;
+  if (problem) return nameInputMessage(problem, "성씨", SURNAME_MAX_LENGTH);
+  if (value.length === 2 && !COMPOUND_SURNAMES.includes(value)) return compoundSurnameMessage("성씨", value);
+  return null;
+}
+// #endregion rare-surname-input
+
+/** 제출 때 잡은 조건 — 결과의 평가 링크·조건 칩은 이 값으로 만든다(응답을 기다리는 사이 폼을 고쳐도 결과와 어긋나지 않게) */
+interface RareSubmitted {
+  birthDate: string;
+  birthTime: string;
+  gender: string;
+  tone: string;
+}
 
 // ============================================================
 // 어댑터: RareSurnameResponse → RareResultData
@@ -213,29 +255,41 @@ export default function RareSurnamePage() {
   const [count, setCount] = useState("10");
 
   const [result, setResult] = useState<RareSurnameResponse | null>(null);
+  const [submitted, setSubmitted] = useState<RareSubmitted | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 오류 상자의 문장이 성씨 칸 문제인지 — 그 칸에 aria-invalid·aria-describedby */
+  const [lastNameInvalid, setLastNameInvalid] = useState(false);
   const birthDateMissing = error === BIRTH_DATE_MISSING;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!lastName.trim()) {
-      setError("성씨를 입력해주세요.");
+    // 성씨 — 한글 1~2자, 두 글자는 복성 목록(rareSurnameError). 다듬은 값(NFC·앞뒤 공백 제거)을 보낸다
+    const surname = cleanNameInput(lastName);
+    const surnameProblem = rareSurnameError(surname);
+    if (surnameProblem) {
+      setError(surnameProblem);
+      setLastNameInvalid(true);
+      document.getElementById("lastName")?.focus();
       return;
     }
+    setLastNameInvalid(false);
     // 생년월일 — 백엔드 필수(없으면 400 '생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다'). 날짜를 덜 채운 칸도 value 가 "" 다
     if (!birthDate) {
       setError(BIRTH_DATE_MISSING);
       document.getElementById("birthDate")?.focus();
       return;
     }
+    // 제출 때 조건 — 응답을 기다리는 동안(콜드 스타트면 30초 안팎) 폼을 고쳐도 결과의 평가 링크·칩은 이 값으로 만든다.
+    // 기다리는 동안은 입력 칸도 잠근다(아래 fieldset disabled)
+    const snapshot: RareSubmitted = { birthDate, birthTime, gender, tone };
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
       const data = await rareSurname({
-        lastName: lastName.trim(),
+        lastName: surname,
         birthDate,
         birthTime: birthTime || undefined,
         gender:
@@ -252,6 +306,7 @@ export default function RareSurnamePage() {
               : "Strong",
         count: parseInt(count, 10),
       });
+      setSubmitted(snapshot);
       setResult(data);
     } catch (err) {
       setError(
@@ -270,20 +325,10 @@ export default function RareSurnamePage() {
   // ============================================================
   // 결과 화면
   // ============================================================
-  if (result && result.candidates.length > 0) {
-    const data = buildRareResultData(result, {
-      birthDate,
-      birthTime,
-      gender,
-      tone,
-    });
-    return (
-      <SmartResultRarePage
-        data={data}
-        editHref="/rare-surname"
-        onRegenerate={handleReset}
-      />
-    );
+  if (result && result.candidates.length > 0 && submitted) {
+    // 살아 있는 폼 값이 아니라 제출 때 잡은 값으로 — 옛 화면은 기다리는 사이 고친 날짜로 평가 링크를 만들었다(2026-11-27)
+    const data = buildRareResultData(result, submitted);
+    return <SmartResultRarePage data={data} onRegenerate={handleReset} />;
   }
 
   // ============================================================
@@ -314,120 +359,140 @@ export default function RareSurnamePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="lastName">성씨</Label>
-              <Input
-                id="lastName"
-                placeholder="예: 선우, 남궁, 봉, 빈, 탁"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-              />
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[10px] text-muted-foreground">
-                  자주 찾는 복성:
-                </span>
-                {COMMON_COMPOUND_SURNAMES.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setLastName(s)}
-                    className="rounded-full border border-paper-line bg-paper-tint px-2 py-0.5 text-[10px] text-navy/70 transition hover:border-teal hover:text-teal"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* 응답을 기다리는 동안 입력을 잠근다 — 결과는 제출 때 값(submitted)으로 그리지만, 고친 값이 반영된 것처럼 보이지 않게 */}
+            <fieldset disabled={loading} className="m-0 min-w-0 space-y-5 border-0 p-0">
               <div className="space-y-2">
-                <Label>성별</Label>
-                <Select
-                  value={gender}
-                  onValueChange={(v) => setGender(v ?? "none")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">무관</SelectItem>
-                    <SelectItem value="male">남</SelectItem>
-                    <SelectItem value="female">여</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>톤</Label>
-                <Select
-                  value={tone}
-                  onValueChange={(v) => setTone(v ?? "neutral")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="neutral">중립</SelectItem>
-                    <SelectItem value="soft">부드러움</SelectItem>
-                    <SelectItem value="strong">강함</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 출생일 — 백엔드 필수(없으면 400). 표시는 옆 '(선택)'과 같은 꼴의 '(필수)'(/search·/required-char 와 같은 말).
-                  네이티브 required 를 걸면 브라우저 말풍선이 먼저 떠 아래 오류 상자의 안내가 나오지 않아 aria-required 로 알린다 */}
-              <div className="space-y-2">
-                <Label htmlFor="birthDate">
-                  출생일{" "}
-                  <span className="text-[10px] text-muted-foreground">(필수)</span>
-                </Label>
+                <Label htmlFor="lastName">성씨</Label>
+                {/* 한글 1~2자(복성까지) — 칸도 2자에서 멈춘다. 검사는 제출 때 rareSurnameError */}
                 <Input
-                  id="birthDate"
-                  type="date"
-                  value={birthDate}
+                  id="lastName"
+                  placeholder="예: 선우, 남궁, 봉, 빈, 탁"
+                  maxLength={SURNAME_MAX_LENGTH}
+                  value={lastName}
                   onChange={(e) => {
-                    setBirthDate(e.target.value);
-                    if (e.target.value && birthDateMissing) setError(null);
+                    setLastName(e.target.value);
+                    if (lastNameInvalid) {
+                      setLastNameInvalid(false);
+                      setError(null);
+                    }
                   }}
-                  aria-required="true"
-                  aria-invalid={birthDateMissing || undefined}
-                  aria-describedby={
-                    birthDateMissing ? "rare-surname-error" : undefined
-                  }
+                  required
+                  aria-invalid={lastNameInvalid || undefined}
+                  aria-describedby={lastNameInvalid ? "rare-surname-error" : undefined}
                 />
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] text-muted-foreground">
+                    자주 찾는 복성:
+                  </span>
+                  {COMMON_COMPOUND_SURNAMES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setLastName(s);
+                        if (lastNameInvalid) {
+                          setLastNameInvalid(false);
+                          setError(null);
+                        }
+                      }}
+                      className="rounded-full border border-paper-line bg-paper-tint px-2 py-0.5 text-[10px] text-navy/70 transition hover:border-teal hover:text-teal"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="birthTime">
-                  출생 시각{" "}
-                  <span className="text-[10px] text-muted-foreground">(선택)</span>
-                </Label>
-                <Input
-                  id="birthTime"
-                  type="time"
-                  value={birthTime}
-                  onChange={(e) => setBirthTime(e.target.value)}
-                />
-              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {/* Base UI Select 는 트리거(button)에 id 를 넘겨 라벨과 잇는다(components/ui/select.tsx 는 그대로) */}
+                <div className="space-y-2">
+                  <Label htmlFor="gender">성별</Label>
+                  <Select
+                    value={gender}
+                    onValueChange={(v) => setGender(v ?? "none")}
+                  >
+                    <SelectTrigger id="gender" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">무관</SelectItem>
+                      <SelectItem value="male">남</SelectItem>
+                      <SelectItem value="female">여</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label>추천 개수</Label>
-                <Select
-                  value={count}
-                  onValueChange={(v) => setCount(v ?? "10")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5개</SelectItem>
-                    <SelectItem value="10">10개</SelectItem>
-                    <SelectItem value="20">20개</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Label htmlFor="tone">톤</Label>
+                  <Select
+                    value={tone}
+                    onValueChange={(v) => setTone(v ?? "neutral")}
+                  >
+                    <SelectTrigger id="tone" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="neutral">중립</SelectItem>
+                      <SelectItem value="soft">부드러움</SelectItem>
+                      <SelectItem value="strong">강함</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 출생일 — 백엔드 필수(없으면 400). 표시는 옆 '(선택)'과 같은 꼴의 '(필수)'(/search·/required-char 와 같은 말).
+                    네이티브 required 를 걸면 브라우저 말풍선이 먼저 떠 아래 오류 상자의 안내가 나오지 않아 aria-required 로 알린다 */}
+                <div className="space-y-2">
+                  <Label htmlFor="birthDate">
+                    출생일{" "}
+                    <span className="text-[10px] text-muted-foreground">(필수)</span>
+                  </Label>
+                  <Input
+                    id="birthDate"
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => {
+                      setBirthDate(e.target.value);
+                      if (e.target.value && birthDateMissing) setError(null);
+                    }}
+                    aria-required="true"
+                    aria-invalid={birthDateMissing || undefined}
+                    aria-describedby={
+                      birthDateMissing ? "rare-surname-error" : undefined
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="birthTime">
+                    출생 시각{" "}
+                    <span className="text-[10px] text-muted-foreground">(선택)</span>
+                  </Label>
+                  <Input
+                    id="birthTime"
+                    type="time"
+                    value={birthTime}
+                    onChange={(e) => setBirthTime(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="count">추천 개수</Label>
+                  <Select
+                    value={count}
+                    onValueChange={(v) => setCount(v ?? "10")}
+                  >
+                    <SelectTrigger id="count" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5개</SelectItem>
+                      <SelectItem value="10">10개</SelectItem>
+                      <SelectItem value="20">20개</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
+            </fieldset>
 
             <Button
               type="submit"

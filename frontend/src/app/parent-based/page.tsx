@@ -20,6 +20,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { parentBased } from "@/lib/api";
+import { josa } from "@/lib/josa";
+import {
+  cleanNameInput,
+  nameInputMessage,
+  nameInputProblem,
+  SURNAME_MAX_LENGTH,
+} from "@/lib/name-input";
+import { COMPOUND_SURNAMES } from "@/lib/name-split";
 import type { ParentBasedCandidate } from "@/lib/types";
 import {
   KEYWORD_HANGUL_REQUIRED,
@@ -37,11 +45,107 @@ import {
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
 
+// #region parent-form — 입력 다듬기·검사(순수 함수). tests/fix1127-parent-rare.test.mjs 가 이 구간을 떼어 돌린다 —
+// 구간 안에는 JSX·import 를 두지 않는다(lib 함수는 테스트가 따로 import 해 넣는다)
+
 /**
  * 생년월일 — 백엔드 필수(POST parent-based 가 비면 400 '생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다').
  * 옛 폼은 출생일 칸을 선택처럼 두고 그대로 보내 백엔드 문구가 오류 상자에 떴다 — 제출 전에 막고 이 문구를 같은 상자에 보인다(2026-10-28)
  */
 const BIRTH_DATE_REQUIRED = "생년월일을 입력해 주세요.";
+
+/**
+ * 부모 이름 칸 글자 수 — 이름 칸은 성을 뺀 이름이 원칙이지만, 성 칸을 비우고 성까지 적은 이름(남궁민수)도 받는다
+ * (엔진은 그 값을 그대로 이름으로 읽고 거르기 목록에만 나눠 더한다 — CLAUDE.md 부모 엔진 ⑨). 한 칸에 한 사람이라 띄어 쓴 두 이름은 없다.
+ * 10 = 서버 계획(부모 이름 [StringLength] — '실제는 10이면 충분')·/evaluate 이름 칸과 같은 상한. 외자(철)도 받는다
+ */
+const PARENT_NAME_MAX_LENGTH = 10;
+
+/** 폼 값 — 제출 때 다듬은 값(cleanParentForm)이 그대로 요청·결과 화면의 스냅샷이 된다 */
+interface ParentFormValues {
+  babySurname: string;
+  fatherSurname: string;
+  fatherName: string;
+  motherSurname: string;
+  motherName: string;
+  storyKeyword: string;
+  birthDate: string;
+  birthTime: string;
+  gender: string;
+  tone: string;
+}
+
+type ParentFieldId =
+  | "babySurname"
+  | "birthDate"
+  | "fatherSurname"
+  | "fatherName"
+  | "motherSurname"
+  | "motherName"
+  | "storyKeyword";
+
+/** 성·이름은 NFC + 앞뒤 공백 제거(lib/name-input), 키워드는 앞뒤 공백만 — 나머지는 그대로 */
+function cleanParentForm(raw: ParentFormValues): ParentFormValues {
+  return {
+    ...raw,
+    babySurname: cleanNameInput(raw.babySurname),
+    fatherSurname: cleanNameInput(raw.fatherSurname),
+    fatherName: cleanNameInput(raw.fatherName),
+    motherSurname: cleanNameInput(raw.motherSurname),
+    motherName: cleanNameInput(raw.motherName),
+    storyKeyword: raw.storyKeyword.trim(),
+  };
+}
+
+/** 두 글자인데 복성 목록에 없는 성씨 — 성 + 이름 첫 글자('김민')나 '김씨'를 넣은 경우 */
+function compoundSurnameMessage(label: string, value: string): string {
+  return `${label} '${value}'${josa(value, "은/는")} 복성 목록(${COMPOUND_SURNAMES.join("·")})에 없어요. 성씨만 적어 주세요.`;
+}
+
+/** 성씨 칸(빈 칸이 아닐 때) — 한글 1~2자, 두 글자는 복성 목록(lib/name-split — 백엔드 SurnameData.TwoCharSurnames 와 같은 10개) */
+function surnameFieldError(value: string, label: string): string | null {
+  const problem = nameInputProblem(value, SURNAME_MAX_LENGTH);
+  if (problem === "empty") return null;
+  if (problem) return nameInputMessage(problem, label, SURNAME_MAX_LENGTH);
+  if (value.length === 2 && !COMPOUND_SURNAMES.includes(value)) return compoundSurnameMessage(label, value);
+  return null;
+}
+
+/** 부모 이름 칸(빈 칸이 아닐 때) — 한글 음절만, PARENT_NAME_MAX_LENGTH 자까지 */
+function parentNameFieldError(value: string, label: string): string | null {
+  const problem = nameInputProblem(value, PARENT_NAME_MAX_LENGTH);
+  if (problem === "empty") return null;
+  return problem ? nameInputMessage(problem, label, PARENT_NAME_MAX_LENGTH) : null;
+}
+
+/**
+ * 제출 전 검사 — 첫 문제 하나(폼 순서: 자녀 성씨 → 출생일 → 아버지 → 어머니 → 부모 이름·키워드 중 하나 → 키워드 한글).
+ * field 는 포커스·aria-invalid 를 둘 칸(부모 이름·키워드 중 하나가 없을 때는 어느 한 칸의 잘못이 아니라 null).
+ * 옛 폼은 빈 값만 보아 부모 이름 'Minsu'·'金 民秀', 자녀 성씨 'Kim'·'김민'이 그대로 가서 부모 이름과 무관한 후보를
+ * '부모님 이름을 분석했어요'로 보였고, 칸에 길이 제한이 없어 붙여 넣은 긴 글도 서버로 갔다(2026-11-27)
+ */
+function parentFormError(v: ParentFormValues): { field: ParentFieldId | null; message: string } | null {
+  if (!v.babySurname) return { field: "babySurname", message: "자녀 성씨를 입력해주세요." };
+  const baby = surnameFieldError(v.babySurname, "자녀 성씨");
+  if (baby) return { field: "babySurname", message: baby };
+  // 폼 순서(자녀 정보 → 부모 정보)대로 — 성씨 다음이 출생일
+  if (!v.birthDate) return { field: "birthDate", message: BIRTH_DATE_REQUIRED };
+  const checks: [ParentFieldId, string | null][] = [
+    ["fatherSurname", surnameFieldError(v.fatherSurname, "아버지 성씨")],
+    ["fatherName", parentNameFieldError(v.fatherName, "아버지 이름")],
+    ["motherSurname", surnameFieldError(v.motherSurname, "어머니 성씨")],
+    ["motherName", parentNameFieldError(v.motherName, "어머니 이름")],
+  ];
+  for (const [field, message] of checks) if (message) return { field, message };
+  if (!v.fatherName && !v.motherName && !v.storyKeyword) {
+    return { field: null, message: "부모 이름 또는 스토리 키워드 중 하나는 입력해주세요." };
+  }
+  if (v.storyKeyword && !keywordHasHangul(v.storyKeyword)) {
+    return { field: "storyKeyword", message: KEYWORD_HANGUL_REQUIRED };
+  }
+  return null;
+}
+// #endregion parent-form
 
 // ============================================================
 // 작명 모델 분류 — 방식 코드 → 칩 표(lib/parent-naming.ts), 모르는 코드만 nameType 부분 문자열
@@ -81,18 +185,8 @@ function buildEvaluateUrl(
 // ============================================================
 function buildParentResultData(
   candidates: ParentBasedCandidate[],
-  inputs: {
-    babySurname: string;
-    fatherSurname: string;
-    fatherName: string;
-    motherSurname: string;
-    motherName: string;
-    storyKeyword: string;
-    birthDate: string;
-    birthTime: string;
-    gender: string;
-    tone: string;
-  }
+  /** 제출 때 다듬은 값(스냅샷) — 살아 있는 폼 값이 아니다 */
+  inputs: ParentFormValues
 ): ParentResultData {
   // 요청에 보낸 성(trim)과 같은 값 — 이름(fullName)·평가 링크의 lastName 이 같은 성을 쓴다
   const surname = inputs.babySurname.trim();
@@ -108,6 +202,8 @@ function buildParentResultData(
     reasons: [],
     phonologyNotes: [],
     namingModel: detectNamingModel(c),
+    // 방식 코드 원값 — 배너의 '키워드 매핑' 칩을 키워드 방식 후보에만 붙인다(화면에 그대로 내지 않는다)
+    namingCode: c.namingModel || undefined,
     evaluateHref: buildEvaluateUrl(surname, c.name, inputs),
   }));
 
@@ -115,9 +211,12 @@ function buildParentResultData(
     `${inputs.fatherSurname || ""}${inputs.fatherName || ""}`.trim();
   const motherFull =
     `${inputs.motherSurname || ""}${inputs.motherName || ""}`.trim();
-  // 배너 강조 글자는 성을 뺀 이름에서 찾는다 — 전체 이름에서 찾으면 아버지 성 '김'이 계승 글자로 칠해졌다
+  // 배너 강조 글자는 성을 뺀 이름에서 찾는다 — 전체 이름에서 찾으면 아버지 성 '김'이 계승 글자로 칠해졌다.
+  // 성도 따로 넘긴다 — 배너가 fullName 의 성 자리와 이름 자리를 가른다(머리글자 = 이름 첫 글자 — 복성 남궁민수 → '민')
   const fatherGiven = (inputs.fatherName || "").replace(/\s+/g, "");
   const motherGiven = (inputs.motherName || "").replace(/\s+/g, "");
+  const fatherSurname = (inputs.fatherSurname || "").trim();
+  const motherSurname = (inputs.motherSurname || "").trim();
 
   const requestSummary: ParentSummary = {
     lastName: surname,
@@ -135,8 +234,12 @@ function buildParentResultData(
           ? "부드러움"
           : "강함",
     parents: {
-      father: fatherFull ? { fullName: fatherFull, givenName: fatherGiven || undefined } : undefined,
-      mother: motherFull ? { fullName: motherFull, givenName: motherGiven || undefined } : undefined,
+      father: fatherFull
+        ? { fullName: fatherFull, surname: fatherSurname || undefined, givenName: fatherGiven || undefined }
+        : undefined,
+      mother: motherFull
+        ? { fullName: motherFull, surname: motherSurname || undefined, givenName: motherGiven || undefined }
+        : undefined,
       keywords: inputs.storyKeyword ? [inputs.storyKeyword] : [],
     },
   };
@@ -200,63 +303,80 @@ export default function ParentBasedPage() {
   const [tone, setTone] = useState("neutral");
 
   const [results, setResults] = useState<ParentBasedCandidate[]>([]);
+  const [submitted, setSubmitted] = useState<ParentFormValues | null>(null);
   const [hasResult, setHasResult] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 오류 상자의 문장이 가리키는 칸 — 그 칸에 aria-invalid·aria-describedby, 제출 때 포커스 */
+  const [errorField, setErrorField] = useState<ParentFieldId | null>(null);
+
+  /** 그 칸을 고치기 시작하면 그 칸의 오류를 걷는다(다시 제출할 때 다시 본다) */
+  function clearFieldError(field: ParentFieldId) {
+    if (errorField === field) {
+      setError(null);
+      setErrorField(null);
+    }
+  }
+  const invalidProps = (field: ParentFieldId) => ({
+    "aria-invalid": errorField === field || undefined,
+    "aria-describedby": errorField === field ? "parent-based-error" : undefined,
+  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!babySurname.trim()) {
-      setError("자녀 성씨를 입력해주세요.");
-      return;
-    }
-    // 폼 순서(자녀 정보 → 부모 정보)대로 — 성씨 다음이 출생일
-    if (!birthDate) {
-      setError(BIRTH_DATE_REQUIRED);
-      document.getElementById("birthDate")?.focus();
-      return;
-    }
-    if (!fatherName.trim() && !motherName.trim() && !storyKeyword.trim()) {
-      setError(
-        "부모 이름 또는 스토리 키워드 중 하나는 입력해주세요."
-      );
-      return;
-    }
-    if (storyKeyword.trim() && !keywordHasHangul(storyKeyword)) {
-      setError(KEYWORD_HANGUL_REQUIRED);
-      document.getElementById("storyKeyword")?.focus();
+    // 다듬은 값(NFC·앞뒤 공백 제거)으로 검사하고 그 값을 보낸다 — 같은 값이 결과 화면의 스냅샷(submitted)이 된다
+    const values = cleanParentForm({
+      babySurname,
+      fatherSurname,
+      fatherName,
+      motherSurname,
+      motherName,
+      storyKeyword,
+      birthDate,
+      birthTime,
+      gender,
+      tone,
+    });
+    const problem = parentFormError(values);
+    if (problem) {
+      setError(problem.message);
+      setErrorField(problem.field);
+      if (problem.field) document.getElementById(problem.field)?.focus();
       return;
     }
 
     setLoading(true);
     setError(null);
+    setErrorField(null);
     setResults([]);
     setHasResult(false);
 
     try {
       const data = await parentBased({
-        lastName: babySurname.trim(),
-        fatherSurname: fatherSurname.trim() || undefined,
-        fatherName: fatherName.trim() || undefined,
-        motherSurname: motherSurname.trim() || undefined,
-        motherName: motherName.trim() || undefined,
-        storyKeyword: storyKeyword.trim() || undefined,
-        birthDate,
-        birthTime: birthTime || undefined,
+        lastName: values.babySurname,
+        fatherSurname: values.fatherSurname || undefined,
+        fatherName: values.fatherName || undefined,
+        motherSurname: values.motherSurname || undefined,
+        motherName: values.motherName || undefined,
+        storyKeyword: values.storyKeyword || undefined,
+        birthDate: values.birthDate,
+        birthTime: values.birthTime || undefined,
         gender:
-          gender === "none"
+          values.gender === "none"
             ? undefined
-            : gender === "male"
+            : values.gender === "male"
               ? "Male"
               : "Female",
         tone:
-          tone === "neutral"
+          values.tone === "neutral"
             ? "Neutral"
-            : tone === "soft"
+            : values.tone === "soft"
               ? "Soft"
               : "Strong",
       });
+      // 제출 때 값 — 응답을 기다리는 동안(콜드 스타트면 30초 안팎) 폼을 고쳐도 결과의 평가 링크·배너는 이 값으로 그린다
+      setSubmitted(values);
       setResults(data);
       setHasResult(true);
     } catch (err) {
@@ -277,26 +397,10 @@ export default function ParentBasedPage() {
   // ============================================================
   // 결과 화면 — 새 디자인 컴포넌트
   // ============================================================
-  if (hasResult && results.length > 0) {
-    const data = buildParentResultData(results, {
-      babySurname,
-      fatherSurname,
-      fatherName,
-      motherSurname,
-      motherName,
-      storyKeyword,
-      birthDate,
-      birthTime,
-      gender,
-      tone,
-    });
-    return (
-      <SmartResultParentPage
-        data={data}
-        editHref="/parent-based"
-        onRegenerate={handleReset}
-      />
-    );
+  if (hasResult && results.length > 0 && submitted) {
+    // 살아 있는 폼 값이 아니라 제출 때 잡은 값으로 — 옛 화면은 기다리는 사이 고친 값으로 평가 링크·배너를 만들었다(2026-11-27)
+    const data = buildParentResultData(results, submitted);
+    return <SmartResultParentPage data={data} onRegenerate={handleReset} />;
   }
 
   // ============================================================
@@ -328,29 +432,38 @@ export default function ParentBasedPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* 응답을 기다리는 동안 세 묶음(fieldset disabled)의 입력을 잠근다 — 결과는 제출 때 값(submitted)으로 그리지만,
+                고친 값이 반영된 것처럼 보이지 않게 */}
             {/* 자녀 정보 */}
-            <fieldset className="space-y-4">
+            <fieldset disabled={loading} className="space-y-4">
               <legend className="text-sm font-medium text-navy/70">
                 자녀 정보
               </legend>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="babySurname">자녀 성씨</Label>
+                  {/* 한글 1~2자(복성까지) — 칸도 2자에서 멈춘다. 검사는 제출 때 parentFormError */}
                   <Input
                     id="babySurname"
                     placeholder="예: 김"
+                    maxLength={SURNAME_MAX_LENGTH}
                     value={babySurname}
-                    onChange={(e) => setBabySurname(e.target.value)}
+                    onChange={(e) => {
+                      setBabySurname(e.target.value);
+                      clearFieldError("babySurname");
+                    }}
                     required
+                    {...invalidProps("babySurname")}
                   />
                 </div>
+                {/* Base UI Select 는 트리거(button)에 id 를 넘겨 라벨과 잇는다(components/ui/select.tsx 는 그대로) */}
                 <div className="space-y-2">
-                  <Label>성별</Label>
+                  <Label htmlFor="gender">성별</Label>
                   <Select
                     value={gender}
                     onValueChange={(v) => setGender(v ?? "none")}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id="gender" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -361,12 +474,12 @@ export default function ParentBasedPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>톤</Label>
+                  <Label htmlFor="tone">톤</Label>
                   <Select
                     value={tone}
                     onValueChange={(v) => setTone(v ?? "neutral")}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id="tone" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -390,14 +503,14 @@ export default function ParentBasedPage() {
                     value={birthDate}
                     onChange={(e) => {
                       setBirthDate(e.target.value);
-                      if (e.target.value && error === BIRTH_DATE_REQUIRED) setError(null);
+                      if (e.target.value) clearFieldError("birthDate");
                     }}
                     aria-required="true"
                     aria-invalid={
-                      (error === BIRTH_DATE_REQUIRED && !birthDate) || undefined
+                      (errorField === "birthDate" && !birthDate) || undefined
                     }
                     aria-describedby={
-                      error === BIRTH_DATE_REQUIRED && !birthDate ? "parent-based-error" : undefined
+                      errorField === "birthDate" && !birthDate ? "parent-based-error" : undefined
                     }
                   />
                 </div>
@@ -417,44 +530,82 @@ export default function ParentBasedPage() {
             </fieldset>
 
             {/* 부모 정보 */}
-            <fieldset className="space-y-4 border-t border-paper-line pt-5">
+            <fieldset disabled={loading} className="space-y-4 border-t border-paper-line pt-5">
               <legend className="text-sm font-medium text-navy/70">
                 부모 정보
               </legend>
+              {/* 칸마다 라벨(화면에는 '👨 아버지' 제목과 placeholder 가 보이니 라벨은 sr-only) — 옛 칸은 라벨이 없어
+                  화면 읽기 프로그램이 placeholder '성'·'이름'만 읽었다(아버지·어머니 구분 없음) */}
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 rounded-lg border border-paper-line bg-paper-card/60 p-4">
-                  <p className="text-xs font-medium text-navy/70">
-                    👨 아버지
+                <div
+                  role="group"
+                  aria-labelledby="father-group-label"
+                  className="space-y-2 rounded-lg border border-paper-line bg-paper-card/60 p-4"
+                >
+                  <p id="father-group-label" className="text-xs font-medium text-navy/70">
+                    <span aria-hidden="true">👨 </span>아버지
                   </p>
                   <div className="grid grid-cols-[auto_1fr] gap-2">
+                    <Label htmlFor="fatherSurname" className="sr-only">아버지 성</Label>
                     <Input
+                      id="fatherSurname"
                       placeholder="성"
                       className="w-16"
+                      maxLength={SURNAME_MAX_LENGTH}
                       value={fatherSurname}
-                      onChange={(e) => setFatherSurname(e.target.value)}
+                      onChange={(e) => {
+                        setFatherSurname(e.target.value);
+                        clearFieldError("fatherSurname");
+                      }}
+                      {...invalidProps("fatherSurname")}
                     />
+                    <Label htmlFor="fatherName" className="sr-only">아버지 이름</Label>
                     <Input
+                      id="fatherName"
                       placeholder="이름"
+                      maxLength={PARENT_NAME_MAX_LENGTH}
                       value={fatherName}
-                      onChange={(e) => setFatherName(e.target.value)}
+                      onChange={(e) => {
+                        setFatherName(e.target.value);
+                        clearFieldError("fatherName");
+                      }}
+                      {...invalidProps("fatherName")}
                     />
                   </div>
                 </div>
-                <div className="space-y-2 rounded-lg border border-paper-line bg-paper-card/60 p-4">
-                  <p className="text-xs font-medium text-navy/70">
-                    👩 어머니
+                <div
+                  role="group"
+                  aria-labelledby="mother-group-label"
+                  className="space-y-2 rounded-lg border border-paper-line bg-paper-card/60 p-4"
+                >
+                  <p id="mother-group-label" className="text-xs font-medium text-navy/70">
+                    <span aria-hidden="true">👩 </span>어머니
                   </p>
                   <div className="grid grid-cols-[auto_1fr] gap-2">
+                    <Label htmlFor="motherSurname" className="sr-only">어머니 성</Label>
                     <Input
+                      id="motherSurname"
                       placeholder="성"
                       className="w-16"
+                      maxLength={SURNAME_MAX_LENGTH}
                       value={motherSurname}
-                      onChange={(e) => setMotherSurname(e.target.value)}
+                      onChange={(e) => {
+                        setMotherSurname(e.target.value);
+                        clearFieldError("motherSurname");
+                      }}
+                      {...invalidProps("motherSurname")}
                     />
+                    <Label htmlFor="motherName" className="sr-only">어머니 이름</Label>
                     <Input
+                      id="motherName"
                       placeholder="이름"
+                      maxLength={PARENT_NAME_MAX_LENGTH}
                       value={motherName}
-                      onChange={(e) => setMotherName(e.target.value)}
+                      onChange={(e) => {
+                        setMotherName(e.target.value);
+                        clearFieldError("motherName");
+                      }}
+                      {...invalidProps("motherName")}
                     />
                   </div>
                 </div>
@@ -467,7 +618,7 @@ export default function ParentBasedPage() {
             </fieldset>
 
             {/* 스토리 키워드 */}
-            <fieldset className="space-y-2 border-t border-paper-line pt-5">
+            <fieldset disabled={loading} className="space-y-2 border-t border-paper-line pt-5">
               <Label htmlFor="storyKeyword">
                 스토리 키워드 <span className="text-muted-foreground">(선택)</span>
               </Label>
@@ -478,10 +629,9 @@ export default function ParentBasedPage() {
                 value={storyKeyword}
                 onChange={(e) => {
                   setStoryKeyword(e.target.value);
-                  if (error === KEYWORD_HANGUL_REQUIRED && keywordHasHangul(e.target.value)) setError(null);
+                  if (keywordHasHangul(e.target.value)) clearFieldError("storyKeyword");
                 }}
-                aria-invalid={error === KEYWORD_HANGUL_REQUIRED || undefined}
-                aria-describedby={error === KEYWORD_HANGUL_REQUIRED ? "parent-based-error" : undefined}
+                {...invalidProps("storyKeyword")}
               />
               <p className="text-[10px] text-muted-foreground">
                 자녀에게 담고 싶은 의미·결을 한글 한두 단어로 표현해주세요
