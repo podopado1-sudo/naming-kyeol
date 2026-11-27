@@ -10,7 +10,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Button } from "./Primitives";
 
 // ============================================================
@@ -223,7 +224,13 @@ export function NotFoundScreen() {
 
   return (
     <PaperBg>
-      <div style={{ position: "absolute", top: "12%", left: "8%" }}>
+      {/* 2026-11-27: 마스코트는 화면 기준 absolute(left 8%)라 카드(가운데, 최대 480px)와 떨어지려면 폭이 약 771px 이상이어야 한다
+          (0.08W + 84 ≤ (W − 480) / 2). 휴대폰 폭(375)에서는 카드 머리표 '404' 글자를 덮어 '· NOT FOUND'만 읽혔다 —
+          768px 미만에서는 그리지 않는다(장식 — aria-hidden) */}
+      <div
+        className="hidden md:block"
+        style={{ position: "absolute", top: "12%", left: "8%" }}
+      >
         <Mascot
           pose="puzzled"
           size={84}
@@ -718,8 +725,33 @@ export function EmptyResultScreen({
 }
 
 // ============================================================
-// Frame 4 — Server Error (500)
+// Frame 4 — Error (app/error.tsx — 렌더 중 예외)
 // ============================================================
+//
+// 2026-11-27 고침(디자인 시안의 자리표시 값이 남아 있던 것):
+// - 문의 메일 hello@naming.kyeol 은 없는 주소(.kyeol 최상위 도메인 없음)였다 → 실제 메일 주소가 있는 /contact 링크
+// - 본문에 error.message(영문 예외 문구 — 'Cannot read properties of undefined …')를 그대로 보였다 → 고정 한국어 문장
+// - REF·'요청 ID req_…'는 digest 가 없으면 예외 문구 앞 8글자였고 기본값 '8a3f2c'는 지어낸 값 → digest 가 있을 때만 '오류 번호'로
+// - '마지막 액션 -'(늘 같은 값) 줄은 지웠다. 머리표 'Error · 500'은 클라이언트 오류에도 붙어 'Error'로
+// - '기술 정보 복사하기'는 '✓ 복사됨'만 띄우고 아무것도 복사하지 않았다 → navigator.clipboard 로 실제 복사, 실패하면 알리고 글을 선택해 둔다
+// - '발생 시각'은 그릴 때마다 새로 찍는 UTC 문자열이었다 → 마운트 때 한 번 잡은 한국 시간
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** 'YYYY-MM-DD HH:mm:ss (한국 시간)' — 기기 시간대와 무관하게 UTC + 9시간 */
+function formatKst(ms: number): string {
+  return `${new Date(ms + KST_OFFSET_MS).toISOString().slice(0, 19).replace("T", " ")} (한국 시간)`;
+}
+
+/** 주소 경로를 읽을 수 있는 글자로(/name/%EC%84%9C… → /name/서…). 풀 수 없는 % 꼴이면 그대로 */
+function readablePath(path: string): string {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div style={{ display: "flex", gap: 10 }}>
@@ -732,22 +764,71 @@ function Row({ k, v }: { k: string; v: string }) {
       >
         {k}
       </div>
-      <div style={{ color: "var(--color-text)" }}>{v}</div>
+      <div style={{ color: "var(--color-text)", minWidth: 0, overflowWrap: "anywhere" }}>{v}</div>
     </div>
   );
 }
 
+type CopyState = "idle" | "copied" | "failed";
+
 export function ServerErrorScreen({
-  refId = "8a3f2c",
-  errorMessage,
+  digest,
   onRetry,
 }: {
-  refId?: string;
-  errorMessage?: string;
+  /** Next 가 서버 오류에 붙이는 digest(서버 로그와 맞춰 볼 번호). 클라이언트 오류에는 없다 — 없으면 줄을 그리지 않는다 */
+  digest?: string;
   onRetry?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>("idle");
+  // 발생 시각 — 이 화면이 처음 그려질 때(오류 직후) 한 번만 잡는다. 기술 정보는 사용자가 펼친 뒤에만 그리므로
+  // 서버 HTML·첫 클라이언트 렌더에 시각 글자가 들어가지 않는다(하이드레이션 불일치 없음)
+  const [occurredAt] = useState(() => Date.now());
+  // 경로만 싣는다 — 쿼리(?lastName=…&birthDate=…)에는 사용자가 넣은 이름·생년월일이 들어갈 수 있다
+  const pathname = usePathname();
+  const infoRef = useRef<HTMLDivElement>(null);
+  const refCode = digest?.trim() ? digest.trim() : null;
+  const infoId = useId();
+
+  const rows: { k: string; v: string }[] = [
+    ...(refCode ? [{ k: "오류 번호", v: refCode }] : []),
+    { k: "발생 시각", v: formatKst(occurredAt) },
+    ...(pathname ? [{ k: "주소", v: readablePath(pathname) }] : []),
+  ];
+
+  // '✓ 복사됨'은 1.5초 뒤 원래 글로(화면을 떠나면 타이머도 지운다)
+  useEffect(() => {
+    if (copyState !== "copied") return;
+    const timer = setTimeout(() => setCopyState("idle"), 1500);
+    return () => clearTimeout(timer);
+  }, [copyState]);
+
+  function selectInfoText() {
+    try {
+      const sel = window.getSelection();
+      if (sel && infoRef.current) sel.selectAllChildren(infoRef.current);
+    } catch {
+      // 선택을 못 해도 글은 화면에 그대로 있다
+    }
+  }
+
+  function copyInfo() {
+    const text = ["이름의 결 오류 기술 정보", ...rows.map((r) => `${r.k}: ${r.v}`)].join("\n");
+    const clipboard = typeof navigator !== "undefined" ? navigator.clipboard : undefined;
+    if (!clipboard?.writeText) {
+      // http 주소·오래된 브라우저 — 클립보드 API 가 없다
+      setCopyState("failed");
+      selectInfoText();
+      return;
+    }
+    clipboard.writeText(text).then(
+      () => setCopyState("copied"),
+      () => {
+        setCopyState("failed");
+        selectInfoText();
+      },
+    );
+  }
 
   return (
     <PaperBg>
@@ -761,7 +842,7 @@ export function ServerErrorScreen({
         }}
       >
         <Card>
-          <Eyebrow color="var(--color-gold-800)">Error · 500</Eyebrow>
+          <Eyebrow color="var(--color-gold-800)">Error</Eyebrow>
           <h1
             style={{
               fontFamily: "var(--font-sans)",
@@ -785,8 +866,7 @@ export function ServerErrorScreen({
               margin: 0,
             }}
           >
-            {errorMessage ??
-              "일시적인 오류가 발생했어요. 다시 시도하거나, 잠시 후 다시 방문해주세요."}
+            일시적인 오류가 발생했어요. 다시 시도하거나, 잠시 후 다시 방문해주세요.
           </p>
 
           <div
@@ -800,6 +880,8 @@ export function ServerErrorScreen({
           >
             <button
               type="button"
+              aria-expanded={open}
+              aria-controls={infoId}
               onClick={() => setOpen((o) => !o)}
               style={{
                 appearance: "none",
@@ -818,6 +900,7 @@ export function ServerErrorScreen({
               }}
             >
               <span
+                aria-hidden="true"
                 style={{
                   display: "inline-block",
                   transition: "transform 180ms",
@@ -830,19 +913,22 @@ export function ServerErrorScreen({
               <span style={{ flex: 1, textAlign: "left" }}>
                 기술 정보 보기
               </span>
-              <span
-                style={{
-                  fontFamily: "Inter, var(--font-mono)",
-                  fontSize: 12,
-                  color: "var(--color-text-2)",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                REF: {refId}
-              </span>
+              {refCode && (
+                <span
+                  style={{
+                    fontFamily: "Inter, var(--font-mono)",
+                    fontSize: 12,
+                    color: "var(--color-text-2)",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  REF: {refCode}
+                </span>
+              )}
             </button>
             {open && (
               <div
+                id={infoId}
                 style={{
                   marginTop: 14,
                   paddingTop: 14,
@@ -853,15 +939,14 @@ export function ServerErrorScreen({
                   lineHeight: 1.8,
                 }}
               >
-                <Row k="요청 ID" v={`req_${refId}`} />
-                <Row k="발생 시각" v={new Date().toISOString()} />
-                <Row k="마지막 액션" v="-" />
+                <div ref={infoRef}>
+                  {rows.map((r) => (
+                    <Row key={r.k} k={r.k} v={r.v} />
+                  ))}
+                </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1500);
-                  }}
+                  onClick={copyInfo}
                   style={{
                     marginTop: 10,
                     fontFamily: "var(--font-sans)",
@@ -875,8 +960,26 @@ export function ServerErrorScreen({
                     color: "var(--color-text)",
                   }}
                 >
-                  {copied ? "✓ 복사됨" : "기술 정보 복사하기"}
+                  {copyState === "copied" ? "✓ 복사됨" : "기술 정보 복사하기"}
                 </button>
+                {/* 복사 결과 알림 — 실패는 눈에 보이게, 성공은 단추 글('✓ 복사됨')과 함께 화면 읽기 프로그램에만 */}
+                <p
+                  role="status"
+                  className={copyState === "failed" ? undefined : "sr-only"}
+                  style={{
+                    margin: "8px 0 0",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 12,
+                    lineHeight: 1.6,
+                    color: "var(--color-amber-warm-700)",
+                  }}
+                >
+                  {copyState === "failed"
+                    ? "복사하지 못했어요. 위 내용을 직접 선택해 복사해 주세요."
+                    : copyState === "copied"
+                      ? "기술 정보를 복사했어요."
+                      : ""}
+                </p>
               </div>
             )}
           </div>
@@ -917,22 +1020,21 @@ export function ServerErrorScreen({
             </Link>
           </div>
 
+          {/* 실제 메일 주소(contact@namingkyeol.com)는 문의 페이지에 있다 — 주소를 여기 따로 적어 두면 또 어긋난다 */}
           <p
             style={{
               marginTop: 18,
               fontSize: 12,
               color: "var(--color-text-3)",
               textAlign: "center",
+              lineHeight: 1.6,
             }}
           >
-            이 문제가 계속된다면{" "}
-            <a
-              href="mailto:hello@naming.kyeol"
-              style={{ color: "var(--color-teal)" }}
-            >
-              hello@naming.kyeol
-            </a>{" "}
-            로 알려주세요
+            이 문제가 계속된다면 위 기술 정보를 복사해{" "}
+            <Link href="/contact" style={{ color: "var(--color-teal)" }}>
+              문의 페이지
+            </Link>
+            의 메일로 보내 주세요
           </p>
         </Card>
       </div>
