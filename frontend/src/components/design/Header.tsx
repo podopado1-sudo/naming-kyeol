@@ -10,6 +10,7 @@
 "use client";
 
 import Link from "next/link";
+import { adBoundaryPrefetch } from "@/lib/ad-scope";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { Mark } from "./Mark";
@@ -83,13 +84,21 @@ export function Header({
     function onScroll() {
       if (Math.abs(window.scrollY - baseY) > MENU_CLOSE_SCROLL_PX) closeMenu();
     }
+    // 키보드 초점이 머리말 밖으로 나가면 닫는다 — 메뉴가 본문 위에 겹쳐 그려져, Tab 으로 마지막 메뉴 링크를 지나면
+    // 초점이 메뉴 밑에 가려진 본문 요소로 가 보이지 않았다(검토 지적 — WCAG 2.4.11 초점 가림)
+    function onFocusIn(e: FocusEvent) {
+      if (e.target instanceof Node && headerRef.current?.contains(e.target)) return;
+      closeMenu();
+    }
 
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("focusin", onFocusIn);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("focusin", onFocusIn);
       window.removeEventListener("scroll", onScroll);
     };
   }, [menuOpen]);
@@ -145,6 +154,7 @@ export function Header({
         }}
       >
         <Link
+          prefetch={adBoundaryPrefetch(pathname ?? "", "/")}
           href="/"
           onClick={() => {
             onNav?.("home");
@@ -199,6 +209,7 @@ export function Header({
             <Link
               key={item.key}
               href={item.href}
+              prefetch={adBoundaryPrefetch(pathname ?? "", item.href)}
               onClick={() => onNav?.(item.key)}
               aria-current={current === item.key ? "page" : undefined}
               style={linkStyle(current === item.key)}
@@ -217,6 +228,7 @@ export function Header({
           }}
         >
           <Link
+            prefetch={adBoundaryPrefetch(pathname ?? "", "/favorites")}
             href="/favorites"
             aria-label="저장한 이름"
             onClick={() => setMenuOpen(false)}
@@ -280,6 +292,7 @@ export function Header({
           <Link
             key={item.key}
             href={item.href}
+            prefetch={adBoundaryPrefetch(pathname ?? "", item.href)}
             onClick={() => {
               onNav?.(item.key);
               // 지금 화면과 같은 주소(홈에서 '홈')는 경로가 그대로라 여기서 닫는다

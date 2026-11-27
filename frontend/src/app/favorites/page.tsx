@@ -4,7 +4,14 @@ import { Heart, X } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/design/Header";
 import { Footer } from "@/components/design/Footer";
-import { favoriteKey, removeFavorite, useFavorites, type FavoriteName } from "@/lib/favorites";
+import { toast } from "sonner";
+import {
+  FAVORITE_SAVE_FAILED,
+  favoriteKey,
+  removeFavorite,
+  useFavorites,
+  type FavoriteName,
+} from "@/lib/favorites";
 import { favoriteHanjaLabel } from "@/lib/hanja-summary-text";
 import { splitFullName } from "@/lib/name-split";
 
@@ -110,7 +117,10 @@ export default function FavoritesPage() {
                 </a>
                 <button
                   type="button"
-                  onClick={() => removeFavorite(f.fullName, f.birthDate, f.hanja, f.lastHanja)}
+                  onClick={() => {
+                    // 저장소에 쓰지 못하면(사이트 데이터 저장 차단) 지워지지 않은 채 남는다 — 알린다
+                    if (!removeFavorite(f.fullName, f.birthDate, f.hanja, f.lastHanja)) toast.error(FAVORITE_SAVE_FAILED);
+                  }}
                   aria-label="제거"
                   style={{
                     appearance: "none",

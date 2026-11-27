@@ -91,7 +91,7 @@ export interface SmartNameCandidate {
    */
   evaluateHanja?: string;
   score?: number;
-  /** score 의 이름표 — 없으면 'FINAL'(종합). 순우리말·3글자는 발음 점수라 '발음'(lib/specialty-candidates.ts) */
+  /** score 의 이름표 — 없으면 'FINAL'(종합). 순우리말·3글자 '발음', 창의 '창의', 특이 성씨 '발음 조화'(lib/specialty-candidates.ts normalizeSpecialtyTags) */
   scoreLabel?: string;
   /** 미학 점수 (한자 카테고리 한정, 0~100). 없으면 undefined. */
   aestheticScore?: number;

@@ -19,7 +19,7 @@ const REPO = fileURLToPath(new URL("../../", import.meta.url));
 const GATE_PATH = join(REPO, "scripts", "drip-gate.mjs");
 const { decideDripStamp, publishDates, parseStamp, kstDate, FALLBACK_WINDOW_DAYS } = await import(pathToFileURL(GATE_PATH).href);
 
-const readRepo = (rel) => readFileSync(join(REPO, rel), "utf8");
+const readRepo = (rel) => readFileSync(join(REPO, rel), "utf8").replace(/\r\n/g, "\n"); // Windows 체크아웃(autocrlf)도 같은 결과
 
 // ── deploy-skip-head-only ────────────────────────────────────────────────────
 

@@ -112,7 +112,6 @@ export default function ThreeSyllablePage() {
       <SmartResultPage
         data={result.data}
         requestSummary={requestSummary}
-        editHref="/three-syllable"
         onRegenerate={handleReset}
         // 카드의 한자(순우리말 음절은 '-' — 한자 없이)를 평가 링크에 싣는다. 빼면 /evaluate 가 한자를 자동으로 골라 다른 이름을 채점한다
         onCandidateDetail={(fn, hanja) => navDetail(q.lastName, fn, { gender: q.gender, tone: q.tone, hanja })}

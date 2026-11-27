@@ -727,7 +727,6 @@ function SearchBody({
       <SmartResultPage
         data={result}
         requestSummary={requestSummary}
-        editHref="/search"
         onRegenerate={handleReset}
         onCandidateDetail={(fullName, evaluateHanja) =>
           handleCandidateDetail(query, fullName, evaluateHanja)

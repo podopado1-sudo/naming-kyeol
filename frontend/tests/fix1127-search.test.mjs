@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 
 import "./resolve-ts.mjs";
 
-const readRel = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
+const readRel = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8").replace(/\r\n/g, "\n"); // Windows 체크아웃(autocrlf)도 같은 결과
 const stripComments = (s) =>
   s
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")

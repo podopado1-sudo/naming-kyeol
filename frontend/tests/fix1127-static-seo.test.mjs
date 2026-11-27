@@ -217,30 +217,20 @@ test("/guide 04장 — 시각이 없으면 시주만 빠지고 점수 비율은 
 
 // ─── ad-boundary-prefetch-waste ─────────────────────────────────
 
-const HELPER =
-  "function adBoundaryPrefetch(from: string, href: string): false | undefined {\n" +
-  '  return adsEnabled() && isAdPage(from) !== isAdPage(href.split(/[?#]/)[0]) ? false : undefined;\n' +
-  "}";
 const PAGES = [HANJA_INDEX, NAME_INDEX, HANJA_SLUG, NAME_SLUG];
 
-/** 원문의 함수를 타입을 지워 그대로 돌린다(ad-scope 의 판정 함수를 넣어) */
-function helperFrom(src) {
-  const js = HELPER.replace("(from: string, href: string): false | undefined", "(from, href)");
-  assert.ok(src.includes(HELPER));
-  return new Function("adsEnabled", "isAdPage", `${js}\nreturn adBoundaryPrefetch;`)(AD.adsEnabled, AD.isAdPage);
-}
-
-test("광고 경계 판정 함수 — 네 파일이 같은 글자, ad-scope 를 읽기만 한다", () => {
+// 2026-11-27 합치기: 네 페이지가 따로 두던 같은 함수를 lib/ad-scope.ts adBoundaryPrefetch 하나로 모았다(Header·Footer 도 쓴다)
+test("광고 경계 판정 함수 — 네 파일은 lib/ad-scope 의 adBoundaryPrefetch 를 가져다 쓰고 따로 정의하지 않는다", () => {
   for (const p of PAGES) {
     const src = read(p);
-    assert.equal([...src.matchAll(/function adBoundaryPrefetch\(/g)].length, 1, p);
-    assert.ok(src.includes(HELPER), `${p} 의 adBoundaryPrefetch 가 다르다`);
-    assert.match(src, /^import \{ adsEnabled, isAdPage \} from "@\/lib\/ad-scope";$/m, p);
+    assert.doesNotMatch(src, /function adBoundaryPrefetch\(/, p);
+    assert.match(src, /^import \{[^}]*\badBoundaryPrefetch\b[^}]*\} from "@\/lib\/ad-scope";$/m, p);
   }
+  assert.equal(typeof AD.adBoundaryPrefetch, "function");
 });
 
 test("광고 경계 판정 — 광고를 켠 빌드에서 경계를 넘을 때만 false, 그 밖(넘지 않음·광고 끈 빌드)은 기본 미리 받기(undefined)", () => {
-  const fn = helperFrom(read(NAME_INDEX));
+  const fn = AD.adBoundaryPrefetch;
   const saved = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
   try {
     process.env.NEXT_PUBLIC_ADSENSE_CLIENT = "ca-pub-0000000000000000";

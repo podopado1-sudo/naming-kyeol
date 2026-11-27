@@ -950,6 +950,8 @@
   .site-header-inner,
   .site-header-mobile,
   .hide-on-print,
+  /* 알림(sonner Toaster) — 저장·공유 직후 인쇄하면 쪽마다 같은 알림이 찍혔다 */
+  [data-sonner-toaster],
   [data-hide-print] {
     display: none !important;
   }

@@ -1035,7 +1035,7 @@ test("개인정보처리방침 — 고른 한자·판정 요청·음절 파일 �
   // 1항 자동 수집 — 음절 파일 요청. '이름 전체가 아니다'라고 쓰지 않는다(칸을 여러 개 열면 그만큼 남는다)
   assert.ok(
     policy.includes(
-      "이름 평가에서 한자 칸을 열거나 한자를 넣으면(다른 화면의 링크로 한자가 함께 넘어온 경우 포함) 그 음절의 한자 후보 목록 파일을 받으며, 그 요청 주소에 음절이 문자 코드로 들어갑니다)"
+      "이름 평가에서 한자 칸을 열거나 한자를 넣으면(다른 화면의 링크로 한자가 함께 넘어온 경우 포함), 그리고 이름 추천에서 필수 글자와 항렬자 한자를 함께 넣고 추천을 받으면 그 음절의 한자 후보 목록 파일을 받으며, 그 요청 주소에 음절이 문자 코드로 들어갑니다)"
     )
   );
   // 방침이 실제 처리보다 좁지 않다(검증 지적 2026-11-23) — 직접 넣은 글자는 목록을 아직 못 받았을 때도 서버로 가고(known=false),
@@ -1044,6 +1044,10 @@ test("개인정보처리방침 — 고른 한자·판정 요청·음절 파일 �
   assert.doesNotMatch(flat(code(read(...PRIVACY))), /이름 전체가 아니/);
   // 1항 브라우저 저장 — 즐겨찾기에 고른 한자
   assert.ok(policy.includes("출생일·출생 시각·성별·톤·고른 한자·점수는 이용자 브라우저(localStorage)에만 저장되며"));
+  // 2026-11-27 /search 새로 고침·뒤로 가기 복원 — 입력값과 결과를 그 탭의 sessionStorage 에(app/search/page.tsx RESTORE_STORAGE_KEY)
+  assert.ok(policy.includes("이름 추천 화면은 새로 고침·뒤로 가기에 결과를 다시 보여 주려고 최근 몇 번의 입력값(성씨·생년월일·출생 시각·성별·톤·부모 이름·키워드 등)과 결과를 그 탭의 브라우저 저장소(sessionStorage)에 두며, 이것도 서버로 보내지 않고 탭을 닫으면 브라우저가 지웁니다."));
+  assert.match(read("src", "app", "search", "page.tsx"), /const RESTORE_STORAGE_KEY = "nameform:search-restore";/);
+  assert.match(read("src", "app", "search", "page.tsx"), /window\.sessionStorage/);
   assert.match(read("src", "lib", "favorites.ts"), /hanja\?: string;[\s\S]*?lastHanja\?: string;/);
   // 5항 — 광고 요청에 화면 주소가 포함될 수 있다. 2026-11-27: 운영에서 실제로 쿼리째 가는 것을 확인해 광고 로더를 읽을거리 화면에만 싣고
   // 도구 화면에는 싣지 않는다(tests/adsense-placement.test.mjs 가 싣는 곳을 고정한다 — 방침과 코드가 같은 말을 한다)

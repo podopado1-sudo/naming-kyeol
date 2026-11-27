@@ -7,7 +7,7 @@ import { OhaengRelationChip } from "@/components/design/OhaengRelationChip";
 import { Badge } from "@/components/ui/badge";
 import { HanjaGradeBadge } from "@/components/hanja/HanjaBadges";
 import { ScoreBreakdownCard } from "@/components/results/ScoreBreakdownCard";
-import { adsEnabled, isAdPage } from "@/lib/ad-scope";
+import { adBoundaryPrefetch } from "@/lib/ad-scope";
 import { evaluateComboHref } from "@/lib/hanja-pick";
 import { ELEMENT_KO, getHanja, getReadingChars } from "@/lib/hanja-seo";
 import { getInsight, type Insight } from "@/lib/insights";
@@ -110,15 +110,6 @@ function noMeanNote(kind: NameKind, hasCombos: boolean, syllableHanja: boolean):
   return base;
 }
 
-/**
- * 광고 경계를 넘는 링크는 미리 받지 않는다(2026-11-27). 광고를 켠 빌드에서는 광고 화면(lib/ad-scope.ts isAdPage)과 광고 밖 화면
- * 사이의 이동을 AdsenseNavigationGuard 가 새 문서로 열어, next/link 가 미리 받아 둔 RSC 를 쓰지 않는다. 광고를 켜지 않은 빌드(로컬)는
- * 가드가 아무 일도 하지 않으니 지금 동작(기본 미리 받기) 그대로 둔다(undefined). from·href 는 같은 사이트 경로(쿼리·해시는 뗀다).
- * 같은 함수가 app/hanja/page.tsx·app/name/page.tsx·app/hanja/[slug]/page.tsx 에 있다 — tests/fix1127-static-seo.test.mjs 가 네 벌이 글자 그대로 같은지 본다.
- */
-function adBoundaryPrefetch(from: string, href: string): false | undefined {
-  return adsEnabled() && isAdPage(from) !== isAdPage(href.split(/[?#]/)[0]) ? false : undefined;
-}
 
 /** 외래 이름(fx)인데 뜻이 없을 때 '이름 뜻' 아래 한 줄 — 어원이 갈리거나 원어 이름이 없어 비운 이름(S7 데이터 단계) */
 const FOREIGN_NO_MEAN_NOTE =

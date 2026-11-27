@@ -3,7 +3,7 @@
  * 헤더 nav와 용어를 통일하고, 실제 라우트가 있는 곳만 연결.
  * 미준비 항목은 "준비 중" 표시.
  */
-import Link from "next/link";
+import { AdBoundaryLink } from "@/components/AdBoundaryLink";
 import { Mark } from "./Mark";
 
 interface FooterLink {
@@ -73,9 +73,9 @@ function FootLink({ link }: { link: FooterLink }) {
   );
   if (link.href) {
     return (
-      <Link href={link.href} style={baseStyle}>
+      <AdBoundaryLink href={link.href} style={baseStyle}>
         {inner}
-      </Link>
+      </AdBoundaryLink>
     );
   }
   return <span style={baseStyle}>{inner}</span>;
@@ -202,9 +202,9 @@ export function Footer() {
       >
         <div>© 2026 이름의 결 · Naming.kyeol</div>
         {/* 이용약관 페이지는 없다 — 링크 없는 글자로 두지 않는다(2026-10-21) */}
-        <Link href="/privacy" style={{ color: "inherit", textDecoration: "none" }}>
+        <AdBoundaryLink href="/privacy" style={{ color: "inherit", textDecoration: "none" }}>
           개인정보처리방침
-        </Link>
+        </AdBoundaryLink>
       </div>
     </footer>
   );

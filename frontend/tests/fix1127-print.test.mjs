@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const SRC = join(ROOT, "src");
-const read = (...p) => readFileSync(join(ROOT, ...p), "utf8");
+const read = (...p) => readFileSync(join(ROOT, ...p), "utf8").replace(/\r\n/g, "\n"); // Windows 체크아웃(autocrlf)도 같은 결과
 const stripCssComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "");
 const stripJsComments = (s) =>
   s
@@ -31,7 +31,7 @@ function walk(dir, out = []) {
   }
   return out;
 }
-const SOURCES = walk(SRC).map((p) => ({ rel: relative(SRC, p).split(sep).join("/"), text: readFileSync(p, "utf8") }));
+const SOURCES = walk(SRC).map((p) => ({ rel: relative(SRC, p).split(sep).join("/"), text: readFileSync(p, "utf8").replace(/\r\n/g, "\n") }));
 
 /** open 위치의 여는 중괄호에 짝이 맞는 닫는 중괄호 위치 */
 function matchBrace(s, open) {
@@ -134,7 +134,8 @@ test("사이트 머리말은 Header.tsx 의 클래스로, 꼬리말은 Footer.ts
   assert.equal(hasCount, 2, "머리말 껍데기·결과 화면 두 곳");
 
   // Header.tsx — 바깥 <header> 하나, 그 안에 두 클래스(이 순서). 두 클래스는 다른 곳에서 쓰지 않는다(인쇄에서 함께 사라진다)
-  const header = read("src", "components", "design", "Header.tsx");
+  // 주석은 걷는다(G-site-chrome 이 바깥 <header> 에 data-hide-print 를 달며 주석에 '<header>'를 적었다)
+  const header = stripJsComments(read("src", "components", "design", "Header.tsx"));
   assert.equal([...header.matchAll(/<header\b/g)].length, 1);
   const at = (needle) => {
     const i = header.indexOf(needle);

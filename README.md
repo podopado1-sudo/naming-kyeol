@@ -131,8 +131,8 @@ NameForm/
         │   DualNameEngine            → 영어+한자 이중 이름
         │   RareSurnameEngine         → 희귀 성씨 (봉/탁/제갈 등)
         │   RequiredCharEngine        → 필수 글자·항렬자(돌림자)
-        │   PureKoreanNameEngine      → 순우리말 (326개 사전)
-        │   ThreeSyllableEngine       → 3글자 (139개 큐레이션)
+        │   PureKoreanNameEngine      → 순우리말 (307개 사전 — 326줄 중 19개 중복)
+        │   ThreeSyllableEngine       → 3글자 (138개 큐레이션)
         │   CreativeNamingEngine      → 창의적 작명
         │   NameReversalEngine        → 뒤집기 변형
         │

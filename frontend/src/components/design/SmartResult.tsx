@@ -22,7 +22,13 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { trackTabView } from "@/lib/api";
-import { toggleFavorite, useIsFavorite } from "@/lib/favorites";
+import {
+  FAVORITE_SAVE_FAILED,
+  FAVORITES_LIMIT,
+  favoriteCount,
+  toggleFavorite,
+  useIsFavorite,
+} from "@/lib/favorites";
 import { josa } from "@/lib/josa";
 import { normalizeSpecialtyTags } from "@/lib/specialty-candidates";
 import type { CandidateDetailContext } from "@/lib/useCandidateDetail";
@@ -69,7 +75,7 @@ interface UICandidate {
   /** hasDetailScores가 true일 때만 의미 있음 */
   harmony: number;
   finalScore: number;
-  /** finalScore 의 이름표 — 'FINAL'(종합) 또는 순우리말·3글자의 '발음' */
+  /** finalScore 의 이름표 — 'FINAL'(종합) 또는 순우리말·3글자 '발음'·창의 '창의'·특이 성씨 '발음 조화' */
   scoreLabel: string;
   /** '상세 보기'가 /evaluate 에 실을 한자(주소 꼴) — SmartNameCandidate.evaluateHanja */
   evaluateHanja?: string;
@@ -2078,11 +2084,6 @@ export function SmartResultPage({
   data: SmartRecommendationResponse;
   requestSummary: RequestSummary;
   initialTab?: string;
-  /**
-   * @deprecated 쓰지 않는다 — '← 조건 바꾸기'는 onRegenerate 로 폼에 돌아간다. 자기 경로로 가는 링크는 결과(페이지 useState)를
-   * 지우지 않아 눌러도 그대로였다(2026-11-27). 다섯 페이지가 아직 넘겨서 타입에만 남겨 둔다 — 페이지에서 빼면 이 줄도 지운다
-   */
-  editHref?: string;
   /** '← 조건 바꾸기' — 각 페이지의 handleReset(결과를 지우고 입력값이 남은 폼으로). 없으면 단추를 그리지 않는다 */
   onRegenerate?: () => void;
   /** 없으면 저장 버튼이 TopPick 이름을 즐겨찾기(/favorites)에 넣고 뺀다 */
@@ -2112,7 +2113,9 @@ export function SmartResultPage({
     // 점수는 미학·조화가 모두 있는 한자 이름일 때만 남긴다 — 다른 카테고리의 score는
     // 창의성·발음 점수라 /favorites의 '종합' 표기와 뜻이 다르다
     const scored = rawTop.aestheticScore != null && rawTop.harmonyScore != null;
-    toggleFavorite({
+    // 저장소에 쓰지 못하면 알린다(EvaluateResult onSave 와 같은 꼴). 상한이면 가장 오래된 1개가 빠진다는 것도 적는다
+    const evicts = !topSaved && favoriteCount() >= FAVORITES_LIMIT;
+    const ok = toggleFavorite({
       fullName: rawTop.fullName,
       lastName: ln,
       name: rawTop.fullName.startsWith(ln)
@@ -2128,10 +2131,16 @@ export function SmartResultPage({
       aestheticScore: scored ? rawTop.aestheticScore : undefined,
       harmonyScore: scored ? rawTop.harmonyScore : undefined,
     });
+    if (!ok) {
+      toast.error(FAVORITE_SAVE_FAILED);
+      return;
+    }
     if (topSaved) toast.success(`${rawTop.fullName} 저장 해제`);
     else
       toast.success(`${rawTop.fullName} 저장됨`, {
-        description: "'저장한 이름'에서 다시 볼 수 있어요",
+        description: evicts
+          ? `${FAVORITES_LIMIT}개까지 보관해서 가장 오래된 1개를 지웠어요. '저장한 이름'에서 다시 볼 수 있어요`
+          : "'저장한 이름'에서 다시 볼 수 있어요",
         action: {
           label: "보기",
           onClick: () => window.location.assign("/favorites"),

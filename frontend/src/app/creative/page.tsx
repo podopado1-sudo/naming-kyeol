@@ -112,7 +112,6 @@ export default function CreativePage() {
       <SmartResultPage
         data={result.data}
         requestSummary={requestSummary}
-        editHref="/creative"
         onRegenerate={handleReset}
         onCandidateDetail={(fn) => navDetail(q.lastName, fn, { gender: q.gender, tone: q.tone })}
         // 저장(TopPick)에도 성별·톤을 남긴다 — 없으면 /favorites가 옛 저장분으로 보고

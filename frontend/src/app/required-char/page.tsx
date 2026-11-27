@@ -303,7 +303,6 @@ function RequiredCharForm({
         <SmartResultPage
           data={result.data}
           requestSummary={requestSummary}
-          editHref="/required-char"
           onRegenerate={handleReset}
           onCandidateDetail={(fn) => navDetail(q.lastName, fn, ctx)}
           favoriteContext={ctx}

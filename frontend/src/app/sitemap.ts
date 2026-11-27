@@ -11,7 +11,7 @@ import { getAllInsights } from "@/lib/insights";
  * - 추천 도구: priority 0.8 (전환 페이지)
  * - 보조 도구(쌍둥이/이중이름 등): priority 0.6
  * - 운영(소개/문의): priority 0.4
- * - 사용자 데이터 페이지(favorites)는 robots에서 제외, 사이트맵에도 미포함
+ * - 사용자 데이터 페이지(favorites)는 사이트맵에 넣지 않는다(색인 제외는 favorites/layout.tsx 의 noindex 메타 — 2026-11-27 robots.txt 차단을 걷었다)
  *
  * 환경변수 NEXT_PUBLIC_SITE_URL 로 도메인 주입.
  */
@@ -39,7 +39,7 @@ const ROUTES: Array<{
   { path: "analysis", priority: 0.8, changeFrequency: "monthly" },
 
   // 보조 추천 도구
-  { path: "pure-korean", priority: 0.7, changeFrequency: "monthly", lastModified: "2026-11-25" }, // 순우리말 리포트 링크
+  { path: "pure-korean", priority: 0.7, changeFrequency: "monthly", lastModified: "2026-11-27" }, // 순우리말 리포트 링크 · 11/27 설명 숫자·결과 화면
   { path: "creative", priority: 0.7, changeFrequency: "monthly" },
   { path: "three-syllable", priority: 0.7, changeFrequency: "monthly", lastModified: "2026-11-27" }, // 머리말 '성 뒤에 세 글자'(옛 '성씨 포함' — 엔진은 성 + 세 음절)·결과 화면이 처음으로 그려짐
   { path: "required-char", priority: 0.7, changeFrequency: "monthly" },

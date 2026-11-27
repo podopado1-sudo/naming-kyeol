@@ -52,3 +52,14 @@ export function needsFreshDocument(targetPathname: string, currentPathname?: str
   const current = currentPathname ?? (typeof window !== "undefined" ? window.location.pathname : "");
   return adsEnabled() && !isAdPage(current);
 }
+
+/**
+ * 이 링크를 미리 받을지 — next/link 의 prefetch 값(2026-11-27, 버그 목록 ad-boundary-prefetch-waste).
+ * 광고를 켠 빌드에서는 광고 화면과 광고 밖 화면 사이의 이동을 AdsenseNavigationGuard 가 새 문서로 열어, next/link 가 미리 받아 둔
+ * RSC 를 쓰지 않는다(/name 인덱스 한 번에 RSC 요청 약 200건이 헛돌았다). 그런 링크만 false, 나머지·광고를 끈 빌드(로컬)는
+ * undefined(Next 기본 미리 받기). from·href 는 같은 사이트 경로 — href 의 쿼리·해시는 떼고 본다(isAdPage 는 경로만 받는다).
+ * 쓰는 곳: /name·/hanja 인덱스와 상세(서버 컴포넌트, 자기 경로를 안다), Header(usePathname), components/AdBoundaryLink(꼬리말 등).
+ */
+export function adBoundaryPrefetch(from: string, href: string): false | undefined {
+  return adsEnabled() && isAdPage(from) !== isAdPage(href.split(/[?#]/)[0]) ? false : undefined;
+}
