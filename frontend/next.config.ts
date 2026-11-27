@@ -59,10 +59,12 @@ const securityHeaders = [
   // 새 문서로 열면 그 화면의 document.referrer — 광고 요청의 ref 값 — 에 이름·생년월일이 실렸다(검증 지적, lib/ad-scope.ts).
   // 다른 사이트로 가는 요청은 예전과 같다(도메인만). 문서 하나는 처음 받은 정책을 클라이언트 이동 내내 쓰므로 모든 화면에 같은 값을 둔다.
   { key: "Referrer-Policy", value: "strict-origin" },
+  // 2026-11-27 interest-cohort=() 를 뺐다 — FLoC 는 폐지돼 브라우저가 모르는 기능 이름이라 모든 쪽 콘솔에 경고만 남겼다.
+  // 같은 뜻의 browsing-topics=() 는 넣지 않는다(애드센스가 쓰는 Topics API 를 막는다 — 광고 정책은 사용자 결정).
+  // CSP(위 adsenseScript·adsenseFrame) 보강·위반 보고(report-to)는 애드센스 재검토(2027-01) 전 확인 장치 없이 바꾸지 않는다.
   {
     key: "Permissions-Policy",
-    value:
-      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   },
   // HSTS — 1년, 서브도메인 포함, preload 가능 (HTTPS 강제)
   {

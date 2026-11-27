@@ -6,7 +6,8 @@ import type { MetadataRoute } from "next";
  * 정책:
  * - 검색 엔진 봇 (Googlebot, Bingbot, Naverbot/Yeti, Daumoa) → 전체 허용
  * - AI 학습/스크래퍼 봇 → 전체 차단 (콘텐츠 학습 데이터로 쓰이는 것 방지)
- * - 사용자 도구 페이지(/favorites)는 동적이라 인덱싱 제외
+ * - /favorites(이 브라우저의 저장 목록)는 수집을 막지 않는다 — 색인 제외는 그 쪽의 robots 메타(noindex, follow — favorites/layout.tsx)가 맡는다.
+ *   disallow 로 막으면 봇이 그 noindex 를 읽지 못해, 머리말 링크만 보고 '차단되었지만 색인됨'이 될 수 있다(2026-11-27 favorites-robots-only).
  * - sitemap.xml 위치 명시
  *
  * 환경변수 NEXT_PUBLIC_SITE_URL 로 도메인 주입.
@@ -60,7 +61,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: ["Googlebot", "Bingbot", "Naverbot", "Yeti", "Daumoa"],
         allow: "/",
-        disallow: ["/favorites", "/api/", STATIC_DATA, ...TOOL_QUERY_VARIANTS],
+        disallow: ["/api/", STATIC_DATA, ...TOOL_QUERY_VARIANTS],
       },
       // 2. AI 학습/스크래퍼 봇 — 전체 차단
       {
@@ -71,7 +72,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/favorites", "/api/", STATIC_DATA, ...TOOL_QUERY_VARIANTS],
+        disallow: ["/api/", STATIC_DATA, ...TOOL_QUERY_VARIANTS],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

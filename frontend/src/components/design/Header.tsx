@@ -10,7 +10,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type CSSProperties } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { Mark } from "./Mark";
 import { Heart, Menu, X } from "lucide-react";
 import {
@@ -19,6 +20,17 @@ import {
   type CurrentKey,
   type NavKey,
 } from "./header-nav";
+
+/**
+ * 모바일 메뉴(640px 이하)를 닫는 때 — 2026-11-27 mobile-menu-stays-open.
+ * 예전에는 버튼·메뉴 링크를 누를 때만 닫혀, 연 채 스크롤하면 sticky 머리말이 메뉴만큼 길어진 채 본문 위쪽을 가리고 따라왔다.
+ * 지금은 ① Esc ② 머리말 바깥 누름(pointerdown — 터치 스크롤의 시작도 여기 든다) ③ 연 자리에서 MENU_CLOSE_SCROLL_PX 넘게 스크롤
+ * ④ 경로 변경 때 닫힌다. 여닫기 버튼에는 aria-expanded·aria-controls(메뉴 id)를 단다.
+ */
+const MENU_CLOSE_SCROLL_PX = 40;
+// 연 직후 잠깐의 스크롤은 기준점만 옮긴다 — 메뉴가 열려 머리말이 길어지면 브라우저가 화면 위치를 맞추느라(scroll anchoring)
+// 스크롤 사건을 낼 수 있는데, 그건 사람이 내린 스크롤이 아니다
+const MENU_SCROLL_SETTLE_MS = 300;
 
 // 메뉴에 없는 화면(/company·/hanja·/name·/analysis 등)은 "none" — 어떤 메뉴도 켜지 않는다(기본값, header-nav.ts)
 export function Header({
@@ -30,12 +42,61 @@ export function Header({
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // ④ 경로가 바뀌면 닫는다 — 렌더 중에 앞 경로와 견주어 바로 맞춘다(React 'prop 이 바뀔 때 state 맞추기' 방식, 효과를 한 번 더 돌리지 않는다).
+  // 머리말이 이동 뒤에도 그대로 남는 경우(같은 틀의 다른 쪽 — /guide/가 → /guide/나)에도 닫힌다
+  const pathname = usePathname();
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setMenuOpen(false);
+  }
+  const headerRef = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const burgerRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // 메뉴가 열려 있을 때만 거는 닫기 감시(위 머리말 ①~③)
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeMenu = () => setMenuOpen(false);
+    const openedAt = performance.now();
+    let baseY = window.scrollY;
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      // 메뉴 안 링크에 초점이 있었다면 여는 버튼으로 돌려 둔다(닫힌 메뉴에 초점이 남지 않게)
+      const focusInMenu = menuRef.current?.contains(document.activeElement) ?? false;
+      closeMenu();
+      if (focusInMenu) burgerRef.current?.focus();
+    }
+    function onPointerDown(e: PointerEvent) {
+      // 머리말 안(메뉴·여닫기 버튼·로고·저장한 이름)은 제 동작에 맡긴다
+      if (e.target instanceof Node && headerRef.current?.contains(e.target)) return;
+      closeMenu();
+    }
+    function onScroll() {
+      if (performance.now() - openedAt < MENU_SCROLL_SETTLE_MS) {
+        baseY = window.scrollY;
+        return;
+      }
+      if (Math.abs(window.scrollY - baseY) > MENU_CLOSE_SCROLL_PX) closeMenu();
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [menuOpen]);
 
   function linkStyle(active: boolean): CSSProperties {
     return {
@@ -55,6 +116,9 @@ export function Header({
 
   return (
     <header
+      ref={headerRef}
+      // 인쇄에서 숨긴다 — 전역 인쇄 규칙이 모든 <header> 대신 사이트 머리말만 숨기게 좁혀져도 이 머리말은 빠진다(globals.css [data-hide-print])
+      data-hide-print
       style={{
         position: "sticky",
         top: 0,
@@ -86,7 +150,10 @@ export function Header({
       >
         <Link
           href="/"
-          onClick={() => onNav?.("home")}
+          onClick={() => {
+            onNav?.("home");
+            setMenuOpen(false);
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -156,6 +223,7 @@ export function Header({
           <Link
             href="/favorites"
             aria-label="저장한 이름"
+            onClick={() => setMenuOpen(false)}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -173,10 +241,12 @@ export function Header({
             <span className="site-header-fav-label">저장한 이름</span>
           </Link>
           <button
+            ref={burgerRef}
             type="button"
             className="site-header-burger"
             aria-label={menuOpen ? "메뉴 닫기" : "메뉴 열기"}
             aria-expanded={menuOpen}
+            aria-controls={menuId}
             onClick={() => setMenuOpen((v) => !v)}
             style={{
               appearance: "none",
@@ -195,13 +265,18 @@ export function Header({
       </div>
 
       {/* 모바일 전용 드롭다운 메뉴 (640px 이하에서만 노출) */}
-      <div className={`site-header-mobile${menuOpen ? " open" : ""}`}>
+      <div
+        ref={menuRef}
+        id={menuId}
+        className={`site-header-mobile${menuOpen ? " open" : ""}`}
+      >
         {NAV_ITEMS.map((item) => (
           <Link
             key={item.key}
             href={item.href}
             onClick={() => {
               onNav?.(item.key);
+              // 지금 화면과 같은 주소(홈에서 '홈')는 경로가 그대로라 여기서 닫는다
               setMenuOpen(false);
             }}
             aria-current={current === item.key ? "page" : undefined}

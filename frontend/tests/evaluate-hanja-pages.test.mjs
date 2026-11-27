@@ -1183,7 +1183,8 @@ test("sitemap·robots — /evaluate 는 바뀐 날을 자기 lastModified 로(�
   assert.match(sitemap, /\{ path: "evaluate", priority: 0\.8, changeFrequency: "monthly", lastModified: "/);
   const robots = read(...ROBOTS);
   assert.match(robots, /const STATIC_DATA = "\/data\/";/);
-  assert.equal([...robots.matchAll(/disallow: \["\/favorites", "\/api\/", STATIC_DATA, \.\.\.TOOL_QUERY_VARIANTS\],/g)].length, 2);
+  // 2026-11-27 /favorites 는 disallow 에서 뺐다 — 그 쪽 robots 메타(noindex, follow)가 색인을 막는다(tests/fix1127-site-chrome.test.mjs)
+  assert.equal([...robots.matchAll(/disallow: \["\/api\/", STATIC_DATA, \.\.\.TOOL_QUERY_VARIANTS\],/g)].length, 2);
   assert.match(robots, /const TOOL_QUERY_VARIANTS = \[[^\]]*"\/evaluate\?"[^\]]*\];/);
 });
 

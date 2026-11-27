@@ -101,7 +101,7 @@ export const metadata: Metadata = {
     },
     // Google은 DNS TXT로 이미 인증 완료 (Cloudflare에 google-site-verification 레코드)
   },
-  // Open Graph — 카카오톡/페이스북 공유 미리보기 (public/og-image.png 1200×630)
+  // Open Graph — 카카오톡/페이스북 공유 미리보기 (public/og-image.png 1672×941 — Hero 그림과 같은 파일, 크기 선언은 lib/og.ts)
   // ⚠️ 얕은 병합: 하위 페이지가 openGraph를 쓰면 이 객체는 통째로 대체된다 — 페이지에서도
   // BASE_OPEN_GRAPH(lib/og.ts)를 펼쳐야 이미지·siteName·locale이 남는다.
   openGraph: {
@@ -110,11 +110,12 @@ export const metadata: Metadata = {
     title: `${SITE_NAME} — 한국어 이름 추천 서비스`,
     description: SITE_DESCRIPTION,
   },
-  // Twitter/X 카드
+  // Twitter/X 카드 — card·images 만 둔다. title·description 을 여기 적으면 twitter 를 다시 정하지 않는 모든 하위 쪽이
+  // 이 사이트 공통값을 물려받아, 글 주소를 X 에 붙여도 카드 제목이 사이트 이름으로 나왔다(2026-11-27 twitter-meta-generic).
+  // 비워 두면 Next 가 쪽마다 그 쪽의 openGraph 제목·설명(없으면 title·description)으로 채운다(resolve-metadata.js postProcessMetadata).
+  // 자기 twitter 를 정하는 /name/[이름]은 그대로다.
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — 한국어 이름 추천`,
-    description: SITE_DESCRIPTION,
     images: ["/og-image.png"],
   },
   // 모바일/PWA 메타

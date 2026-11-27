@@ -14,6 +14,8 @@ import type { Metadata } from "next";
  *   (openGraph 에 images 키가 있으면 파일 기반 이름별 공유 카드가 주입되지 않는다).
  * - BASE_OPEN_GRAPH: 공통 필드 + 기본 공유 이미지(/og-image.png). 그 밖의 페이지는 이것을 펼친다.
  *   `openGraph: { ...BASE_OPEN_GRAPH, title, description, url }` — 리포트처럼 type 이 다르면 뒤에서 덮어쓴다.
+ * - twitter:title·description 은 쪽마다 따로 적지 않는다 — 루트 layout 의 twitter 는 card·images 만 두고, Next 가 이 쪽의
+ *   openGraph 제목·설명으로 채운다(resolve-metadata.js postProcessMetadata, 2026-11-27 twitter-meta-generic).
  */
 
 type OpenGraph = NonNullable<Metadata["openGraph"]>;
@@ -26,11 +28,13 @@ export const OG_SITE = {
   siteName: OG_SITE_NAME,
 };
 
+// 크기는 public/og-image.png 의 실제 크기다(Hero 그림과 같은 파일 — 1a7854b). 첫 1200×630 그림 때 적은 값이 남아 있었다
+// (2026-11-27 og-image-size-mismatch). 그림을 바꾸면 이 값도 같이 — tests/fix1127-site-chrome.test.mjs 가 PNG 머리와 맞춘다.
 export const OG_DEFAULT_IMAGES: NonNullable<OpenGraph["images"]> = [
   {
     url: "/og-image.png",
-    width: 1200,
-    height: 630,
+    width: 1672,
+    height: 941,
     alt: `${OG_SITE_NAME} — 한국어 이름 추천 서비스`,
   },
 ];
