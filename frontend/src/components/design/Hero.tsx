@@ -247,7 +247,7 @@ export function Hero({
   const parentHint = !parentName.trim()
     ? null
     : parentReading.unclear
-      ? `'${parentReading.father}' 한 분으로 읽어요. 두 분이면 '김민호 · 이수정'처럼 가운뎃점(·)으로 나눠 주세요.`
+      ? `'${parentReading.father}' 한 분으로 읽어요. 두 분이면 '김민호, 이수정'처럼 쉼표나 가운뎃점(·)으로 나눠 주세요.`
       : parentReading.mother
         ? `아버지 ${parentReading.father} · 어머니 ${withJosa(parentReading.mother, "으로/로")} 읽어요.`
         : null;
@@ -740,7 +740,8 @@ export function Hero({
                         style={fieldStyle}
                       />
                       {/* /search 가 아버지·어머니 칸을 어떻게 채울지 — 두 분으로 가르면 확인, 한 분으로도 두 분으로도
-                          읽히면 가운뎃점 안내(2026-11-27 hero-parent-name-split — '지호 서윤'이 아버지 '지 + 호서윤'이 됐다) */}
+                          읽히면 쉼표·가운뎃점 안내(2026-11-27 hero-parent-name-split — '지호 서윤'이 아버지 '지 + 호서윤'이 됐다.
+                          휴대폰 자판에서 치기 쉬운 쉼표를 먼저 권한다 — 'ㆍ'·'・' 같은 다른 가운뎃점 꼴도 가름표로 읽는다) */}
                       {parentHint && (
                         <p id={fieldId("parentName-note")} style={fieldNoteStyle}>
                           {parentHint}

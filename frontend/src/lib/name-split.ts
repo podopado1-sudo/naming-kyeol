@@ -115,14 +115,23 @@ export interface ParentPairReading {
   father: string;
   mother: string;
   /**
-   * 한 분으로 읽었지만 두 분일 수도 있는 입력('선우 서윤'·'김민 호'·'지호 서윤 하린'·붙여 쓴 '김민호이수정') —
-   * 홈 Hero 가 "두 분이면 가운뎃점(·)으로 나눠 주세요"를 띄운다
+   * 한 분으로 읽었지만 두 분일 수도 있는 입력('선우 서윤'·'김민 호'·'지호 서윤 하린'·붙여 쓴 '김민호이수정'·한글이 아닌 낱말이 섞인 'a 김민호') —
+   * 홈 Hero 가 "두 분이면 쉼표나 가운뎃점(·)으로 나눠 주세요"를 띄운다
    */
   unclear: boolean;
 }
 
-const PARENT_SEPARATOR_CHARS = /[·•,/&+]/;
-const PARENT_SEPARATOR = /\s*[·•,/&+]\s*/;
+/**
+ * 두 분을 가르는 표 — 가운뎃점은 자판마다 다른 글자가 들어온다(2026-11-27 검토: 휴대폰 천지인 자판의 'ㆍ' U+318D,
+ * 일본어 자판의 '・' U+30FB·'･' U+FF65, 그 밖의 '‧' U+2027·'∙' U+2219·'⋅' U+22C5). 쉼표·빗금·&·+ 와 '-'·'|'·';'·'、'·'，'(전각 쉼표)도 가름표다.
+ * 이 표에 없는 기호는 낱말에 붙은 채 남아 groupParentWords 가 한글 아닌 낱말로 보고 통째로 + unclear 로 보낸다(기호를 성씨로 만들지 않는다).
+ */
+const PARENT_SEPARATOR_CLASS = "[·•ㆍ・･‧∙⋅,，、/&+\\-|;]";
+const PARENT_SEPARATOR_CHARS = new RegExp(PARENT_SEPARATOR_CLASS);
+const PARENT_SEPARATOR = new RegExp(`\\s*${PARENT_SEPARATOR_CLASS}\\s*`);
+
+/** 한글 음절만으로 된 낱말 — 부모 이름 칸의 낱말을 사람으로 묶을 수 있는지(기호·영문·숫자·자모가 든 낱말은 묶지 않는다) */
+const HANGUL_WORD = /^[가-힣]+$/;
 
 /** 성 없이 이름만 쓴 한 분('지호')이나 성까지 붙여 쓴 한 분('김민호'·'남궁서연')으로 볼 낱말 — 2~4자 */
 function isWholeNameWord(word: string): boolean {
@@ -130,15 +139,17 @@ function isWholeNameWord(word: string): boolean {
 }
 
 /**
- * 띄어 쓴 낱말을 사람 단위로 묶는다 — 1자 낱말이나 복성 뒤에 1~3자 낱말이 오면 '성 이름' 한 분('김 철'·'남궁 민'),
- * 나머지 낱말은 2~4자일 때만 한 분. 묶을 수 없거나 세 분 이상이면 null.
+ * 띄어 쓴 낱말을 사람 단위로 묶는다 — 한글 한 음절 낱말이나 복성 뒤에 1~3자 낱말이 오면 '성 이름' 한 분('김 철'·'남궁 민'),
+ * 나머지 낱말은 2~4자일 때만 한 분. 한글 음절이 아닌 글자가 든 낱말이 있거나('ㆍ'·'-'·'a'·'1') 묶을 수 없거나 세 분 이상이면 null.
+ * (2026-11-27 검토: 한 글자면 무엇이든 성으로 봐서 '김민호 ㆍ 이수정'이 어머니 'ㆍ 이수정' → /search 성씨 'ㆍ' 가 됐다)
  */
 function groupParentWords(words: string[]): string[] | null {
+  if (!words.every((w) => HANGUL_WORD.test(w))) return null;
   const people: string[] = [];
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
     const next = words[i + 1];
-    const surnameLike = word.length === 1 || COMPOUND_SURNAMES.includes(word);
+    const surnameLike = /^[가-힣]$/.test(word) || COMPOUND_SURNAMES.includes(word);
     if (surnameLike && next !== undefined && next.length <= 3) {
       people.push(`${word} ${next}`);
       i++;
@@ -154,12 +165,12 @@ function groupParentWords(words: string[]): string[] | null {
  * 홈 Hero 의 한 칸 '부모 이름'(placeholder '예: 김민호 · 이수정')을 아버지·어머니 두 칸 값으로 읽는다.
  *
  * 규칙 (위에서부터)
- * 1. 가름표(·, /, &, +, 쉼표)가 있으면 그것으로 가른다 — 앞의 두 조각
+ * 1. 가름표(가운뎃점 여러 꼴 ·ㆍ・･‧∙⋅•, 쉼표 ,，、, /, &, +, -, |, ;)가 있으면 그것으로 가른다 — 앞의 두 조각
  * 2. 띄어 쓴 낱말을 사람 단위로 묶는다(groupParentWords) — 두 분이면 두 칸
  *    "김민호 이수정"·"지호 서윤"(2자는 이름만 — splitParentName 이 성을 자르지 않는다)·"김지호 서윤"·
  *    "김 철 이서윤"·"남궁 민 이서윤"·"김민호 이 수정"·"김 민호 이 수정"
  * 3. 한 분으로 묶이면 아버지 칸 — "김 민호"·"남궁 민호". 다만 두 낱말이 모두 2~4자면 두 분으로도 읽혀 unclear('선우 서윤' — 선우는 흔한 이름)
- * 4. 묶을 수 없으면(1자 낱말이 끝에 남음 '김민 호'·세 분 이상·5자 이상 낱말) 예전처럼 통째로 아버지 칸 + unclear
+ * 4. 묶을 수 없으면(1자 낱말이 끝에 남음 '김민 호'·세 분 이상·5자 이상 낱말·한글 음절이 아닌 낱말 'a 김민호') 예전처럼 통째로 아버지 칸 + unclear
  *
  * 왜(2026-11-27 hero-parent-name-split): 옛 규칙은 가름표가 없으면 두 낱말이 모두 3자 이상일 때만 두 분으로 봐
  * '지호 서윤'이 아버지 '지 + 호서윤'이 되고 어머니 이름이 사라졌다. 옛 /search 는 한 칸 값을 아버지 이름 칸에 그대로 넣어 '김' + '민호·이수정'이 됐다.

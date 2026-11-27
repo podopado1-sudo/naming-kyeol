@@ -19,9 +19,19 @@ const publicDir = fileURLToPath(new URL("../public/", import.meta.url));
 
 // ── hero-parent-name-split ──────────────────────────────────────────────
 
-/** [입력, 아버지, 어머니, unclear] — unclear = Hero 가 '두 분이면 가운뎃점(·)으로 나눠 주세요'를 띄우는 입력 */
+/** [입력, 아버지, 어머니, unclear] — unclear = Hero 가 '두 분이면 쉼표나 가운뎃점(·)으로 나눠 주세요'를 띄우는 입력 */
 const PARENT_READING_CASES = [
   ["김민호 · 이수정", "김민호", "이수정", false],
+  ["김민호, 이수정", "김민호", "이수정", false],
+  // 휴대폰 자판의 다른 가운뎃점 꼴(천지인 'ㆍ' U+318D·일본어 자판 '・' U+30FB) — 옛 표는 한 분으로 읽고 '가운뎃점으로 나눠 주세요'를 띄웠다
+  ["김민호ㆍ이수정", "김민호", "이수정", false],
+  ["김민호・이수정", "김민호", "이수정", false],
+  // 띄어 쓴 기호 — 옛 규칙은 한 글자 낱말이면 무엇이든 성으로 묶어 어머니가 'ㆍ 이수정'·'- 이수정'이 됐다
+  ["김민호 ㆍ 이수정", "김민호", "이수정", false],
+  ["김민호 - 이수정", "김민호", "이수정", false],
+  // 가름표 밖 기호·영문이 든 낱말은 성으로 묶지 않는다 — 통째로 한 분 + 안내
+  ["김민호 1 이수정", "김민호 1 이수정", "", true],
+  ["a 김민호", "a 김민호", "", true],
   ["지호 서윤", "지호", "서윤", false],
   ["김지호 서윤", "김지호", "서윤", false],
   ["김 철 이서윤", "김 철", "이서윤", false],
@@ -45,9 +55,20 @@ for (const [input, father, mother, unclear] of PARENT_READING_CASES) {
   });
 }
 
+test("두 분으로 가른 어머니 칸이 /search splitParentName 에서 기호 성씨가 되지 않는다", async () => {
+  const { splitParentName } = await import("../src/lib/name-split.ts");
+  for (const input of ["김민호ㆍ이수정", "김민호・이수정", "김민호 ㆍ 이수정", "김민호 - 이수정"]) {
+    const { father, mother } = readParentPair(input);
+    assert.deepEqual(splitParentName(father), { surname: "김", name: "민호" }, input);
+    assert.deepEqual(splitParentName(mother), { surname: "이", name: "수정" }, input);
+  }
+});
+
 test("Hero 의 부모 이름 안내는 /search 와 같은 함수(readParentPair)로 읽는다", () => {
   assert.match(hero, /readParentPair\(parentName\)/);
-  assert.match(hero, /가운뎃점\(·\)으로 나눠 주세요/);
+  // 휴대폰 자판에서 치기 쉬운 쉼표를 먼저 권한다('·'만 권하던 안내)
+  assert.match(hero, /'김민호, 이수정'처럼 쉼표나 가운뎃점\(·\)으로 나눠 주세요/);
+  assert.doesNotMatch(hero, /'김민호 · 이수정'처럼 가운뎃점\(·\)으로 나눠 주세요/);
   assert.match(hero, /withJosa\(parentReading\.mother, "으로\/로"\)/, "어머니 이름 뒤 조사는 lib/josa 로");
 });
 
