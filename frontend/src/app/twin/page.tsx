@@ -77,7 +77,8 @@ export default function TwinPage() {
       );
       return;
     }
-    // 생년월일 — 서버 필수(없으면 400 '생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다'). 날짜를 덜 채운 칸도 value 가 "" 다
+    // 생년월일 — 서버 필수(없으면 400 '생년월일은 필수이며 YYYY-MM-DD 형식이어야 합니다'). 여기 오는 빈 값은 비워 둔 칸뿐이다 —
+    // 덜 채운 날짜·시각(value "" + validity.badInput)은 폼에 noValidate 가 없어 브라우저가 제출 전에 막는다(시각만 덜 채우고 시주 없이 보내지 않게)
     if (!birthDate) {
       fail("birthDate", BIRTH_DATE_MISSING);
       return;
@@ -186,9 +187,10 @@ export default function TwinPage() {
           </p>
         </header>
 
+        {/* noValidate 를 달지 않는다 — 칸에 네이티브 required·min·max 가 없어 빈 칸 검사는 handleSubmit 이 하고, 브라우저 검사는 덜 채운
+            날짜·시각(badInput)만 막는다. noValidate 를 달면 '09:--'처럼 시만 넣은 시각이 "" 로 읽혀 안내 없이 시주 없이 채점된다 */}
         <form
           onSubmit={handleSubmit}
-          noValidate
           style={{
             background: "var(--color-surface)",
             borderRadius: "var(--radius-xl)",
@@ -259,7 +261,7 @@ export default function TwinPage() {
 
           <div className="twin-form-row2">
             {/* 출생일 — 서버 필수(없으면 400). 표시는 옆 '(선택 …)'과 같은 꼴의 '(필수)'. 네이티브 required 는 브라우저 말풍선이 먼저 떠
-                아래 오류 상자의 안내가 나오지 않아 aria-required 로 알린다(/rare-surname 과 같은 방식 — 폼은 noValidate) */}
+                아래 오류 상자의 안내가 나오지 않아 aria-required 로 알린다(/rare-surname·/dual-name 과 같은 방식 — 그 폼들처럼 noValidate 없이) */}
             <FormField id={FIELD_ID.birthDate} label="출생일 (필수)">
               <FormInput
                 id={FIELD_ID.birthDate}

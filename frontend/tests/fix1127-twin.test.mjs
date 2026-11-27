@@ -173,9 +173,13 @@ test("원본 — 출생일은 '(필수)' 표시 + 제출 전 검사(요청 전�
   assert.ok(surnameAt >= 0 && birthAt > surnameAt && requestAt > birthAt, "검사 순서: 성씨 → 출생일 → 요청");
   assert.match(body.slice(birthAt, requestAt), /fail\("birthDate", BIRTH_DATE_MISSING\);\s*return;/);
   assert.match(page, /document\.getElementById\(FIELD_ID\[field\]\)\?\.focus\(\)/);
-  // 날짜 칸은 aria-required(네이티브 required 의 브라우저 말풍선이 오류 상자 안내를 가리지 않게 — 폼은 noValidate)
+  // 날짜 칸은 aria-required(네이티브 required 의 브라우저 말풍선이 오류 상자 안내를 가리지 않게)
   assert.match(page, /<FormInput\s+id=\{FIELD_ID\.birthDate\}\s+type="date"[\s\S]*?ariaRequired\s+invalid=\{birthDateInvalid\}\s+describedBy=\{birthDateInvalid \? ERROR_ID : undefined\}/);
-  assert.match(page, /<form\s+onSubmit=\{handleSubmit\}\s+noValidate/);
+  // 폼에 noValidate 가 없다 — 덜 채운 날짜·시각(badInput, value "")은 브라우저가 제출 전에 막는다(시만 넣은 '09:--'가 시주 없이 조용히 나가지 않게).
+  // 대신 칸에 네이티브 required·min·max·pattern 을 두지 않아 빈 칸 안내는 handleSubmit 의 오류 상자가 맡는다
+  assert.match(page, /<form\s+onSubmit=\{handleSubmit\}\s+style=/);
+  assert.doesNotMatch(page, /noValidate/);
+  assert.doesNotMatch(page, /^\s+(required|min|max|pattern)(=|$)/m);
   assert.match(page, /<div\s+id=\{ERROR_ID\}\s+role="alert"/);
   assert.match(page, /aria-required=\{ariaRequired \|\| undefined\}/);
   assert.match(page, /aria-invalid=\{invalid \|\| undefined\}/);
