@@ -3,8 +3,10 @@
 // deploy-skip-head-only: Vercel ignoreCommand 가 `git diff --quiet HEAD^ HEAD` 로 push 의 맨 위 커밋 하나만 보아, 프런트 커밋 위에 docs 커밋을
 //   얹어 한 번에 push 하면 프런트 변경이 말없이 배포되지 않았다(9/24 실사고 — CSP 커밋 92fec00 이 docs 커밋 밑에 묶여 40분 미배포).
 //   이제 마지막 성공 배포(VERCEL_GIT_PREVIOUS_SHA — Vercel 문서: Ignored Build Step 이 있을 때만, 브랜치 첫 배포에는 빈 값)부터 이번 커밋까지를 본다.
-//   이전 SHA 가 없으면 옛 비교(HEAD^)로, 얕은 clone(깊이 10)에 없으면 git 이 128 로 끝나 빌드한다(모르면 빌드 쪽).
-//   같은 SHA 다시 배포(대시보드 Redeploy — 기본으로 Ignored Build Step 을 돈다)는 diff 가 늘 비므로 앞의 비교로 빌드한다.
+//   ⚠️ 종료 코드는 0(생략)·1(빌드) 둘뿐이어야 한다 — 처음 꼴은 앞 배포 SHA 가 얕은 clone(깊이 10) 밖이면 git diff 가 128 로 끝났고,
+//   Vercel 은 그것을 빌드가 아니라 배포 실패로 처리했다(2026-11-27 운영 — 30커밋 push 의 배포가 3초 만에 failure, 문서: '0 또는 1').
+//   그래서 이전 SHA 가 없거나·같거나·clone 에 없거나·비교가 실패하면 모두 1(빌드)이다 — 모르면 빌드 쪽.
+//   같은 SHA 다시 배포(대시보드 Redeploy — 기본으로 Ignored Build Step 을 돈다)도 빌드한다.
 // weekly-drip-empty-stamps: 주간 드립이 열 이름이 없는 정지 기간에도 매주 스탬프 커밋(→ 전량 재빌드·Render 재배포)을 만들었다.
 //   게이트를 scripts/drip-gate.mjs 로 빼고, 직전 스탬프 뒤 ~ 오늘(KST)에 새로 열리는 pa 가 있을 때만 스탬프, 커밋 메시지에 [skip render].
 import { test } from "node:test";
@@ -23,13 +25,13 @@ const readRepo = (rel) => readFileSync(join(REPO, rel), "utf8").replace(/\r\n/g,
 
 // ── deploy-skip-head-only ────────────────────────────────────────────────────
 
-const GUARD = '[ "$VERCEL_GIT_PREVIOUS_SHA" != "$VERCEL_GIT_COMMIT_SHA" ] && ';
-const DIFF = "git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} ${VERCEL_GIT_COMMIT_SHA:-HEAD} -- ";
+const CMD = (path) =>
+  `P=$VERCEL_GIT_PREVIOUS_SHA; [ -n "$P" ] && [ "$P" != "$VERCEL_GIT_COMMIT_SHA" ] && git cat-file -e "$P^{commit}" 2>/dev/null && git diff --quiet "$P" HEAD -- ${path} && exit 0; exit 1`;
 const ignoreCommandOf = (rel) => JSON.parse(readRepo(rel)).ignoreCommand;
 
 test("frontend/vercel.json — 마지막 성공 배포부터 이번 커밋까지 frontend(루트 디렉터리) 안을 비교한다", () => {
   const cmd = ignoreCommandOf("frontend/vercel.json");
-  assert.equal(cmd, `${GUARD}${DIFF}.`);
+  assert.equal(cmd, CMD("."));
   assert.doesNotMatch(cmd, /HEAD\^ HEAD/, "옛 꼴(맨 위 커밋 하나만 비교)이 남아 있다");
   // vercel.json 스키마(https://openapi.vercel.sh/vercel.json)의 ignoreCommand maxLength
   assert.ok(cmd.length <= 256, `ignoreCommand ${cmd.length}자 — 256자를 넘으면 Vercel 이 설정을 거절한다`);
@@ -37,7 +39,7 @@ test("frontend/vercel.json — 마지막 성공 배포부터 이번 커밋까지
 
 test("루트 vercel.json — 프로젝트 루트가 저장소 루트일 때를 위해 같은 꼴로 frontend 를 본다(지우지 않는다)", () => {
   const cmd = ignoreCommandOf("vercel.json");
-  assert.equal(cmd, `${GUARD}${DIFF}frontend`);
+  assert.equal(cmd, CMD("frontend"));
   assert.ok(cmd.length <= 256);
 });
 
@@ -105,14 +107,16 @@ test("ignoreCommand 행동 — 얕은 clone 에서 묶어 push·첫 배포·clon
     // [설명, 이전 SHA, 이번 SHA, 기대 종료 코드 — 0 이면 빌드 생략, 그 밖은 빌드]
     ["프런트 커밋 위에 docs 커밋을 얹어 한 번에 push(9/24) — 빌드", c1, top, 1],
     ["마지막 성공 배포가 프런트 커밋이고 그 위 docs 만 — 생략", front, top, 0],
-    ["브랜치 첫 배포(이전 SHA 빈 값) — 옛 비교(HEAD^)", "", top, 0],
-    ["이전 SHA 가 얕은 clone 밖 — git 128, 빌드", c0, top, 128],
+    ["브랜치 첫 배포(이전 SHA 빈 값) — 빌드", "", top, 1],
+    ["이전 SHA 가 얕은 clone 밖 — 빌드(옛 꼴은 git 128 → Vercel 배포 실패, 11/27 운영)", c0, top, 1],
+    ["이전 SHA 가 저장소에 없는 값 — 빌드", "0000000000000000000000000000000000000000", top, 1],
     ["같은 SHA 다시 배포(Redeploy) — 빌드", top, top, 1],
     ["git 정보가 없는 배포(두 값 모두 없음) — 빌드", undefined, undefined, 1],
   ];
   const fCmd = ignoreCommandOf("frontend/vercel.json");
   const rCmd = ignoreCommandOf("vercel.json");
   for (const [label, prev, cur, want] of cases) {
+    assert.ok(want === 0 || want === 1, "Vercel 이 받는 종료 코드는 0·1 뿐");
     assert.equal(run(join(clone, "frontend"), fCmd, prev, cur), want, `frontend/vercel.json: ${label}`);
     assert.equal(run(clone, rCmd, prev, cur), want, `vercel.json: ${label}`);
   }

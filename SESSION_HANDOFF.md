@@ -22,8 +22,9 @@ CRLF 에서 실패하던 새 테스트) → 런타임 검증 반영 두 번(f59f
 **확인**: npm test 825 · tsc · lint · next build(경고 0, 정적 쪽 수 변화 없음) · next start 헤드리스 크롬 검증 세 번 — 묶음 16 + 사이트 전체(217 통과·4 실패 → 고침),
 재검증(38 통과·2 실패 → 고침), 마지막 확인. 로컬 API 의 CORS 허용 목록이 3000 뿐이라 3100 의 next start 에서는 제출이 막힌다(검증은 3000 으로 옮겨 했다).
 
-**push 순서**: 이번 묶음은 프런트·문서만이라 한 번에 push 해도 된다(Render 는 [skip render] 로 건너뜀). Vercel ignoreCommand 가 이번 커밋부터
-'마지막 성공 배포부터 비교'로 바뀌지만, 이번 push 는 운영 배포 f2e237e 가 깊이 10 clone 밖이라 Ignored Build Step 로그에 'fatal: bad object' 가 찍히고 종료 128 → 빌드한다(정상).
+**push·배포**: 30커밋을 한 번에 push(11/27 15시 무렵) → **Vercel 배포 실패(3초)**. 새 ignoreCommand 가 앞 배포 SHA(f2e237e — 깊이 10 clone 밖)에서 git diff 128 로
+끝났고 Vercel 은 0·1 밖의 코드를 실패로 처리한다(검증 담당이 읽은 KB '1 이상이면 빌드'를 믿은 내 판단 잘못). 운영은 f2e237e 그대로였다.
+→ 종료 코드가 0·1 뿐인 꼴로 고친 커밋을 더해 다시 push(이 커밋 위). 깊이 10 clone 재현에서 f2e237e·HEAD~1·HEAD·빈 값 모두 1(빌드).
 
 **배포 뒤 운영 확인(가짜 값)**: /search 결과 카드 '상세 보기'·'← 조건 바꾸기'·주소 쿼리가 걷히는지, /favorites robots noindex·robots.txt 에 /favorites 없음,
 모든 쪽 twitter:title 이 그 쪽 제목, og:image 1672×941, Permissions-Policy 에 interest-cohort 없음, 홈 Hero 그림이 WebP, /evaluate?lastName=김&name=ㅋㅋ 가 자동 평가되지 않음,

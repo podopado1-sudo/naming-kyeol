@@ -1248,9 +1248,12 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 
 ### 인프라/운영
 - **Vercel ignoreCommand = 마지막 성공 배포부터 (2026-11-27)**: `frontend/vercel.json` 이
-  `[ "$VERCEL_GIT_PREVIOUS_SHA" != "$VERCEL_GIT_COMMIT_SHA" ] && git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} ${VERCEL_GIT_COMMIT_SHA:-HEAD} -- .` 로 바뀌었다.
-  옛 `HEAD^ HEAD`(맨 위 커밋 하나)는 프런트 커밋 위에 docs 커밋을 얹어 push 하면 빌드를 건너뛰었다(9/24 실사고). 같은 SHA 재배포·앞 SHA 를 모르거나 얕은 clone 에 없으면
-  빌드한다(실패하면 빌드하는 쪽). 첫 실제 배포에서 Vercel 빌드 로그로 확인할 것 — 확인되면 SESSION_HANDOFF 의 'push 직전 HEAD 가 frontend 를 건드려야' 순서 제약을 걷는다
+  `P=$VERCEL_GIT_PREVIOUS_SHA; [ -n "$P" ] && [ "$P" != "$VERCEL_GIT_COMMIT_SHA" ] && git cat-file -e "$P^{commit}" 2>/dev/null && git diff --quiet "$P" HEAD -- . && exit 0; exit 1`.
+  옛 `HEAD^ HEAD`(맨 위 커밋 하나)는 프런트 커밋 위에 docs 커밋을 얹어 push 하면 빌드를 건너뛰었다(9/24 실사고).
+  ⚠️ **종료 코드는 0(생략)·1(빌드) 둘뿐이어야 한다** — 첫 꼴(`${PREV:-HEAD^}` 로 바로 git diff)은 앞 배포 SHA 가 Vercel 의 깊이 10 clone 밖이면 128 로 끝났고,
+  Vercel 은 그것을 빌드가 아니라 **배포 실패**로 처리했다(2026-11-27 운영 — 30커밋 push 의 배포 dpl_jtmgt621… 가 3초 만에 failure, KB 의 '1 이상이면 빌드'는 틀림).
+  지금 꼴은 이전 SHA 가 없거나·같거나(Redeploy)·clone 에 없거나·비교가 실패하면 모두 1(빌드), frontend 변경이 없을 때만 0. 회귀 `tests/fix1127-infra.test.mjs`.
+  첫 성공 배포가 확인되면 SESSION_HANDOFF 의 'push 직전 HEAD 가 frontend 를 건드려야' 순서 제약을 걷는다
 - **Render Free cold start**: 15분 idle 후 첫 요청 30초+ — `.github/workflows/keepalive.yml`이 10분 간격 ping으로 회피 (실측: GitHub cron 스로틀링으로 약 1시간 간격까지 밀림 — cold start 완전 회피는 못 함). 같은 워크플로가 프론트(namingkyeol.com)도 확인해 3회 연속 비200이면 run 실패 → GitHub 실패 알림 메일이 다운 감지 채널 (2026-07-30 Vercel 정지 402 사후 대책). 저장소 60일 무커밋 시 GitHub이 스케줄 자동 비활성화하므로 알림 메일 주의
 - **api.namingkyeol.com 커스텀 도메인**: Render 검증 미완 — 완료 시 Vercel `NEXT_PUBLIC_API_URL` 교체 필요
 - **리미터 버킷의 IP = 방문자 주소 (2026-11-19)**: 운영 경로는 방문자 → Cloudflare → Render 프록시 → Kestrel 이라 `RemoteIpAddress` 를 그대로 쓰면
