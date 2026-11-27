@@ -26,9 +26,28 @@ export interface SajuPillarData {
 export interface YongshinData {
   strength: string;
   primaryYongshin: string;
+  /** 억부법 용신 (응답 eokbuYongshin) — 제목의 방식 이름을 정하는 데 쓴다 */
+  eokbuYongshin?: string | null;
+  /** 조후법 용신 (응답 johuYongshin, 없으면 null) */
+  johuYongshin?: string | null;
   strengthDescription: string;
   yongshinReason: string;
   nameFitsYongshin?: boolean;
+}
+
+/**
+ * 용신 카드 제목의 방식 이름 — 최종 용신(primaryYongshin)을 응답의 억부·조후 용신과 맞대어, 서버가 실제로 고른 방식을 적는다.
+ * 둘 다와 같으면(또는 응답에 두 값이 없으면) 방식 없이 '용신'.
+ * ⚠️ 2026-11-27 전에는 강약만 보고 신강 → '억부', 그 밖 → '조후'로 지어내, 서버가 억부를 고른 신약(강약 −5 이하)은
+ * '조후 용신 土' 아래 '土를 억부 용신으로 취합니다', 조후를 고른 약한 신강(강약 +4)은 반대로 나왔다(analysis-yongshin-method-label).
+ * 서버 규칙은 YongshinCalculationService.DeterminePrimary(|강약| ≥ 5 억부, 그 밖·중화는 조후 → 없으면 억부)
+ */
+function yongshinMethodLabel(y: Pick<YongshinData, "primaryYongshin" | "eokbuYongshin" | "johuYongshin">): string {
+  const isEokbu = Boolean(y.eokbuYongshin) && y.primaryYongshin === y.eokbuYongshin;
+  const isJohu = Boolean(y.johuYongshin) && y.primaryYongshin === y.johuYongshin;
+  if (isEokbu && !isJohu) return "억부 용신";
+  if (isJohu && !isEokbu) return "조후 용신";
+  return "용신";
 }
 
 export interface SajuChartData {
@@ -80,9 +99,12 @@ export function SajuSection({
         >
           생년월일 입력 시 사주 원국 분석이 추가됩니다.
         </div>
-        <Button variant="secondary" size="sm" onClick={onOpenBirthInput}>
-          생년월일 입력하기
-        </Button>
+        {/* 입력 화면으로 돌아가는 단추 — 인쇄에는 싣지 않는다(globals.css [data-hide-print]) */}
+        <div data-hide-print>
+          <Button variant="secondary" size="sm" onClick={onOpenBirthInput}>
+            생년월일 입력하기
+          </Button>
+        </div>
       </div>
     );
   }
@@ -436,7 +458,7 @@ export function SajuSection({
               {saju.dayMaster}
             </span>{" "}
             {saju.yongshin.strength} →{" "}
-            {saju.yongshin.strength === "신강" ? "억부" : "조후"} 용신{" "}
+            {yongshinMethodLabel(saju.yongshin)}{" "}
             <span
               style={{
                 fontFamily: "var(--font-serif)",

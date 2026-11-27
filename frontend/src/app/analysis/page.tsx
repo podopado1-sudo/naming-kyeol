@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense, type FormEvent } from "react";
+import { useId, useState, Suspense, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -29,6 +29,12 @@ import { toResourceGrade } from "@/components/design/resource-grade";
 import { hasVisibleContent, kyeolSubtitle } from "@/components/design/eval-layout";
 
 import { nameAnalysis } from "@/lib/api";
+import {
+  cleanNameInput,
+  nameInputMessage,
+  nameInputProblem,
+  SURNAME_MAX_LENGTH,
+} from "@/lib/name-input";
 import type { NameAnalysisResponse, SajuChartData as ApiSajuChart } from "@/lib/types";
 
 // ============================================================
@@ -93,6 +99,9 @@ function mapSaju(api?: ApiSajuChart | null): SajuChartData | null {
                 ? "신약"
                 : "중화",
           primaryYongshin: api.yongshin.primaryYongshin,
+          // 카드 제목의 방식 이름('억부 용신'·'조후 용신')을 서버가 실제로 고른 쪽으로 정하는 데 쓴다(DetailSaju yongshinMethodLabel)
+          eokbuYongshin: api.yongshin.eokbuYongshin,
+          johuYongshin: api.yongshin.johuYongshin,
           strengthDescription: api.yongshin.strengthDescription,
           yongshinReason: api.yongshin.yongshinReason,
           nameFitsYongshin: api.yongshin.nameFitsYongshin,
@@ -129,6 +138,56 @@ function mapEumryeong(res: NameAnalysisResponse): EumryeongData | null {
 }
 
 // ============================================================
+// 성·이름 칸 검사 (2026-11-27 analysis-input-unvalidated)
+// ⚠️ 전에는 다듬지도 검사하지도 않고 보내, 휴대폰 자동완성이 붙인 끝 공백('서윤 ')을 서버가 3글자로 보고
+// 같은 제목 '김서윤' 아래 유니크 10 → 90·종합 64 → 68 로 채점했고, 한자·영문·낱자모(瑞潤·Daniel·ㅋㅋ)에도 점수를 냈다.
+// 보낼 때는 cleanNameInput 으로 다듬은 값을 쓰고, 문제가 있으면 보내지 않는다. 주소(?lastName=&name=)로 채운 값도 같은 검사.
+// ============================================================
+
+/** 이 화면이 받는 이름 글자 수 — 서버 NameAnalysisRequestDto.FirstName 의 StringLength(10) */
+const GIVEN_NAME_MAX_LENGTH = 10;
+
+type NameField = "lastName" | "firstName";
+
+interface NameFieldProblem {
+  field: NameField;
+  message: string;
+}
+
+/**
+ * 성·이름 칸의 첫 문제(성씨 먼저) — 없으면 null. 값은 cleanNameInput 으로 다듬어 본다.
+ * skipEmpty: 주소로 채운 값을 볼 때 — 비어 온 칸은 아직 문제가 아니다(이름만 실어 온 주소에 '성씨를 입력해주세요'를 띄우지 않는다)
+ */
+function analysisNameProblem(
+  rawLast: string | null | undefined,
+  rawFirst: string | null | undefined,
+  skipEmpty = false
+): NameFieldProblem | null {
+  const fields = [
+    { field: "lastName", value: cleanNameInput(rawLast), label: "성씨", max: SURNAME_MAX_LENGTH, empty: "성씨를 입력해주세요." },
+    { field: "firstName", value: cleanNameInput(rawFirst), label: "이름", max: GIVEN_NAME_MAX_LENGTH, empty: "이름을 입력해주세요." },
+  ] as const;
+  for (const f of fields) {
+    const problem = nameInputProblem(f.value, f.max);
+    if (!problem) continue;
+    if (problem === "empty") {
+      if (skipEmpty) continue;
+      return { field: f.field, message: f.empty };
+    }
+    return { field: f.field, message: nameInputMessage(problem, f.label, f.max) };
+  }
+  return null;
+}
+
+// 480px 이하: 결과 화면 좌우 여백 16px(점수 타일 2×2 는 DetailHero) — /evaluate eval-result-main 과 같은 규칙.
+// 360px 기기에서 4열 점수 타일이 화면을 12px 넘겨 페이지 전체가 옆으로 밀렸다(2026-11-27 analysis-score-grid-overflow)
+const ANALYSIS_RESULT_CSS = `
+  @media (max-width: 480px) {
+    .analysis-result { padding-left: 16px !important; padding-right: 16px !important; }
+  }
+`;
+
+// ============================================================
 // 메인 페이지
 // ============================================================
 function AnalysisInner({
@@ -138,10 +197,23 @@ function AnalysisInner({
   onResultChange: (showingResult: boolean) => void;
 }) {
   const searchParams = useSearchParams();
-  const [lastName, setLastName] = useState(
-    searchParams.get("lastName") ?? searchParams.get("surname") ?? ""
+  // 칸 id — 라벨 htmlFor 와 짝짓는다(/ohaeng 과 같은 방식). 전에는 라벨이 칸과 이어지지 않아 화면 읽기 프로그램이
+  // 성·이름 칸을 placeholder 로만, 성별·톤·생년월일·시각 칸은 이름 없이 읽었다(2026-11-27 labels-analysis)
+  const uid = useId();
+  const ids = {
+    lastName: `${uid}-last`,
+    firstName: `${uid}-first`,
+    gender: `${uid}-gender`,
+    tone: `${uid}-tone`,
+    birthDate: `${uid}-date`,
+    birthTime: `${uid}-time`,
+    error: `${uid}-error`,
+  };
+  // 주소(?lastName=&name=)로 채우는 값도 다듬고(끝 공백·풀어 쓴 한글), 한글이 아니면 칸을 채운 채 이유를 먼저 보여 준다
+  const [lastName, setLastName] = useState(() =>
+    cleanNameInput(searchParams.get("lastName") ?? searchParams.get("surname"))
   );
-  const [firstName, setFirstName] = useState(searchParams.get("name") ?? "");
+  const [firstName, setFirstName] = useState(() => cleanNameInput(searchParams.get("name")));
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [gender, setGender] = useState("none");
@@ -149,7 +221,28 @@ function AnalysisInner({
 
   const [result, setResult] = useState<NameAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [prefillProblem] = useState(() => analysisNameProblem(lastName, firstName, true));
+  const [error, setError] = useState<string | null>(prefillProblem?.message ?? null);
+  /** 오류 문장이 가리키는 칸 — 그 칸에 aria-invalid·aria-describedby 를 켠다(서버 오류는 null) */
+  const [errorField, setErrorField] = useState<NameField | null>(prefillProblem?.field ?? null);
+
+  /** 오류가 가리키던 칸을 고치기 시작하면 그 문장을 거둔다 */
+  function editName(field: NameField, value: string) {
+    if (field === "lastName") setLastName(value);
+    else setFirstName(value);
+    if (errorField === field) {
+      setError(null);
+      setErrorField(null);
+    }
+  }
+
+  function nameFieldA11y(field: NameField) {
+    const flagged = errorField === field && error != null;
+    return {
+      ariaInvalid: flagged || undefined,
+      ariaDescribedBy: flagged ? ids.error : undefined,
+    };
+  }
 
   // 결과 상태와 바깥 화면 전환을 한 번에 바꾼다 (같은 렌더에 묶여 깜빡임 없음)
   function showResult(next: NameAnalysisResponse | null) {
@@ -159,14 +252,28 @@ function AnalysisInner({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    // 다듬은 값으로 검사하고 그 값을 보낸다 — 칸에도 다듬은 값을 다시 넣는다('서윤 ' → '서윤')
+    const last = cleanNameInput(lastName);
+    const first = cleanNameInput(firstName);
+    setLastName(last);
+    setFirstName(first);
+    const problem = analysisNameProblem(last, first);
+    if (problem) {
+      setError(problem.message);
+      setErrorField(problem.field);
+      document.getElementById(ids[problem.field])?.focus();
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setErrorField(null);
     showResult(null);
 
     try {
       const data = await nameAnalysis({
-        lastName,
-        firstName,
+        lastName: last,
+        firstName: first,
         gender,
         tone,
         birthDate: birthDate || undefined,
@@ -203,12 +310,14 @@ function AnalysisInner({
 
     return (
       <div
+        className="analysis-result"
         style={{
           maxWidth: 880,
           margin: "0 auto",
           padding: "32px 32px 64px",
         }}
       >
+        <style>{ANALYSIS_RESULT_CSS}</style>
         {/* Hero */}
         <DetailHero data={heroData} />
 
@@ -273,8 +382,8 @@ function AnalysisInner({
           </section>
         )}
 
-        {/* 다시 분석 */}
-        <div style={{ marginTop: 64, textAlign: "center" }}>
+        {/* 다시 분석 — 인쇄에는 조작 단추를 싣지 않는다(globals.css [data-hide-print]) */}
+        <div data-hide-print style={{ marginTop: 64, textAlign: "center" }}>
           <Button variant="ghost" onClick={() => showResult(null)}>
             ↻ 다른 이름 분석하기
           </Button>
@@ -311,20 +420,24 @@ function AnalysisInner({
             gap: 12,
           }}
         >
-          <Field label="성씨">
+          <Field label="성씨" htmlFor={ids.lastName}>
             <Input
+              id={ids.lastName}
               placeholder="예: 김"
               value={lastName}
-              onChange={setLastName}
+              onChange={(v) => editName("lastName", v)}
               required
+              {...nameFieldA11y("lastName")}
             />
           </Field>
-          <Field label="이름">
+          <Field label="이름" htmlFor={ids.firstName}>
             <Input
+              id={ids.firstName}
               placeholder="예: 서윤"
               value={firstName}
-              onChange={setFirstName}
+              onChange={(v) => editName("firstName", v)}
               required
+              {...nameFieldA11y("firstName")}
             />
           </Field>
         </div>
@@ -336,8 +449,9 @@ function AnalysisInner({
             gap: 12,
           }}
         >
-          <Field label="성별">
+          <Field label="성별" htmlFor={ids.gender}>
             <Select
+              id={ids.gender}
               value={gender}
               onChange={setGender}
               options={[
@@ -347,8 +461,9 @@ function AnalysisInner({
               ]}
             />
           </Field>
-          <Field label="톤">
+          <Field label="톤" htmlFor={ids.tone}>
             <Select
+              id={ids.tone}
               value={tone}
               onChange={setTone}
               options={[
@@ -367,16 +482,18 @@ function AnalysisInner({
             gap: 12,
           }}
         >
-          <Field label="생년월일 (사주 계산)">
-            <Input type="date" value={birthDate} onChange={setBirthDate} />
+          <Field label="생년월일 (사주 계산)" htmlFor={ids.birthDate}>
+            <Input id={ids.birthDate} type="date" value={birthDate} onChange={setBirthDate} />
           </Field>
-          <Field label="태어난 시간 (시주, 선택)">
-            <Input type="time" value={birthTime} onChange={setBirthTime} />
+          <Field label="태어난 시간 (시주, 선택)" htmlFor={ids.birthTime}>
+            <Input id={ids.birthTime} type="time" value={birthTime} onChange={setBirthTime} />
           </Field>
         </div>
 
         {error && (
           <div
+            id={ids.error}
+            role="alert"
             style={{
               fontSize: 13,
               color: "#C45A4C",
@@ -554,14 +671,18 @@ export default function AnalysisPage() {
 // ============================================================
 function Field({
   label,
+  htmlFor,
   children,
 }: {
   label: string;
+  /** 칸 id — 라벨을 칸과 잇는다 */
+  htmlFor: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
       <label
+        htmlFor={htmlFor}
         style={{
           fontSize: 12,
           color: "var(--color-text-2)",
@@ -578,25 +699,34 @@ function Field({
 }
 
 function Input({
+  id,
   value,
   onChange,
   placeholder,
   type = "text",
   required,
+  ariaInvalid,
+  ariaDescribedBy,
 }: {
+  id: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
   required?: boolean;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
 }) {
   return (
     <input
+      id={id}
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       required={required}
+      aria-invalid={ariaInvalid}
+      aria-describedby={ariaDescribedBy}
       style={{
         width: "100%",
         boxSizing: "border-box",
@@ -615,16 +745,19 @@ function Input({
 }
 
 function Select({
+  id,
   value,
   onChange,
   options,
 }: {
+  id: string;
   value: string;
   onChange: (v: string) => void;
   options: { v: string; l: string }[];
 }) {
   return (
     <select
+      id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{

@@ -19,6 +19,15 @@ export interface DetailHeroData {
   hanjaMeanings: string;
 }
 
+// 480px 이하: 점수 타일 4열 → 2×2 (/evaluate eval-score-grid 와 같은 규칙 — 타일은 늘 넷이라 마지막 줄을 늘이지 않는다).
+// ⚠️ 2026-11-27 전에는 repeat(4, 1fr) 이 내용 최소 폭(338px)보다 줄지 않아 360px 기기에서 '종합' 타일이 화면 밖으로 12px 나가고
+// 페이지 전체가 옆으로 밀렸다(analysis-score-grid-overflow). 결과 화면 좌우 여백 16px 은 쓰는 쪽(/analysis analysis-result)이 정한다
+const HERO_CSS = `
+  @media (max-width: 480px) {
+    .detail-score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  }
+`;
+
 export function DetailHero({ data }: { data: DetailHeroData }) {
   const {
     fullName,
@@ -72,7 +81,9 @@ export function DetailHero({ data }: { data: DetailHeroData }) {
         </p>
       )}
 
+      <style>{HERO_CSS}</style>
       <div
+        className="detail-score-grid"
         style={{
           marginTop: 32,
           display: "grid",
