@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useSyncExternalStore, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -70,8 +70,11 @@ const OPTIONS_PANEL = "options";
 // - 폼의 처음 값은 주소 쿼리(홈 Hero·/evaluate '비슷한 이름 추천'·검색 SearchAction)에서 읽는다.
 // - 추천 요청을 시작하면 주소에서 쿼리를 걷는다(search-query-persists — 부모 이름·생년월일이 결과 화면 내내 주소창·기록에 남아
 //   복사·공유로 따라가고, 받은 사람이 열면 autoStart 로 추천이 한 번 더 돌았다). 걷은 뒤의 새로 고침·뒤로 가기는
-//   같은 기록 칸(history.state 의 표)일 때만 이 탭의 sessionStorage 에서 폼 값과 마지막 결과를 되살린다 — 자동 재요청 없이.
+//   그 기록 칸(history.state 의 표)의 폼 값과 결과를 이 탭의 sessionStorage 에서 되살린다 — 자동 재요청 없이.
+//   표마다 따로 담아(최근 RESTORE_MAX_ENTRIES 칸) 같은 탭에서 추천을 또 받아도 앞선 기록 칸으로 돌아가면 그 칸의 값이 나온다.
 //   다른 길로 /search 에 새로 오면(헤더 링크 등 — 표가 없는 기록 칸) 빈 폼이다.
+// - 세션 저장은 클라이언트 첫 렌더부터 읽는다(useSyncExternalStore) — 서버 렌더·하이드레이션 렌더는 쿼리 값만 써서 같다
+//   (next dev 는 useSearchParams 경계 안도 서버에서 그린다). 되살린 값은 폼을 새 key 로 다시 그려 넣는다.
 // - 결과 화면(조건 칩·'상세 보기'·저장)은 제출 때 잡은 값(SubmittedQuery)만 쓴다(form-snapshot-search — 응답을 기다리는 동안
 //   폼을 고치면 고친 값이 링크·저장에 실렸다. /dual-name 의 SubmittedQuery 와 같은 방식).
 // ============================================================
@@ -164,20 +167,89 @@ interface SearchOutcome {
   query: SubmittedQuery;
 }
 
-/** 이 탭의 세션 저장 키 — 마지막 /search 요청의 폼 값과 결과(탭을 닫으면 브라우저가 지운다) */
+/** 이 탭의 세션 저장 키 — 기록 칸(표)마다 /search 요청의 폼 값과 결과(탭을 닫으면 브라우저가 지운다) */
 const RESTORE_STORAGE_KEY = "nameform:search-restore";
-/** history.state 안의 표 — 저장한 값이 이 기록 칸에서 보낸 요청의 것인지 */
+/** history.state 안의 표 — 이 기록 칸에서 보낸 요청의 저장 값을 찾는 열쇠 */
 const RESTORE_HISTORY_KEY = "nameformSearch";
-/** 결과를 되살리는 시한 — 오래된 결과(배포 사이에 응답 꼴이 바뀌었을 수 있다)는 폼 값만 되살린다 */
+
+// ---- 세션 저장 지도 (순수 함수 — 창·저장소를 만지지 않는다. tests/fix1127-search.test.mjs 가 이 구간을 떼어 돌린다) ----
+/** 저장 꼴의 판 — 꼴을 바꾸면 올린다(다른 판의 값은 읽지 않는다) */
+const RESTORE_VERSION = 2;
+/** 기록 칸을 몇 개까지 담는지 — 넘으면 마지막으로 쓴 때(savedAt)가 오래된 칸부터 지운다 */
+const RESTORE_MAX_ENTRIES = 5;
+/**
+ * 결과를 되살리는 시한 — 지난 결과(배포 사이에 응답 꼴이 바뀌었을 수 있다)는 폼 값만 되살리고,
+ * 다음에 저장할 때 지운다(되살리지 않을 결과를 탭에 남겨 두지 않는다)
+ */
 const RESTORE_RESULT_MAX_AGE_MS = 3 * 60 * 60 * 1000;
 
-interface StoredSearch {
-  v: 1;
-  token: string;
+interface StoredEntry {
   savedAt: number;
-  form: SearchForm;
-  outcome?: SearchOutcome;
+  form: unknown;
+  outcome?: unknown;
 }
+type StoredEntries = Record<string, StoredEntry>;
+
+/** 저장 문자열 → 기록 칸 지도. 꼴이 다르면(다른 판·깨진 값) 빈 지도, 꼴이 다른 칸만 뺀다 */
+function parseStoredEntries(raw: string | null): StoredEntries {
+  const out: StoredEntries = Object.create(null);
+  if (!raw) return out;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return out;
+  }
+  if (!parsed || typeof parsed !== "object") return out;
+  const { v, entries } = parsed as { v?: unknown; entries?: unknown };
+  if (v !== RESTORE_VERSION || !entries || typeof entries !== "object" || Array.isArray(entries)) return out;
+  for (const [token, value] of Object.entries(entries as Record<string, unknown>)) {
+    if (!value || typeof value !== "object") continue;
+    const { savedAt, form, outcome } = value as Partial<StoredEntry>;
+    if (typeof savedAt !== "number" || !Number.isFinite(savedAt) || !form || typeof form !== "object") continue;
+    out[token] = outcome === undefined ? { savedAt, form } : { savedAt, form, outcome };
+  }
+  return out;
+}
+
+/** 이 표의 칸 — 폼 값과, 시한 안이면 결과. 칸이 없으면 null */
+function restorableEntry(raw: string | null, token: string, now: number): { form: unknown; outcome: unknown } | null {
+  const entries = parseStoredEntries(raw);
+  if (!Object.prototype.hasOwnProperty.call(entries, token)) return null;
+  const entry = entries[token];
+  const fresh = entry.outcome !== undefined && now - entry.savedAt <= RESTORE_RESULT_MAX_AGE_MS;
+  return { form: entry.form, outcome: fresh ? entry.outcome : null };
+}
+
+/**
+ * 이 표의 칸을 넣거나 바꾼 뒤 저장할 문자열 — 앞의 것부터 써 보고 저장소가 꽉 차 실패하면 다음 것으로
+ * (모든 칸 → 결과는 이 칸 것만 → 폼 값만 → 이 칸의 폼 값만). 다른 표의 칸은 지우지 않고 최근 RESTORE_MAX_ENTRIES 칸을 남긴다
+ */
+function storageAttempts(raw: string | null, token: string, entry: StoredEntry, now: number): Array<() => string> {
+  const entries = parseStoredEntries(raw);
+  entries[token] = entry;
+  const others = Object.keys(entries)
+    .filter((t) => t !== token)
+    .sort((a, b) => entries[b].savedAt - entries[a].savedAt)
+    .slice(0, RESTORE_MAX_ENTRIES - 1);
+  const keep = [token, ...others];
+  const serialize = (withOutcome: (t: string) => boolean, tokens: string[]) => () => {
+    const picked: StoredEntries = Object.create(null);
+    for (const t of tokens) {
+      const { savedAt, form, outcome } = entries[t];
+      const freshOutcome = outcome !== undefined && now - savedAt <= RESTORE_RESULT_MAX_AGE_MS;
+      picked[t] = freshOutcome && withOutcome(t) ? { savedAt, form, outcome } : { savedAt, form };
+    }
+    return JSON.stringify({ v: RESTORE_VERSION, entries: picked });
+  };
+  return [
+    serialize(() => true, keep),
+    serialize((t) => t === token, keep),
+    serialize(() => false, keep),
+    serialize(() => false, [token]),
+  ];
+}
+// ---- 세션 저장 지도 끝 ----
 
 /** 저장해 둔 폼 값 — 아는 칸만, 같은 타입일 때만 받는다(모르는 값은 기본값) */
 function storedForm(raw: unknown): SearchForm | null {
@@ -214,36 +286,48 @@ function historyToken(): string | null {
   }
 }
 
-/** 같은 기록 칸(새로 고침·뒤로 가기)이면 저장해 둔 폼 값·결과. 아니면 null */
-function readRestorable(): { token: string; form: SearchForm; outcome: SearchOutcome | null } | null {
+/** 폼·결과의 처음 값 — token 은 이 기록 칸의 세션 저장 표(쿼리로 새로 들어왔으면 null) */
+interface SearchSeed {
+  token: string | null;
+  form: SearchForm;
+  outcome: SearchOutcome | null;
+}
+
+/** 이 기록 칸(새로 고침·뒤로 가기)의 표로 저장해 둔 폼 값·결과. 없으면 null */
+function readRestorable(): SearchSeed | null {
   if (typeof window === "undefined") return null;
   const token = historyToken();
   if (!token) return null;
   try {
-    const raw = window.sessionStorage.getItem(RESTORE_STORAGE_KEY);
-    if (!raw) return null;
-    const stored = JSON.parse(raw) as Partial<StoredSearch> | null;
-    if (!stored || stored.v !== 1 || stored.token !== token || typeof stored.savedAt !== "number") return null;
-    const form = storedForm(stored.form);
+    const found = restorableEntry(window.sessionStorage.getItem(RESTORE_STORAGE_KEY), token, Date.now());
+    if (!found) return null;
+    const form = storedForm(found.form);
     if (!form) return null;
-    const fresh = Date.now() - stored.savedAt <= RESTORE_RESULT_MAX_AGE_MS;
-    return { token, form, outcome: fresh ? storedOutcome(stored.outcome) : null };
+    return { token, form, outcome: storedOutcome(found.outcome) };
   } catch {
     return null;
   }
 }
 
-/** 세션 저장 — 결과가 커서 못 담으면 폼 값만. 저장소를 못 쓰면 아무것도 하지 않는다(복원만 안 될 뿐) */
+/**
+ * 세션 저장 — 이 표의 칸만 바꾸고 다른 기록 칸은 남긴다. 저장소가 꽉 차면 다른 칸의 결과부터 덜어 낸다.
+ * 저장소를 못 쓰면 아무것도 하지 않는다(복원만 안 될 뿐)
+ */
 function writeRestorable(token: string, form: SearchForm, outcome: SearchOutcome | null) {
-  const base: StoredSearch = { v: 1, token, savedAt: Date.now(), form };
   try {
-    window.sessionStorage.setItem(RESTORE_STORAGE_KEY, JSON.stringify(outcome ? { ...base, outcome } : base));
-  } catch {
-    try {
-      window.sessionStorage.setItem(RESTORE_STORAGE_KEY, JSON.stringify(base));
-    } catch {
-      // 저장소를 못 쓰는 환경(사생활 보호 모드 등) — 복원 없이 그대로
+    const storage = window.sessionStorage;
+    const now = Date.now();
+    const entry: StoredEntry = outcome ? { savedAt: now, form, outcome } : { savedAt: now, form };
+    for (const attempt of storageAttempts(storage.getItem(RESTORE_STORAGE_KEY), token, entry, now)) {
+      try {
+        storage.setItem(RESTORE_STORAGE_KEY, attempt());
+        return;
+      } catch {
+        // 꽉 참 — 덜어 낸 다음 꼴로
+      }
     }
+  } catch {
+    // 저장소를 못 쓰는 환경(사생활 보호 모드 등) — 복원 없이 그대로
   }
 }
 
@@ -273,27 +357,24 @@ function markEntryAndStripQuery(token: string) {
   }, 0);
 }
 
-/** 처음 값 — 쿼리가 있으면 쿼리(새로 들어온 길), 없으면 같은 기록 칸의 세션 저장, 그것도 없으면 기본값 */
-function initialSeed(params: Pick<URLSearchParams, "get" | "toString">): {
-  token: string | null;
-  form: SearchForm;
-  outcome: SearchOutcome | null;
-} {
-  if (params.toString() === "") {
-    const restored = readRestorable();
-    if (restored) return restored;
-  }
-  return { token: null, form: formFromQuery(params), outcome: null };
-}
+/** 구독할 것이 없는 저장소 — useSyncExternalStore 로 '클라이언트인지'만 읽는다 */
+const subscribeNothing = () => () => {};
 
 /** 필수 글자 칸과 항렬자 한자의 독음이 다를 때 — 한자 뒤에는 조사를 붙이지 않는다(독음을 모른다) */
 function requiredHanjaMismatchMessage(hanja: string, syllable: string): string {
   return `‘${hanja}’ 글자는 이 사이트 사전에서 ‘${syllable}’${josa(syllable, "으로/로")} 읽지 않아요. 글자 칸을 항렬자의 음으로 고치거나 항렬자 칸을 비워 주세요.`;
 }
 
-// 서버 렌더에서 useLayoutEffect 경고를 피한다(이 폼은 클라이언트에서만 그려지지만 — useSearchParams 의 Suspense 경계)
+// 서버 렌더에서 useLayoutEffect 경고를 피한다 — 운영 빌드는 이 폼을 클라이언트에서만 그리지만(useSearchParams 의 Suspense 경계),
+// next dev 는 경계 안도 서버에서 그린다
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
+/**
+ * 폼·결과의 처음 값을 정한다. 서버 렌더와 하이드레이션 렌더는 쿼리 값만 쓰고(둘이 같다 — next dev 의 하이드레이션 불일치 방지),
+ * 클라이언트 첫 렌더에서 한 번 이 기록 칸의 세션 저장을 읽어 있으면 그 값으로 폼을 새 key 로 그린다.
+ * 운영 빌드는 이 경계를 클라이언트에서만 그려 첫 렌더부터 클라이언트라 그리기 전에 바뀐다.
+ * 처음 값은 한 번만 — 요청을 시작하면 주소에서 쿼리를 걷으므로 그 뒤의 searchParams 로 폼을 다시 채우지 않는다
+ */
 function BabyNamingInner({
   onResultChange,
 }: {
@@ -301,10 +382,42 @@ function BabyNamingInner({
   onResultChange: (showingResult: boolean) => void;
 }) {
   const searchParams = useSearchParams();
-  // 처음 값은 마운트 때 한 번만 — 요청을 시작하면 주소에서 쿼리를 걷으므로 그 뒤의 searchParams 로 폼을 다시 채우지 않는다
-  const [seed] = useState(() => initialSeed(searchParams));
-  /** 이 기록 칸의 세션 저장 표 — 마지막으로 시작한 요청의 것 */
-  const entryToken = useRef<string | null>(null);
+  const [seed, setSeed] = useState<SearchSeed>(() => ({
+    token: null,
+    form: formFromQuery(searchParams),
+    outcome: null,
+  }));
+  const onClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  const [restoreChecked, setRestoreChecked] = useState(false);
+  if (onClient && !restoreChecked) {
+    setRestoreChecked(true);
+    // 쿼리가 있으면(새로 들어온 길) 되살리지 않는다
+    const restored = searchParams.toString() === "" ? readRestorable() : null;
+    if (restored) setSeed(restored);
+  }
+  return (
+    <SearchBody
+      key={seed.token ?? ""}
+      seed={seed}
+      autoStart={searchParams.get("autoStart") === "1"}
+      onResultChange={onResultChange}
+    />
+  );
+}
+
+function SearchBody({
+  seed,
+  autoStart,
+  onResultChange,
+}: {
+  /** 처음 값 — 마운트 때만 읽는다(바뀌면 바깥이 key 를 바꿔 새로 그린다) */
+  seed: SearchSeed;
+  /** Hero 에서 autoStart=1 로 들어왔는지 — 요청을 시작하면 주소에서 걷혀 false 가 된다 */
+  autoStart: boolean;
+  onResultChange: (showingResult: boolean) => void;
+}) {
+  /** 이 기록 칸의 세션 저장 표 — 되살린 칸의 것, 그 뒤로는 마지막으로 시작한 요청의 것 */
+  const entryToken = useRef<string | null>(seed.token);
 
   function handleCandidateDetail(query: SubmittedQuery, fullName: string, evaluateHanja?: string) {
     // fullName = lastName + firstName (예: "허기태"). 분리해서 /evaluate로 이동.
@@ -381,9 +494,8 @@ function BabyNamingInner({
   const [loading, setLoading] = useState(false);
   const [outcome, setOutcome] = useState<SearchOutcome | null>(seed.outcome);
 
-  // 되살린 결과가 있으면 바깥 화면도 결과 꼴로(그리기 전에 — 헤더·소개가 한 번 비치지 않게). 표도 이어 쓴다
+  // 되살린 결과가 있으면 바깥 화면도 결과 꼴로(그리기 전에 — 헤더·소개가 한 번 비치지 않게)
   useIsoLayoutEffect(() => {
-    entryToken.current = seed.token;
     if (seed.outcome) onResultChange(true);
   }, []);
 
@@ -574,7 +686,6 @@ function BabyNamingInner({
   }
 
   // Hero에서 autoStart=1 + lastName 들어오면 자동 추천 (한 번만 — 요청을 시작하면 주소에서 autoStart 를 걷는다)
-  const autoStart = searchParams.get("autoStart") === "1";
   useEffect(() => {
     if (autoStart && lastName.trim() && !outcome && !loading) {
       void runRecommend();
