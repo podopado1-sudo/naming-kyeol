@@ -7,7 +7,7 @@
  * 결과 바로 아래에 page.tsx의 확정 전 확인 안내(CompanyCheckNotice)가 이어지므로
  * 결과 블록 안에는 상세 면책을 다시 두지 않고 목록 위 한 줄 요약만 둔다.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { AlertTriangle, Info, Loader2, X } from "lucide-react";
 import {
   Card,
@@ -27,7 +27,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { companyNames, companyOptions } from "@/lib/api";
-import type { CompanyNamingOptions, CompanyNamingResponse } from "@/lib/types";
+import type {
+  CompanyNamingOptions,
+  CompanyNamingResponse,
+  CompanyOption,
+} from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { CompanyResultList } from "@/components/design/CompanyResult";
 import { COMPANY_FALLBACK_OPTIONS } from "./options";
 
@@ -49,7 +54,67 @@ function mergeKeywords(current: string[], draft: string): string[] {
   return next;
 }
 
+/**
+ * 결과 제목의 업종 — 응답에 실려 온 요청 때의 업종(industryLabel)이 먼저다.
+ * 지금 폼의 선택을 쓰면 결과를 받은 뒤 업종만 바꿔도 카드는 그대로인데 제목만 새 업종이 된다.
+ * 응답 라벨이 비었을 때만 응답의 업종 키(없으면 요청할 때 고른 키)를 목록에서 찾는다
+ */
+function resultIndustryLabel(
+  result: Pick<CompanyNamingResponse, "industry" | "industryLabel">,
+  requestedKey: string,
+  industries: CompanyOption[]
+): string {
+  const fromResponse = result.industryLabel?.trim();
+  if (fromResponse) return fromResponse;
+  const key = result.industry?.trim() || requestedKey;
+  return industries.find((i) => i.key === key)?.label ?? key;
+}
+
+/** 넣은 키워드를 왜 그대로 안 썼는지 — 결과가 있을 때(목록 위)와 0개일 때(빈 결과 상자 안) 모두 그린다 */
+function KeywordNoticeList({
+  notices,
+  className,
+}: {
+  notices: string[];
+  className?: string;
+}) {
+  if (notices.length === 0) return null;
+  return (
+    <div
+      className={cn("space-y-2 rounded-xl p-4", className)}
+      style={{
+        background:
+          "color-mix(in srgb, var(--color-amber-warm) 8%, transparent)",
+        border:
+          "1px solid color-mix(in srgb, var(--color-amber-warm) 35%, transparent)",
+      }}
+    >
+      {notices.map((n, i) => (
+        <div
+          key={i}
+          className="flex gap-2 text-xs leading-relaxed"
+          style={{ color: "var(--color-amber-warm-700)" }}
+        >
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <span>{n}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function CompanyForm() {
+  // 라벨 ↔ 칸 짝(htmlFor ↔ id). Base UI SelectTrigger 는 받은 id 를 <button role="combobox"> 에 단다
+  const uid = useId();
+  const ids = {
+    industry: `${uid}-industry`,
+    tone: `${uid}-tone`,
+    style: `${uid}-style`,
+    syllables: `${uid}-syllables`,
+    count: `${uid}-count`,
+    keyword: `${uid}-keyword`,
+  };
+
   const [options, setOptions] =
     useState<CompanyNamingOptions>(COMPANY_FALLBACK_OPTIONS);
 
@@ -62,6 +127,8 @@ export function CompanyForm() {
   const [keywordDraft, setKeywordDraft] = useState("");
 
   const [result, setResult] = useState<CompanyNamingResponse | null>(null);
+  // 결과를 받은 요청의 업종 키 — 응답에 업종 라벨이 비었을 때만 제목에 쓴다(지금 폼 선택이 아니다)
+  const [resultIndustry, setResultIndustry] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,15 +166,17 @@ export function CompanyForm() {
     setLoading(true);
     setError(null);
     setResult(null);
+    const requestedIndustry = industry;
     try {
       const data = await companyNames({
-        industry,
+        industry: requestedIndustry,
         keywords: sentKeywords,
         tone,
         style,
         syllables: parseInt(syllables, 10),
         count: parseInt(count, 10),
       });
+      setResultIndustry(requestedIndustry);
       setResult(data);
     } catch (err) {
       setError(
@@ -118,8 +187,7 @@ export function CompanyForm() {
     }
   }
 
-  const industryLabel =
-    options.industries.find((i) => i.key === industry)?.label ?? industry;
+  const keywordNotices = result?.keywordNotices ?? [];
 
   return (
     <>
@@ -133,12 +201,12 @@ export function CompanyForm() {
         <CardContent>
           <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label>업종</Label>
+              <Label htmlFor={ids.industry}>업종</Label>
               <Select
                 value={industry}
                 onValueChange={(v) => setIndustry(v ?? "cafe")}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id={ids.industry} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -152,9 +220,9 @@ export function CompanyForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>톤</Label>
+              <Label htmlFor={ids.tone}>톤</Label>
               <Select value={tone} onValueChange={(v) => setTone(v ?? "modern")}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger id={ids.tone} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -168,9 +236,9 @@ export function CompanyForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>이름의 결</Label>
+              <Label htmlFor={ids.style}>이름의 결</Label>
               <Select value={style} onValueChange={(v) => setStyle(v ?? "all")}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger id={ids.style} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -184,12 +252,12 @@ export function CompanyForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>글자 수</Label>
+              <Label htmlFor={ids.syllables}>글자 수</Label>
               <Select
                 value={syllables}
                 onValueChange={(v) => setSyllables(v ?? "0")}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id={ids.syllables} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -202,9 +270,9 @@ export function CompanyForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>추천 개수</Label>
+              <Label htmlFor={ids.count}>추천 개수</Label>
               <Select value={count} onValueChange={(v) => setCount(v ?? "12")}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger id={ids.count} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -216,7 +284,7 @@ export function CompanyForm() {
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="keyword">
+              <Label htmlFor={ids.keyword}>
                 이름에 넣고 싶은 글자{" "}
                 <span className="font-normal text-muted-foreground">
                   (선택, 최대 3개 · 1~2음절 우리말이 가장 잘 어울려요)
@@ -224,7 +292,7 @@ export function CompanyForm() {
               </Label>
               <div className="flex gap-2">
                 <Input
-                  id="keyword"
+                  id={ids.keyword}
                   placeholder="예: 결, 정성, 바다"
                   value={keywordDraft}
                   maxLength={MAX_KEYWORD_LENGTH}
@@ -295,7 +363,8 @@ export function CompanyForm() {
         <section className="mb-8">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-lg font-medium text-navy">
-              {industryLabel} 상호 {result.totalCount}개
+              {resultIndustryLabel(result, resultIndustry, options.industries)}{" "}
+              상호 {result.totalCount}개
             </h2>
             <p className="text-xs text-muted-foreground">
               점수 = 기억성 30 + 발음 25 + 식별력 25 + 업종적합 20
@@ -303,28 +372,7 @@ export function CompanyForm() {
           </div>
 
           {/* 넣은 키워드를 왜 그대로 안 썼는지 — 식별력이 이 기능의 핵심이라 결과 위에 둔다 */}
-          {result.keywordNotices?.length > 0 && (
-            <div
-              className="mb-4 space-y-2 rounded-xl p-4"
-              style={{
-                background:
-                  "color-mix(in srgb, var(--color-amber-warm) 8%, transparent)",
-                border:
-                  "1px solid color-mix(in srgb, var(--color-amber-warm) 35%, transparent)",
-              }}
-            >
-              {result.keywordNotices.map((n, i) => (
-                <div
-                  key={i}
-                  className="flex gap-2 text-xs leading-relaxed"
-                  style={{ color: "var(--color-amber-warm-700)" }}
-                >
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  <span>{n}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <KeywordNoticeList notices={keywordNotices} className="mb-4" />
 
           {/* 확인 안내 한 줄 요약 — 상세는 목록 바로 아래 CompanyCheckNotice(page.tsx).
               목록이 12~30장이라 맨 아래에만 두면 대부분 못 보고 지나간다 */}
@@ -351,6 +399,11 @@ export function CompanyForm() {
             글자 수를 &lsquo;무관&rsquo;으로 두거나 이름의 결을
             &lsquo;전체&rsquo;로 바꿔보세요
           </p>
+          {/* 0개여도 넣은 키워드를 왜 못 썼는지(금칙어 거절·결·글자 수 탓)는 서버가 알려 준다 — 버리지 않는다 */}
+          <KeywordNoticeList
+            notices={keywordNotices}
+            className="mx-auto mt-6 max-w-xl text-left"
+          />
         </div>
       )}
     </>

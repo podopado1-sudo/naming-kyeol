@@ -55,11 +55,18 @@ function scoreColor(ratio: number): string {
   return "var(--color-text-3)";
 }
 
-const STYLE_TINT: Record<string, string> = {
-  hanja: "var(--color-gold)",
-  "pure-korean": "var(--color-teal)",
-  english: "var(--color-navy-500)",
+// ============================================================
+// 결 라벨 칩('한자 조합'·'순우리말'·'영문 조어') — 바탕은 결 색 10% 틴트, 글자는 짙은 글자 토큰.
+// 옛 `${tint}1a` 는 tint 가 var() 라 'var(--color-gold)1a' 가 되어 무효였다(배경 없음).
+// 10px 작은 글씨라 글자색은 팔레트 #2 규칙(색상은 지키고 글자만 짙게)을 따른다 — 틴트 위 결 색 그대로면
+// 금 2.08·청록 4.27:1 로 4.5:1 아래(tests/fix1127-company.test.mjs 가 흰 카드·종이 위에서 잰다)
+// ============================================================
+const STYLE_CHIP: Record<string, { tint: string; text: string }> = {
+  hanja: { tint: "var(--color-gold)", text: "var(--color-gold-800)" },
+  "pure-korean": { tint: "var(--color-teal)", text: "var(--color-teal-800)" },
+  english: { tint: "var(--color-navy-500)", text: "var(--color-navy-500)" },
 };
+const DEFAULT_STYLE_CHIP = STYLE_CHIP["pure-korean"];
 
 // ============================================================
 // 점수 막대
@@ -104,7 +111,7 @@ export function CompanyNameCard({
   rank: number;
 }) {
   const c = candidate;
-  const tint = STYLE_TINT[c.style] ?? "var(--color-teal)";
+  const chip = STYLE_CHIP[c.style] ?? DEFAULT_STYLE_CHIP;
   const isTop = rank === 1;
 
   return (
@@ -122,7 +129,10 @@ export function CompanyNameCard({
           <div className="mb-1.5 flex flex-wrap items-center gap-2">
             <span
               className="rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide"
-              style={{ background: `${tint}1a`, color: tint }}
+              style={{
+                background: `color-mix(in srgb, ${chip.tint} 10%, transparent)`,
+                color: chip.text,
+              }}
             >
               {c.styleLabel}
             </span>
