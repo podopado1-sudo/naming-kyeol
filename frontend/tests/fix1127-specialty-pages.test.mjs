@@ -248,7 +248,7 @@ test("한자 필수 글자의 판정 — 사전에 없으면 막고, 이름에 �
   const ok = (fact) => ({ status: "ok", character: fact.character, hanja: fact, acceptedSyllables: ["사"], message: null, suggestion: null });
   const death = requiredHanjaVerdict(ok(toHanjaFact(deathRow)), "死");
   assert.ok("notice" in death && death.notice, "막지 않고 알린다");
-  assert.equal(death.notice, "‘死’(죽을 사)는 이 사이트가 이름에 피하는 글자로 두는 한자예요. 넣은 글자 그대로 추천했지만, 다른 추천에서는 이 글자를 고르지 않아요.");
+  assert.equal(death.notice, "‘死’(죽을 사)는 이 사이트가 이름에 피하는 글자로 두는 한자예요. 넣은 글자 그대로 추천했지만, 사이트가 한자를 골라 주는 추천에서는 이 글자를 쓰지 않아요.");
 
   const seo = JSON.parse(fromFrontend("public/data/hanja-pick/v1/c11c.json")).hanja.find((h) => h.character === "瑞");
   assert.deepEqual(requiredHanjaVerdict(ok(toHanjaFact(seo)), "瑞"), { notice: null }, "보통 글자는 안내 없음");

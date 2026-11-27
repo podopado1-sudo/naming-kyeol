@@ -63,3 +63,55 @@ test("SmartResultPage 에 같은 경로 editHref 를 넘기는 페이지가 없�
   }
   assert.doesNotMatch(code(read("components/design/SmartResult.tsx")), /editHref/);
 });
+
+// ─── 11/27 런타임 검증(헤드리스 크롬, next start) 뒤 고친 것 ───────────────────────────
+
+test("/evaluate 주소 자동 평가는 입력 폼과 같은 검사 — 낱자모·영문·한자 이름은 채점하지 않고 폼으로", async () => {
+  const { canAutoEvaluate, inputFromParams } = await import("../src/app/evaluate/evaluate-params.ts");
+  const auto = (q) => canAutoEvaluate(inputFromParams(new URLSearchParams(q)));
+  assert.equal(auto("lastName=김&name=서윤"), true);
+  assert.equal(auto("lastName=남궁&name=하늘&birthDate=2025-03-02"), true);
+  assert.equal(auto("lastName=김&name=ㅋㅋ"), false);
+  assert.equal(auto("lastName=Kim&name=서윤"), false);
+  assert.equal(auto("lastName=김&name=瑞潤"), false);
+  assert.equal(auto("lastName=김&name=서 윤"), false);
+  assert.equal(auto("lastName=김&name="), false);
+  assert.equal(auto("lastName=김&name=가나다라마바사아자차카"), false, "11자 — 서버는 1~10자");
+});
+
+test("인쇄 — 붙박이 미니 머리는 제자리, 종이색 토큰은 흰색, 카드 위 꼬리표는 카드 안, 가로 줄은 접어 내림", () => {
+  const css = read("app/globals.css");
+  const print = css.slice(css.indexOf("@media print {"));
+  assert.match(print, /:root \{\s*--color-background-token: #fff;\s*\}/);
+  assert.match(print, /\[style\*="sticky"\] \{\s*position: static !important;/);
+  assert.match(print, /\[data-print-inline-tag\] \{\s*position: static !important;/);
+  assert.match(print, /\[data-print-wrap\] \{\s*flex-wrap: wrap !important;/);
+  const parent = read("components/design/SmartResultParent.tsx");
+  assert.equal([...parent.matchAll(/data-print-inline-tag\n\s+style=\{\{\n\s+position: "absolute",\n\s+top: -10,/g)].length, 2);
+  assert.match(read("components/design/SmartResultRare.tsx"), /data-print-wrap\n\s+style=\{\{\n\s+display: "flex",\n\s+gap: 8,\n\s+overflowX: "auto",/);
+  assert.match(read("components/design/DetailPrimitives.tsx"), /className="print:break-inside-avoid print:break-after-avoid"/);
+  // /company — 결과가 있으면 폼을 빼고 카드는 쪽 경계에서 갈리지 않는다
+  const company = read("app/company/CompanyForm.tsx");
+  assert.match(company, /<Card className="mb-8" data-hide-print-with-result>/);
+  assert.match(company, /<section className="mb-8" data-print-result>/);
+  assert.match(read("components/design/CompanyResult.tsx"), /className="rounded-2xl bg-surface p-6 shadow-sm print:break-inside-avoid"/);
+  // 오류 화면 종이 결(feTurbulence)도 인쇄에서 뺀다
+  assert.match(read("components/design/SystemStates.tsx"), /<svg\n\s+aria-hidden="true"\n\s+data-hide-print\n/);
+});
+
+test("/analysis 날짜·시각 칸 — 두 칸이 다 들어가지 않는 폭에서는 위아래로(360 에서 카드 밖으로 나갔다)", () => {
+  const page = read("app/analysis/page.tsx");
+  assert.match(page, /gridTemplateColumns: "repeat\(auto-fit, minmax\(150px, 1fr\)\)",\s*gap: 12,\s*\}\}\s*>\s*<Field label="생년월일 \(사주 계산\)"/);
+  assert.match(page, /width: "100%",\s*minWidth: 0,/);
+});
+
+test("/evaluate 한자를 모두 비운 결과 — 같은 말의 세 번째 경고 상자를 그리지 않는다", () => {
+  const ev = read("app/evaluate/EvaluateResult.tsx");
+  assert.match(ev, /\{data\.harmony\.usedFallback && !allUserBlank\(summary\) \? \(/);
+});
+
+test("/search — 막 펼친 칸으로 옮길 때 화면을 끌어오고, 스토리 키워드 안내는 '담고 싶은 의미' 칸과 다른 말", () => {
+  const page = read("app/search/page.tsx");
+  assert.match(page, /el\.focus\(\{ preventScroll: true \}\);\s*requestAnimationFrame\(\(\) => el\.scrollIntoView\(\{ block: "center" \}\)\);/);
+  assert.doesNotMatch(page, /자녀에게 담고 싶은 의미를/);
+});

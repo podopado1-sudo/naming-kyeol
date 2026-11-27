@@ -116,7 +116,7 @@ export function CompanyNameCard({
 
   return (
     <article
-      className="rounded-2xl bg-surface p-6 shadow-sm"
+      className="rounded-2xl bg-surface p-6 shadow-sm print:break-inside-avoid"
       style={{
         border: isTop
           ? "1.5px solid var(--color-gold)"

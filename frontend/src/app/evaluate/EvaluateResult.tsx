@@ -50,6 +50,7 @@ import {
   HARMONY_STROKE_NOTICE,
   SHARE_FAILED,
   WAITING_BADGE,
+  allUserBlank,
   fallbackWarning,
   pdfTitle,
   recalcFailedNote,
@@ -369,7 +370,9 @@ export function EvaluateResultView({
                     작명 원리
                   </Link>
                 </p>
-                {data.harmony.usedFallback ? (
+                {/* 이름 칸에 한자를 하나도 두지 않았으면 같은 말이 이미 두 번 있다(블록 아래 ALL_BLANK_NOTICE·바로 위 백엔드 노트 '한자를 두지 않아
+                    기본값을 사용했습니다') — 세 번째 경고 상자는 그리지 않는다(11/27 런타임 검증) */}
+                {data.harmony.usedFallback && !allUserBlank(summary) ? (
                   <div
                     style={{
                       marginTop: 14,

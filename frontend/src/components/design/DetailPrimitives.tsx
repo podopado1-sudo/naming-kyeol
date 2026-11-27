@@ -76,7 +76,8 @@ export function SectionHead({
   subtitle?: string;
 }) {
   return (
-    <div style={{ marginBottom: 24 }}>
+    // 인쇄 — 머리(줄·제목·부제)는 한 덩어리로, 다음 내용과 같은 쪽에(장식 줄만 앞 쪽 맨 아래에 남고 제목이 다음 쪽에서 시작했다 — 11/27 런타임 검증)
+    <div style={{ marginBottom: 24 }} className="print:break-inside-avoid print:break-after-avoid">
       <div
         style={{
           width: 28,

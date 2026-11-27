@@ -15,6 +15,10 @@ import type {
 } from "@/components/design/EvaluateInput";
 // node --test 가 이 파일을 바로 읽는다 — 값 import 는 별칭(@/) 대신 상대 경로로 쓴다(tests/resolve-ts.mjs 가 확장자를 붙여 찾는다)
 import { canonicalHanja, isHangulSyllables } from "../../lib/hanja-pick";
+import { nameInputProblem, SURNAME_MAX_LENGTH } from "../../lib/name-input";
+
+/** 이름 칸 글자 수 — 서버 NameEvaluateRequestDto.Name 1~10자(입력 폼 EvaluateInput 의 NAME_MAX_LENGTH 와 같다) */
+export const EVAL_NAME_MAX_LENGTH = 10;
 
 export interface EvalInput {
   lastName: string;
@@ -114,7 +118,9 @@ export function inputSignature(i: EvalInput): string {
 
 /** 자동 평가 조건 — 성과 이름만 있으면 된다(출생일·성별·톤은 선택, API가 허용) */
 export function canAutoEvaluate(i: EvalInput): boolean {
-  return i.lastName !== "" && i.name !== "";
+  // 주소로 온 값도 입력 폼과 같은 검사(lib/name-input) — 옛 판정은 빈 값만 봐서 /evaluate?lastName=김&name=ㅋㅋ 가 그대로 채점됐다
+  // (11/27 런타임 검증 — 폼은 막는데 주소·Hero 길은 열려 있었다). 못 지나가면 값을 채운 입력 폼을 보여 주고 폼이 이유를 알린다
+  return nameInputProblem(i.lastName, SURNAME_MAX_LENGTH) === null && nameInputProblem(i.name, EVAL_NAME_MAX_LENGTH) === null;
 }
 
 /** 링크를 만들 때의 입력 — 한자는 없어도 된다(추천 결과에서 평가로 넘어가는 링크처럼 한자를 고른 적 없는 자리) */

@@ -418,7 +418,7 @@ export function requiredHanjaVerdict(
   const head = fact.gloss ? `‘${ch}’(${fact.gloss})${topicAfterGloss(fact.gloss)}` : `‘${ch}’ 글자는`;
   if (fact.forbidden) {
     return {
-      notice: `${head} 이 사이트가 이름에 피하는 글자로 두는 한자예요. 넣은 글자 그대로 추천했지만, 다른 추천에서는 이 글자를 고르지 않아요.`,
+      notice: `${head} 이 사이트가 이름에 피하는 글자로 두는 한자예요. 넣은 글자 그대로 추천했지만, 사이트가 한자를 골라 주는 추천에서는 이 글자를 쓰지 않아요.`,
     };
   }
   if (!fact.hasMeaning) {

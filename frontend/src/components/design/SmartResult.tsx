@@ -515,7 +515,8 @@ const detailBtn: CSSProperties = {
   fontSize: 13,
   color: "var(--color-teal)",
   fontWeight: 600,
-  padding: 0,
+  // 누를 자리 — 이제 모든 카드의 주 동작이라 글자 높이(약 20px)보다 넉넉하게(WCAG 2.5.8 24px 이상)
+  padding: "6px 0",
   whiteSpace: "nowrap",
 };
 

@@ -940,6 +940,7 @@ function RareSurnameBanner({
       </div>
 
       <div
+        className="print:break-inside-avoid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -1314,6 +1315,7 @@ function RareCandidateCard({
                   한자 옵션 {c.hanjaOptions.length}개
                 </div>
                 <div
+                  data-print-wrap
                   style={{
                     display: "flex",
                     gap: 8,

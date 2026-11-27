@@ -37,6 +37,7 @@ function PaperBg({
     >
       <svg
         aria-hidden="true"
+        data-hide-print
         style={{
           position: "absolute",
           inset: 0,
@@ -1031,10 +1032,10 @@ export function ServerErrorScreen({
             }}
           >
             이 문제가 계속된다면 위 기술 정보를 복사해{" "}
-            <Link href="/contact" style={{ color: "var(--color-teal)" }}>
+            <Link href="/contact" style={{ color: "var(--color-teal)", whiteSpace: "nowrap" }}>
               문의 페이지
             </Link>
-            의 메일로 보내 주세요
+            의 메일로 보내 주세요.
           </p>
         </Card>
       </div>

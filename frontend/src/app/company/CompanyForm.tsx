@@ -191,7 +191,8 @@ export function CompanyForm() {
 
   return (
     <>
-      <Card className="mb-8">
+      {/* 결과가 있으면 인쇄에서 입력 폼을 뺀다(globals.css [data-print-result] — /ohaeng 과 같은 방식) */}
+      <Card className="mb-8" data-hide-print-with-result>
         <CardHeader>
           <CardTitle className="text-navy">어떤 일을 하시나요?</CardTitle>
           <CardDescription>
@@ -360,7 +361,7 @@ export function CompanyForm() {
       )}
 
       {result && result.totalCount > 0 && (
-        <section className="mb-8">
+        <section className="mb-8" data-print-result>
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-lg font-medium text-navy">
               {resultIndustryLabel(result, resultIndustry, options.industries)}{" "}

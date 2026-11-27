@@ -477,7 +477,11 @@ function SearchBody({
     const id = pendingFocus.current;
     if (!id) return;
     pendingFocus.current = null;
-    document.getElementById(id)?.focus();
+    // 막 펼친 칸은 포커스만으로는 화면에 들어오지 않았다(11/27 런타임 검증 — 토스트만 보이고 고칠 칸은 화면 아래) → 가운데로 끌어온다
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    requestAnimationFrame(() => el.scrollIntoView({ block: "center" }));
   });
   function focusField(id: string) {
     const el = document.getElementById(id);
@@ -928,7 +932,7 @@ function SearchBody({
                         autoComplete="off"
                       />
                       <p className="text-[11px] text-muted-foreground">
-                        자녀에게 담고 싶은 의미를 한글 한두 단어로 적어 주세요. 부모 이름 없이 키워드만 넣어도 돼요.
+                        아이 이야기를 떠올리게 하는 한글 낱말 한두 개를 적어 주세요(예: 바다, 봄). 부모 이름 없이 키워드만 넣어도 돼요.
                       </p>
                     </div>
                   </div>

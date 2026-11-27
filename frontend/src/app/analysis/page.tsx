@@ -475,10 +475,12 @@ function AnalysisInner({
           </Field>
         </div>
 
+        {/* 날짜·시각 칸은 브라우저 기본 최소 폭(날짜 약 150px)이 있어 1fr 두 칸이면 360 폭에서 카드 밖으로 27px 나갔다(11/27 런타임 검증) —
+            두 칸이 다 들어가지 않는 폭에서는 위아래로 놓는다 */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
             gap: 12,
           }}
         >
@@ -729,6 +731,7 @@ function Input({
       aria-describedby={ariaDescribedBy}
       style={{
         width: "100%",
+        minWidth: 0,
         boxSizing: "border-box",
         fontFamily: "var(--font-sans)",
         fontSize: 14,

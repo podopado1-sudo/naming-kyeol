@@ -816,6 +816,7 @@ function ChildNode({
       }}
     >
       <div
+        data-print-inline-tag
         style={{
           position: "absolute",
           top: -10,
@@ -1598,6 +1599,7 @@ function ParentCandidateCard({
       }}
     >
       <div
+        data-print-inline-tag
         style={{
           position: "absolute",
           top: -10,

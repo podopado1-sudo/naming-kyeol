@@ -240,9 +240,10 @@ test("/ohaeng 인쇄 — 결과가 있으면 폼·머리말·설명 글을 빼�
   assert.ok(printLine, "결과 제목 앞에 인쇄 전용 한 줄");
   assert.match(printLine[1], /이름의 결/);
   assert.match(printLine[1], /부족한 오행 찾기/);
-  // data-print-result 는 이 결과 화면 하나 — 다른 화면에서 머리말·설명 글이 빠지지 않게
-  const marked = SOURCES.filter((f) => /\sdata-print-result\b/.test(stripJsComments(f.text))).map((f) => f.rel);
-  assert.deepEqual(marked, ["components/design/OhaengResult.tsx"]);
+  // data-print-result 는 결과가 있으면 입력 폼을 인쇄에서 빼는 화면만 — /ohaeng 과 /company(11/27 합칠 때 — 결과가 있어도 폼·짙은 단추가
+  // 1쪽 절반을 차지했다). 다른 화면에서 머리말·설명 글이 빠지지 않게 목록을 고정한다
+  const marked = SOURCES.filter((f) => /\sdata-print-result\b/.test(stripJsComments(f.text))).map((f) => f.rel).sort();
+  assert.deepEqual(marked, ["app/company/CompanyForm.tsx", "components/design/OhaengResult.tsx"]);
 });
 
 test("/ohaeng 인쇄 — '맞춰 보기'·그 안내·다음 단계 링크 카드는 빼고, 짧은 카드는 쪽 경계에서 갈리지 않는다", () => {
