@@ -482,6 +482,11 @@ function SearchBody({
     if (!el) return;
     el.focus({ preventScroll: true });
     requestAnimationFrame(() => el.scrollIntoView({ block: "center" }));
+    // 접힌 패널을 막 펼친 경우 — 열림 애니메이션(약 200ms)이 끝나면 칸 자리가 바뀌므로 다시 맞춘다.
+    // 지우개(cleanup)를 두지 않는다 — 이 효과는 렌더마다 돌아 다음 렌더(토스트 등)가 곧바로 타이머를 지운다. 칸이 사라졌으면 아무 일도 없다
+    window.setTimeout(() => {
+      if (el.isConnected) el.scrollIntoView({ block: "center" });
+    }, 280);
   });
   function focusField(id: string) {
     const el = document.getElementById(id);
@@ -932,7 +937,7 @@ function SearchBody({
                         autoComplete="off"
                       />
                       <p className="text-[11px] text-muted-foreground">
-                        아이 이야기를 떠올리게 하는 한글 낱말 한두 개를 적어 주세요(예: 바다, 봄). 부모 이름 없이 키워드만 넣어도 돼요.
+                        아이 이야기를 떠올리게 하는 한글 낱말 한두 개를 적어 주세요. 부모 이름 없이 키워드만 넣어도 돼요.
                       </p>
                     </div>
                   </div>

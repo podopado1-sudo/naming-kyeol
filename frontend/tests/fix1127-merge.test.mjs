@@ -87,7 +87,11 @@ test("인쇄 — 붙박이 미니 머리는 제자리, 종이색 토큰은 흰�
   assert.match(print, /\[data-print-inline-tag\] \{\s*position: static !important;/);
   assert.match(print, /\[data-print-wrap\] \{\s*flex-wrap: wrap !important;/);
   const parent = read("components/design/SmartResultParent.tsx");
-  assert.equal([...parent.matchAll(/data-print-inline-tag\n\s+style=\{\{\n\s+position: "absolute",\n\s+top: -10,/g)].length, 2);
+  assert.equal([...parent.matchAll(/data-print-inline-tag\n\s+style=\{\{\n\s+position: "absolute",\n\s+top: -10,/g)].length, 1, "후보 카드 꼬리표만 — 배너 아이 카드 꼬리표는 그대로(내리면 배너 가운데 알약을 덮었다)");
+  assert.match(read("components/design/SmartResultRare.tsx"), /function RareSurnameBanner[\s\S]*?return \(\n\s+<div\n\s+className="print:break-inside-avoid"/);
+  assert.match(read("components/design/CompanyResult.tsx"), /<div\n\s+data-hide-print\n\s+className="mt-4 flex flex-wrap items-center/);
+  assert.match(print, /\[data-print-inline-tag\] \{[^}]*display: inline-flex !important;/);
+  assert.doesNotMatch(print, /-webkit-backdrop-filter/, "한 줄만 — 빌드가 접두사 없는 쪽을 버렸다");
   assert.match(read("components/design/SmartResultRare.tsx"), /data-print-wrap\n\s+style=\{\{\n\s+display: "flex",\n\s+gap: 8,\n\s+overflowX: "auto",/);
   assert.match(read("components/design/DetailPrimitives.tsx"), /className="print:break-inside-avoid print:break-after-avoid"/);
   // /company — 결과가 있으면 폼을 빼고 카드는 쪽 경계에서 갈리지 않는다

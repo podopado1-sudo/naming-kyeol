@@ -258,6 +258,7 @@ export function CompanyNameCard({
       {/* 확정 전 확인의 첫걸음 — 이름을 복사해 직접 검색하던 수고를 덜어 준다.
           등록 가능 여부를 판단하는 기능이 아니므로 '확인 완료'처럼 들리는 말은 쓰지 않는다 */}
       <div
+        data-hide-print
         className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 text-xs"
         style={{ borderTop: "1px solid var(--color-divider)" }}
       >

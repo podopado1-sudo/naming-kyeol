@@ -58,6 +58,31 @@
   /evaluate 에 싣는다 — 순우리말 음절 '-', 엔진 한자 조각 '主(주)' 는 그 한자, 서버가 '-'를 접는 음절(색인에 없음·autoEmpty — 바·봄·몰)은 '*'
   (서버 `hanjaSummary.nameHanja` 와 같은 꼴이어야 즐겨찾기 키가 하나다 — 색인 `public/data/hanja-pick/v1/index.json` 을 import). 한자 조각이 없는 3글자 큐레이션 후보는 싣지 않는다
   (서버 `BuildCuratedComponents` 가 앞 두 음절 + 끝 음절로 기계적으로 잘라 솔이슬 → 솔이 + 슬)
+- **2026-11-27 버그 목록 프런트 81건 수정에서 정한 약속** (목록·묶음은 저장소 밖 tmp/handoff-2026-11-26/research/버그목록-1127.md, 묶음별 테스트 `tests/fix1127-<묶음>.test.mjs`):
+  - **입력 검사는 `lib/name-input.ts`** — `cleanNameInput`(NFC + 앞뒤 공백)·`nameInputProblem`(빈 칸·낱자모·가운데 공백·한글 아님·길이)·`nameInputMessage`(조사 맞춤)·
+    `SURNAME_MAX_LENGTH`(2, 복성). 성·이름 칸을 새로 만들면 이것으로 다듬고 막는다(실제 성씨 사전은 보지 않는다 — 희귀 성씨 도구가 있다). 서버 쪽 같은 검사는 서버 묶음 BE-3.
+    ⚠️ 주소로 들어오는 /evaluate 자동 평가(`app/evaluate/evaluate-params.ts` canAutoEvaluate)는 아직 빈 값만 본다 — 한자 이름 입력(K1) 때 같은 검사를 넣는다
+  - **인쇄**: 숨길 조작 요소는 `data-hide-print`(globals.css 인쇄 규칙). 전역 규칙은 **사이트 머리말·꼬리말만** 숨긴다 — 결과 화면 안의 `<header>`·`<footer>`(미니 머리·
+    /company 카드 머리·도구 제목)는 인쇄되니 그 안 단추·링크에 data-hide-print 를 단다. `print-color-adjust: exact` 가 전역이라(막대·타일이 '배경 그래픽' 꺼짐에서도 찍힌다)
+    인쇄에 필요 없는 짙은 단추·링크도 data-hide-print. 큰 section 은 쪽 경계에서 나뉘게 두고 점수 행·타일·짧은 카드만 break-inside: avoid(옛 section 전체 avoid 가 K5 의 5쪽 원인).
+    결과가 있으면 입력 폼을 빼는 `[data-print-result]`·`[data-hide-print-with-result]`(/ohaeng·/company). 알림(sonner)도 숨긴다.
+    인쇄에서는 종이색 토큰(`--color-background-token`)이 흰색이고(결과 화면 감싸개·오류 화면 PaperBg 가 main 밖에서 종이색을 깔아 쪽마다 찍혔다),
+    인라인 `position: sticky` 요소(`[style*="sticky"]` — 결과 화면 미니 머리)는 제자리·바탕 없음(인쇄 때의 스크롤 위치에 찍혀 카드를 덮었다).
+    카드 위에 걸친 꼬리표는 `data-print-inline-tag`(카드 안 첫 줄 — 부모 기반 후보 카드), 옆으로 넘겨 보는 줄은 `data-print-wrap`(접어 내림).
+    새 결과 화면은 375·인쇄(스크롤을 내린 뒤 포함)를 헤드리스 크롬 printToPDF(printBackground false)로 본다 — 11/27 런타임 검증에서 이 셋이 모두 그렇게 드러났다
+  - **결과 화면 단추**: '← 조건 바꾸기' = 각 페이지의 handleReset(`onRegenerate` — 입력값 남은 폼으로). 자기 경로로 가는 Link 는 페이지 useState 를 지우지 않아 눌러도 그대로였다.
+    결정적 엔진이라 '↻ 새로 생성'은 두지 않는다. 결과 꼬리말 링크는 /about·/contact. 추천 카드는 2위 이하도 '상세 보기'(onCandidateDetail(fullName, evaluateHanja)).
+    결과의 조건 칩·상세·저장 값은 **제출 때 잡은 값**(SubmittedQuery 스냅샷) — 응답을 기다리는 동안 폼을 고친 값이 실리지 않게
+  - **/search 주소 쿼리**: 추천 요청을 시작하면 주소에서 쿼리를 걷고(history.replaceState), 새로 고침·뒤로 가기는 기록 칸 표로 이 탭의 sessionStorage
+    (`nameform:search-restore`, 칸 최대 5개)에서 폼 값·결과를 되살린다(자동 재요청 없음). 처리방침 1항 '브라우저 저장 정보'가 이것을 적는다 — 저장 값을 늘리면 방침도
+  - **광고 경계 미리 받기**: `lib/ad-scope.ts` `adBoundaryPrefetch(from, href)` — 광고를 켠 빌드에서 광고 화면 ↔ 광고 밖 화면 링크만 `prefetch={false}`(가드가 새 문서로
+    열어 미리 받은 RSC 를 버린다 — /name 인덱스 한 번에 약 200건). /name·/hanja 인덱스·상세, Header(usePathname), Footer(`components/AdBoundaryLink.tsx`)가 쓴다
+  - **/favorites 는 일반 noindex**(`favorites/layout.tsx` robots index:false) + robots.txt 차단 없음 — 개인 저장 화면이라 네이버 색인도 필요 없다. 내용 쪽 숨김의
+    googlebot 전용 noindex 규칙과는 별개다(차단만 하면 noindex 를 읽지 못해 '차단되었지만 색인됨'이 될 수 있었다)
+  - **Hero 그림**은 미리 만든 WebP(`public/hero-illustration-{800,1200,1600}.webp`, srcSet) — next/image 는 Vercel 이미지 최적화 과금이라 쓰지 않는다. og-image.png 는
+    Hero 원본과 같은 1672×941 파일이고 메타도 그 크기로 적는다(1200×630 전용 카드는 디자인 결정)
+  - **저장(favorites)**: `addFavorite`·`removeFavorite`·`toggleFavorite` 는 저장소에 쓰지 못하면 false — 부르는 곳은 `FAVORITE_SAVE_FAILED` 로 알린다. 꼴이 깨진 저장 항목은
+    읽을 때 거른다(`isFavoriteRecord` — 하나가 /favorites 전체를 오류 화면으로 만들었다)
 
 ## 빌드 명령어
 
@@ -94,7 +119,7 @@ npm run build
 # 린트
 npm run lint
 
-npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-11-27 기준 520개, 10-28 기준 249)
+npm test   # 테스트 — node --test "tests/*.test.mjs" (Node 22.18+, lib/*.ts 를 타입 지우기로 바로 읽는다 — 2026-11-27 기준 825개 — 버그 목록 프런트 수정 뒤, 같은 날 앞선 520, 10-28 기준 249)
            # 대비 테스트: tests/amber-contrast.test.mjs(amber-warm-700)·tests/palette-contrast.test.mjs(text-3·오행·골드·결과 화면 글자 토큰),
            # 공용 헬퍼 tests/color-utils.mjs(globals.css·Tailwind theme.css 실제 값, WCAG 대비, CIEDE2000 — *.test.mjs 가 아니라 따로 돌지 않는다)
            # 앱 코드(.ts)를 읽는 테스트는 tests/resolve-ts.mjs 훅을 먼저 import 하고 앱 모듈을 동적 import 한다(확장자 없는 상대 import 풀기)
@@ -734,7 +759,9 @@ build_name_seo_data.py가 **기존 출력에서 자동 이월**한다 — 무인
 (min_total도 기존 meta에서 승계), --baseline은 최초 부트스트랩에만 쓴 옵션이니 다시 주지
 말 것. 스크립트가 pa 전멸·수록 소실 시 하드 에러로 중단하며, `audit_combo_regressions.py`의
 F 검사도 같은 회귀를 잡는다. 코호트 개방은 `.github/workflows/weekly-drip.yml`(일 05:23 KST
-스탬프 커밋 → Vercel 재빌드)이 담당 — 마지막 pa 경과 후엔 자동 스킵.
+스탬프 커밋 → Vercel 재빌드)이 담당 — 게이트는 `scripts/drip-gate.mjs`(2026-11-27): 직전 스탬프(KST 날짜) 초과 ~ 오늘 이하에
+새로 열리는 pa 가 있을 때만 스탬프(스탬프를 못 읽으면 14일 창), 수동 실행 force, 커밋 메시지 [skip render]. 옛 게이트('마지막 pa 경과' 하나)는
+드립 정지 기간에도 매주 빈 스탬프로 전량 재빌드·Render 재배포를 냈다(11/01~11/22). 회귀 `tests/fix1127-infra.test.mjs`.
 ⚠️ **2026-10-28 드립 일시 정지(사용자 결정)**: 애드센스 재심사(11/6 이후 신청) 동안 같은 틀의 /name 페이지가 늘지 않게, 남은 22개 코호트(1,475명)의
 pa 를 크기·순서 그대로 +8주 옮겼다(11/01~2027-03-28 → 12/27~2027-05-23). 워크플로를 끄는 것만으로는 멈추지 않는다 — pa 가 지난 이름은
 다른 커밋의 빌드에서도 열린다. 재개·앞당기기도 같은 방식(name-seo.json 의 미래 pa 만 일괄 이동, 이미 공개된 pa 는 건드리지 않음 —
@@ -1068,7 +1095,8 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   /evaluate(none)와 다시 갈라진다(링크에 성별을 실으면 점수의 성별 보너스도 바뀐다). ② 용신 배정이 obscure 글자를 앞세운다 — 피 髲 '다리'(피터·소피아)·암 頷 '끄덕일'(리암)·
   루 慺·니 柅(남)·필립(남) 駜 '살찔'·립 粒 '낟알'. 피는 어느 경로든 皮 '가죽'/髲/被 '입을'(彼 '저'는 weak). ③ 토는 土·兎·兔 모두 weak 라 안토니 = 兎 '토끼'(대안 없음).
   ④ 같은 영어 이름도 출생일·출생 시각에 따라 한자가 바뀐다(사이트 설계와 같음 — 시각 09:30 을 넣으면 1,320요청 중 121요청이 바뀜). ⑤ 영어 이름 없이 성별 '무관'으로 받는
-  기본 목록은 지도 파일 순서 앞 20개라 거의 남자 이름(16/20 — 지도에 gender 'none' 항목 0)인데 화면은 '성별에 맞는 이중 이름'이라 안내한다. ⑥ 데이터 한계 — 한글 음역 음절 123개 중
+  기본 목록은 지도 파일 순서 앞 20개라 거의 남자 이름(16/20 — 지도에 gender 'none' 항목 0)이다(2026-11-27 부터 무관이면 머리는 '한·영 이중 이름 N가지'만 쓰고
+  '성별에 맞춘'은 성별을 골랐을 때만 — 0개 안내의 '칸을 비워 두면 성별에 맞는 이중 이름을 추천해 드려요'는 남아 있다). ⑥ 데이터 한계 — 한글 음역 음절 123개 중
   57개는 쓸 글자가 없어(레·클·스·트·엘·에 등) 영어 이름 110개 중 65개가 후보 0, 존(John)은 1음절이라 길이 검사로 빠진다
 - ~~**부모 이름 엔진 성씨 뜻**~~ (2026-10-28 부모 엔진 개편으로 해소 — 성씨 한자는 `SurnameData.RepresentativeHanja`, 뜻 매칭은 훈의 낱말 일치):
   옛 엔진은 성씨 독음의 사전 글자 Take(2)(璞·博·最·催)를 적었고, 같은 개편에서 고친 것 — 어머니 성 + 어머니 이름(어머니 전체 이름)이 어머니 성·이름을 준 실행의
@@ -1167,6 +1195,14 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   'UsageEvents already exists'에서 멈춰 `Candidates` · `UserFeedbacks` 가 끝내 안 생긴다 — /smart 응답에서 standard(한자 이름) 탭이 말없이 빠진다. **띄우기 전에 0바이트 `nameform.db` 를 만들어 둘 것**(운영 PostgreSQL 은 무관).
 
 ### 프론트엔드
+- **2026-11-27 프런트 수정에서 남긴 것**: ① 글꼴 preload — 모든 쪽이 2.0MB Pretendard Variable 전체를 preload 한다(캐시 없는 홈 첫 방문의 40%). preload 를 끄면 첫 화면이
+  대체 글꼴로 먼저 보여 사용자 결정 대기(근본은 dynamic-subset·KS X 1001 서브셋 자체 호스팅). ② 애드센스 CSP 는 손으로 적은 허용 목록에 위반 보고가 없다 — 재검토(2027-01) 전에
+  Report-Only + report-to 로 막히는 호스트를 모은 뒤 보강(지금은 Permissions-Policy 의 폐지된 interest-cohort 만 지웠다). ③ /evaluate 인쇄 머리글·바닥글(브라우저가 찍는 주소)에
+  생년월일이 든 주소가 찍힌다(K5 남은 절반 — 평가 뒤 주소에서 생년월일을 걷으면 공유·새로 고침이 바뀌어 사용자 결정). ④ '상세 보기'(useCandidateDetail)는 같은 탭 이동이라
+  /creative·/required-char·/pure-korean·/three-syllable 에서 뒤로 가면 결과가 사라진다(/search 는 세션 복원이 있다 — 카드마다 상세 보기가 생겨 더 자주 겪는다).
+  ⑤ 추천 카드 2위 이하에는 저장 단추가 없다(상세 → /evaluate 에서 저장). ⑥ /favorites 첫 그림(정적 HTML·하이드레이션)이 저장한 것이 있어도 '아직 저장한 이름이 없어요'를 잠깐 보인다.
+  ⑦ Hero WebP 는 기본 캐시(max-age=0 — 매번 재검증). ⑧ Render Build Filter(Api/·Application/·Domain/·Infrastructure/·data/·Program.cs·NameForm.csproj·Dockerfile)는 대시보드
+  작업이라 남았다 — 그 전까지 push 맨 위 커밋의 [skip render] 가 그 밑 백엔드 커밋까지 가린다(Vercel 쪽은 아래 인프라 항목대로 고침)
 - **광고 경계 이동의 남은 것 (2026-11-27)**: 광고 ID 를 켠 운영에서는 홈·/guide·/name·/hanja 인덱스 ↔ 다른 화면 이동이 모두 새 문서라 클라이언트 이동보다 느리다(정적 쪽이라
   체감은 작다고 봄 — 재지 않았다). 운영 확인은 배포 뒤(가짜 값으로): 도구 화면 HTML 에 로더 없음, /guide → '이름 평가' 가 새 문서, 응답 헤더 Referrer-Policy strict-origin,
   광고 요청 url·ref 에 쿼리 없음. 광고 화면의 스크립트가 Navigation API(`navigation.entries()`)로 같은 사이트 이전 기록 주소를 읽는 것은 막지 못한다(브라우저 기능 — 애드센스가
@@ -1187,11 +1223,13 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
 - **정의되지 않은 paper 클래스**: `bg-paper-card`·`border-paper-line`·`bg-paper-tint`·`text-paper-line` 은 globals.css 에 토큰이 없다(초기 커밋부터 —
   /hanja·/guide·/name·/creative). 그래서 카드 바탕이 투명(종이 위)이고, /name 점수 카드는 cn(tailwind-merge)이 Card 의 bg-card 를 지워 투명이다.
   토큰을 정의하면 이 화면들 모양이 바뀌니 디자인 결정으로 함께 정할 것(감점 숫자 대비는 종이 기준 6.00:1)
+- (2026-11-27) CompanyResult 결 라벨 칩은 배경이 무효 CSS(`${tint}1a` — 변수 문자열 뒤 1a)라 그려지지 않았다 → color-mix 10% 틴트, 글자는 표지색과 나눠
+  금 gold-800 7.51·청록 teal-800 5.07·영문 navy-500 8.00:1(흰 카드 위 틴트, `tests/fix1127-company.test.mjs` 가 잰다)
 - **대비 미달로 남은 색(팔레트·디자인 결정 필요)**: 2026-10-26 팔레트 #2(위 '컬러 토큰')로 오행 배지·FIVE_EL 칩·부족 오행 칩·/name 상극 칩·gold-600 강조 글자·
   /method '미상' 칩·XCircle·배점 숫자·text-3, 같은 날 보완으로 쌍둥이 'SET COHERENCE' 칩·/hanja 흐린 카드(전체 opacity → 글리프만)·ScoreTile 라벨(high)·
   강점/약점 제목·희귀 성씨 카드 희귀도 별·홈 준비 중 카드·푸터 '준비 중' 배지를 고쳤다. 남은 것:
   ScoreTile mid 라벨(조화·유니크 11px) score-mid-700 종이 위 10% 틴트 4.47:1(흰 위 4.65 — 더 짙은 score-mid 글자 토큰이 필요), teal #2e7d7a/teal-50 4.15:1
-  (SmartResultParent 팔레트 칩 등), CompanyResult 스타일 라벨 `${tint}1a` 위 tint 글자(안 잼), 입력 화면 오류 상자 #C45A4C/8% 틴트 3.87:1(/analysis·/dual-name·/twin
+  (SmartResultParent 팔레트 칩 등), 입력 화면 오류 상자 #C45A4C/8% 틴트 3.87:1(/analysis·/dual-name·/twin
   — red 색이라 amber-warm-700 규칙 밖), text-3 은 navy-100 4.24·gold-100 4.28:1(지금 그 바탕에 올린 곳 없음 — 쓰게 되면 surface-2 등으로).
   디자인 결정: 오행 글자색이 화면마다 다르다 — /hanja 배지 木 Tailwind teal-700 과 /evaluate 칩 金 teal-800 이 ΔE00 3.9 로 같은 청록(팔레트 #2 전에도 4.4),
   배지 金 은 정의되지 않은 `text-navy-700`(부모 글자색 상속 #14120f)·칩 金 teal-800, 水 배지 #4a6f99·칩 #1E3A5F — 다섯 원소를 한 글자 토큰으로 맞추면 /hanja 배지
@@ -1209,6 +1247,10 @@ Home v2 / Badges / Spacing & Typography). `docs/claude-design-brief.md` 참조.
   기능 투자(도메인 RDAP·KIPRIS 조회)는 실사용 월 100회 이상이 확인될 때까지 보류(30일 15회 — 2026-10-21 감사)
 
 ### 인프라/운영
+- **Vercel ignoreCommand = 마지막 성공 배포부터 (2026-11-27)**: `frontend/vercel.json` 이
+  `[ "$VERCEL_GIT_PREVIOUS_SHA" != "$VERCEL_GIT_COMMIT_SHA" ] && git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} ${VERCEL_GIT_COMMIT_SHA:-HEAD} -- .` 로 바뀌었다.
+  옛 `HEAD^ HEAD`(맨 위 커밋 하나)는 프런트 커밋 위에 docs 커밋을 얹어 push 하면 빌드를 건너뛰었다(9/24 실사고). 같은 SHA 재배포·앞 SHA 를 모르거나 얕은 clone 에 없으면
+  빌드한다(실패하면 빌드하는 쪽). 첫 실제 배포에서 Vercel 빌드 로그로 확인할 것 — 확인되면 SESSION_HANDOFF 의 'push 직전 HEAD 가 frontend 를 건드려야' 순서 제약을 걷는다
 - **Render Free cold start**: 15분 idle 후 첫 요청 30초+ — `.github/workflows/keepalive.yml`이 10분 간격 ping으로 회피 (실측: GitHub cron 스로틀링으로 약 1시간 간격까지 밀림 — cold start 완전 회피는 못 함). 같은 워크플로가 프론트(namingkyeol.com)도 확인해 3회 연속 비200이면 run 실패 → GitHub 실패 알림 메일이 다운 감지 채널 (2026-07-30 Vercel 정지 402 사후 대책). 저장소 60일 무커밋 시 GitHub이 스케줄 자동 비활성화하므로 알림 메일 주의
 - **api.namingkyeol.com 커스텀 도메인**: Render 검증 미완 — 완료 시 Vercel `NEXT_PUBLIC_API_URL` 교체 필요
 - **리미터 버킷의 IP = 방문자 주소 (2026-11-19)**: 운영 경로는 방문자 → Cloudflare → Render 프록시 → Kestrel 이라 `RemoteIpAddress` 를 그대로 쓰면

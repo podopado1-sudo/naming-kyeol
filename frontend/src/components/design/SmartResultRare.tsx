@@ -906,6 +906,7 @@ function RareSurnameBanner({
 }) {
   return (
     <div
+      className="print:break-inside-avoid"
       style={{
         maxWidth: 920,
         margin: "20px auto 0",
