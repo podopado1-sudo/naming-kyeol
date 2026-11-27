@@ -12,10 +12,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { toast } from "sonner";
 import { trackTabView } from "@/lib/api";
 import { toggleFavorite, useIsFavorite } from "@/lib/favorites";
+import { josa } from "@/lib/josa";
 import { normalizeSpecialtyTags } from "@/lib/specialty-candidates";
 import type { CandidateDetailContext } from "@/lib/useCandidateDetail";
 import type {
@@ -174,7 +182,24 @@ export function requiredCharMeaning(
   fallback: string
 ): string {
   const syllables = [...name];
-  if (syllables.length !== 2 || hanjaOptions.length < 2) return fallback;
+  if (syllables.length !== 2) return fallback;
+  // 필수 글자에 한자가 없으면(봄·빛처럼 사전에 독음이 없는 글자) 엔진은 짝 글자 옵션 하나만 준다 —
+  // 엔진 meaning 은 짝 글자의 사전 뜻 전체라 '봄학 → 배울 학, 가르칠 교, 고지새 할'·'수봄 → 목숨 수'로 나왔다(2026-11-27).
+  // 필수 글자 자리는 한글 그대로, 짝 글자 자리는 그 소리의 훈 하나만 적는다.
+  if (hanjaOptions.length === 1) {
+    const partner = parseHanjaOption(hanjaOptions[0]);
+    if (!partner) return fallback;
+    if (position === "first") {
+      const gloss = glossForSyllable(partner.meaning, syllables[1]);
+      return gloss ? `${syllables[0]}(한글) + ${gloss}` : fallback;
+    }
+    if (position === "last") {
+      const gloss = glossForSyllable(partner.meaning, syllables[0]);
+      return gloss ? `${gloss} + ${syllables[1]}(한글)` : fallback;
+    }
+    return fallback;
+  }
+  if (hanjaOptions.length < 2) return fallback;
   const pair =
     position === "first"
       ? [hanjaOptions[0], hanjaOptions[hanjaOptions.length - 1]]
@@ -364,7 +389,12 @@ function TagChip({ label }: { label: string }) {
         borderRadius: 999,
         fontSize: 12,
         fontWeight: 500,
-        whiteSpace: "nowrap",
+        lineHeight: 1.4,
+        // 창의 탭 칩은 문장이다('실제 쓰이는 흔치 않은 이름 (개성 있는 실명)') — 줄 폭보다 길면 칩 안에서 줄을 바꾼다.
+        // 예전 nowrap 은 칩 두 개가 카드 하한을 403px 로 만들어 375 폭에서 페이지가 옆으로 넘쳤다(2026-11-27)
+        maxWidth: "100%",
+        wordBreak: "keep-all",
+        overflowWrap: "anywhere",
         fontFamily: "var(--font-sans)",
         background: palette.bg,
         color: palette.color,
@@ -375,22 +405,15 @@ function TagChip({ label }: { label: string }) {
   );
 }
 
-function TagRow({
-  tags,
-  scrollable = true,
-}: {
-  tags: string[];
-  scrollable?: boolean;
-}) {
+/** 칩 줄 — 넘치면 다음 줄로(가로 스크롤은 휴대폰에서 끝 칩이 숨고 인쇄에서 잘렸다) */
+function TagRow({ tags }: { tags: string[] }) {
   return (
     <div
       style={{
         display: "flex",
         gap: 6,
-        flexWrap: scrollable ? "nowrap" : "wrap",
-        overflowX: scrollable ? "auto" : "visible",
-        paddingBottom: 2,
-        scrollbarWidth: "thin",
+        flexWrap: "wrap",
+        minWidth: 0,
       }}
     >
       {tags.map((t, i) => (
@@ -476,12 +499,45 @@ const btnGhost: CSSProperties = {
   whiteSpace: "nowrap",
 };
 
+/** '상세 보기 →' — Top Pick·후보 카드가 같은 모양(/evaluate 로 간다) */
+const detailBtn: CSSProperties = {
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  fontFamily: "var(--font-sans)",
+  fontSize: 13,
+  color: "var(--color-teal)",
+  fontWeight: 600,
+  padding: 0,
+  whiteSpace: "nowrap",
+};
+
+/**
+ * 결과 화면 블록의 좌우 여백 — Top Pick·카테고리 띠·'이 추천은 시작점이에요' 상자는 이 래퍼 안에 둔다.
+ * 예전에는 이 셋만 바깥 padding 이 없어 휴대폰 폭에서 테두리가 화면 끝에 붙었다(2026-11-27). 탭 줄·목록과 같은 24px
+ */
+const SIDE_GUTTER: CSSProperties = { padding: "0 24px" };
+
 // ============================================================
 // 1. Mini header
 // ============================================================
-function MiniHeader({ editHref = "/search" }: { editHref?: string }) {
+/**
+ * 결과 화면 머리 — '← 조건 바꾸기'는 페이지가 넘긴 onEdit(handleReset)로 입력값이 남은 폼에 돌아간다.
+ * ⚠️ 2026-11-27 전에는 자기 경로로 가는 next/link 였다 — 결과는 페이지 useState 라 같은 경로 이동으로는 지워지지 않아
+ * 눌러도 화면이 그대로였다. 옆의 '↻ 새로 생성'은 이름과 달리 폼으로 돌아가기만 했고(엔진이 결정적이라 같은 조건이면
+ * 같은 결과) 이 단추 하나로 합쳤다. onEdit 이 없으면 단추를 그리지 않는다(눌러도 아무 일 없는 단추를 두지 않는다).
+ */
+function MiniHeader({
+  onEdit,
+  headerRef,
+}: {
+  onEdit?: () => void;
+  headerRef?: RefObject<HTMLElement | null>;
+}) {
   return (
     <header
+      ref={headerRef}
       style={{
         position: "sticky",
         top: 0,
@@ -527,19 +583,29 @@ function MiniHeader({ editHref = "/search" }: { editHref?: string }) {
           Naming.kyeol
         </span>
       </Link>
-      <Link
-        href={editHref}
-        style={{
-          fontSize: 13,
-          color: "var(--color-text-2)",
-          textDecoration: "none",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
-        ← 조건 수정
-      </Link>
+      {onEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          data-hide-print
+          style={{
+            appearance: "none",
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            padding: "4px 0",
+            fontFamily: "var(--font-sans)",
+            fontSize: 13,
+            color: "var(--color-text-2)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span aria-hidden="true">←</span> 조건 바꾸기
+        </button>
+      )}
     </header>
   );
 }
@@ -549,13 +615,11 @@ function MiniHeader({ editHref = "/search" }: { editHref?: string }) {
 // ============================================================
 function SubHeader({
   summary,
-  onRegenerate,
   onSave,
   saveLabel = "이 결과 저장",
   saved,
 }: {
   summary: RequestSummary;
-  onRegenerate?: () => void;
   /** 없으면 저장 버튼을 숨긴다 — 눌러도 아무 일 없는 버튼을 두지 않는다 */
   onSave?: () => void;
   /**
@@ -641,11 +705,9 @@ function SubHeader({
           </span>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" onClick={onRegenerate} style={btnGhost}>
-          ↻ 새로 생성
-        </button>
-        {onSave && (
+      {/* '↻ 새로 생성'은 머리의 '← 조건 바꾸기'로 합쳤다(MiniHeader 참고). 조건 칩은 인쇄에 남기고 단추만 숨긴다 */}
+      {onSave && (
+        <div data-hide-print style={{ display: "flex", gap: 8 }}>
           <button
             type="button"
             onClick={onSave}
@@ -660,8 +722,8 @@ function SubHeader({
             </span>{" "}
             {saveLabel}
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -681,7 +743,8 @@ function RareSurnameBanner({ name }: { name: string }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 16,
+        flexWrap: "wrap",
+        gap: "8px 16px",
       }}
     >
       <div
@@ -710,10 +773,13 @@ function RareSurnameBanner({ name }: { name: string }) {
           i
         </span>
         <span>
-          <b style={{ fontWeight: 600 }}>{name}</b>는 희귀 성씨에요
+          {/* 조사는 받침으로 — 예전 고정 '는'이라 '남궁는 희귀 성씨에요'로 나왔다(2026-11-27, 맞춤법도 '성씨예요') */}
+          <b style={{ fontWeight: 600 }}>{name}</b>
+          {josa(name, "은/는")} 희귀 성씨예요
         </span>
       </div>
       <div
+        data-hide-print
         style={{
           display: "inline-flex",
           gap: 16,
@@ -812,17 +878,24 @@ function TopPickCard({
     <div
       style={{
         maxWidth: 720,
-        margin: "24px auto 0",
+        margin: "0 auto",
         position: "relative",
         overflow: "hidden",
         background: "var(--color-surface)",
         borderRadius: "var(--radius-lg)",
         border: "1.5px solid var(--color-gold)",
         boxShadow: "0 12px 36px rgba(201, 169, 110, 0.18)",
+        // 인쇄 때 쪽 경계에서 갈리지 않게(화면에서는 효과 없음)
+        breakInside: "avoid",
       }}
     >
       <PaperGrain opacity={0.05} seed={3} />
-      <div style={{ position: "relative", padding: "32px 36px 36px" }}>
+      <div
+        style={{
+          position: "relative",
+          padding: "32px clamp(20px, 6vw, 36px) 36px",
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -852,7 +925,7 @@ function TopPickCard({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr auto",
+            gridTemplateColumns: "minmax(0, 1fr) auto",
             gap: 24,
             alignItems: "end",
             marginTop: 18,
@@ -862,7 +935,7 @@ function TopPickCard({
             <div
               style={{
                 fontFamily: "var(--font-sans)",
-                fontSize: 48,
+                fontSize: "clamp(36px, 10vw, 48px)",
                 fontWeight: 500,
                 color: "var(--color-text)",
                 letterSpacing: "-0.02em",
@@ -1079,31 +1152,24 @@ function TopPickCard({
           </div>
         )}
 
-        <div
-          style={{
-            marginTop: 22,
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
-          <button
-            type="button"
-            onClick={onDetail}
+        {onDetail && (
+          <div
+            data-hide-print
             style={{
-              appearance: "none",
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-              fontSize: 14,
-              color: "var(--color-teal)",
-              fontWeight: 600,
-              padding: 0,
+              marginTop: 22,
+              display: "flex",
+              justifyContent: "flex-end",
             }}
           >
-            상세 보기 →
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onDetail}
+              style={{ ...detailBtn, fontSize: 14 }}
+            >
+              상세 보기 →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1112,17 +1178,103 @@ function TopPickCard({
 // ============================================================
 // 5–6. Tabs + category banner
 // ============================================================
+/**
+ * 탭 줄 끝의 흐림 마스크 — 그쪽에 가려진 탭이 있을 때만. 없으면 undefined(마스크 없음).
+ * 예전에는 375 폭에서 셋째 탭이 잘리고 넷째는 보이지 않는데 더 있다는 표시가 없었다(2026-11-27)
+ */
+export function tabEdgeMask(left: boolean, right: boolean): string | undefined {
+  if (!left && !right) return undefined;
+  const fade = 28;
+  const start = left ? `transparent, #000 ${fade}px` : "#000";
+  const end = right ? `#000 calc(100% - ${fade}px), transparent` : "#000";
+  return `linear-gradient(to right, ${start}, ${end})`;
+}
+
+/**
+ * 고른 탭을 탭 줄 가운데로 옮길 가로 거리(px, 양수 = 오른쪽으로).
+ * scrollIntoView 는 탭 줄이 화면 밖일 때 창까지 세로로 움직여 아래의 창 스크롤과 겹치므로 탭 줄만 가로로 민다
+ */
+export function centerScrollDelta(
+  containerLeft: number,
+  containerWidth: number,
+  itemLeft: number,
+  itemWidth: number
+): number {
+  return itemLeft + itemWidth / 2 - (containerLeft + containerWidth / 2);
+}
+
+/** 고정 머리(MiniHeader)를 재지 못할 때의 높이 — 12px 위아래 여백 + 글자 + 테두리 실측 57px */
+const MINI_HEADER_FALLBACK_HEIGHT = 57;
+/** 탭 줄과 고정 머리 사이 틈 */
+const TAB_SCROLL_GAP = 8;
+
+/**
+ * 탭을 바꿀 때 창을 옮길 위치 — 탭 줄 윗변이 고정 머리 바로 아래(+8px)에 오게.
+ * tabsTop 은 탭 줄의 getBoundingClientRect().top(창 기준), scrollY 는 지금 창 스크롤
+ */
+export function tabScrollTop(tabsTop: number, scrollY: number, headerHeight: number): number {
+  return Math.max(0, Math.round(tabsTop + scrollY - headerHeight - TAB_SCROLL_GAP));
+}
+
 function CategoryTabs({
   categories,
   active,
   onChange,
+  anchorRef,
 }: {
   categories: UICategory[];
   active: string;
   onChange: (type: string) => void;
+  /** 탭을 바꿀 때 창을 이 줄 위(고정 머리 바로 아래)로 옮긴다 — SmartResultPage.onTabChange */
+  anchorRef?: RefObject<HTMLDivElement | null>;
 }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const tabKey = categories.map((c) => c.type).join("|");
+
+  // 가려진 탭이 있는 쪽 — 스크롤·크기 바뀜(글꼴이 늦게 와 탭 폭이 바뀌는 것 포함)마다 다시 잰다
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const left = el.scrollLeft > 1;
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      setEdges((prev) =>
+        prev.left === left && prev.right === right ? prev : { left, right }
+      );
+    };
+    const frame = requestAnimationFrame(measure);
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    if (ro) {
+      ro.observe(el);
+      for (const child of Array.from(el.children)) ro.observe(child);
+    }
+    el.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      ro?.disconnect();
+      el.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [tabKey]);
+
+  // 고른 탭이 보이게 — '모두 보기'로 바꾼 탭이 탭 줄 밖(오른쪽)에 있을 수 있다
+  useEffect(() => {
+    const el = scrollerRef.current;
+    const btn = el?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!el || !btn) return;
+    const box = el.getBoundingClientRect();
+    const item = btn.getBoundingClientRect();
+    const delta = centerScrollDelta(box.left, box.width, item.left, item.width);
+    if (Math.abs(delta) > 1) el.scrollBy({ left: delta, behavior: "smooth" });
+  }, [active]);
+
+  const mask = tabEdgeMask(edges.left, edges.right);
   return (
     <div
+      ref={anchorRef}
+      data-hide-print
       style={{
         maxWidth: 920,
         margin: "40px auto 0",
@@ -1130,6 +1282,7 @@ function CategoryTabs({
       }}
     >
       <div
+        ref={scrollerRef}
         style={{
           display: "flex",
           gap: 4,
@@ -1137,6 +1290,8 @@ function CategoryTabs({
           padding: 4,
           borderRadius: 999,
           overflowX: "auto",
+          maskImage: mask,
+          WebkitMaskImage: mask,
         }}
       >
         {categories.map((cat) => {
@@ -1145,6 +1300,7 @@ function CategoryTabs({
             <button
               key={cat.type}
               type="button"
+              aria-pressed={isActive}
               onClick={() => onChange(cat.type)}
               style={{
                 appearance: "none",
@@ -1258,33 +1414,38 @@ function CategoryBanner({ cat }: { cat: UICategory }) {
 // ============================================================
 // 7. Candidate list
 // ============================================================
+/** 후보 카드의 '상세 보기' — SmartResultPage 가 받은 onCandidateDetail(이름, 평가 링크 한자) 그대로 */
+type CandidateDetailHandler = (fullName: string, evaluateHanja?: string) => void;
+
+/**
+ * 후보 카드. 카드 자체는 눌러도 동작이 없으므로 손가락 커서·떠오름 효과를 두지 않는다 — 평가로 가는 길은
+ * 카드 아래 '상세 보기 →'(Top Pick 과 같은 단추)다.
+ * ⚠️ 2026-11-27 전에는 카드가 눌리는 모양인데 동작이 없었고 '상세 보기'는 Top Pick 한 장에만 있어 2위 이하 후보는
+ * /evaluate 로 갈 길이 없었다(이름을 손으로 다시 쳐야 했다).
+ */
 function CandidateCard({
   candidate,
   index,
+  onDetail,
 }: {
   candidate: UICandidate;
   index: number;
+  onDetail?: CandidateDetailHandler;
 }) {
   const [open, setOpen] = useState(false);
-  const [hover, setHover] = useState(false);
   const c = candidate;
+  const hasNotes = c.reasons.length > 0 || c.phonologyNotes.length > 0;
   return (
     <article
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
       style={{
+        minWidth: 0,
         background: "var(--color-surface)",
-        border:
-          "1px solid " +
-          (hover ? "var(--color-teal-100)" : "var(--color-border)"),
+        border: "1px solid var(--color-border)",
         borderRadius: "var(--radius-lg)",
-        padding: "22px 26px",
-        boxShadow: hover
-          ? "0 10px 24px rgba(46, 125, 122, 0.08)"
-          : "var(--shadow-sm)",
-        transform: hover ? "translateY(-2px)" : "translateY(0)",
-        transition: "all 200ms cubic-bezier(.2,.6,.2,1)",
-        cursor: "pointer",
+        padding: "22px clamp(18px, 5vw, 26px)",
+        boxShadow: "var(--shadow-sm)",
+        // 인쇄 때 카드 머리와 한자가 다른 쪽으로 나뉘지 않게(화면에서는 효과 없음)
+        breakInside: "avoid",
       }}
     >
       <div
@@ -1312,7 +1473,7 @@ function CandidateCard({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr auto",
+          gridTemplateColumns: "minmax(0, 1fr) auto",
           gap: 24,
           alignItems: "center",
         }}
@@ -1460,127 +1621,146 @@ function CandidateCard({
         </div>
       )}
 
-      {(c.reasons.length > 0 || c.phonologyNotes.length > 0) && (
+      {/* 조작 줄('이름의 결' 펼침·'상세 보기')은 인쇄에서 숨긴다 — 펼친 내용은 아래에 따로 있어 인쇄에 남는다 */}
+      {(hasNotes || onDetail) && (
         <div
+          data-hide-print
           style={{
             marginTop: 16,
             paddingTop: 14,
             borderTop: "1px dashed var(--color-divider)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: hasNotes ? "space-between" : "flex-end",
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen((o) => !o);
-            }}
-            style={{
-              appearance: "none",
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              fontFamily: "var(--font-sans)",
-              fontSize: 13,
-              fontWeight: 500,
-              color: "var(--color-text-2)",
-            }}
-          >
-            <span
+          {hasNotes && (
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => setOpen((o) => !o)}
               style={{
-                display: "inline-block",
-                transition: "transform 180ms",
-                transform: open ? "rotate(90deg)" : "rotate(0deg)",
+                appearance: "none",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontFamily: "var(--font-sans)",
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--color-text-2)",
               }}
             >
-              ▸
-            </span>
-            이름의 결
-          </button>
-          {open && (
-            <div style={{ marginTop: 12, paddingLeft: 18 }}>
-              {c.reasons.length > 0 && (
-                <div style={{ display: "grid", gap: 6 }}>
-                  {c.reasons.map((r, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        display: "flex",
-                        gap: 10,
-                        fontSize: 13.5,
-                        color: "var(--color-text)",
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: 999,
-                          background: "var(--color-teal)",
-                          flexShrink: 0,
-                          marginTop: 8,
-                        }}
-                      />
-                      <span>{r}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {c.phonologyNotes.length > 0 && (
+              <span
+                aria-hidden="true"
+                style={{
+                  display: "inline-block",
+                  transition: "transform 180ms",
+                  transform: open ? "rotate(90deg)" : "rotate(0deg)",
+                }}
+              >
+                ▸
+              </span>
+              이름의 결
+            </button>
+          )}
+          {onDetail && (
+            <button
+              type="button"
+              onClick={() => onDetail(c.fullName, c.evaluateHanja)}
+              // 카드마다 같은 글자라 접근 이름에 이름을 붙인다(보이는 글자로 시작 — 음성 조작 '상세 보기')
+              aria-label={`상세 보기: ${c.fullName}`}
+              style={detailBtn}
+            >
+              상세 보기 →
+            </button>
+          )}
+        </div>
+      )}
+      {hasNotes && open && (
+        <div style={{ marginTop: 12, paddingLeft: 18 }}>
+          {c.reasons.length > 0 && (
+            <div style={{ display: "grid", gap: 6 }}>
+              {c.reasons.map((r, i) => (
                 <div
+                  key={i}
                   style={{
-                    marginTop: 12,
-                    padding: "10px 14px",
-                    background: "var(--color-surface-2)",
-                    borderRadius: "var(--radius-md)",
                     display: "flex",
-                    gap: 8,
-                    alignItems: "flex-start",
-                    fontSize: 12.5,
-                    color: "var(--color-text-2)",
+                    gap: 10,
+                    fontSize: 13.5,
+                    color: "var(--color-text)",
+                    lineHeight: 1.6,
                   }}
                 >
                   <span
                     style={{
-                      width: 14,
-                      height: 14,
+                      width: 4,
+                      height: 4,
                       borderRadius: 999,
-                      background: "var(--color-text-3)",
-                      color: "#fff",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 9,
-                      fontWeight: 700,
+                      background: "var(--color-teal)",
                       flexShrink: 0,
-                      marginTop: 1,
+                      marginTop: 8,
                     }}
-                  >
-                    i
-                  </span>
-                  <div>
-                    {c.phonologyNotes.map((n, i) => (
-                      <div key={i}>
-                        <b
-                          style={{
-                            color: "var(--color-text)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {n.name}
-                        </b>
-                        {" — "}
-                        {n.message}
-                      </div>
-                    ))}
-                  </div>
+                  />
+                  <span>{r}</span>
                 </div>
-              )}
+              ))}
+            </div>
+          )}
+
+          {c.phonologyNotes.length > 0 && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: "10px 14px",
+                background: "var(--color-surface-2)",
+                borderRadius: "var(--radius-md)",
+                display: "flex",
+                gap: 8,
+                alignItems: "flex-start",
+                fontSize: 12.5,
+                color: "var(--color-text-2)",
+              }}
+            >
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 999,
+                  background: "var(--color-text-3)",
+                  color: "#fff",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 9,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  marginTop: 1,
+                }}
+              >
+                i
+              </span>
+              <div>
+                {c.phonologyNotes.map((n, i) => (
+                  <div key={i}>
+                    <b
+                      style={{
+                        color: "var(--color-text)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {n.name}
+                    </b>
+                    {" — "}
+                    {n.message}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1589,36 +1769,59 @@ function CandidateCard({
   );
 }
 
-function CandidateList({ category }: { category: UICategory }) {
+/**
+ * 카드 key — 카테고리 + 이름(같은 이름이 또 오면 '#2'·'#3'을 붙인다).
+ * ⚠️ 2026-11-27 전에는 key 가 순번(i)이라 한 탭에서 펼친 '이름의 결'이 다른 탭의 같은 순번 카드(다른 이름)에서도 펼쳐져 있었다
+ */
+export function candidateKeys(
+  type: string,
+  names: readonly { fullName: string }[]
+): string[] {
+  const seen = new Map<string, number>();
+  return names.map((n) => {
+    const count = (seen.get(n.fullName) ?? 0) + 1;
+    seen.set(n.fullName, count);
+    return count === 1 ? `${type}-${n.fullName}` : `${type}-${n.fullName}#${count}`;
+  });
+}
+
+function CandidateList({
+  category,
+  onDetail,
+}: {
+  category: UICategory;
+  onDetail?: CandidateDetailHandler;
+}) {
   if (!category.names || category.names.length === 0) {
     return (
-      <div
-        style={{
-          maxWidth: 880,
-          margin: "20px auto 0",
-          padding: "32px 24px",
-          textAlign: "center",
-          color: "var(--color-text-2)",
-          background: "var(--color-surface)",
-          borderRadius: "var(--radius-lg)",
-          border: "1px dashed var(--color-border)",
-        }}
-      >
+      <div style={{ ...SIDE_GUTTER, maxWidth: 880 + 48, margin: "20px auto 0" }}>
         <div
           style={{
-            fontSize: 14,
-            fontWeight: 500,
-            color: "var(--color-text)",
+            padding: "32px 24px",
+            textAlign: "center",
+            color: "var(--color-text-2)",
+            background: "var(--color-surface)",
+            borderRadius: "var(--radius-lg)",
+            border: "1px dashed var(--color-border)",
           }}
         >
-          이 카테고리는 추천 후보가 없어요
-        </div>
-        <div style={{ fontSize: 13, marginTop: 6 }}>
-          다른 탭을 살펴보세요
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 500,
+              color: "var(--color-text)",
+            }}
+          >
+            이 카테고리는 추천 후보가 없어요
+          </div>
+          <div style={{ fontSize: 13, marginTop: 6 }}>
+            다른 탭을 살펴보세요
+          </div>
         </div>
       </div>
     );
   }
+  const keys = candidateKeys(category.type, category.names);
   return (
     <div
       style={{
@@ -1626,11 +1829,14 @@ function CandidateList({ category }: { category: UICategory }) {
         margin: "20px auto 0",
         padding: "0 24px",
         display: "grid",
+        // 열 하나를 0 까지 줄 수 있게 — 열 정의가 없으면 auto 열이 카드의 최소 폭(창의 탭의 긴 칩)까지 넓어져
+        // 375 폭에서 카드가 457px 로 화면 밖으로 넘쳤다(2026-11-27)
+        gridTemplateColumns: "minmax(0, 1fr)",
         gap: 14,
       }}
     >
       {category.names.map((n, i) => (
-        <CandidateCard key={i} candidate={n} index={i} />
+        <CandidateCard key={keys[i]} candidate={n} index={i} onDetail={onDetail} />
       ))}
     </div>
   );
@@ -1652,8 +1858,10 @@ function OtherCategoriesPreview({
     (c) => c.type !== active && c.names.length > 0
   );
   if (others.length === 0) return null;
+  // 탭으로 옮기는 단추 줄이라 인쇄에서 숨긴다(가로 줄은 인쇄에서 셋째 카드가 잘렸다)
   return (
     <div
+      data-hide-print
       style={{
         maxWidth: 920,
         margin: "48px auto 0",
@@ -1761,46 +1969,51 @@ function OtherCategoriesPreview({
 // ============================================================
 function ReferenceNotice() {
   return (
-    <div
-      style={{
-        marginTop: 48,
-        marginInline: "auto",
-        maxWidth: 920,
-        padding: "20px 22px",
-        background: "var(--color-surface-2)",
-        border: "1px solid var(--color-divider)",
-        borderRadius: 12,
-      }}
-    >
+    <div style={{ ...SIDE_GUTTER, maxWidth: 920 + 48, margin: "48px auto 0" }}>
       <div
         style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: "var(--color-text)",
-          marginBottom: 8,
+          padding: "20px 22px",
+          background: "var(--color-surface-2)",
+          border: "1px solid var(--color-divider)",
+          borderRadius: 12,
         }}
       >
-        이 추천은 시작점이에요
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: "var(--color-text)",
+            marginBottom: 8,
+          }}
+        >
+          이 추천은 시작점이에요
+        </div>
+        <p
+          style={{
+            fontSize: 13,
+            lineHeight: 1.75,
+            color: "var(--color-text-2)",
+            margin: 0,
+          }}
+        >
+          처음부터 이름을 짓는 건 어려운 일이에요. 이 도구로 후보를 찾고,
+          마음에 드는 이름은 사용하시고, 아쉬운 건 참고만 하세요. 결국 이름을
+          정하는 건 당신의 몫입니다.
+        </p>
       </div>
-      <p
-        style={{
-          fontSize: 13,
-          lineHeight: 1.75,
-          color: "var(--color-text-2)",
-          margin: 0,
-        }}
-      >
-        처음부터 이름을 짓는 건 어려운 일이에요. 이 도구로 후보를 찾고,
-        마음에 드는 이름은 사용하시고, 아쉬운 건 참고만 하세요. 결국 이름을
-        정하는 건 당신의 몫입니다.
-      </p>
     </div>
   );
 }
 
+/**
+ * 결과 화면 꼬리 — 사이트 Footer 를 숨긴 화면이라 소개·문의로 가는 길이 여기뿐이다.
+ * ⚠️ 2026-11-27 전에는 두 링크가 디자인 원본의 href="#" 그대로라 맨 위로 튈 뿐이었다.
+ * 링크만 있는 줄이라 인쇄에서는 통째로 숨긴다(사이트 머리·꼬리만 숨기게 좁힌 인쇄 규칙 뒤에도)
+ */
 function ResultFooter() {
   return (
     <footer
+      data-hide-print
       style={{
         marginTop: 64,
         padding: "32px 24px 48px",
@@ -1830,19 +2043,21 @@ function ResultFooter() {
           gap: 16,
         }}
       >
-        <a
-          href="#"
+        <Link
+          href="/about"
           style={{ color: "var(--color-text-3)", textDecoration: "none" }}
         >
           이름의 결에 대하여
-        </a>
-        <span style={{ color: "var(--color-divider)" }}>·</span>
-        <a
-          href="#"
+        </Link>
+        <span aria-hidden="true" style={{ color: "var(--color-divider)" }}>
+          ·
+        </span>
+        <Link
+          href="/contact"
           style={{ color: "var(--color-text-3)", textDecoration: "none" }}
         >
           문의
-        </a>
+        </Link>
       </div>
     </footer>
   );
@@ -1855,7 +2070,6 @@ export function SmartResultPage({
   data,
   requestSummary,
   initialTab,
-  editHref = "/search",
   onRegenerate,
   onSave,
   onCandidateDetail,
@@ -1864,7 +2078,12 @@ export function SmartResultPage({
   data: SmartRecommendationResponse;
   requestSummary: RequestSummary;
   initialTab?: string;
+  /**
+   * @deprecated 쓰지 않는다 — '← 조건 바꾸기'는 onRegenerate 로 폼에 돌아간다. 자기 경로로 가는 링크는 결과(페이지 useState)를
+   * 지우지 않아 눌러도 그대로였다(2026-11-27). 다섯 페이지가 아직 넘겨서 타입에만 남겨 둔다 — 페이지에서 빼면 이 줄도 지운다
+   */
   editHref?: string;
+  /** '← 조건 바꾸기' — 각 페이지의 handleReset(결과를 지우고 입력값이 남은 폼으로). 없으면 단추를 그리지 않는다 */
   onRegenerate?: () => void;
   /** 없으면 저장 버튼이 TopPick 이름을 즐겨찾기(/favorites)에 넣고 뺀다 */
   onSave?: () => void;
@@ -1930,7 +2149,8 @@ export function SmartResultPage({
 
   const initialTabType = initialTab ?? categories[0]?.type ?? "standard";
   const [tab, setTab] = useState(initialTabType);
-  const bannerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
   // 세션 내 탭별 1회만 전송
   const trackedTabs = useRef<Set<string>>(new Set());
 
@@ -1949,14 +2169,17 @@ export function SmartResultPage({
       trackedTabs.current.add(t);
       trackTabView(t);
     }
+    // 탭 줄이 고정 머리 바로 아래에 오게 — 예전에는 띠를 기준으로 80px 위로 옮겨 탭 줄이 57px 머리 밑에 숨었다
+    // ('모두 보기'로 탭을 바꾸면 고른 탭이 보이지 않았다, 2026-11-27)
     setTimeout(() => {
-      if (bannerRef.current) {
-        const y =
-          bannerRef.current.getBoundingClientRect().top +
-          window.scrollY -
-          80;
-        window.scrollTo({ top: y, behavior: "smooth" });
-      }
+      const tabs = tabsRef.current;
+      if (!tabs) return;
+      const headerHeight =
+        headerRef.current?.getBoundingClientRect().height ?? MINI_HEADER_FALLBACK_HEIGHT;
+      window.scrollTo({
+        top: tabScrollTop(tabs.getBoundingClientRect().top, window.scrollY, headerHeight),
+        behavior: "smooth",
+      });
     }, 30);
   };
 
@@ -1971,10 +2194,9 @@ export function SmartResultPage({
           background: "var(--color-background)",
         }}
       >
-        <MiniHeader editHref={editHref} />
+        <MiniHeader onEdit={onRegenerate} headerRef={headerRef} />
         <SubHeader
           summary={requestSummary}
-          onRegenerate={onRegenerate}
           onSave={saveHandler}
           saveLabel={saveLabel}
           saved={saved}
@@ -2012,10 +2234,9 @@ export function SmartResultPage({
         background: "var(--color-background)",
       }}
     >
-      <MiniHeader editHref={editHref} />
+      <MiniHeader onEdit={onRegenerate} headerRef={headerRef} />
       <SubHeader
         summary={requestSummary}
-        onRegenerate={onRegenerate}
         onSave={saveHandler}
         saveLabel={saveLabel}
         saved={saved}
@@ -2030,21 +2251,28 @@ export function SmartResultPage({
           lastName={requestSummary.lastName}
         />
         {topPick && (
-          <TopPickCard
-            pick={topPick}
-            onDetail={() => onCandidateDetail?.(topPick.candidate.fullName, topPick.candidate.evaluateHanja)}
-          />
+          <div style={{ ...SIDE_GUTTER, maxWidth: 720 + 48, margin: "24px auto 0" }}>
+            <TopPickCard
+              pick={topPick}
+              onDetail={
+                onCandidateDetail
+                  ? () => onCandidateDetail?.(topPick.candidate.fullName, topPick.candidate.evaluateHanja)
+                  : undefined
+              }
+            />
+          </div>
         )}
 
         <CategoryTabs
           categories={categories}
           active={tab}
           onChange={onTabChange}
+          anchorRef={tabsRef}
         />
-        <div ref={bannerRef} data-banner-anchor>
+        <div style={{ ...SIDE_GUTTER, maxWidth: 920 + 48, margin: "0 auto" }}>
           <CategoryBanner cat={activeCat} />
         </div>
-        <CandidateList category={activeCat} />
+        <CandidateList category={activeCat} onDetail={onCandidateDetail} />
 
         <OtherCategoriesPreview
           categories={categories}
