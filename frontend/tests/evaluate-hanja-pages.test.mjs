@@ -583,7 +583,11 @@ test("결과 화면 — hanjaSummary 가 없는 응답은 블록·'이 글자로
     result,
     /onPick=\{\s*change \? \(index, fact\) => change\.onChange\("name", index, \{ kind: "hanja", fact \}\) : undefined\s*\}/
   );
-  assert.match(result, /subtitle=\{\s*change\s*\? CANDIDATES_SUBTITLE\s*: "음절마다 쓸 수 있는 한자와/);
+  // 한자를 바꿀 수 있으면 CANDIDATES_SUBTITLE 의 두 문장 — '이 글자로' 안내(뒤 문장)만 인쇄에서 숨긴다(2026-11-27 인쇄 조작 요소)
+  assert.match(
+    result,
+    /\{change \? \(\s*<SectionHeadWithHint title="한자 후보" subtitle=\{CANDIDATES_SUBTITLE_FACT\} hint=\{CANDIDATES_PICK_HINT\} \/>\s*\) : \(\s*<SectionHead\s+title="한자 후보"\s+subtitle="음절마다 쓸 수 있는 한자와/
+  );
   // 조화 패널: 획수 고지 + 대체값 경고의 문구 가르기
   assert.match(result, /\{HARMONY_STROKE_NOTICE\}\{" "\}\s*<Link href="\/method"/);
   assert.match(result, /\{fallbackWarning\(summary\)\}/);

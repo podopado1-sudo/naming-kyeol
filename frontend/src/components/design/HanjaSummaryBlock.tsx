@@ -36,6 +36,8 @@ import {
 import { requestPickIndex, usePickStore } from "@/lib/hanja-pick-store";
 import { EXTENSION_NOTICE, MIXED_SCRIPT_NOTICE, lockedSurnameNote } from "@/lib/hanja-pick-text";
 import {
+  ALL_BLANK_NOTICE,
+  BLOCK_CHANGE_HINT,
   BLOCK_TITLE,
   FILL_NOTICE,
   FRAME_NOTICE,
@@ -51,9 +53,10 @@ import {
   SEEN_TITLE,
   SURNAME_NOTICE,
   YONGSHIN_METHOD_NOTICE,
+  allUserBlank,
   birthTimeNotice,
   blockSlots,
-  blockSubtitle,
+  blockSource,
   comboLine,
   fillLabel,
   forbiddenNote,
@@ -70,7 +73,7 @@ import {
 import { noHanjaSyllableNote } from "@/lib/no-hanja";
 import type { ElementFit, HanjaFact, HanjaSummary, NameEvaluationResponse } from "@/lib/types";
 
-import { SectionHead } from "./DetailPrimitives";
+import { SectionHeadWithHint } from "./EvalBody";
 import { ElementChip } from "./EvalPrimitives";
 import { HanjaPickerPanel } from "./HanjaPickerPanel";
 import { HanjaSlots, slotButtonId, slotKey } from "./HanjaSlots";
@@ -187,6 +190,20 @@ const smallButton: CSSProperties = {
   cursor: "pointer",
 };
 
+/**
+ * 인쇄(PDF 저장) — 칸 단추는 종이에서 누를 수 없으니 단추 테두리·바탕 없이 글자만 남긴다(칸 상자는 HanjaSlots 의 인라인 스타일이라 !important).
+ * 고르기 패널·읽는 법 접기·[다시 시도] [닫기]·비교 줄·부제의 '칸을 눌러…'는 data-hide-print 로 숨긴다(app/globals.css 의 인쇄 규칙)
+ */
+const PRINT_CSS = `
+  @media print {
+    .eval-hanja-block [role="group"] button > span:first-child {
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+  }
+`;
+
 /** 역할 꼬리표 — 감점이 걸린 것(기신·많은 오행)은 주의 글자색, 나머지는 청록 글자색 */
 function fillTagStyle(penalty: boolean): CSSProperties {
   return {
@@ -225,12 +242,15 @@ function NameDetail({
   syllable,
   fit,
   birthDateProvided,
+  allBlank,
   noteId,
   children,
 }: {
   syllable: BlockSyllable;
   fit: ElementFit | null;
   birthDateProvided: boolean;
+  /** 계산된 결과의 이름 칸 모두에 한자가 없다(allUserBlank) — 칸마다의 어림 문장 대신 블록 아래 한 줄이 기본값 계산을 적는다 */
+  allBlank: boolean;
   /** 열 수 없는 칸의 까닭 문장 id — 칸 버튼이 aria-describedby 로 잇는다 */
   noteId: string;
   children?: ReactNode;
@@ -258,7 +278,7 @@ function NameDetail({
       )}
       {fact?.forbidden && <p style={alertText}>{forbiddenNote(fact.gloss)}</p>}
       {fact && !fact.hasMeaning && <p style={noteText}>{NO_MEANING_NOTE}</p>}
-      {syllable.source === "none" && <p style={noteText}>{noneNote(syllable.syllable, birthDateProvided)}</p>}
+      {syllable.source === "none" && <p style={noteText}>{noneNote(syllable.syllable, birthDateProvided, allBlank)}</p>}
       {syllable.source === "unavailable" && (
         <p id={noteId} style={{ ...noteText, marginTop: 0 }}>
           {noHanjaSyllableNote(syllable.syllable)}
@@ -338,6 +358,9 @@ export function HanjaSummaryBlock({
   const slots = useMemo(() => blockSlots(view, store.index), [view, store.index]);
   const all = [...slots.surname, ...slots.name];
   const fit = view.elementFit;
+  // 계산이 끝난 응답(summary)의 이름 칸 모두에 한자가 없다 — 점수는 칸마다 어림하지 않고 기본값이다(백엔드 HarmonyEngine).
+  // 기다리는 변경(pending)이 아니라 지금 보이는 점수를 낸 조합으로 정한다
+  const allBlank = birthDateProvided && allUserBlank(summary);
 
   // 열린 칸(한 번에 하나)
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -415,7 +438,7 @@ export function HanjaSummaryBlock({
           {recalcFailedNote({ syllable: slot.syllable, kind: recalcError.kind, character: recalcError.character })}{" "}
           {recalcError.message}
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+        <div data-hide-print style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
           <button
             type="button"
             style={smallButton}
@@ -452,7 +475,13 @@ export function HanjaSummaryBlock({
     const syllable = view.syllables[slot.index];
     if (!syllable) return null;
     return (
-      <NameDetail syllable={syllable} fit={fit} birthDateProvided={birthDateProvided} noteId={noteIdOf(slot)}>
+      <NameDetail
+        syllable={syllable}
+        fit={fit}
+        birthDateProvided={birthDateProvided}
+        allBlank={allBlank}
+        noteId={noteIdOf(slot)}
+      >
         {errorNote(slot)}
       </NameDetail>
     );
@@ -478,7 +507,9 @@ export function HanjaSummaryBlock({
         if (e.key === "Escape" && !e.nativeEvent.isComposing && openSlot) closePanel();
       }}
     >
-      <SectionHead title={BLOCK_TITLE} subtitle={blockSubtitle(summary.userHanja)} />
+      <style>{PRINT_CSS}</style>
+      {/* 부제 = blockSubtitle 의 두 문장 — 뒤 문장('칸을 눌러 바꿔 볼 수 있어요.')만 인쇄에서 숨긴다 */}
+      <SectionHeadWithHint title={BLOCK_TITLE} subtitle={blockSource(summary.userHanja)} hint={BLOCK_CHANGE_HINT} />
       <div className="eval-hanja-block" style={card}>
         <div
           style={{
@@ -512,23 +543,26 @@ export function HanjaSummaryBlock({
           between={between}
         />
 
+        {/* 고르기 패널은 화면 조작이라 인쇄에서 숨긴다(연 채 인쇄하면 높이 제한에 잘린 목록이 찍혔다) */}
         {openSlot && (
-          <HanjaPickerPanel
-            key={slotKey(openSlot)}
-            id={panelId}
-            slot={openSlot}
-            representative={
-              openSlot.target === "surname"
-                ? surnameDefaultAt(store.index, summary.surname.hangul, openSlot.index)
-                : null
-            }
-            forbiddenCount={store.index?.counts.forbidden ?? null}
-            elementFit={birthDateProvided ? fit : null}
-            onPick={(fact) => applyChoice(openSlot, choiceFor(openSlot, fact))}
-            onAuto={() => applyChoice(openSlot, { kind: "auto" })}
-            onNone={openSlot.target === "name" ? () => applyChoice(openSlot, { kind: "none" }) : undefined}
-            onClose={closePanel}
-          />
+          <div data-hide-print>
+            <HanjaPickerPanel
+              key={slotKey(openSlot)}
+              id={panelId}
+              slot={openSlot}
+              representative={
+                openSlot.target === "surname"
+                  ? surnameDefaultAt(store.index, summary.surname.hangul, openSlot.index)
+                  : null
+              }
+              forbiddenCount={store.index?.counts.forbidden ?? null}
+              elementFit={birthDateProvided ? fit : null}
+              onPick={(fact) => applyChoice(openSlot, choiceFor(openSlot, fact))}
+              onAuto={() => applyChoice(openSlot, { kind: "auto" })}
+              onNone={openSlot.target === "name" ? () => applyChoice(openSlot, { kind: "none" }) : undefined}
+              onClose={closePanel}
+            />
+          </div>
         )}
 
         <div style={{ marginTop: 16 }}>
@@ -537,12 +571,15 @@ export function HanjaSummaryBlock({
           {birthDateProvided && (
             <p style={{ ...guideText, marginTop: yongshin ? 8 : 0 }}>{birthTimeNotice(hasBirthTime)}</p>
           )}
+          {/* 이름 칸 모두 한자 없이 — 칸마다의 어림 문장 대신 이 한 줄(조화는 발음오행만 실제 계산, 나머지는 기본값) */}
+          {allBlank && <p style={guideText}>{ALL_BLANK_NOTICE}</p>}
           {hasGishin && <p style={guideText}>{GISHIN_NOTICE}</p>}
           {!birthDateProvided && <p style={{ ...guideText, marginTop: 0 }}>{NO_BIRTH_NOTICE}</p>}
           {isMixedResult(summary) && <p style={guideText}>{MIXED_SCRIPT_NOTICE}</p>}
           {hasExtension && <p style={guideText}>{EXTENSION_NOTICE}</p>}
 
-          <details style={{ marginTop: 12 }}>
+          {/* 접은 읽는 법은 인쇄에서 숨긴다 — 접힌 채면 요약 줄만 찍혀 누를 수 없는 줄이 남는다 */}
+          <details data-hide-print style={{ marginTop: 12 }}>
             {/* 펼침 표시(▸)는 브라우저 기본 그대로 — 누름 영역은 위아래 여백으로 44px */}
             <summary
               style={{
@@ -616,7 +653,8 @@ function SeenCombos({
   const anyAuto = rows.some((row) => row.line.hasAuto);
 
   return (
-    <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid var(--color-divider)" }}>
+    // 화면에서 조합을 오가는 단추 묶음이라 인쇄에서는 숨긴다 — 종이에는 지금 조합(위 칸 줄)만 남긴다
+    <div data-hide-print style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid var(--color-divider)" }}>
       <h3 id={titleId} style={{ margin: 0, fontSize: 14, lineHeight: 1.4, fontWeight: 700, color: "var(--color-text)" }}>
         {SEEN_TITLE}
       </h3>

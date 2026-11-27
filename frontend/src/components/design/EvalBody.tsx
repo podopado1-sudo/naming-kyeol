@@ -1,9 +1,10 @@
 /**
- * EvalBody — Evaluate 결과 본문 (HanjaCandidatesTable + RecommendedCombo + StrengthsCautions + NoteBlocks)
+ * EvalBody — Evaluate 결과 본문 (HanjaCandidatesTable + RecommendedCombo + StrengthsCautions + NoteBlocks + SectionHeadWithHint)
  * Source: NameForm_design/src/EvalBody.jsx (Claude Design 산출물)
  *
  * 2열 그리드는 className "eval-2col" — 480px 이하 1열 전환 규칙은 평가 결과 화면
  * (app/evaluate/EvaluateResult.tsx의 RESULT_CSS)이 갖고 있다.
+ * 인쇄(PDF 저장)에서는 누르는 요소('이 글자로')와 그 안내를 data-hide-print 로 숨긴다(app/globals.css 의 인쇄 규칙).
  */
 "use client";
 
@@ -262,8 +263,10 @@ export function HanjaCandidatesTable({
                         {confirmedChars?.[gi] === c.character ? "지금 한자" : "다시 계산 중"}
                       </span>
                     ) : c.fact ? (
+                      // 인쇄에서는 숨긴다 — 종이에서 누를 수 없는 단추(지금 한자 표시는 남긴다)
                       <button
                         type="button"
+                        data-hide-print
                         id={`${markBase}-pick-${gi}-${i}`}
                         // 보이는 글('이 글자로')로 시작하는 이름 — 음성 입력으로 보이는 글을 말해도 맞는다(WCAG 2.5.3)
                         aria-label={`이 글자로 — ‘${g.syllable}’ 음절을 ${c.character} 글자로 바꾸기`}
@@ -291,6 +294,60 @@ export function HanjaCandidatesTable({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============================================================
+// SectionHeadWithHint — 절 머리(DetailPrimitives SectionHead 와 같은 꼴) + 부제 끝의 조작 안내
+// ============================================================
+
+/**
+ * SectionHead 는 부제를 글 하나로만 받아 문장 일부를 인쇄에서 숨길 수 없다 — 같은 꼴(막대·제목·부제)을 그리고
+ * 부제 끝의 '누르면 …' 안내(hint)만 data-hide-print 로 감싼다. 결과 화면의 '이 이름의 한자'·'한자 후보' 머리가 쓴다.
+ * SectionHead 의 꼴을 바꾸면 여기도 같이 바꿀 것
+ */
+export function SectionHeadWithHint({
+  title,
+  subtitle,
+  hint,
+}: {
+  title: string;
+  subtitle: string;
+  /** 화면에서 누르는 법 — 인쇄에서는 숨긴다 */
+  hint: string;
+}) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div
+        style={{
+          width: 28,
+          height: 2,
+          background: "var(--color-teal)",
+          marginBottom: 14,
+        }}
+      />
+      <h2
+        style={{
+          fontSize: 24,
+          lineHeight: 1.3,
+          fontWeight: 700,
+          letterSpacing: "-0.01em",
+          margin: 0,
+        }}
+      >
+        {title}
+      </h2>
+      <p
+        style={{
+          fontSize: 13.5,
+          color: "var(--color-text-2)",
+          margin: "8px 0 0",
+          lineHeight: 1.6,
+        }}
+      >
+        {subtitle} <span data-hide-print>{hint}</span>
+      </p>
     </div>
   );
 }

@@ -12,7 +12,7 @@
  * - 응답에 hanjaSummary 가 없으면(옛 백엔드·한글 음절이 아닌 이름) 블록과 '이 글자로' 버튼 없이 예전 화면 그대로다.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Clock, Download, Heart, Share2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import { BreakdownPanel } from "@/components/design/EvalPrimitives";
 import {
   HanjaCandidatesTable,
   NoteBlocks,
+  SectionHeadWithHint,
   StrengthsCautions,
   type HanjaGroup,
 } from "@/components/design/EvalBody";
@@ -33,15 +34,28 @@ import {
   type SeenCombo,
 } from "@/components/design/HanjaSummaryBlock";
 import { toResourceGrade } from "@/components/design/resource-grade";
-import { toggleFavorite, useIsFavorite } from "@/lib/favorites";
+import {
+  FAVORITES_LIMIT,
+  FAVORITE_SAVE_FAILED,
+  favoriteCount,
+  favoriteSavedNotice,
+  toggleFavorite,
+  useIsFavorite,
+} from "@/lib/favorites";
 import { blockView, type HanjaChoice, type PendingHanja, type SlotTarget } from "@/lib/hanja-pick";
 import { shareHanja } from "@/lib/hanja-recalc";
 import {
-  CANDIDATES_SUBTITLE,
+  CANDIDATES_PICK_HINT,
+  CANDIDATES_SUBTITLE_FACT,
   HARMONY_STROKE_NOTICE,
+  SHARE_FAILED,
   WAITING_BADGE,
   fallbackWarning,
+  pdfTitle,
   recalcFailedNote,
+  shareFailedDetail,
+  shareNotice,
+  shareOrCopy,
 } from "@/lib/hanja-summary-text";
 import type { GenerationFit, NameEvaluationResponse } from "@/lib/types";
 
@@ -351,7 +365,7 @@ export function EvaluateResultView({
                   }}
                 >
                   {HARMONY_STROKE_NOTICE}{" "}
-                  <Link href="/method" style={{ color: "var(--color-teal-800)", fontWeight: 500 }}>
+                  <Link href="/method" data-hide-print style={{ color: "var(--color-teal-800)", fontWeight: 500 }}>
                     작명 원리
                   </Link>
                 </p>
@@ -382,15 +396,16 @@ export function EvaluateResultView({
       {/* 한자 후보 */}
       {hanjaGroups.length > 0 && (
         <section style={{ marginTop: 48 }}>
-          {/* 후보 표는 음절별 목록이라 점수에 쓴 한자와 다를 수 있다 — 어느 쪽인지 밝혀 둔다 (감사 EV-3) */}
-          <SectionHead
-            title="한자 후보"
-            subtitle={
-              change
-                ? CANDIDATES_SUBTITLE
-                : "음절마다 쓸 수 있는 한자와 부수로 정한 자원오행, 그 판정 등급(확정·이견 있음·예외 적용)이에요. 점수 계산에 쓴 한자는 아래 '의미 메모'에 적어 두었어요."
-            }
-          />
+          {/* 후보 표는 음절별 목록이라 점수에 쓴 한자와 다를 수 있다 — 어느 쪽인지 밝혀 둔다 (감사 EV-3).
+              한자를 바꿀 수 있는 결과는 부제가 CANDIDATES_SUBTITLE 의 두 문장 — '이 글자로' 안내(뒤 문장)는 단추와 함께 인쇄에서 숨긴다 */}
+          {change ? (
+            <SectionHeadWithHint title="한자 후보" subtitle={CANDIDATES_SUBTITLE_FACT} hint={CANDIDATES_PICK_HINT} />
+          ) : (
+            <SectionHead
+              title="한자 후보"
+              subtitle="음절마다 쓸 수 있는 한자와 부수로 정한 자원오행, 그 판정 등급(확정·이견 있음·예외 적용)이에요. 점수 계산에 쓴 한자는 아래 '의미 메모'에 적어 두었어요."
+            />
+          )}
           <HanjaCandidatesTable
             groups={hanjaGroups}
             onPick={
@@ -632,8 +647,11 @@ function ResultActions({
 
   // 생년월일·성별·톤까지 저장해야 찜 '다시 보기'가 같은 평가를 자동으로 다시 연다 (감사 EV-7).
   // 성·이름은 입력값 그대로 — fullName[0]으로 자르면 '남궁민'이 '남'+'궁민'이 된다(EV-6).
+  // 저장소에 쓰지 못하면(사이트 데이터 저장 차단·용량 초과) 그 사실을 알린다 — 옛 화면은 예외로 끝나 토스트도 하트 변화도 없었다.
+  // 이미 FAVORITES_LIMIT 개면 새로 저장할 때 가장 오래된 1개가 빠진다 — 저장 알림에 함께 적는다
   function onSave() {
-    toggleFavorite({
+    const evicts = !fav && favoriteCount() >= FAVORITES_LIMIT;
+    const ok = toggleFavorite({
       fullName: data.fullName,
       lastName: input.lastName,
       name: input.name,
@@ -650,13 +668,19 @@ function ResultActions({
       harmonyScore:
         data.birthDateProvided === false ? undefined : data.harmonyScore,
     });
-    toast.success(fav ? "저장 해제" : "저장됨");
+    if (!ok) {
+      toast.error(FAVORITE_SAVE_FAILED);
+      return;
+    }
+    toast.success(fav ? "저장 해제" : favoriteSavedNotice(evicts));
   }
 
   // 공유 링크는 생년월일을 뺀다(아이 생년월일 노출 방지). 받는 쪽은 출생일 없이 평가되므로
   // 조화가 들어간 종합 점수는 문구에 쓰지 않는다 — 받은 화면과 숫자가 달라지기 때문.
   // 한자를 하나라도 고른 결과는 화면에 보인 이름 글자를 모두 싣는다(자동 칸도 그 글자로) — 고른 칸만 실으면 받는 쪽 자동 칸이
   // 생년월일 없는 기본 배정으로 채워져 다른 조합으로 열린다. 한자를 고르지 않은 결과의 링크는 예전과 같다(lib/hanja-recalc.ts shareHanja).
+  // 공유 시트 → (없거나 취소가 아닌 까닭으로 실패하면) 링크 복사 → 둘 다 안 되면 '링크를 복사하지 못했어요'와 주소(lib/hanja-summary-text.ts shareOrCopy).
+  // 공유 시트를 닫은 것(AbortError)만 조용히 넘긴다. 생년월일을 넣은 결과는 두 길 모두에서 '생년월일은 빠진 링크'라고 알린다
   async function onShare() {
     if (typeof window === "undefined") return;
     const shared = { ...input, ...shareHanja(data.hanjaSummary, input) };
@@ -665,22 +689,18 @@ function ResultActions({
       data.birthDateProvided === false
         ? `${data.fullName} 종합 ${data.finalScore}점`
         : `${data.fullName} 이름 평가 리포트`;
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `${data.fullName} - 이름 리포트`,
-          text,
-          url,
-        });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast.success(
-          input.birthDate ? "링크 복사됨 (생년월일은 빠진 링크예요)" : "링크 복사됨"
-        );
-      }
-    } catch {
-      // 사용자가 공유 취소 시 무시
+    const outcome = await shareOrCopy(
+      { title: `${data.fullName} - 이름 리포트`, text, url },
+      typeof navigator.share === "function" ? (d) => navigator.share(d) : undefined,
+      typeof navigator.clipboard?.writeText === "function" ? (t) => navigator.clipboard.writeText(t) : undefined
+    );
+    if (outcome === "failed") {
+      // 주소를 함께 보여 손으로 복사할 수 있게 한다(토스트 글은 고를 수 있다) — 오래 띄운다
+      toast.error(SHARE_FAILED, { description: shareFailedDetail(url), duration: 15_000 });
+      return;
     }
+    const notice = shareNotice(outcome, !!input.birthDate);
+    if (notice) toast.success(notice);
   }
 
   const btnStyle: React.CSSProperties = {
@@ -699,8 +719,28 @@ function ResultActions({
     gap: 6,
   };
 
+  // 'PDF' = 인쇄 대화상자('PDF로 저장'). 인쇄 동안만 문서 제목을 '{성명} 이름 평가'로 바꿔 기본 파일 이름·쪽 머리말이 이름마다 다르게 하고,
+  // 인쇄가 끝나면(afterprint) 되돌린다. afterprint 가 오지 않는 브라우저(인쇄를 열지 못하는 인앱 브라우저 등)에서도
+  // 결과 화면을 떠날 때(다른 이름 평가·빈 폼) 되돌린다 — 바꾼 제목이 다른 이름의 화면에 남지 않게
+  const restoreTitleRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => restoreTitleRef.current?.(), []);
+
   function onPdf() {
-    if (typeof window !== "undefined") window.print();
+    if (typeof window === "undefined") return;
+    const title = pdfTitle(data.fullName);
+    if (!restoreTitleRef.current) {
+      const previous = document.title;
+      const restore = () => {
+        window.removeEventListener("afterprint", restore);
+        if (restoreTitleRef.current === restore) restoreTitleRef.current = null;
+        // 그사이 다른 쪽으로 옮겨 제목이 바뀌었으면 건드리지 않는다(새 쪽의 제목을 옛 제목으로 덮지 않게)
+        if (document.title === title) document.title = previous;
+      };
+      restoreTitleRef.current = restore;
+      window.addEventListener("afterprint", restore);
+    }
+    document.title = title;
+    window.print();
   }
 
   return (

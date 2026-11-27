@@ -520,10 +520,12 @@ export function EvaluateClient({ guide }: { guide?: ReactNode }) {
 
       {/* 하단 띠 — 진행·완료를 글로 알린다. 알림 영역(role="status")은 늘 문서에 두고 안의 글만 바꾼다
           (글이 생길 때 영역째 새로 끼우면 화면 읽기 프로그램이 놓칠 수 있다). 누를 것이 없어 클릭을 가로채지 않는다.
-          좌우 16px 를 뺀 폭 안에서 가운데에 둔다(왼쪽 50% + 옮기기로 두면 쓸 수 있는 폭이 화면의 절반이라 좁은 화면에서 일찍 줄이 바뀐다) */}
+          좌우 16px 를 뺀 폭 안에서 가운데에 둔다(왼쪽 50% + 옮기기로 두면 쓸 수 있는 폭이 화면의 절반이라 좁은 화면에서 일찍 줄이 바뀐다).
+          인쇄에서는 숨긴다 — position: fixed 라 한자를 바꾼 직후 인쇄하면 쪽마다 되풀이 찍혔다 */}
       <div
         role="status"
         aria-live="polite"
+        data-hide-print
         style={{
           position: "fixed",
           bottom: 24,

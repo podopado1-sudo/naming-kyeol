@@ -3,7 +3,8 @@
  * 법규 사실은 §20.
  *
  * "use client" 가 없는 순수 모듈이다(node --test 가 바로 읽는다 — tests/hanja-summary-text.test.mjs). 화면(HanjaSummaryBlock·
- * EvaluateResult·EvaluateClient·/favorites)은 여기서 문장과 칸을 받아 그리기만 한다.
+ * EvaluateResult·EvaluateClient·/favorites)은 여기서 문장과 칸을 받아 그리기만 한다. 결과 머리 단추(공유·PDF)의 문장과
+ * 공유 순서(shareOrCopy)도 여기 둔다(2026-11-27 — tests/fix1127-evaluate-result.test.mjs).
  *
  * 규칙
  * - **점수를 만들지 않는다.** 숫자는 /evaluate 응답의 값을 그대로 옮긴다(획수 합은 응답에 실린 두 획수를 더한 사실이다).
@@ -34,11 +35,17 @@ import type { ElementFit, HanjaFact, HanjaFill, HanjaSummary } from "./types";
 
 export const BLOCK_TITLE = "이 이름의 한자";
 
-/** 블록 부제 — 한자를 하나라도 고른 결과인가(응답 hanjaSummary.userHanja) */
+/** 블록 부제의 앞 문장 — 이 한자가 어디서 왔나(인쇄에도 남는다). 한자를 하나라도 고른 결과인가(응답 hanjaSummary.userHanja) */
+export function blockSource(userHanja: boolean): string {
+  return userHanja ? "고른 한자로 계산했어요." : "한자를 고르지 않아 자동으로 골랐어요.";
+}
+
+/** 블록 부제의 뒤 문장 — 화면에서 누르는 법이라 인쇄에서는 숨긴다(data-hide-print — 칸 단추는 종이에서 누를 수 없다) */
+export const BLOCK_CHANGE_HINT = "칸을 눌러 바꿔 볼 수 있어요.";
+
+/** 블록 부제 전체(화면에 보이는 두 문장) */
 export function blockSubtitle(userHanja: boolean): string {
-  return userHanja
-    ? "고른 한자로 계산했어요. 칸을 눌러 바꿔 볼 수 있어요."
-    : "한자를 고르지 않아 자동으로 골랐어요. 칸을 눌러 바꿔 볼 수 있어요.";
+  return `${blockSource(userHanja)} ${BLOCK_CHANGE_HINT}`;
 }
 
 /** 다시 계산하는 동안 점수 타일 묶음 위에 다는 글 배지 — 화면을 흐리게 하지 않고 글로 알린다 */
@@ -260,13 +267,35 @@ export function forbiddenNote(gloss: string): string {
 
 export const NO_MEANING_NOTE = "사전에 뜻 풀이가 없는 글자예요. 획수와 자원오행으로만 계산해요.";
 
-/** 사용자가 한자 없이 둔 칸 — 생년월일이 있으면 그 칸을 어떻게 어림했는지도 적는다 */
-export function noneNote(syllable: string, birthDateProvided: boolean): string {
+/**
+ * 사용자가 한자 없이 둔 칸 — 생년월일이 있으면 그 칸을 어떻게 어림했는지도 적는다.
+ * 이름 칸 모두에 한자가 없으면(allUserBlank) 칸마다 어림하지 않고 기본값으로 계산하므로 어림 문장을 빼고(allBlank),
+ * 블록 아래 한 줄(ALL_BLANK_NOTICE)이 그 사실을 적는다
+ */
+export function noneNote(syllable: string, birthDateProvided: boolean, allBlank = false): string {
   const base = `‘${syllable}’ 음절은 한자 없이 한글로 두었어요.`;
-  return birthDateProvided
+  return birthDateProvided && !allBlank
     ? `${base} 이 칸은 획수 조화에서 5획, 81수리에서 0획으로 어림해 계산했어요(추정값).`
     : base;
 }
+
+/**
+ * 이름 칸 모두에 한자가 없고 그중 사용자가 한자 없이 둔 칸이 있는가(쓸 수 있는 한자가 없는 음절이 섞여도 참).
+ * 백엔드 HarmonyEngine 은 이름 글자의 한자가 모두 비면 칸마다 어림하지 않고 일찍 돌아간다 — 자원오행 보완·획수 조화·음양·81수리는
+ * 정해진 기본값(14·10·5·7점), 발음오행만 한글 소리로 계산하고 노트는 '한자를 두지 않아 기본값을 사용했습니다' 하나다.
+ */
+export function allUserBlank(summary: Pick<HanjaSummary, "syllables"> | null | undefined): boolean {
+  return (
+    !!summary &&
+    summary.syllables.length > 0 &&
+    summary.syllables.every((s) => s.hanja === null) &&
+    hasUserBlank(summary)
+  );
+}
+
+/** allUserBlank 일 때 블록 아래 한 줄 — 생년월일이 있을 때만(없으면 조화 점수를 계산하지 않는다) */
+export const ALL_BLANK_NOTICE =
+  "이름 칸에 둔 한자가 없어 조화 점수의 자원오행 보완·획수 조화·음양·전통 81수리는 정해진 기본값으로 계산했어요(발음오행만 한글 소리로 계산해요).";
 
 /**
  * 한글과 한자가 섞인 조합인가 — **한자를 지정한 결과**에서 한자가 든 칸과 한글로 둔 칸(한자 없이·쓸 수 있는 한자가 없는 음절)이
@@ -284,8 +313,12 @@ export function hasUserBlank(summary: Pick<HanjaSummary, "syllables"> | null | u
   return !!summary && summary.syllables.some((s) => s.source === "none");
 }
 
-/** 조화 패널의 대체값 경고(usedFallback) — 사용자가 비운 칸이 있을 때만 새 문구, 그 밖은 예전 문구 */
+/**
+ * 조화 패널의 대체값 경고(usedFallback) — 사용자가 비운 칸이 있을 때만 새 문구, 그 밖은 예전 문구.
+ * 이름 칸 모두에 한자가 없으면(allUserBlank) 획수 어림이 아니라 기본값이다 — 백엔드 노트 '한자를 두지 않아 기본값을 사용했습니다'와 같은 말
+ */
 export function fallbackWarning(summary: Pick<HanjaSummary, "syllables"> | null | undefined): string {
+  if (allUserBlank(summary)) return "⚠ 한자를 두지 않아 기본값으로 계산했어요";
   return hasUserBlank(summary)
     ? "⚠ 한자를 두지 않은 음절은 획수를 추정값으로 계산했어요"
     : "⚠ 배정할 한자가 없는 음절이 있어 기본값으로 계산했어요";
@@ -295,9 +328,13 @@ export function fallbackWarning(summary: Pick<HanjaSummary, "syllables"> | null 
 export const HARMONY_STROKE_NOTICE =
   "획수는 유니코드 총획 기준이에요. 부수를 본래 꼴로 세는 작명소의 원획과 다를 수 있어 획수 조화·음양·81수리 값도 달라질 수 있어요.";
 
+/** '한자 후보' 표 부제의 앞 문장 — 표가 무엇인지(인쇄에도 남는다) */
+export const CANDIDATES_SUBTITLE_FACT =
+  "음절마다 쓸 수 있는 한자와 부수로 정한 자원오행, 그 판정 등급(확정·이견 있음·예외 적용)이에요.";
+/** '한자 후보' 표 부제의 뒤 문장 — '이 글자로' 단추 안내라 인쇄에서는 단추와 함께 숨긴다 */
+export const CANDIDATES_PICK_HINT = "줄 끝의 ‘이 글자로’를 누르면 그 글자로 바꿔 다시 계산해요.";
 /** '한자 후보' 표의 부제 — 한자를 바꿔 다시 계산할 수 있을 때(hanjaSummary 가 있는 응답) */
-export const CANDIDATES_SUBTITLE =
-  "음절마다 쓸 수 있는 한자와 부수로 정한 자원오행, 그 판정 등급(확정·이견 있음·예외 적용)이에요. 줄 끝의 ‘이 글자로’를 누르면 그 글자로 바꿔 다시 계산해요.";
+export const CANDIDATES_SUBTITLE = `${CANDIDATES_SUBTITLE_FACT} ${CANDIDATES_PICK_HINT}`;
 
 // ============================================================
 // 자원오행 관계 — 이웃한 두 글자
@@ -377,6 +414,79 @@ export function comboLine(summary: HanjaSummary): ComboLine {
       .filter((r): r is RelationChip => r !== null)
       .map((r) => r.label),
   };
+}
+
+// ============================================================
+// 결과 머리 단추 — 공유 · PDF(인쇄)
+// ============================================================
+
+/**
+ * 'PDF' 단추로 인쇄하는 동안의 문서 제목 — 브라우저가 'PDF로 저장'의 기본 파일 이름과 쪽 머리말로 쓴다.
+ * 결과 화면의 제목은 메타 제목(이름과 무관)으로 고정이라 후보 셋을 저장하면 같은 이름 파일 셋이 됐다(2026-11-27).
+ * 결과 화면(EvaluateResult)이 인쇄 동안만 바꾸고 인쇄가 끝나면(afterprint) 되돌린다
+ */
+export function pdfTitle(fullName: string): string {
+  return `${fullName} 이름 평가`;
+}
+
+/** 공유 단추의 결과 — shared = 공유 시트로 보냄 · copied = 링크를 복사함 · cancelled = 공유 시트를 닫음 · failed = 둘 다 안 됨 */
+export type ShareOutcome = "shared" | "copied" | "cancelled" | "failed";
+
+export interface ShareData {
+  title: string;
+  text: string;
+  url: string;
+}
+
+/** 사용자가 공유 시트를 닫았다(취소) — 그때만 조용히 넘어간다. 그 밖의 실패(권한·상태)는 복사로 넘어간다 */
+export function isShareAbort(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { name?: unknown }).name === "AbortError";
+}
+
+/**
+ * 공유 시트가 있으면 먼저 열고, 없거나 취소가 아닌 까닭으로 실패하면 링크를 복사한다. 둘 다 안 되면 failed —
+ * 화면이 '링크를 복사하지 못했어요'와 주소를 띄운다(옛 화면은 모든 오류를 삼켜 눌러도 아무 일이 없었다).
+ * 브라우저 기능(공유·클립보드)은 화면이 넘긴다 — 없으면 undefined(이 모듈은 브라우저 객체를 만지지 않는다)
+ */
+export async function shareOrCopy(
+  data: ShareData,
+  share: ((data: ShareData) => Promise<void>) | undefined,
+  copy: ((text: string) => Promise<void>) | undefined
+): Promise<ShareOutcome> {
+  if (share) {
+    try {
+      await share(data);
+      return "shared";
+    } catch (err) {
+      if (isShareAbort(err)) return "cancelled";
+    }
+  }
+  if (copy) {
+    try {
+      await copy(data.url);
+      return "copied";
+    } catch {
+      // 복사도 거부됨(권한·포커스·비보안 맥락) — 아래에서 failed
+    }
+  }
+  return "failed";
+}
+
+/**
+ * 공유가 끝났을 때의 한 줄 — 생년월일을 넣은 결과의 링크는 생년월일을 뺀다(받는 쪽은 조화 점수 없이 본다)는 것을 두 길 모두에서 알린다.
+ * 공유 시트로 보냈고 생년월일이 없던 결과는 알릴 것이 없다(null). 취소·실패도 null(실패는 SHARE_FAILED)
+ */
+export function shareNotice(outcome: ShareOutcome, hadBirthDate: boolean): string | null {
+  const birth = hadBirthDate ? " (생년월일은 빠진 링크예요)" : "";
+  if (outcome === "copied") return `링크 복사됨${birth}`;
+  if (outcome === "shared" && hadBirthDate) return `공유했어요${birth}`;
+  return null;
+}
+
+/** 공유도 복사도 되지 않았다 — 토스트 제목. 설명 줄(shareFailedDetail)에 주소를 적어 손으로 복사할 수 있게 한다 */
+export const SHARE_FAILED = "링크를 복사하지 못했어요";
+export function shareFailedDetail(url: string): string {
+  return `주소를 직접 복사해 주세요: ${url}`;
 }
 
 // ============================================================
