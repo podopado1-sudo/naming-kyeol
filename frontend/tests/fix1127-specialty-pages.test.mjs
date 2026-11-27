@@ -173,6 +173,41 @@ test("성씨 칸 — lib/name-input 규칙(다듬어 보내고, 한글 1~2자가
   }
 });
 
+// 검토 지적(2026-11-27): 성씨 검사에 걸리면 포커스는 성씨 칸으로 가는데 문장은 카드 아래 공용 오류 상자(서버 오류와 같은 자리)에만 있어,
+// 화면 읽기 프로그램은 칸에서 '성씨'만 읽고 휴대폰에서는 칸으로 올라간 화면 밖에 문장이 있었다. 필수 글자 칸(reqChar-error)처럼 칸 바로 아래에
+// 문장을 두고 칸에 aria-invalid·aria-describedby(빨간 테두리는 aria-invalid 와 같은 조건)를 단다. 칸을 고치면 지운다.
+test("성씨 칸 오류는 칸 바로 아래에 — 칸과 aria-invalid·aria-describedby 로 잇고, 칸을 고치면 지운다", () => {
+  for (const page of PAGES) {
+    const src = read(page);
+    assert.match(src, /const \[surnameError, setSurnameError\] = useState<string \| null>\(null\);/, `${page}: 성씨 칸 오류 상태`);
+    // 검사에 걸리면 칸 오류로, 공용 상자는 비운다(같은 문장이 두 군데 뜨지 않게). 통과하면 칸 오류를 지운다
+    assert.match(
+      src,
+      /if \(surname\.error\) \{\s*setSurnameError\(surname\.error\);\s*setError\(null\);[\s\S]*?document\.getElementById\("lastName"\)\?\.focus\(\);\s*return;\s*\}\s*setSurnameError\(null\);/,
+      `${page}: 검사에 걸리면 칸 오류, 통과하면 지움`
+    );
+    assert.doesNotMatch(src, /setError\(surname\.error\)/, `${page}: 성씨 문제를 공용 오류 상자에 넣지 않는다`);
+    // 성씨 칸 — 하나뿐이고, 오류일 때만 aria-invalid·aria-describedby·빨간 테두리
+    const inputs = [...src.matchAll(/<Input\s+id="lastName"[\s\S]*?\/>/g)].map((m) => m[0]);
+    assert.equal(inputs.length, 1, `${page}: 성씨 칸`);
+    const input = inputs[0];
+    assert.ok(input.includes("aria-invalid={surnameError ? true : undefined}"), `${page}: aria-invalid`);
+    assert.ok(input.includes('aria-describedby={surnameError ? "lastName-error" : undefined}'), `${page}: aria-describedby`);
+    assert.match(input, /className=\{cn\(\s*surnameError &&\s*"border-destructive focus-visible:ring-destructive"\s*\)\}/, `${page}: 빨간 테두리`);
+    assert.match(input, /onChange=\{\(e\) => \{\s*setLastName\(e\.target\.value\);\s*if \(surnameError\) setSurnameError\(null\);\s*\}\}/, `${page}: 칸을 고치면 지운다`);
+    // 문장은 칸 바로 뒤(같은 칸 묶음 안), 화면 읽기 프로그램이 바로 읽게 role="alert"
+    const after = src.slice(src.indexOf(input) + input.length);
+    assert.match(
+      after,
+      /^\s*\{surnameError && \(\s*<p id="lastName-error" className="text-xs text-amber-warm-700" role="alert">\s*\{surnameError\}\s*<\/p>\s*\)\}\s*<\/div>/,
+      `${page}: 칸 바로 아래 문장`
+    );
+    assert.equal(src.match(/id="lastName-error"/g).length, 1, `${page}: 문장 id 하나`);
+  }
+  // 빈 칸 문구는 화면의 원래 문구 그대로 — 이제 칸 아래에 뜬다
+  assert.equal(checkSpecialtySurname(" ").error, "성씨를 입력해주세요.");
+});
+
 // ------------------------------------------------------------
 // required-char-input-feedback
 // ------------------------------------------------------------

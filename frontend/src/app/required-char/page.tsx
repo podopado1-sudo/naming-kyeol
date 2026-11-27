@@ -154,6 +154,8 @@ function RequiredCharForm({
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 성씨 칸의 문제(칸 아래에 그린다 — 칸에 aria-invalid·aria-describedby). 칸을 고치면 지운다 */
+  const [surnameError, setSurnameError] = useState<string | null>(null);
   /** 필수 글자 칸의 문제(칸 아래에 그린다) — 쓸 수 없는 값·사전에 없는 한자 */
   const [reqCharError, setReqCharError] = useState<string | null>(null);
   /** 한자 판정(/hanja/resolve) 결과 — 같은 글자로 다시 제출할 때 또 묻지 않는다 */
@@ -192,11 +194,13 @@ function RequiredCharForm({
     if (loading) return;
     const surname = checkSpecialtySurname(lastName);
     if (surname.error) {
-      setError(surname.error);
+      setSurnameError(surname.error);
+      setError(null);
       setReqCharError(null);
       document.getElementById("lastName")?.focus();
       return;
     }
+    setSurnameError(null);
     // 필수 글자 — 한글 한 음절이나 한자 한 글자만. 낱자모·영문·숫자는 엔진이 후보를 모두 버려 이유 없는 '결과 없음'이 됐다
     const req = checkRequiredCharInput(reqChar);
     if (!req.ok) {
@@ -328,9 +332,23 @@ function RequiredCharForm({
                 id="lastName"
                 placeholder="예: 김"
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                onChange={(e) => {
+                  setLastName(e.target.value);
+                  if (surnameError) setSurnameError(null);
+                }}
                 required
+                aria-invalid={surnameError ? true : undefined}
+                aria-describedby={surnameError ? "lastName-error" : undefined}
+                className={cn(
+                  surnameError &&
+                    "border-destructive focus-visible:ring-destructive"
+                )}
               />
+              {surnameError && (
+                <p id="lastName-error" className="text-xs text-amber-warm-700" role="alert">
+                  {surnameError}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

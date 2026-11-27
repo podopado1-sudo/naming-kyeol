@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { threeSyllable } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import type { SmartRecommendationResponse } from "@/lib/types";
 import {
   NAME_TYPE_LABEL as NAMETYPE_LABEL,
@@ -61,16 +62,20 @@ export default function ThreeSyllablePage() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 성씨 칸의 문제(칸 아래에 그린다 — 칸에 aria-invalid·aria-describedby). 칸을 고치면 지운다 */
+  const [surnameError, setSurnameError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (loading) return;
     const surname = checkSpecialtySurname(lastName);
     if (surname.error) {
-      setError(surname.error);
+      setSurnameError(surname.error);
+      setError(null);
       document.getElementById("lastName")?.focus();
       return;
     }
+    setSurnameError(null);
     const query: SubmittedQuery = { lastName: surname.value, gender, tone };
     setLoading(true);
     setError(null);
@@ -150,9 +155,23 @@ export default function ThreeSyllablePage() {
                 id="lastName"
                 placeholder="예: 김"
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                onChange={(e) => {
+                  setLastName(e.target.value);
+                  if (surnameError) setSurnameError(null);
+                }}
                 required
+                aria-invalid={surnameError ? true : undefined}
+                aria-describedby={surnameError ? "lastName-error" : undefined}
+                className={cn(
+                  surnameError &&
+                    "border-destructive focus-visible:ring-destructive"
+                )}
               />
+              {surnameError && (
+                <p id="lastName-error" className="text-xs text-amber-warm-700" role="alert">
+                  {surnameError}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
