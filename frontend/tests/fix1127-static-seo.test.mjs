@@ -175,9 +175,11 @@ test("/hanja 머리말 글자 수 = 독음 쪽들이 싣는 글자(겹치지 않
   assert.match(src, /const detailChars = getAllDetailChars\(\)\.length;/);
   assert.ok(
     flat(src).includes(
-      '이름에 쓰는 한자 {totalChars.toLocaleString()}자를 독음{" "} {totalReadings}개로 정리했습니다. 뜻·획수와 함께 부수 기준 자원오행과 그 판정 근거(확정·이견)를 표시하며, 뜻과 획수가 모두 있는{" "} {detailChars.toLocaleString()}자는 글자마다 상세 쪽을 두었습니다.'
+      '이름에 쓰는 한자 {totalChars.toLocaleString()}자를 독음{" "} {totalReadings}개로 정리했습니다. 뜻·획수와 함께 부수 기준 자원오행과 그 판정 근거(확정·이견)를 표시하며, 뜻과 획수가 모두 있는{" "} {detailChars.toLocaleString()}자는 글자마다 상세 페이지를 두었습니다.'
     )
   );
+  // 화면 문구는 웹 페이지를 '페이지'라 부른다(같은 화면의 V 등급 설명도 '상세 페이지') — '쪽'은 주석에만 쓴다
+  assert.ok(!src.includes("쪽"));
   // 값 — 사전 레코드 전부가 어느 독음 쪽에든 실린다(9,105). 상세 쪽은 뜻·획수가 있는 글자(9,016)
   const readings = H.getAllReadings();
   const total = new Set(readings.flatMap((r) => H.getReadingChars(r) ?? [])).size;

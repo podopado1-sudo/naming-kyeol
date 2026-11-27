@@ -82,7 +82,7 @@ export default function HanjaIndexPage() {
           이름에 쓰는 한자 {totalChars.toLocaleString()}자를 독음{" "}
           {totalReadings}개로 정리했습니다. 뜻·획수와 함께 부수 기준 자원오행과 그
           판정 근거(확정·이견)를 표시하며, 뜻과 획수가 모두 있는{" "}
-          {detailChars.toLocaleString()}자는 글자마다 상세 쪽을 두었습니다.
+          {detailChars.toLocaleString()}자는 글자마다 상세 페이지를 두었습니다.
         </p>
 
         {/* 자원오행 등급 읽는 법 — 뱃지 문구는 components/hanja/HanjaBadges.tsx 와 같다 */}
