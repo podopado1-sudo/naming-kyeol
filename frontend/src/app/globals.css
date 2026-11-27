@@ -908,10 +908,27 @@
   mix-blend-mode: multiply;
 }
 
-/* ─── Print: 이름 리포트 PDF 저장 ────────────────────────────────── */
+/* ─── Print: 결과지 인쇄·PDF 저장 ──────────────────────────────────
+   2026-11-27 고침(tests/fix1127-print.test.mjs 가 고정한다):
+   - 숨기는 것은 사이트 머리말·꼬리말과 조작 요소뿐이다. 옛 규칙은 요소 선택자 header, footer 를 통째로 숨겨 /company 카드 머리
+     (상호·로마자·종합 점수)와 도구 화면의 제목 묶음(h1)까지 인쇄물에서 빠졌다. 결과 화면 안의 <header>·<footer>(미니 머리 등)는
+     이제 인쇄된다 — 그 안의 단추·링크는 data-hide-print 로 숨긴다(여러 묶음 공통 약속).
+   - 막대·점수 타일·오행 칩·희귀도 칸은 배경색으로만 그린다. 브라우저 인쇄 기본값('배경 그래픽' 꺼짐)에서는 막대가 하나도 찍히지 않고
+     종합 타일(차콜 바탕 + 종이색 글자)은 바탕이 빠져 연회색 숫자만 남았다 → print-color-adjust: exact 로 화면 그대로 찍는다.
+     그만큼 바탕이 찍히니 쪽 바탕(html·body)은 흰색, 장식(먹 번짐·종이 결)은 뺀다.
+   - 쪽 나눔: section 마다 break-inside: avoid 라 큰 묶음이 통째로 다음 쪽으로 밀려 /evaluate 가 빈 자리 많은 5쪽, /ohaeng 은 1쪽에
+     폼만 찍혔다(K5 · 11/26 EX-6). 큰 묶음은 쪽 경계에서 나뉘게 두고, 점수 행·타일 줄·짧은 카드만 한 쪽에 둔다.
+     (옛 .breakdown-panel 은 어디에도 없는 클래스였다 — 실제 패널은 .eval-breakdown 이고, 수백 px 라 통째로 묶지 않는다)
+   - :has() 는 늘 :is()·:where() 안에 둔다 — 빌드(Tailwind 의 lightningcss)가 선언이 같은 규칙을 한 선택자 목록으로 합치는데,
+     맨 :has() 가 목록에 섞이면 :has() 를 모르는 브라우저가 목록 전체(.hide-on-print 까지)를 버린다. :is()·:where() 안이면
+     그 칸만 아무것도 고르지 않는다(관대한 선택자 목록). */
 @media print {
-  /* 배경/그림자 제거 → 잉크 절약 + 깔끔 */
-  * {
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    /* 그림자 제거 → 잉크 절약 + 깔끔 */
     box-shadow: none !important;
   }
   /* 페이지 여백 */
@@ -919,19 +936,38 @@
     margin: 16mm;
     size: A4;
   }
+  /* 쪽 바탕 — html 에도 종이색(--color-background)이 깔려 있어 exact 면 쪽 전체가 찍힌다 */
+  html,
   body {
     background: #fff !important;
+  }
+  body {
     color: #000 !important;
   }
-  /* 헤더/푸터/버튼 등 인쇄 시 제외 */
-  header,
-  footer,
+  /* 사이트 머리말(Header.tsx — 바깥 <header> 의 두 자식 .site-header-inner·.site-header-mobile)·사이트 꼬리말(Footer.tsx 의
+     <footer data-hide-print>)·조작 요소. 머리말은 그 컴포넌트의 클래스로 고른다(바깥 <header> 에는 클래스가 없다) */
+  .site-header-inner,
+  .site-header-mobile,
   .hide-on-print,
   [data-hide-print] {
     display: none !important;
   }
-  /* 카드 배경을 흰색으로 단순화 */
-  [class*="surface"],
+  /* 머리말의 빈 껍데기(sticky·밑줄)까지 — :has() 를 모르는 브라우저에서는 껍데기만 남고 속은 위 규칙으로 이미 숨었다 */
+  :is(header:has(> .site-header-inner)) {
+    display: none !important;
+  }
+  /* 결과가 있는 화면 — 결과 묶음([data-print-result])이 있으면 입력 화면용 머리말·설명 글([data-hide-print-with-result])을 빼서
+     결과가 1쪽부터 오게 한다(/ohaeng). :has() 를 모르는 브라우저는 예전처럼 모두 찍는다 */
+  :where(body:has([data-print-result])) [data-hide-print-with-result] {
+    display: none !important;
+  }
+  /* 장식 — 먹 번짐(홈 Hero)·종이 결(한자 카드) */
+  .ink-wash,
+  .paper-grain::before {
+    display: none !important;
+  }
+  /* 카드 배경을 흰색으로 단순화 — 막대 트랙(rounded-full — /company 점수 막대의 bg-surface-2)은 남긴다(지우면 채움만 떠 길이를 못 읽는다) */
+  [class*="surface"]:not(.rounded-full),
   main > * {
     background: transparent !important;
     border-color: #ddd !important;
@@ -941,9 +977,20 @@
     color: inherit !important;
     text-decoration: none !important;
   }
-  /* 페이지 강제 분할 방지 */
-  section,
-  .breakdown-panel {
+  /* 쪽 나눔 — 제목은 다음 내용과 같은 쪽에, 짧은 블록만 쪼개지 않는다(section 은 쪼개질 수 있다) */
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+  }
+  .eval-score-grid,
+  .eval-score-bar,
+  .eval-2col > *,
+  tr,
+  img,
+  svg,
+  figure {
     break-inside: avoid;
   }
 }

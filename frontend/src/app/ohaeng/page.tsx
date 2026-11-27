@@ -36,8 +36,10 @@ export default function OhaengPage() {
     <>
       {/* 헤더 메뉴는 4개 고정(홈·이름 찾기·작명 가이드·작명 원리) — 메뉴에 없는 화면이라 아무것도 켜지 않는다(기본값 'none') */}
       <Header />
-      <main className="mx-auto w-full max-w-3xl px-4 py-12">
-        <header className="mb-10 space-y-3 text-center">
+      {/* 인쇄(globals.css @media print): 결과가 있으면 머리말·설명 글(data-hide-print-with-result)과 폼(OhaengClient)을 빼고
+          결과(OhaengResult — data-print-result, 인쇄 전용 머리 한 줄)가 1쪽부터 오게 한다. 결과가 없으면 지금 화면 그대로 찍힌다 */}
+      <main className="mx-auto w-full max-w-3xl px-4 py-12 print:py-0">
+        <header className="mb-10 space-y-3 text-center" data-hide-print-with-result>
           <p className="eyebrow">OHAENG · 오행</p>
           <h1 className="font-serif text-3xl font-bold leading-snug tracking-tight text-navy md:text-4xl">
             부족한 오행 찾기
@@ -56,7 +58,9 @@ export default function OhaengPage() {
 
         <OhaengClient />
 
-        <OhaengGuide />
+        <div data-hide-print-with-result>
+          <OhaengGuide />
+        </div>
       </main>
       <Footer />
       <ApiWarmup />

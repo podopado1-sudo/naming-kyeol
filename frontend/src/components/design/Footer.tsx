@@ -112,7 +112,10 @@ function Column({
 
 export function Footer() {
   return (
+    // 인쇄에서는 뺀다(data-hide-print — globals.css @media print). 인쇄 규칙은 요소 선택자 footer 를 숨기지 않는다 —
+    // 결과 화면 안의 <footer>·<header>(카드 머리·미니 머리)는 인쇄된다(2026-11-27, tests/fix1127-print.test.mjs)
     <footer
+      data-hide-print
       style={{
         borderTop: "1px solid var(--color-ink-qing)",
         background: "var(--color-background)",

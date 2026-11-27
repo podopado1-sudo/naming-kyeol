@@ -1004,7 +1004,8 @@ test("/ohaeng 한자 예의 '맞춰 보기' — 글자와 독음만 해시에 �
   const item = functionBody(raw, "HanjaItem");
   assert.match(
     item,
-    /<a\s+href=\{evaluatePickHref\(item\.character, item\.readings\)\}\s+target="_blank"\s+rel="noopener"\s+aria-label=\{`\$\{item\.character\} 한자로 이름 맞춰 보기 \(새 창\)`\}\s+style=\{pickLink\}\s*>\s*맞춰 보기\s*<\/a>/
+    // data-hide-print — 인쇄에서는 뺀다(2026-11-27 tests/fix1127-print.test.mjs)
+    /<a\s+href=\{evaluatePickHref\(item\.character, item\.readings\)\}\s+target="_blank"\s+rel="noopener"\s+aria-label=\{`\$\{item\.character\} 한자로 이름 맞춰 보기 \(새 창\)`\}\s+style=\{pickLink\}\s+data-hide-print\s*>\s*맞춰 보기\s*<\/a>/
   );
   assert.equal([...result.matchAll(/<a\b/g)].length, 1, "풀 페이지 이동(<a>)은 이 링크 하나");
   // 넘기는 것은 응답의 글자·독음뿐 — 생년월일·시각·출생지를 싣지 않는다(이 칸은 그 값을 받지도 않는다)
@@ -1013,7 +1014,7 @@ test("/ohaeng 한자 예의 '맞춰 보기' — 글자와 독음만 해시에 �
   // 안내 한 줄 — 한자 예가 있을 때만, 새 창·생년월일을 넘기지 않음을 적는다
   assert.ok(
     flat(raw).includes(
-      "{data.elementHanja.some((g) => !g.isGishin && g.hanja.length > 0) && ( <p style={{ ...smallNote, marginTop: 16 }}> ‘맞춰 보기’는 이름 평가를 새 창으로 열어요. 생년월일은 넘기지 않으니, 이름 평가에서 다시 넣으면 이 한자가 필요한 오행을 채우는지 점수와 함께 볼 수 있어요. </p> )}"
+      "{data.elementHanja.some((g) => !g.isGishin && g.hanja.length > 0) && ( <p style={{ ...smallNote, marginTop: 16 }} data-hide-print> ‘맞춰 보기’는 이름 평가를 새 창으로 열어요. 생년월일은 넘기지 않으니, 이름 평가에서 다시 넣으면 이 한자가 필요한 오행을 채우는지 점수와 함께 볼 수 있어요. </p> )}"
     )
   );
   // '다음 단계'의 이름 평가 줄

@@ -140,10 +140,12 @@ export function OhaengClient() {
 
   return (
     <>
+      {/* 결과가 떠 있으면 인쇄에서 폼을 뺀다(data-hide-print) — 결과가 1쪽부터 오게(머리말·설명 글은 page.tsx 의 data-hide-print-with-result) */}
       <form
         onSubmit={handleSubmit}
         noValidate
         aria-label="부족한 오행 찾기 입력"
+        data-hide-print={shown ? true : undefined}
         style={{
           background: "var(--color-surface)",
           borderRadius: "var(--radius-lg)",

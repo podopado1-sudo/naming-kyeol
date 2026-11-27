@@ -122,8 +122,14 @@ export function OhaengResult({
   const { saju } = data;
   const term = termNote(saju.termOnBirthDay);
 
+  // 인쇄(globals.css @media print): data-print-result 가 있으면 page.tsx 의 머리말·설명 글이 빠지고 폼도 빠진다(OhaengClient) —
+  // 그래서 사이트·도구 이름을 인쇄 전용 한 줄로 단다. 조작 요소('맞춰 보기'와 그 안내·다음 단계 링크)는 data-hide-print,
+  // 짧은 카드는 쪽 경계에서 갈리지 않게(print:break-inside-avoid), 한자 예 카드는 길어 쪼개질 수 있게 둔다(칸 하나하나만 묶는다)
   return (
-    <section aria-labelledby="ohaeng-result-title" style={{ marginTop: 40 }}>
+    <section aria-labelledby="ohaeng-result-title" data-print-result className="mt-10 print:mt-0">
+      <p className="hidden print:block" style={{ ...smallNote, marginBottom: 8 }}>
+        이름의 결 · 부족한 오행 찾기 결과 (namingkyeol.com/ohaeng)
+      </p>
       <h2
         id="ohaeng-result-title"
         ref={headingRef}
@@ -147,7 +153,7 @@ export function OhaengResult({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 20 }}>
         {/* ── 원국 표 ── */}
-        <div style={{ ...card, overflow: "hidden" }}>
+        <div className="print:break-inside-avoid" style={{ ...card, overflow: "hidden" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
             <PillarCell label="년주" pillar={saju.yearPillar} index={0} />
             <PillarCell label="월주" pillar={saju.monthPillar} index={1} />
@@ -169,7 +175,7 @@ export function OhaengResult({
         </div>
 
         {/* ── 오행 개수 ── */}
-        <div style={{ ...card, padding: "22px 22px" }}>
+        <div className="print:break-inside-avoid" style={{ ...card, padding: "22px 22px" }}>
           <h3 style={cardTitle}>오행 개수</h3>
           <CountBars count={saju.fiveElementCount} />
           <p style={{ ...bodyText, marginTop: 16, color: "var(--color-text)" }}>
@@ -180,6 +186,7 @@ export function OhaengResult({
         {/* ── 용신·희신 ── */}
         {saju.yongshin && (
           <div
+            className="print:break-inside-avoid"
             style={{
               ...card,
               padding: "22px 22px",
@@ -220,7 +227,7 @@ export function OhaengResult({
             </div>
             {/* 한자 예가 하나라도 있을 때만(없는 오행이 기신이면 한자 예를 비운다 — 그때는 링크도 없다) */}
             {data.elementHanja.some((g) => !g.isGishin && g.hanja.length > 0) && (
-              <p style={{ ...smallNote, marginTop: 16 }}>
+              <p style={{ ...smallNote, marginTop: 16 }} data-hide-print>
                 ‘맞춰 보기’는 이름 평가를 새 창으로 열어요. 생년월일은 넘기지 않으니, 이름 평가에서 다시 넣으면 이 한자가 필요한
                 오행을 채우는지 점수와 함께 볼 수 있어요.
               </p>
@@ -228,8 +235,8 @@ export function OhaengResult({
           </div>
         )}
 
-        {/* ── 다음 단계 ── */}
-        <div style={{ ...card, padding: "22px 22px" }}>
+        {/* ── 다음 단계 ── 링크 카드라 인쇄에서 뺀다 */}
+        <div style={{ ...card, padding: "22px 22px" }} data-hide-print>
           <h3 style={cardTitle}>다음 단계</h3>
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
             {/* /search 는 오행을 골라 찾아 주지 않는다 — 생년월일로 계산한 용신·희신 글자에 가산점을 주어 음절마다 한자를 배정하고(HanjaSelector),
@@ -455,6 +462,7 @@ function HanjaItem({ item }: { item: ElementHanjaItem }) {
   const exception = item.resourceGrade === "X";
   return (
     <li
+      className="print:break-inside-avoid"
       style={{
         border: "1px solid var(--color-divider)",
         borderRadius: "var(--radius-md)",
@@ -496,6 +504,7 @@ function HanjaItem({ item }: { item: ElementHanjaItem }) {
         rel="noopener"
         aria-label={`${item.character} 한자로 이름 맞춰 보기 (새 창)`}
         style={pickLink}
+        data-hide-print
       >
         맞춰 보기
       </a>
