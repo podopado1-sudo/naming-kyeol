@@ -5,7 +5,8 @@
 // - evaluate-date-style-leak: <head> 에 넣고 지우지 않은 범위 없는 날짜 칸 규칙이 다른 화면의 생년월일을 빈칸처럼 보이게 했고,
 //   /evaluate 안에서는 포커스 때 덮개와 기본 날짜 글자가 겹쳤다. → 폼 안의 <style>, 규칙은 .eval-date 아래로만.
 // - labels-evaluate: 출생일 칸이 라벨과 이어져 있지 않았다. → <label htmlFor> ↔ 칸 id, 칸이 여럿인 절은 묶음 aria-labelledby.
-// - evaluate-tone-help-text: 톤 도움말이 결과에 없는 줄('실제 톤')을 약속했다. → 실제 점수 규칙과 결과의 줄만 말한다.
+// - evaluate-tone-help-text: 톤 도움말이 결과에 없는 줄('실제 톤')을 약속했다. → 실제 점수 규칙과 결과의 줄만 말한다
+//   (톤이 닿는 두 길 — '톤 보너스' 줄(EvaluateToneBonus)과 '의미' 줄 +1(EvaluateMeaning 의 톤 가점, 검토 반영)).
 // - evaluate-time-field-overflow: 375 폭에서 시각 칸이 카드 밖으로 밀리고 날짜 덮개가 달력 아이콘에 붙었다.
 //
 // 화면 컴포넌트(.tsx)는 node 로 읽을 수 없으므로 두 갈래로 본다:
@@ -370,7 +371,10 @@ test("톤 도움말은 결과에 실제로 보이는 것만 말한다 — 엔진
   assert.doesNotMatch(inputCode, /실제 톤/);
   const flat = inputCode.replace(/\s+/g, " ");
   assert.ok(flat.includes("고른 톤에 이름의 자음·모음이 잘 맞으면 미학 점수에 톤 보너스가 붙고, 부드러운 톤인데 된소리(ㄲ·ㄸ·ㅃ·ㅆ·ㅉ)로 시작하는 음절이 있으면 줄어요."));
-  assert.ok(flat.includes("붙거나 줄어든 점수는 결과의 미학 점수에 ‘톤 보너스’ 줄로 보여요. 중립을 고르면 톤은 점수에 들어가지 않아요."));
+  assert.ok(flat.includes("붙거나 줄어든 톤 보너스는 결과의 미학 점수에 ‘톤 보너스’ 줄로 보여요."));
+  assert.ok(flat.includes("중립을 고르면 톤은 점수에 들어가지 않아요."));
+  // 옛 문장('붙거나 줄어든 점수는 … 톤 보너스 줄로')은 톤의 효과가 모두 그 줄에 있다고 읽혀 의미 +1 을 찾지 못하게 했다
+  assert.ok(!flat.includes("붙거나 줄어든 점수는 결과의 미학 점수에"));
   // 그 줄이 결과 화면에 있다(이름을 바꾸면 이 도움말도 함께)
   assert.match(readAt(SRC, "app", "evaluate", "EvaluateResult.tsx"), /\{ label: "톤 보너스", value: data\.aesthetic\.toneBonus, max: 0, bonus: true \}/);
   // 엔진 규칙 — 부드러운 톤만 된소리 첫소리로 깎고, 중립은 보너스 0
@@ -379,4 +383,43 @@ test("톤 도움말은 결과에 실제로 보이는 것만 말한다 — 엔진
   assert.match(engine, /\["strong"\] = new ToneProfile\s*\{[\s\S]*?PenaltyConsonants = Array\.Empty<char>\(\),\s*BonusPoints = 8/);
   assert.match(engine, /\["neutral"\] = new ToneProfile \{ BonusPoints = 0 \}/);
   assert.match(engine, /if \(profile\.PenaltyConsonants\.Length > 0 && profile\.PenaltyConsonants\.Contains\(initChar\)\)/);
+});
+
+/** C# 메서드 — 시그니처 줄부터 같은 들여쓰기의 닫는 `}` 줄까지(readAt 이 줄바꿈을 LF 로 맞춘 원문) */
+function csMethodBody(src, signature) {
+  const at = src.indexOf(signature);
+  assert.ok(at >= 0, `${signature} 를 찾지 못했다`);
+  const lineStart = src.lastIndexOf("\n", at) + 1;
+  const indent = /^[ \t]*/.exec(src.slice(lineStart))[0];
+  const close = `\n${indent}}\n`;
+  const end = src.indexOf(close, at);
+  assert.ok(end > at, `${signature} 의 끝을 찾지 못했다`);
+  return src.slice(at, end + close.length);
+}
+
+test("톤 도움말은 '의미' 줄의 톤 가점(+1)도 말한다 — AestheticEngine.EvaluateMeaning 의 톤 경로", () => {
+  const flat = inputCode.replace(/\s+/g, " ");
+  assert.ok(
+    flat.includes(
+      "또 이름 음절로 읽는 한자 가운데 고른 톤으로 분류된 글자가 하나라도 있으면(화면에 보이는 한자가 아니어도) 의미 점수가 1점 올라요. 이 1점은 따로 줄 없이 ‘의미’ 줄에 들어가요.",
+    ),
+  );
+  // 결과 화면의 '의미' 줄(만점 10 — 늘 그린다)
+  assert.match(readAt(SRC, "app", "evaluate", "EvaluateResult.tsx"), /\{ label: "의미", value: data\.aesthetic\.meaning, max: 10 \}/);
+
+  const engine = readAt(FRONT, "..", "Application", "Engines", "AestheticEngine.cs");
+  // 고른 톤이 의미 평가로 들어가고, 원점수 ×0.10 이 '의미' 줄이다
+  assert.match(engine, /int meaningRaw = EvaluateMeaning\(name, tone\);\s*breakdown\.MeaningScore = \(int\)\(meaningRaw \* 0\.10\);/);
+  const meaning = csMethodBody(engine, "private int EvaluateMeaning(string name, string tone)");
+  // '1점' 이 참인 조건: 원점수가 10 단위(기본 70·카테고리 +20·톤 +10 — 합 100 이라 위 상한에 잘리지 않는다)
+  assert.match(meaning, /int score = 70;/);
+  assert.match(meaning, /if \(hanjaInfo\.Any\(h => h\.Category == "자연" \|\| h\.Category == "덕목" \|\| h\.Category == "개념"\)\)\s*\{\s*score \+= 20;/);
+  assert.match(meaning, /if \(tone == "soft"\)\s*\{\s*if \(hanjaInfo\.Any\(h => h\.TonePref == HanjaData\.TonePreference\.Soft\)\)\s*\{\s*score \+= 10;/);
+  assert.match(meaning, /else if \(tone == "strong"\)\s*\{\s*if \(hanjaInfo\.Any\(h => h\.TonePref == HanjaData\.TonePreference\.Strong\)\)\s*\{\s*score \+= 10;/);
+  assert.match(meaning, /return Math\.Max\(0, Math\.Min\(100, score\)\);/);
+  assert.doesNotMatch(meaning, /neutral/, "중립 톤은 의미 가점이 없다('중립을 고르면 톤은 점수에 들어가지 않아요')");
+  // '화면에 보이는 한자가 아니어도' — 톤 가점은 음절마다 쓸 수 있는 글자 전부를 본다(보이는·고른 한자 인자 없음)
+  assert.match(meaning, /var hanjaInfo = GetHanjaInfo\(name\);/);
+  const info = csMethodBody(engine, "private List<HanjaData.HanjaInfo>? GetHanjaInfo(string name)");
+  assert.match(info, /result\.AddRange\(HanjaSelector\.UsableByReading\(c\.ToString\(\)\)\);/);
 });
